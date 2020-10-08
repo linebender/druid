@@ -595,6 +595,19 @@ impl LayoutCtx<'_, '_> {
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
         self.widget_state.paint_insets = insets.into().nonnegative();
     }
+
+    /// Set an explicit baseline position for this widget.
+    ///
+    /// The baseline position is used to align widgets that contain text,
+    /// such as buttons, labels, and other controls. It may also be used
+    /// by other widgets that are opinionated about how they are aligned
+    /// relative to neighbouring text, such as switches or checkboxes.
+    ///
+    /// The provided value should be the distance from the *bottom* of the
+    /// widget to the baseline.
+    pub fn set_baseline_offset(&mut self, baseline: f64) {
+        self.widget_state.baseline_offset = baseline
+    }
 }
 
 impl PaintCtx<'_, '_, '_> {

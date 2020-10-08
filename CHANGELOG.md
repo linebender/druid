@@ -47,6 +47,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `RichText` and `Attribute` types for creating rich text ([#1255] by [@cmyr])
 - `request_timer` can now be called from `LayoutCtx` ([#1278] by [@Majora320])
 - TextBox supports vertical movement ([#1280] by [@cmyr])
+- Widgets can specify a baseline, flex rows can align baselines ([#1295] by [@cmyr])
 
 ### Changed
 
@@ -495,6 +496,7 @@ Last release without a changelog :(
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
+[#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
 

@@ -79,7 +79,10 @@ impl Widget<bool> for Checkbox {
             check_size + x_padding + label_size.width,
             check_size.max(label_size.height),
         );
-        bc.constrain(desired_size)
+        let our_size = bc.constrain(desired_size);
+        let baseline = self.child_label.baseline_offset() + (our_size.height - label_size.height);
+        ctx.set_baseline_offset(baseline);
+        our_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {

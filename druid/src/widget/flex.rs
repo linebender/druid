@@ -294,6 +294,13 @@ pub enum CrossAxisAlignment {
     /// In a vertical container, widgets are bottom aligned. In a horiziontal
     /// container, their trailing edges are aligned.
     End,
+    /// Align on the baseline.
+    ///
+    /// In a horizontal container, widgets are aligned along the calculated
+    /// baseline. In a vertical container, this is equivalent to `End`.
+    ///
+    /// The calculated baseline is the maximum baseline offset of the children.
+    Baseline,
 }
 
 /// Arrangement of children on the main axis.
@@ -607,15 +614,21 @@ impl<T: Data> Widget<T> for Flex<T> {
         // we loosen our constraints when passing to children.
         let loosened_bc = bc.loosen();
 
+        // minor-axis values for all children
+        let mut minor = self.direction.minor(bc.min());
+        // these two are calculated but only used if we're baseline aligned
+        let mut max_above_baseline = 0f64;
+        let mut max_below_baseline = 0f64;
+
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
-        let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
             if child.params.flex == 0.0 {
                 let child_bc = self
                     .direction
                     .constraints(&loosened_bc, 0., std::f64::INFINITY);
                 let child_size = child.widget.layout(ctx, &child_bc, data, env);
+                let baseline_offset = child.widget.baseline_offset();
 
                 if child_size.width.is_infinite() {
                     log::warn!("A non-Flex child has an infinite width.");
@@ -627,6 +640,8 @@ impl<T: Data> Widget<T> for Flex<T> {
 
                 major_non_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
+                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
+                max_below_baseline = max_below_baseline.max(baseline_offset);
                 // Stash size.
                 let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
@@ -651,9 +666,12 @@ impl<T: Data> Widget<T> for Flex<T> {
                     .direction
                     .constraints(&loosened_bc, min_major, actual_major);
                 let child_size = child.widget.layout(ctx, &child_bc, data, env);
+                let baseline_offset = child.widget.baseline_offset();
 
                 major_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
+                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
+                max_below_baseline = max_below_baseline.max(baseline_offset);
                 // Stash size.
                 let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
@@ -670,21 +688,39 @@ impl<T: Data> Widget<T> for Flex<T> {
         };
 
         let mut spacing = Spacing::new(self.main_alignment, extra, self.children.len());
-        // Finalize layout, assigning positions to each child.
+
+        // the actual size needed to tightly fit the children on the minor axis.
+        // Unlike the 'minor' var, this ignores the incoming constraints.
+        let minor_dim = match self.direction {
+            Axis::Horizontal => max_below_baseline + max_above_baseline,
+            Axis::Vertical => minor,
+        };
+
         let mut major = spacing.next().unwrap_or(0.);
         let mut child_paint_rect = Rect::ZERO;
         for child in &mut self.children {
-            let rect = child.widget.layout_rect();
-            let extra_minor = minor - self.direction.minor(rect.size());
+            let child_size = child.widget.layout_rect().size();
             let alignment = child.params.alignment.unwrap_or(self.cross_alignment);
-            let align_minor = alignment.align(extra_minor);
-            let pos: Point = self.direction.pack(major, align_minor).into();
+            let child_minor_offset = match alignment {
+                // This will ignore baseline alignment if it is overridden on children,
+                // but is not the default for the container. Is this okay?
+                CrossAxisAlignment::Baseline if matches!(self.direction, Axis::Horizontal) => {
+                    let extra_height = minor - minor_dim.min(minor);
+                    let child_baseline = child.widget.baseline_offset();
+                    let child_above_baseline = child_size.height - child_baseline;
+                    extra_height + (max_above_baseline - child_above_baseline)
+                }
+                _ => {
+                    let extra_minor = minor_dim - self.direction.minor(child_size);
+                    alignment.align(extra_minor)
+                }
+            };
 
-            child
-                .widget
-                .set_layout_rect(ctx, data, env, rect.with_origin(pos));
+            let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
+            let child_frame = Rect::from_origin_size(child_pos, child_size);
+            child.widget.set_layout_rect(ctx, data, env, child_frame);
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
-            major += self.direction.major(rect.size()).expand();
+            major += self.direction.major(child_size).expand();
             major += spacing.next().unwrap_or(0.);
         }
 
@@ -696,7 +732,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             major = total_major;
         }
 
-        let my_size: Size = self.direction.pack(major, minor).into();
+        let my_size: Size = self.direction.pack(major, minor_dim).into();
 
         // if we don't have to fill the main axis, we loosen that axis before constraining
         let my_size = if !self.fill_major_axis {
@@ -711,12 +747,37 @@ impl<T: Data> Widget<T> for Flex<T> {
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
         ctx.set_paint_insets(insets);
+
+        let baseline_offset = match self.direction {
+            Axis::Horizontal => max_below_baseline,
+            Axis::Vertical => self
+                .children
+                .last()
+                .map(|last| {
+                    let child_bl = last.widget.baseline_offset();
+                    let child_max_y = last.widget.layout_rect().max_y();
+                    let extra_bottom_padding = my_size.height - child_max_y;
+                    child_bl + extra_bottom_padding
+                })
+                .unwrap_or(0.0),
+        };
+
+        ctx.set_baseline_offset(baseline_offset);
         my_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint(ctx, data, env);
+        }
+
+        // paint the baseline if we're debugging layout
+        if env.get(Env::DEBUG_PAINT) && ctx.widget_state.baseline_offset != 0.0 {
+            let color = env.get_debug_color(ctx.widget_id().to_raw());
+            let my_baseline = ctx.size().height - ctx.widget_state.baseline_offset;
+            let line = crate::kurbo::Line::new((0.0, my_baseline), (ctx.size().width, my_baseline));
+            let stroke_style = crate::piet::StrokeStyle::new().dash(vec![4.0, 4.0], 0.0);
+            ctx.stroke_styled(line, &color, 1.0, &stroke_style);
         }
     }
 }
@@ -728,7 +789,8 @@ impl CrossAxisAlignment {
     fn align(self, val: f64) -> f64 {
         match self {
             CrossAxisAlignment::Start => 0.0,
-            CrossAxisAlignment::Center => (val / 2.0).round(),
+            // in vertical layout, baseline is equivalent to center
+            CrossAxisAlignment::Center | CrossAxisAlignment::Baseline => (val / 2.0).round(),
             CrossAxisAlignment::End => val,
         }
     }

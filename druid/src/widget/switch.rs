@@ -169,9 +169,16 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &bool, env: &Env) -> Size {
-        let width = env.get(theme::BORDERED_WIDGET_HEIGHT) * SWITCH_WIDTH_RATIO;
-        bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &bool, env: &Env) -> Size {
+        let text_metrics = self.on_text.layout_metrics();
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let width = height * SWITCH_WIDTH_RATIO;
+
+        let label_y = (height - text_metrics.size.height).max(0.0) / 2.0;
+        let text_bottom_padding = height - (text_metrics.size.height + label_y);
+        let text_baseline_offset = text_metrics.size.height - text_metrics.first_baseline;
+        ctx.set_baseline_offset(text_bottom_padding + text_baseline_offset);
+        bc.constrain(Size::new(width, height))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
