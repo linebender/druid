@@ -57,6 +57,16 @@ pub struct TextLayout<T> {
     alignment: TextAlignment,
 }
 
+/// Metrics describing the layout text.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LayoutMetrics {
+    /// The nominal size of the layout.
+    pub size: Size,
+    /// The distance from the nominal top of the layout to the first baseline.
+    pub first_baseline: f64,
+    //TODO: add inking_rect
+}
+
 impl<T> TextLayout<T> {
     /// Create a new `TextLayout` object.
     ///
@@ -192,6 +202,31 @@ impl<T: TextStorage> TextLayout<T> {
             .as_ref()
             .map(|layout| layout.size())
             .unwrap_or_default()
+    }
+
+    /// Return the text's [`LayoutMetrics`].
+    ///
+    /// This is not meaningful until [`rebuild_if_needed`] has been called.
+    ///
+    /// [`rebuild_if_needed`]: #method.rebuild_if_needed
+    /// [`LayoutMetrics`]: struct.LayoutMetrics.html
+    pub fn layout_metrics(&self) -> LayoutMetrics {
+        debug_assert!(
+            self.layout.is_some(),
+            "TextLayout::layout_metrics called without rebuilding layout object. Text was '{}'",
+            self.text().as_ref().map(|s| s.as_str()).unwrap_or_default()
+        );
+
+        if let Some(layout) = self.layout.as_ref() {
+            let first_baseline = layout.line_metric(0).unwrap().baseline;
+            let size = layout.size();
+            LayoutMetrics {
+                size,
+                first_baseline,
+            }
+        } else {
+            LayoutMetrics::default()
+        }
     }
 
     /// For a given `Point` (relative to this object's origin), returns index
