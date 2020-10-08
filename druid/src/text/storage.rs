@@ -90,6 +90,8 @@ impl PietTextStorage for RichText {
 
 impl TextStorage for String {}
 
+impl TextStorage for Arc<String> {}
+
 impl TextStorage for RichText {
     fn add_attributes(
         &self,
