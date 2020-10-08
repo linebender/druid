@@ -148,7 +148,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
     pub fn update(&mut self, ctx: &mut UpdateCtx, new_data: &T, env: &Env) {
         if self.data_is_stale(new_data) {
             self.layout.set_text(new_data.clone());
-            self.selection.constrain_to(new_data);
+            self.selection = self.selection.constrained(new_data);
             ctx.request_paint();
         } else if self.layout.needs_rebuild_after_update(ctx) {
             ctx.request_paint();

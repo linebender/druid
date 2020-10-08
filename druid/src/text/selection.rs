@@ -44,6 +44,15 @@ impl Selection {
         }
     }
 
+    /// Create a new selection constrained to the length of the provided text.
+    #[must_use = "constrained constructs a new Selection"]
+    pub fn constrained(mut self, s: &impl EditableText) -> Self {
+        let s_len = s.len();
+        self.start = min(self.start, s_len);
+        self.end = min(self.end, s_len);
+        self
+    }
+
     /// Create a selection that starts at the beginning and ends at text length.
     /// TODO: can text length be at a non-codepoint or a non-grapheme?
     pub fn all(&mut self, text: &impl EditableText) {
@@ -84,13 +93,5 @@ impl Selection {
     /// Return a range from smallest to largest index
     pub fn range(self) -> Range<usize> {
         self.min()..self.max()
-    }
-
-    /// Constrain selection to be not greater than input string
-    pub fn constrain_to(mut self, s: &impl EditableText) -> Self {
-        let s_len = s.len();
-        self.start = min(self.start, s_len);
-        self.end = min(self.end, s_len);
-        self
     }
 }
