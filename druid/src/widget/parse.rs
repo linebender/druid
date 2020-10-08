@@ -37,8 +37,15 @@ impl<T> Parse<T> {
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
+        let pre_data = self.state.clone();
         self.widget.event(ctx, event, &mut self.state, env);
         *data = self.state.parse().ok();
+
+        // we want an update anytime the inner data changes, even if
+        // the outer data didn't:
+        if !pre_data.same(&self.state) {
+            ctx.request_update();
+        }
     }
 
     fn lifecycle(
@@ -57,11 +64,13 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
-        let old = match *data {
-            None => return, // Don't clobber the input
-            Some(ref x) => mem::replace(&mut self.state, x.to_string()),
-        };
-        self.widget.update(ctx, &old, &self.state, env)
+        if let Some(data) = data {
+            let old = mem::replace(&mut self.state, data.to_string());
+            self.widget.update(ctx, &old, &self.state, env);
+        } else {
+            // send update to inner child anyway, so it knows what our state is
+            self.widget.update(ctx, &self.state, &self.state, env);
+        }
     }
 
     fn layout(
