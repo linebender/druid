@@ -268,21 +268,27 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+        let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         if self.multiline {
             self.editor
                 .set_wrap_width(bc.max().width - TEXT_INSETS.x_value());
         }
         self.editor.rebuild_if_needed(ctx.text(), env);
-        let size = self.editor.layout().size();
 
-        let width = env.get(theme::WIDE_WIDGET_WIDTH);
-        let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-
-        let text_height = size.height + TEXT_INSETS.y_value();
+        let text_metrics = self.editor.layout().layout_metrics();
+        let text_height = text_metrics.size.height + TEXT_INSETS.y_value();
         let height = text_height.max(min_height);
 
-        bc.constrain((width, height))
+        let size = bc.constrain((width, height));
+        let bottom_padding = (size.height - text_metrics.size.height) / 2.0;
+        let baseline_off =
+            bottom_padding + (text_metrics.size.height - text_metrics.first_baseline);
+        ctx.set_baseline_offset(baseline_off);
+
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {

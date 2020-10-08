@@ -146,6 +146,7 @@ fn make_control_row() -> impl Widget<AppState> {
                         ("Start", CrossAxisAlignment::Start),
                         ("Center", CrossAxisAlignment::Center),
                         ("End", CrossAxisAlignment::End),
+                        ("Baseline", CrossAxisAlignment::Baseline),
                     ])
                     .lens(Params::cross_alignment),
                 ),
@@ -261,11 +262,13 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
 
     space_if_needed(&mut flex, state);
 
-    flex.add_child(Label::new(|data: &DemoState, _: &Env| {
-        data.input_text.clone()
-    }));
+    flex.add_child(
+        Label::new(|data: &DemoState, _: &Env| data.input_text.clone()).with_text_size(32.0),
+    );
     space_if_needed(&mut flex, state);
     flex.add_child(Checkbox::new("Demo").lens(DemoState::enabled));
+    space_if_needed(&mut flex, state);
+    flex.add_child(Switch::new().lens(DemoState::enabled));
     space_if_needed(&mut flex, state);
     flex.add_child(Slider::new().lens(DemoState::volume));
     space_if_needed(&mut flex, state);
@@ -278,8 +281,6 @@ fn build_widget(state: &Params) -> Box<dyn Widget<AppState>> {
             .with_wraparound(true)
             .lens(DemoState::volume),
     );
-    space_if_needed(&mut flex, state);
-    flex.add_child(Switch::new().lens(DemoState::enabled));
 
     let mut flex = SizedBox::new(flex);
     if state.fix_minor_axis {

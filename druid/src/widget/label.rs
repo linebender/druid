@@ -268,6 +268,12 @@ impl<T: TextStorage> RawLabel<T> {
     pub fn draw_at(&self, ctx: &mut PaintCtx, origin: impl Into<Point>) {
         self.layout.draw(ctx, origin)
     }
+
+    /// Return the offset of the first baseline relative to the bottom of the widget.
+    pub fn baseline_offset(&self) -> f64 {
+        let text_metrics = self.layout.layout_metrics();
+        text_metrics.size.height - text_metrics.first_baseline
+    }
 }
 
 impl<T: TextStorage> Label<T> {
@@ -533,9 +539,12 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         self.layout.set_wrap_width(width);
         self.layout.rebuild_if_needed(ctx.text(), env);
 
-        let mut text_size = self.layout.size();
-        text_size.width += 2. * LABEL_X_PADDING;
-        bc.constrain(text_size)
+        let text_metrics = self.layout.layout_metrics();
+        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
+        bc.constrain(Size::new(
+            text_metrics.size.width + 2. * LABEL_X_PADDING,
+            text_metrics.size.height,
+        ))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {

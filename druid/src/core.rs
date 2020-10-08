@@ -80,6 +80,13 @@ pub(crate) struct WidgetState {
     /// drop shadows or overflowing text.
     pub(crate) paint_insets: Insets,
 
+    /// The offset of the baseline relative to the bottom of the widget.
+    ///
+    /// In general, this will be zero; the bottom of the widget will be considered
+    /// the baseline. Widgets that contain text or controls that expect to be
+    /// laid out alongside text can set this as appropriate.
+    pub(crate) baseline_offset: f64,
+
     // The region that needs to be repainted, relative to the widget's bounds.
     pub(crate) invalid: Region,
 
@@ -311,6 +318,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
+    }
+
+    /// The distance from the bottom of this widget to the baseline.
+    pub fn baseline_offset(&self) -> f64 {
+        self.state.baseline_offset
     }
 
     /// Determines if the provided `mouse_pos` is inside `rect`
@@ -884,6 +896,7 @@ impl WidgetState {
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
             viewport_offset: Vec2::ZERO,
+            baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
             is_active: false,
