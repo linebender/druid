@@ -121,7 +121,7 @@
 //! [`image` crate]: https://crates.io/crates/image
 
 #![deny(
-    intra_doc_link_resolution_failure,
+    broken_intra_doc_links,
     unsafe_code,
     clippy::trivially_copy_pass_by_ref
 )]
