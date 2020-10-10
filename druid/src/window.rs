@@ -30,7 +30,7 @@ use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, InternalEvent,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
     TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
@@ -173,7 +173,7 @@ impl<T: Data> Window<T> {
         event: Event,
         data: &mut T,
         env: &Env,
-    ) -> bool {
+    ) -> Handled {
         match &event {
             Event::WindowSize(size) => self.size = *size,
             Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) | Event::Wheel(e) => {
@@ -194,7 +194,7 @@ impl<T: Data> Window<T> {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
                     log::error!("No widget found for timer {:?}", token);
-                    return false;
+                    return Handled::No;
                 }
             }
             other => other,
@@ -223,7 +223,7 @@ impl<T: Data> Window<T> {
             };
 
             self.root.event(&mut ctx, &event, data, env);
-            ctx.is_handled
+            Handled::from_handled(ctx.is_handled)
         };
 
         // Clean up the timer token and do it immediately after the event handling

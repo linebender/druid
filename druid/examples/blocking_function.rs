@@ -23,7 +23,7 @@ use druid::{
 
 use druid::{
     widget::{Button, Either, Flex, Label, Spinner},
-    Target,
+    Handled, Target,
 };
 
 const FINISH_SLOW_FUNCTION: Selector<u32> = Selector::new("finish_slow_function");
@@ -59,12 +59,14 @@ impl AppDelegate<AppState> for Delegate {
         cmd: &Command,
         data: &mut AppState,
         _env: &Env,
-    ) -> bool {
+    ) -> Handled {
         if let Some(number) = cmd.get(FINISH_SLOW_FUNCTION) {
             data.processing = false;
             data.value = *number;
+            Handled::Yes
+        } else {
+            Handled::No
         }
-        true
     }
 }
 

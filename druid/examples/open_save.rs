@@ -15,7 +15,7 @@
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,
-    LocalizedString, Target, Widget, WindowDesc,
+    Handled, LocalizedString, Target, Widget, WindowDesc,
 };
 
 struct Delegate;
@@ -84,12 +84,12 @@ impl AppDelegate<String> for Delegate {
         cmd: &Command,
         data: &mut String,
         _env: &Env,
-    ) -> bool {
+    ) -> Handled {
         if let Some(Some(file_info)) = cmd.get(commands::SAVE_FILE) {
             if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
                 println!("Error writing file: {}", e);
             }
-            return false;
+            return Handled::Yes;
         }
         if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
             match std::fs::read_to_string(file_info.path()) {
@@ -101,8 +101,8 @@ impl AppDelegate<String> for Delegate {
                     println!("Error opening file: {}", e);
                 }
             }
-            return false;
+            return Handled::Yes;
         }
-        true
+        Handled::No
     }
 }

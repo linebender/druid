@@ -29,7 +29,7 @@ use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, PlatformError, Target,
+    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Target,
     TimerToken, WindowDesc, WindowId,
 };
 
@@ -207,9 +207,9 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    fn delegate_cmd(&mut self, cmd: &Command) -> bool {
+    fn delegate_cmd(&mut self, cmd: &Command) -> Handled {
         self.with_delegate(|del, data, env, ctx| del.command(ctx, cmd.target(), cmd, data, env))
-            .unwrap_or(true)
+            .unwrap_or(Handled::No)
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
@@ -319,11 +319,13 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    /// Returns `true` if the command was handled.
-    fn dispatch_cmd(&mut self, cmd: Command) -> bool {
-        if !self.delegate_cmd(&cmd) {
-            self.do_update();
-            return true;
+    fn dispatch_cmd(&mut self, cmd: Command) -> Handled {
+        let handled = self.delegate_cmd(&cmd);
+        // We do the update whether or not the command was handled, because the delegate has
+        // arbitrary user code in it: it could change the data but return Handled::No.
+        self.do_update();
+        if handled.is_handled() {
+            return handled;
         }
 
         match cmd.target() {
@@ -331,11 +333,11 @@ impl<T: Data> Inner<T> {
                 // first handle special window-level events
                 if cmd.is(sys_cmd::SET_MENU) {
                     self.set_menu(id, &cmd);
-                    return true;
+                    return Handled::Yes;
                 }
                 if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) {
                     self.show_context_menu(id, &cmd);
-                    return true;
+                    return Handled::Yes;
                 }
                 if let Some(w) = self.windows.get_mut(id) {
                     let event = Event::Command(cmd);
@@ -347,16 +349,20 @@ impl<T: Data> Inner<T> {
             Target::Widget(id) => {
                 for w in self.windows.iter_mut().filter(|w| w.may_contain_widget(id)) {
                     let event = Event::Internal(InternalEvent::TargetedCommand(cmd.clone()));
-                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        return true;
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env)
+                        .is_handled()
+                    {
+                        return Handled::Yes;
                     }
                 }
             }
             Target::Global => {
                 for w in self.windows.iter_mut() {
                     let event = Event::Command(cmd.clone());
-                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        return true;
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env)
+                        .is_handled()
+                    {
+                        return Handled::Yes;
                     }
                 }
             }
@@ -364,10 +370,10 @@ impl<T: Data> Inner<T> {
                 log::error!("{:?} reached window handler with `Target::Auto`", cmd);
             }
         }
-        false
+        Handled::No
     }
 
-    fn do_window_event(&mut self, source_id: WindowId, event: Event) -> bool {
+    fn do_window_event(&mut self, source_id: WindowId, event: Event) -> Handled {
         match event {
             Event::Command(..) | Event::Internal(InternalEvent::TargetedCommand(..)) => {
                 panic!("commands should be dispatched via dispatch_cmd");
@@ -378,13 +384,13 @@ impl<T: Data> Inner<T> {
         // if the event was swallowed by the delegate we consider it handled?
         let event = match self.delegate_event(source_id, event) {
             Some(event) => event,
-            None => return true,
+            None => return Handled::Yes,
         };
 
         if let Some(win) = self.windows.get_mut(source_id) {
             win.event(&mut self.command_queue, event, &mut self.data, &self.env)
         } else {
-            false
+            Handled::No
         }
     }
 
@@ -490,7 +496,7 @@ impl<T: Data> AppState<T> {
     ///
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
-    fn do_window_event(&mut self, event: Event, window_id: WindowId) -> bool {
+    fn do_window_event(&mut self, event: Event, window_id: WindowId) -> Handled {
         let result = self.inner.borrow_mut().do_window_event(window_id, event);
         self.process_commands();
         self.inner.borrow_mut().do_update();
@@ -582,7 +588,7 @@ impl<T: Data> AppState<T> {
             T::Window(id) if cmd.is(sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::CONFIGURE_WINDOW) => self.configure_window(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => {
-                if !self.inner.borrow_mut().dispatch_cmd(cmd) {
+                if !self.inner.borrow_mut().dispatch_cmd(cmd).is_handled() {
                     self.request_close_window(id);
                 }
             }
@@ -779,6 +785,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn key_down(&mut self, event: KeyEvent) -> bool {
         self.app_state
             .do_window_event(Event::KeyDown(event), self.window_id)
+            .is_handled()
     }
 
     fn key_up(&mut self, event: KeyEvent) {
