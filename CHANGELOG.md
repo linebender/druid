@@ -69,6 +69,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Window construction: WindowDesc decomposed to PendingWindow and WindowConfig to allow for sub-windows and reconfiguration. ([#1235] by [@rjwittams])
 - `LocalizedString` and `LabelText` use `ArcStr` instead of String ([#1245] by [@cmyr])
 - `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
+- `Delegate::command` now returns `Handled`, not `bool` ([#1298] by [@jneem])
 
 ### Deprecated
 
@@ -492,6 +493,7 @@ Last release without a changelog :(
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
+[#1298]: https://github.com/linebender/druid/pull/1298
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
