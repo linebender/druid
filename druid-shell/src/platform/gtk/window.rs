@@ -20,6 +20,7 @@ use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::ffi::OsString;
 use std::os::raw::{c_int, c_uint};
+use std::panic::Location;
 use std::ptr;
 use std::slice;
 use std::sync::{Arc, Mutex, Weak};
@@ -119,6 +120,9 @@ enum IdleKind {
     Token(IdleToken),
 }
 
+// We use RefCells for interior mutability, but we try to structure things so that double-borrows
+// are impossible. See the documentation on crate::platform::x11::window::Window for more details,
+// since the idea there is basically the same.
 pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
@@ -139,12 +143,12 @@ pub(crate) struct WindowState {
     // we then copy onto `drawing_area`.
     surface: RefCell<Option<Surface>>,
     // The size of `surface` in pixels. This could be bigger than `drawing_area`.
-    surface_size: RefCell<(i32, i32)>,
+    surface_size: Cell<(i32, i32)>,
     // The invalid region, in display points.
     invalid: RefCell<Region>,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    current_keycode: RefCell<Option<u16>>,
+    current_keycode: Cell<Option<u16>>,
 }
 
 #[derive(Clone)]
@@ -241,11 +245,11 @@ impl WindowBuilder {
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
-            surface_size: RefCell::new((0, 0)),
+            surface_size: Cell::new((0, 0)),
             invalid: RefCell::new(Region::EMPTY),
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
-            current_keycode: RefCell::new(None),
+            current_keycode: Cell::new(None),
         });
 
         self.app
@@ -321,11 +325,7 @@ impl WindowBuilder {
                         scale = reported_scale;
                         state.scale.set(scale);
                         scale_changed = true;
-                        if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                            handler_borrow.scale(scale);
-                        } else {
-                            log::warn!("Failed to inform the handler of scale change because it was already borrowed");
-                        }
+                        state.with_handler(|h| h.scale(scale));
                     }
                 }
 
@@ -341,56 +341,53 @@ impl WindowBuilder {
                     if let Err(e) = state.resize_surface(extents.width, extents.height) {
                         log::error!("Failed to resize surface: {}", e);
                     }
-                    if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                        handler_borrow.size(size_dp);
-                    } else {
-                        log::warn!("Failed to inform the handler of a resize because it was already borrowed");
-                    }
+                    state.with_handler(|h| h.size(size_dp));
                     state.invalidate_rect(size_dp.to_rect());
                 }
 
-                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    // Note that we aren't holding any RefCell borrows here (except for the
-                    // WinHandler itself), because prepare_paint can call back into our WindowHandle
-                    // (most likely for invalidation).
-                    handler_borrow.prepare_paint();
+                state.with_handler(|h| h.prepare_paint());
 
-                    let surface = state.surface.try_borrow();
-                    if let Ok(Some(surface)) = surface.as_ref().map(|s| s.as_ref()) {
-                        if let Ok(mut invalid) = state.invalid.try_borrow_mut() {
-                            let surface_context = cairo::Context::new(surface);
-
-                            // Clip to the invalid region, in order that our surface doesn't get
-                            // messed up if there's any painting outside them.
-                            for rect in invalid.rects() {
-                                surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
-                            }
-                            surface_context.clip();
-
-                            surface_context.scale(scale.x(), scale.y());
-                            let mut piet_context = Piet::new(&surface_context);
-                            handler_borrow.paint(&mut piet_context, &invalid);
-                            if let Err(e) = piet_context.finish() {
-                                log::error!("piet error on render: {:?}", e);
-                            }
-
-                            // Copy the entire surface to the drawing area (not just the invalid
-                            // region, because there might be parts of the drawing area that were
-                            // invalidated by external forces).
-                            let alloc = widget.get_allocation();
-                            context.set_source_surface(&surface, 0.0, 0.0);
-                            context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
-                            context.fill();
-
-                            invalid.clear();
-                        } else {
-                            log::warn!("Drawing was skipped because the invalid region was borrowed");
-                        }
-                    } else {
-                        log::warn!("Drawing was skipped because there was no surface");
+                let invalid = match state.invalid.try_borrow_mut() {
+                    Ok(mut invalid) => std::mem::replace(&mut *invalid, Region::EMPTY),
+                    Err(_) => {
+                        log::error!("invalid region borrowed while drawing");
+                        Region::EMPTY
                     }
+                };
+
+                if let Ok(Some(surface)) = state.surface.try_borrow().as_ref().map(|s| s.as_ref()) {
+                    // Note that we're borrowing the surface while calling the handler. This is ok,
+                    // because we don't return control to the system or re-borrow the surface from
+                    // any code that the client can call.
+                    // (TODO: the above comment isn't true yet because of save_as_sync and
+                    // open_sync, but it will be true soon)
+                    state.with_handler_and_dont_check_the_other_borrows(|handler| {
+                        let surface_context = cairo::Context::new(surface);
+
+                        // Clip to the invalid region, in order that our surface doesn't get
+                        // messed up if there's any painting outside them.
+                        for rect in invalid.rects() {
+                            surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
+                        }
+                        surface_context.clip();
+
+                        surface_context.scale(scale.x(), scale.y());
+                        let mut piet_context = Piet::new(&surface_context);
+                        handler.paint(&mut piet_context, &invalid);
+                        if let Err(e) = piet_context.finish() {
+                            log::error!("piet error on render: {:?}", e);
+                        }
+
+                        // Copy the entire surface to the drawing area (not just the invalid
+                        // region, because there might be parts of the drawing area that were
+                        // invalidated by external forces).
+                        let alloc = widget.get_allocation();
+                        context.set_source_surface(&surface, 0.0, 0.0);
+                        context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
+                        context.fill();
+                    });
                 } else {
-                    log::warn!("Drawing was skipped because the handler was already borrowed");
+                    log::warn!("Drawing was skipped because there was no surface");
                 }
             }
 
@@ -399,7 +396,7 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                state.with_handler(|handler| {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
@@ -415,9 +412,7 @@ impl WindowBuilder {
                             },
                         );
                     }
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
+                });
             }
 
             Inhibit(true)
@@ -425,7 +420,7 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                state.with_handler(|handler| {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
@@ -441,161 +436,152 @@ impl WindowBuilder {
                             },
                         );
                     }
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
+                });
             }
 
             Inhibit(true)
         }));
 
-        win_state.drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let motion_state = motion.get_state();
-                let mouse_event = MouseEvent {
-                    pos: Point::from(motion.get_position()).to_dp(scale),
-                    buttons: get_mouse_buttons_from_modifiers(motion_state),
-                    mods: get_modifiers(motion_state),
-                    count: 0,
-                    focus: false,
-                    button: MouseButton::None,
-                    wheel_delta: Vec2::ZERO
-                };
-
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.mouse_move(&mouse_event);
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let crossing_state = crossing.get_state();
-                let mouse_event = MouseEvent {
-                    pos: Point::from(crossing.get_position()).to_dp(scale),
-                    buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                    mods: get_modifiers(crossing_state),
-                    count: 0,
-                    focus: false,
-                    button: MouseButton::None,
-                    wheel_delta: Vec2::ZERO
-                };
-
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.mouse_move(&mouse_event);
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let mods = get_modifiers(scroll.get_state());
-
-                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                // They claim that one "tick" on a scroll wheel should be 120 units.
-                let shift = mods.shift();
-                let wheel_delta = match scroll.get_direction() {
-                    ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
-                    ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
-                    ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
-                    ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
-                    ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
-                    ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
-                    ScrollDirection::Smooth => {
-                        //TODO: Look at how gtk's scroll containers implements it
-                        let (mut delta_x, mut delta_y) = scroll.get_delta();
-                        delta_x *= 120.;
-                        delta_y *= 120.;
-                        if shift {
-                            delta_x += delta_y;
-                            delta_y = 0.;
-                        }
-                        Some(Vec2::new(delta_x, delta_y))
-                    }
-                    e => {
-                        eprintln!(
-                            "Warning: the Druid widget got some whacky scroll direction {:?}",
-                            e
-                        );
-                        None
-                    }
-                };
-
-                if let Some(wheel_delta) = wheel_delta {
+        win_state.drawing_area.connect_motion_notify_event(
+            clone!(handle => move |_widget, motion| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let motion_state = motion.get_state();
                     let mouse_event = MouseEvent {
-                        pos: Point::from(scroll.get_position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
-                        mods,
+                        pos: Point::from(motion.get_position()).to_dp(scale),
+                        buttons: get_mouse_buttons_from_modifiers(motion_state),
+                        mods: get_modifiers(motion_state),
                         count: 0,
                         focus: false,
                         button: MouseButton::None,
-                        wheel_delta
+                        wheel_delta: Vec2::ZERO
                     };
 
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        handler.wheel(&mouse_event);
-                    } else {
-                        log::info!("GTK event was dropped because the handler was already borrowed");
+                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                }
+
+                Inhibit(true)
+            }),
+        );
+
+        win_state.drawing_area.connect_leave_notify_event(
+            clone!(handle => move |_widget, crossing| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let crossing_state = crossing.get_state();
+                    let mouse_event = MouseEvent {
+                        pos: Point::from(crossing.get_position()).to_dp(scale),
+                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
+                        mods: get_modifiers(crossing_state),
+                        count: 0,
+                        focus: false,
+                        button: MouseButton::None,
+                        wheel_delta: Vec2::ZERO
+                    };
+
+                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                }
+
+                Inhibit(true)
+            }),
+        );
+
+        win_state
+            .drawing_area
+            .connect_scroll_event(clone!(handle => move |_widget, scroll| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let mods = get_modifiers(scroll.get_state());
+
+                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                    // They claim that one "tick" on a scroll wheel should be 120 units.
+                    let shift = mods.shift();
+                    let wheel_delta = match scroll.get_direction() {
+                        ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
+                        ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
+                        ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
+                        ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
+                        ScrollDirection::Smooth => {
+                            //TODO: Look at how gtk's scroll containers implements it
+                            let (mut delta_x, mut delta_y) = scroll.get_delta();
+                            delta_x *= 120.;
+                            delta_y *= 120.;
+                            if shift {
+                                delta_x += delta_y;
+                                delta_y = 0.;
+                            }
+                            Some(Vec2::new(delta_x, delta_y))
+                        }
+                        e => {
+                            eprintln!(
+                                "Warning: the Druid widget got some whacky scroll direction {:?}",
+                                e
+                            );
+                            None
+                        }
+                    };
+
+                    if let Some(wheel_delta) = wheel_delta {
+                        let mouse_event = MouseEvent {
+                            pos: Point::from(scroll.get_position()).to_dp(scale),
+                            buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
+                            mods,
+                            count: 0,
+                            focus: false,
+                            button: MouseButton::None,
+                            wheel_delta
+                        };
+
+                        state.with_handler(|h| h.wheel(&mouse_event));
                     }
                 }
-            }
 
-            Inhibit(true)
-        }));
+                Inhibit(true)
+            }));
 
-        win_state.drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
-            if let Some(state) = handle.state.upgrade() {
+        win_state
+            .drawing_area
+            .connect_key_press_event(clone!(handle => move |_widget, key| {
+                if let Some(state) = handle.state.upgrade() {
 
-                let mut current_keycode = state.current_keycode.borrow_mut();
-                let hw_keycode = key.get_hardware_keycode();
-                let repeat = *current_keycode == Some(hw_keycode);
+                    let hw_keycode = key.get_hardware_keycode();
+                    let repeat = state.current_keycode.get() == Some(hw_keycode);
 
-                *current_keycode = Some(hw_keycode);
+                    state.current_keycode.set(Some(hw_keycode));
 
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_down(make_key_event(key, repeat, KeyState::Down));
-                } else {
-                    log::info!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
-            if let Some(state) = handle.state.upgrade() {
-
-                let mut current_keycode = state.current_keycode.borrow_mut();
-                if *current_keycode == Some(key.get_hardware_keycode()) {
-                    *current_keycode = None;
+                    state.with_handler(|h|
+                        h.key_down(make_key_event(key, repeat, KeyState::Down))
+                    );
                 }
 
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_up(make_key_event(key, false, KeyState::Up));
-                } else {
-                    log::info!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
+                Inhibit(true)
+            }));
 
-            Inhibit(true)
-        }));
+        win_state
+            .drawing_area
+            .connect_key_release_event(clone!(handle => move |_widget, key| {
+                if let Some(state) = handle.state.upgrade() {
+
+                    if state.current_keycode.get() == Some(key.get_hardware_keycode()) {
+                        state.current_keycode.set(None);
+                    }
+
+
+                    state.with_handler(|h|
+                        h.key_up(make_key_event(key, false, KeyState::Up))
+                    );
+                }
+
+                Inhibit(true)
+            }));
 
         win_state
             .window
             .connect_delete_event(clone!(handle => move |_widget, _ev| {
                 if let Some(state) = handle.state.upgrade() {
-                    state.handler.borrow_mut().request_close();
+                    state.with_handler(|h| h.request_close());
                     Inhibit(!state.closing.get())
                 } else {
                     Inhibit(false)
@@ -606,7 +592,7 @@ impl WindowBuilder {
             .drawing_area
             .connect_destroy(clone!(handle => move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
-                    state.handler.borrow_mut().destroy();
+                    state.with_handler(|h| h.destroy());
                 }
             }));
 
@@ -618,16 +604,42 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
-        let mut handler = win_state.handler.borrow_mut();
-        handler.connect(&handle.clone().into());
-        handler.scale(scale);
-        handler.size(self.size);
+        let size = self.size;
+        win_state.with_handler(|h| {
+            h.connect(&handle.clone().into());
+            h.scale(scale);
+            h.size(size);
+        });
 
         Ok(handle)
     }
 }
 
 impl WindowState {
+    #[track_caller]
+    fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
+        if self.invalid.try_borrow_mut().is_err() || self.surface.try_borrow_mut().is_err() {
+            log::error!("other RefCells were borrowed when calling into the handler");
+            return None;
+        }
+
+        self.with_handler_and_dont_check_the_other_borrows(f)
+    }
+
+    #[track_caller]
+    fn with_handler_and_dont_check_the_other_borrows<T, F: FnOnce(&mut dyn WinHandler) -> T>(
+        &self,
+        f: F,
+    ) -> Option<T> {
+        match self.handler.try_borrow_mut() {
+            Ok(mut h) => Some(f(&mut **h)),
+            Err(_) => {
+                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                None
+            }
+        }
+    }
+
     fn resize_surface(&self, width: i32, height: i32) -> Result<(), anyhow::Error> {
         fn next_size(x: i32) -> i32 {
             // We round up to the nearest multiple of `accuracy`, which is between x/2 and x/4.
@@ -638,10 +650,11 @@ impl WindowState {
         }
 
         let mut surface = self.surface.borrow_mut();
-        let mut cur_size = self.surface_size.borrow_mut();
+        let mut cur_size = self.surface_size.get();
         let (width, height) = (next_size(width), next_size(height));
-        if surface.is_none() || *cur_size != (width, height) {
-            *cur_size = (width, height);
+        if surface.is_none() || cur_size != (width, height) {
+            cur_size = (width, height);
+            self.surface_size.set(cur_size);
             if let Some(s) = surface.as_ref() {
                 s.finish();
             }
@@ -839,8 +852,7 @@ impl WindowHandle {
 
         glib::timeout_add(interval, move || {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    handler_borrow.timer(token);
+                if state.with_handler(|h| h.timer(token)).is_some() {
                     return glib::Continue(false);
                 }
             }
@@ -1015,7 +1027,7 @@ impl IdleHandle {
 
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
-    if let Ok(mut handler) = state.handler.try_borrow_mut() {
+    let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
 
         for item in queue {
@@ -1024,7 +1036,9 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
                 IdleKind::Token(it) => handler.idle(it),
             }
         }
-    } else {
+    });
+
+    if result.is_none() {
         log::warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
         // to empty the idle queue. Returning glib::source::Continue(true) achieves this but

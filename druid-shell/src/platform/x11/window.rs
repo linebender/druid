@@ -19,6 +19,7 @@ use std::cell::RefCell;
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
+use std::panic::Location;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -360,6 +361,22 @@ impl WindowBuilder {
 }
 
 /// An X11 window.
+//
+// We use lots of RefCells here, so to avoid panics we need some rules. The basic observation is
+// that there are two ways we can end up calling the code in this file:
+//
+// 1) it either comes from the system (e.g. through some X11 event), or
+// 2) from the client (e.g. druid, calling a method on its `WindowHandle`).
+//
+// Note that 2 only ever happens as a result of 1 (i.e., the system calls us, we call the client
+// using the `WinHandler`, and it calls us back). The rules are:
+//
+// a) We never call into the system as a result of 2. As a consequence, we never get 1
+//    re-entrantly.
+// b) We *almost* never call into the `WinHandler` while holding any of the other RefCells. There's
+//    an exception for `paint`. This is enforced by the `with_handler` method.
+//    (TODO: we could try to encode this exception statically, by making the data accessible in
+//    case 2 smaller than the data accessible in case 1).
 pub(crate) struct Window {
     id: u32,
     gc: Gcontext,
@@ -519,12 +536,41 @@ struct PresentData {
 pub struct CustomCursor(xproto::Cursor);
 
 impl Window {
+    #[track_caller]
+    fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
+        if self.cairo_surface.try_borrow_mut().is_err()
+            || self.state.try_borrow_mut().is_err()
+            || self.present_data.try_borrow_mut().is_err()
+            || self.buffers.try_borrow_mut().is_err()
+        {
+            log::error!("other RefCells were borrowed when calling into the handler");
+            return None;
+        }
+
+        self.with_handler_and_dont_check_the_other_borrows(f)
+    }
+
+    #[track_caller]
+    fn with_handler_and_dont_check_the_other_borrows<T, F: FnOnce(&mut dyn WinHandler) -> T>(
+        &self,
+        f: F,
+    ) -> Option<T> {
+        match self.handler.try_borrow_mut() {
+            Ok(mut h) => Some(f(&mut **h)),
+            Err(_) => {
+                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                None
+            }
+        }
+    }
+
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        let mut handler = borrow_mut!(self.handler)?;
         let size = self.size()?;
-        handler.connect(&handle.into());
-        handler.scale(Scale::default());
-        handler.size(size);
+        self.with_handler(|h| {
+            h.connect(&handle.into());
+            h.scale(Scale::default());
+            h.size(size);
+        });
         Ok(())
     }
 
@@ -575,7 +621,7 @@ impl Window {
                     )
                 })?;
             self.add_invalid_rect(size.to_rect())?;
-            borrow_mut!(self.handler)?.size(size);
+            self.with_handler(|h| h.size(size));
         }
         Ok(())
     }
@@ -598,19 +644,19 @@ impl Window {
     }
 
     fn render(&self) -> Result<(), Error> {
-        borrow_mut!(self.handler)?.prepare_paint();
+        self.with_handler(|h| h.prepare_paint());
 
         if self.destroyed() {
             return Ok(());
         }
 
         self.update_cairo_surface()?;
+        let invalid = std::mem::replace(&mut borrow_mut!(self.state)?.invalid, Region::EMPTY);
         {
-            let state = borrow!(self.state)?;
             let surface = borrow!(self.cairo_surface)?;
             let cairo_ctx = cairo::Context::new(&surface);
 
-            for rect in state.invalid.rects() {
+            for rect in invalid.rects() {
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
@@ -620,20 +666,26 @@ impl Window {
             // We need to be careful with earlier returns here, because piet_ctx
             // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
             // even on error.
-            let err;
-            match borrow_mut!(self.handler) {
-                Ok(mut handler) => {
-                    handler.paint(&mut piet_ctx, &state.invalid);
-                    err = piet_ctx
+            //
+            // Note that we're borrowing the surface while calling the handler. This is ok, because
+            // we don't return control to the system or re-borrow the surface from any code that
+            // the client can call.
+            let result = self.with_handler_and_dont_check_the_other_borrows(|handler| {
+                handler.paint(&mut piet_ctx, &invalid);
+                piet_ctx
+                    .finish()
+                    .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e))
+            });
+            let err = match result {
+                None => {
+                    // The handler borrow failed, so finish didn't get called.
+                    piet_ctx
                         .finish()
-                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e));
+                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e))
                 }
-                Err(e) => {
-                    err = Err(e);
-                    if let Err(e) = piet_ctx.finish() {
-                        // We can't return both errors, so just log this one.
-                        log::error!("Window::render - piet finish failed in error branch: {}", e);
-                    }
+                Some(e) => {
+                    // Finish might have errored, in which case we want to propagate it.
+                    e
                 }
             };
             cairo_ctx.reset_clip();
@@ -644,16 +696,15 @@ impl Window {
         self.set_needs_present(false)?;
 
         let mut buffers = borrow_mut!(self.buffers)?;
-        let mut state = borrow_mut!(self.state)?;
         let pixmap = *buffers
             .idle_pixmaps
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
-            present.present(self.app.connection(), pixmap, self.id, &state.invalid)?;
+            present.present(self.app.connection(), pixmap, self.id, &invalid)?;
             buffers.idle_pixmaps.pop();
         } else {
-            for r in state.invalid.rects() {
+            for r in invalid.rects() {
                 let (x, y) = (r.x0 as i16, r.y0 as i16);
                 let (w, h) = (r.width() as u16, r.height() as u16);
                 self.app
@@ -661,7 +712,6 @@ impl Window {
                     .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
             }
         }
-        state.invalid.clear();
         Ok(())
     }
 
@@ -806,7 +856,7 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
+    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) {
         let hw_keycode = key_press.detail;
         let code = keycodes::hardware_keycode_to_code(hw_keycode);
         let mods = key_mods(key_press.state);
@@ -822,14 +872,10 @@ impl Window {
             repeat: false,
             is_composing: false,
         };
-        borrow_mut!(self.handler)?.key_down(key_event);
-        Ok(())
+        self.with_handler(|h| h.key_down(key_event));
     }
 
-    pub fn handle_button_press(
-        &self,
-        button_press: &xproto::ButtonPressEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_button_press(&self, button_press: &xproto::ButtonPressEvent) {
         let button = mouse_button(button_press.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_press.event_x as f64, button_press.event_y as f64),
@@ -843,14 +889,10 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_down(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_down(&mouse_event));
     }
 
-    pub fn handle_button_release(
-        &self,
-        button_release: &xproto::ButtonReleaseEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_button_release(&self, button_release: &xproto::ButtonReleaseEvent) {
         let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_release.event_x as f64, button_release.event_y as f64),
@@ -863,8 +905,7 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_up(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_up(&mouse_event));
     }
 
     pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
@@ -892,14 +933,11 @@ impl Window {
             wheel_delta: delta.into(),
         };
 
-        borrow_mut!(self.handler)?.wheel(&mouse_event);
+        self.with_handler(|h| h.wheel(&mouse_event));
         Ok(())
     }
 
-    pub fn handle_motion_notify(
-        &self,
-        motion_notify: &xproto::MotionNotifyEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_motion_notify(&self, motion_notify: &xproto::MotionNotifyEvent) {
         let mouse_event = MouseEvent {
             pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64),
             buttons: mouse_buttons(motion_notify.state),
@@ -909,32 +947,23 @@ impl Window {
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_move(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_move(&mouse_event));
     }
 
-    pub fn handle_client_message(
-        &self,
-        client_message: &xproto::ClientMessageEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
         if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
             if protocol == self.atoms.WM_DELETE_WINDOW {
-                self.handler.borrow_mut().request_close();
+                self.with_handler(|h| h.request_close());
             }
         }
-        Ok(())
     }
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn handle_destroy_notify(
-        &self,
-        _destroy_notify: &xproto::DestroyNotifyEvent,
-    ) -> Result<(), Error> {
-        borrow_mut!(self.handler)?.destroy();
-        Ok(())
+    pub fn handle_destroy_notify(&self, _destroy_notify: &xproto::DestroyNotifyEvent) {
+        self.with_handler(|h| h.destroy());
     }
 
     pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
@@ -1027,7 +1056,7 @@ impl Window {
         std::mem::swap(&mut *self.idle_queue.lock().unwrap(), &mut queue);
 
         let mut needs_redraw = false;
-        if let Ok(mut handler) = self.handler.try_borrow_mut() {
+        self.with_handler(|handler| {
             for callback in queue {
                 match callback {
                     IdleKind::Callback(f) => {
@@ -1041,9 +1070,7 @@ impl Window {
                     }
                 }
             }
-        } else {
-            log::error!("Not running idle callbacks because the handler is borrowed");
-        }
+        });
 
         if needs_redraw {
             if let Err(e) = self.redraw_now() {
@@ -1067,9 +1094,7 @@ impl Window {
             }
             // Remove the timer and get the token
             let token = self.timer_queue.lock().unwrap().pop().unwrap().token();
-            if let Ok(mut handler_borrow) = self.handler.try_borrow_mut() {
-                handler_borrow.timer(token);
-            }
+            self.with_handler(|h| h.timer(token));
         }
     }
 }
