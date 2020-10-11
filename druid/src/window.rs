@@ -223,7 +223,7 @@ impl<T: Data> Window<T> {
             };
 
             self.root.event(&mut ctx, &event, data, env);
-            Handled::from_handled(ctx.is_handled)
+            Handled::from(ctx.is_handled)
         };
 
         // Clean up the timer token and do it immediately after the event handling

@@ -65,9 +65,11 @@ impl Handled {
     pub fn is_handled(self) -> bool {
         self == Handled::Yes
     }
+}
 
-    /// Returns `Handled` if `handled` is true, and `Unhandled` otherwise.
-    pub fn from_handled(handled: bool) -> Handled {
+impl From<bool> for Handled {
+    /// Returns `Handled::Yes` if `handled` is true, and `Handled::No` otherwise.
+    fn from(handled: bool) -> Handled {
         if handled {
             Handled::Yes
         } else {

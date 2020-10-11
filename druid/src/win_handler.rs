@@ -321,8 +321,6 @@ impl<T: Data> Inner<T> {
 
     fn dispatch_cmd(&mut self, cmd: Command) -> Handled {
         let handled = self.delegate_cmd(&cmd);
-        // We do the update whether or not the command was handled, because the delegate has
-        // arbitrary user code in it: it could change the data but return Handled::No.
         self.do_update();
         if handled.is_handled() {
             return handled;
