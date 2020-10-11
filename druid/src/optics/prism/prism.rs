@@ -173,41 +173,50 @@ where
         let _opt = self
             .prism
             .with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
+
+        // let id = ctx.widget_id();
+        // println!("{:?}" id);
+        // dbg!("event", _opt);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &S, env: &Env) {
+        let id = ctx.widget_id();
+        println!("{:?} lifecycle", id);
+
         let inner = &mut self.inner;
         let _opt = self
             .prism
             .with::<(), _>(data, |data| inner.lifecycle(ctx, event, data, env));
+
+        dbg!((id, _opt));
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &S, data: &S, env: &Env) {
+        let id = ctx.widget_id();
+        // println!("{:?}" update, id);
+
         let inner = &mut self.inner;
         let prism = &self.prism;
 
-        #[allow(clippy::unused_unit)]
+        #[allow(clippy::blocks_in_if_conditions)]
         match prism.with(data, |newer_data| {
-            match prism.with(old_data, |older_data| {
-                if !old_data.same(data) {
-                    // forwards older and newer data into inner
-                    inner.update(ctx, older_data, newer_data, env);
-                    // note: the variant wasn't been changed
-                    ()
-                }
-            }) {
-                // had both an older and newer data,
-                // do nothing more
-                Some(()) => (),
-                // only had the newer data
-                // send newer as both older and newer
-                // TODO: check if this is right
-                // maybe just ignore the inner update call..
-                None => {
-                    ctx.request_layout(); // variant was changed
-                    inner.update(ctx, newer_data, newer_data, env);
-                    ()
-                }
+            if prism
+                .with(old_data, |older_data| {
+                    if !old_data.same(data) {
+                        // forwards older and newer data into inner
+                        inner.update(ctx, older_data, newer_data, env);
+                    }
+                })
+                .is_none()
+            {
+                // this is when this variant just got activated
+                // ie. does not have an old_data
+
+                // ctx.children_changed();
+                // ctx.request_layout(); // variant was changed
+                // ctx.request_paint(); // variant was changed
+                // inner.update(ctx, newer_data, newer_data, env);
+                // inner.update(ctx, newer_data, newer_data, env);
             }
         }) {
             // already had the newer data,
@@ -217,13 +226,18 @@ where
             // didn't have the newer data,
             // check if at least the older data is available
             #[allow(clippy::single_match)]
-            None => match prism.with(old_data, |older_data| {
+            None => match prism.with(old_data, |_older_data| {
                 // only had the older data
                 // send older as both older and newer
                 // TODO: check if this is right
                 // maybe just ignore the inner update call..
-                ctx.request_layout(); // variant was changed
-                inner.update(ctx, older_data, older_data, env);
+                // ctx.children_changed();
+                // ctx.request_layout(); // variant was changed
+                // ctx.request_paint(); // variant was changed
+
+                // inner.update(ctx, older_data, older_data, env);
+                // inner.update(ctx, older_data, older_data, env);
+                dbg!("only has old data");
                 ()
             }) {
                 // already had only the older data,
@@ -232,12 +246,17 @@ where
                 // didn't have any of the older nor newer data,
                 // do nothing.
                 // TODO: check if this is right
-                None => (),
+                None => {
+                    // dbg!("no old, no new");
+                }
             },
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &S, env: &Env) -> Size {
+        let id = ctx.widget_id();
+        println!("{:?} layout", id);
+
         let inner = &mut self.inner;
         self.prism
             .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
@@ -245,8 +264,12 @@ where
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &S, env: &Env) {
+        let id = ctx.widget_id();
+        println!("{:?} paint", id);
+
         let inner = &mut self.inner;
-        self.prism.with(data, |data| inner.paint(ctx, data, env));
+        let _opt = self.prism.with(data, |data| inner.paint(ctx, data, env));
+        // dbg!("paint", _opt);
     }
 
     fn id(&self) -> Option<WidgetId> {
