@@ -63,7 +63,7 @@ pub enum Handled {
 impl Handled {
     /// Has the event been handled yet?
     pub fn is_handled(self) -> bool {
-        matches!(self, Handled::Yes)
+        self == Handled::Yes
     }
 
     /// Returns `Handled` if `handled` is true, and `Unhandled` otherwise.
