@@ -122,7 +122,7 @@ pub trait AppDelegate<T: Data> {
     /// This function is called with each ([`Target`], [`Command`]) pair before
     /// they are sent down the tree.
     ///
-    /// If your implementation returns `Handled::Unhandled`, the command will be sent down
+    /// If your implementation returns `Handled::No`, the command will be sent down
     /// the widget tree. Otherwise it will not.
     ///
     /// To do anything fancier than this, you can submit arbitary commands
