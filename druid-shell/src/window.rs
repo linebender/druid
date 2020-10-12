@@ -92,13 +92,28 @@ impl IdleToken {
     }
 }
 
+/// A token that uniquely identifies a file dialog request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
-pub struct FileDialogToken(usize);
+pub struct FileDialogToken(u64);
 
 impl FileDialogToken {
-    /// Create a new `FileDialogToken` with the given raw `usize` id.
-    pub const fn new(raw: usize) -> FileDialogToken {
-        FileDialogToken(raw)
+    /// A token that does not correspond to any file dialog.
+    pub const INVALID: FileDialogToken = FileDialogToken(0);
+
+    /// Create a new token.
+    pub fn next() -> FileDialogToken {
+        static COUNTER: Counter = Counter::new();
+        FileDialogToken(COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> FileDialogToken {
+        FileDialogToken(id)
+    }
+
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
+        self.0
     }
 }
 

@@ -129,8 +129,6 @@ pub(crate) struct WindowState {
     /// Used to determine whether to honor close requests from the system: we inhibit them unless
     /// this is true, and this gets set to true when our client requests a close.
     closing: Cell<bool>,
-    /// A counter for generating unique tokens.
-    next_token: Cell<usize>,
     drawing_area: DrawingArea,
     // A cairo surface for us to render to; we copy this to the drawing_area whenever necessary.
     // This extra buffer is necessitated by DrawingArea's painting model: when our paint callback
@@ -245,7 +243,6 @@ impl WindowBuilder {
             scale: Cell::new(scale),
             area: Cell::new(area),
             closing: Cell::new(false),
-            next_token: Cell::new(0),
             drawing_area,
             surface: RefCell::new(None),
             surface_size: Cell::new((0, 0)),
@@ -647,12 +644,6 @@ impl WindowState {
         }
     }
 
-    fn next_token(&self) -> usize {
-        let next = self.next_token.get();
-        self.next_token.set(next + 1);
-        next
-    }
-
     fn resize_surface(&self, width: i32, height: i32) -> Result<(), anyhow::Error> {
         fn next_size(x: i32) -> i32 {
             // We round up to the nearest multiple of `accuracy`, which is between x/2 and x/4.
@@ -948,7 +939,7 @@ impl WindowHandle {
 
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         if let Some(state) = self.state.upgrade() {
-            let tok = FileDialogToken::new(state.next_token());
+            let tok = FileDialogToken::next();
             state.defer(DeferredOp::Open(options, tok));
             Some(tok)
         } else {
@@ -958,7 +949,7 @@ impl WindowHandle {
 
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         if let Some(state) = self.state.upgrade() {
-            let tok = FileDialogToken::new(state.next_token());
+            let tok = FileDialogToken::next();
             state.defer(DeferredOp::SaveAs(options, tok));
             Some(tok)
         } else {
