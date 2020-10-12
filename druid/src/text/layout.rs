@@ -130,6 +130,7 @@ impl<T> TextLayout<T> {
     /// You may pass `f64::INFINITY` to disable word wrapping
     /// (the default behaviour).
     pub fn set_wrap_width(&mut self, width: f64) {
+        let width = width.max(0.0);
         // 1e-4 is an arbitrary small-enough value that we don't care to rewrap
         if (width - self.wrap_width).abs() > 1e-4 {
             self.wrap_width = width;
