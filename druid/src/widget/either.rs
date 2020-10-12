@@ -85,7 +85,7 @@ impl<T: Data> Widget<T> for Either<T> {
             let size = self.false_branch.layout(ctx, bc, data, env);
             self.false_branch
                 .set_layout_rect(ctx, data, env, size.to_rect());
-            ctx.set_paint_insets(self.true_branch.paint_insets());
+            ctx.set_paint_insets(self.false_branch.paint_insets());
             size
         }
     }

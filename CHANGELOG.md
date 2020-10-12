@@ -104,6 +104,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - TextBox doesn't reset position after unfocused. ([#1276] by [@sysint64])
 - Able to select text in multiple TextBoxes at once. ([#1276] by [@sysint64])
 - The scroll bar now shows when the contents of a scrollable area change size. ([#1278] by [@Majora320])
+- Fix `widget::Either` using the wrong paint insets ([#1299] by [@andrewhickman])
 
 ### Visual
 
@@ -330,6 +331,7 @@ Last release without a changelog :(
 [@koutoftimer]: https://github.com/koutoftimer
 [@tay64]: https://github.com/tay64
 [@JAicewizard]: https://github.com/JAicewizard
+[@andrewhickman]: https://github.com/andrewhickman
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -494,6 +496,7 @@ Last release without a changelog :(
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
+[#1299]: https://github.com/linebender/druid/pull/1299
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
