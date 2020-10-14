@@ -66,10 +66,17 @@ impl<T> Editor<T> {
         self.layout.set_wrap_width(width);
     }
 
-    /// Return the inner [`TextLayout`] objects.
+    /// Return a reference to the inner [`TextLayout`] object.
     ///
-    /// [`TextLayout`]: struct.TextLayout.html
-    pub fn layout(&mut self) -> &mut TextLayout<T> {
+    /// [`TextLayout`]: TextLayout
+    pub fn layout(&self) -> &TextLayout<T> {
+        &self.layout
+    }
+
+    /// Return a mutable reference to the inner [`TextLayout`] object.
+    ///
+    /// [`TextLayout`]: TextLayout
+    pub fn layout_mut(&mut self) -> &mut TextLayout<T> {
         &mut self.layout
     }
 }

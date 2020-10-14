@@ -113,7 +113,7 @@ impl<T> TextBox<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         let size = size.into();
-        self.editor.layout().set_text_size(size.clone());
+        self.editor.layout_mut().set_text_size(size.clone());
         self.placeholder.set_text_size(size);
     }
 
@@ -127,8 +127,16 @@ impl<T> TextBox<T> {
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         let font = font.into();
-        self.editor.layout().set_font(font.clone());
+        self.editor.layout_mut().set_font(font.clone());
         self.placeholder.set_font(font);
+    }
+
+    /// Return the [`Editor`] used by this `TextBox`.
+    ///
+    /// This is only needed in advanced cases, such as if you want to customize
+    /// the drawing of the text.
+    pub fn editor(&self) -> &Editor<T> {
+        &self.editor
     }
 }
 
