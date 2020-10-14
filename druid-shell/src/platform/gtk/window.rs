@@ -24,14 +24,14 @@ use std::panic::Location;
 use std::ptr;
 use std::slice;
 use std::sync::{Arc, Mutex, Weak};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::anyhow;
 use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -149,6 +149,9 @@ pub(crate) struct WindowState {
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
+    last_click: Cell<(f64, f64)>,
+    last_click_time: Cell<Instant>,
+    last_click_count: Cell<u8>,
 }
 
 #[derive(Clone)]
@@ -250,6 +253,9 @@ impl WindowBuilder {
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
+            last_click: Cell::new((0.0, 0.0)),
+            last_click_time: Cell::new(Instant::now()),
+            last_click_count: Cell::new(0),
         });
 
         self.app
@@ -400,17 +406,40 @@ impl WindowBuilder {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
-                        handler.mouse_down(
-                            &MouseEvent {
-                                pos: Point::from(event.get_position()).to_dp(scale),
-                                buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
-                                mods: get_modifiers(button_state),
-                                count: get_mouse_click_count(event.get_event_type()),
-                                focus: false,
-                                button,
-                                wheel_delta: Vec2::ZERO
-                            },
-                        );
+                        let gtk_count = get_mouse_click_count(event.get_event_type());
+                        let raw_pos = event.get_position();
+                        let count = if gtk_count == 1 {
+                            let this_click_time = Instant::now();
+                            let settings = state.drawing_area.get_settings().unwrap();
+                            let thresh_ms = settings.get_property_gtk_double_click_time();
+                            let thresh_dur = Duration::from_millis(thresh_ms as u64);
+                            let thresh_dist = settings.get_property_gtk_double_click_distance();
+                            let last_click = state.last_click.get();
+                            let dist = (raw_pos.0 - last_click.0).powi(2) + (raw_pos.1 - last_click.1).powi(2);
+                            if dist > (thresh_dist * thresh_dist) as f64 || this_click_time - state.last_click_time.get() > thresh_dur {
+                                state.last_click_count.set(0);
+                            }
+                            let count = state.last_click_count.get().saturating_add(1);
+                            state.last_click_count.set(count);
+                            state.last_click.set(raw_pos);
+                            state.last_click_time.set(this_click_time);
+                            count
+                        } else {
+                            0
+                        };
+                        if gtk_count == 0 || gtk_count == 1 {
+                            handler.mouse_down(
+                                &MouseEvent {
+                                    pos: Point::from(raw_pos).to_dp(scale),
+                                    buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
+                                    mods: get_modifiers(button_state),
+                                    count,
+                                    focus: false,
+                                    button,
+                                    wheel_delta: Vec2::ZERO
+                                },
+                            );
+                        }
                     }
                 });
             }
