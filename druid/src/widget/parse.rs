@@ -22,6 +22,10 @@ use crate::Data;
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
 pub struct Parse<T> {
     widget: T,
+    // because we are synthesizing the data for our inner widget, we keep track
+    // of 'old' and 'new' data as widgetpod would, so that our child can handle
+    // update() correctly.
+    prev_state: String,
     state: String,
 }
 
@@ -30,6 +34,7 @@ impl<T> Parse<T> {
     pub fn new(widget: T) -> Self {
         Self {
             widget,
+            prev_state: String::new(),
             state: String::new(),
         }
     }
@@ -38,7 +43,9 @@ impl<T> Parse<T> {
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
         self.widget.event(ctx, event, &mut self.state, env);
-        *data = self.state.parse().ok();
+        if self.state != self.prev_state {
+            *data = self.state.parse().ok();
+        }
     }
 
     fn lifecycle(
@@ -51,17 +58,24 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         if let LifeCycle::WidgetAdded = event {
             if let Some(data) = data {
                 self.state = data.to_string();
+                self.prev_state = self.state.clone();
             }
         }
         self.widget.lifecycle(ctx, event, &self.state, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
-        let old = match *data {
-            None => return, // Don't clobber the input
-            Some(ref x) => mem::replace(&mut self.state, x.to_string()),
-        };
-        self.widget.update(ctx, &old, &self.state, env)
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Option<T>, data: &Option<T>, env: &Env) {
+        if !old_data.same(data) {
+            if let Some(data) = data {
+                // only reset our state if the data has changed; this means we
+                // do *not* reset it, for instance, when the text changes from
+                // "42" to "42." (when parsing a float) but it *will* when going
+                // from "42.2" to "42.". This is an annoying limitation of this
+                // implementation.
+                self.prev_state = mem::replace(&mut self.state, data.to_string());
+            }
+        }
+        self.widget.update(ctx, &self.prev_state, &self.state, env)
     }
 
     fn layout(

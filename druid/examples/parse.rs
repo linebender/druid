@@ -19,15 +19,15 @@ pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(
         LocalizedString::new("parse-demo-window-title").with_placeholder("Number Parsing Demo"),
     );
-    let data = Some(0);
+    let data = Some(42.0);
     AppLauncher::with_window(main_window)
         .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }
 
-fn ui_builder() -> impl Widget<Option<u32>> {
-    let label = Label::new(|data: &Option<u32>, _env: &_| {
+fn ui_builder() -> impl Widget<Option<f32>> {
+    let label = Label::new(|data: &Option<f32>, _env: &_| {
         data.map_or_else(|| "Invalid input".into(), |x| x.to_string())
     });
     let input = Parse::new(TextBox::new());
