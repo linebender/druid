@@ -51,7 +51,6 @@ objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
-cairo-rs = { version = "0.9.1", default_features = false, optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
 # TODO(x11/dependencies): only use feature "xcb" if using X11
