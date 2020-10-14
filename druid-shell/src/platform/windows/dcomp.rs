@@ -23,7 +23,7 @@ use log::error;
 
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::d3d11::*;
-use winapi::um::d3dcommon::D3D_DRIVER_TYPE_HARDWARE;
+use winapi::um::d3dcommon::{D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP};
 use winapi::um::winnt::HRESULT;
 use winapi::Interface;
 use wio::com::ComPtr;
@@ -45,21 +45,29 @@ pub struct D3D11Device(ComPtr<ID3D11Device>);
 impl D3D11Device {
     /// Creates a new device with basic defaults.
     pub(crate) fn new_simple() -> Result<D3D11Device, HRESULT> {
+        let mut hr = 0;
         unsafe {
             let mut d3d11_device: *mut ID3D11Device = null_mut();
-            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // could probably set single threaded
-            let hr = D3D11CreateDevice(
-                null_mut(),
-                D3D_DRIVER_TYPE_HARDWARE,
-                null_mut(),
-                flags,
-                null(),
-                0,
-                D3D11_SDK_VERSION,
-                &mut d3d11_device,
-                null_mut(),
-                null_mut(),
-            );
+            // Note: could probably set single threaded in flags for small performance boost.
+            let flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+            // Prefer hardware but use warp if it's the only driver available.
+            for driver_type in &[D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP] {
+                hr = D3D11CreateDevice(
+                    null_mut(),
+                    *driver_type,
+                    null_mut(),
+                    flags,
+                    null(),
+                    0,
+                    D3D11_SDK_VERSION,
+                    &mut d3d11_device,
+                    null_mut(),
+                    null_mut(),
+                );
+                if SUCCEEDED(hr) {
+                    break;
+                }
+            }
             if !SUCCEEDED(hr) {
                 error!("D3D11CreateDevice: 0x{:x}", hr);
             }
