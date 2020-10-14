@@ -13,7 +13,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Added documentation to resizable() and show_titlebar() in WindowDesc. ([#1037] by [@rhzk])
 - Windows: Added internal functions to handle Re-entrancy. ([#1037] by [@rhzk])
 - Windows: WindowDesc: Create window with disabled titlebar, maximized or minimized state, and with position. ([#1037] by [@rhzk])
-- Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037] by [@rhzk])
+- Windows: WindowHandle: Change window state. Toggle titlebar. Change size and position of window. ([#1037], [#1324] by [@rhzk])
 - Windows: WindowHandle: Added handle_titlebar(), Allowing a custom titlebar to behave like the OS one. ([#1037] by [@rhzk])
 - `OPEN_PANEL_CANCELLED` and `SAVE_PANEL_CANCELLED` commands. ([#1061] by @cmyr)
 - Export `Image` and `ImageData` by default. ([#1011] by [@covercash2])
@@ -523,6 +523,7 @@ Last release without a changelog :(
 [#1306]: https://github.com/linebender/druid/pull/1306
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
+[#1324]: https://github.com/linebender/druid/pull/1324
 [#1326]: https://github.com/linebender/druid/pull/1326
 [#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
