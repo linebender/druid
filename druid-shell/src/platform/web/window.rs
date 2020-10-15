@@ -42,7 +42,7 @@ use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::window;
-use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -571,11 +571,19 @@ impl WindowHandle {
             .map(|s| FileInfo { path: s.into() })
     }
 
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        None
+    }
+
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         log::warn!("save_as_sync is currently unimplemented for web.");
         self.file_dialog(FileDialogType::Save, options)
             .ok()
             .map(|s| FileInfo { path: s.into() })
+    }
+
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        None
     }
 
     fn render_soon(&self) {

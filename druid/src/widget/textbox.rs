@@ -113,7 +113,7 @@ impl<T> TextBox<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         let size = size.into();
-        self.editor.layout().set_text_size(size.clone());
+        self.editor.layout_mut().set_text_size(size.clone());
         self.placeholder.set_text_size(size);
     }
 
@@ -127,8 +127,16 @@ impl<T> TextBox<T> {
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         let font = font.into();
-        self.editor.layout().set_font(font.clone());
+        self.editor.layout_mut().set_font(font.clone());
         self.placeholder.set_font(font);
+    }
+
+    /// Return the [`Editor`] used by this `TextBox`.
+    ///
+    /// This is only needed in advanced cases, such as if you want to customize
+    /// the drawing of the text.
+    pub fn editor(&self) -> &Editor<T> {
+        &self.editor
     }
 }
 
@@ -140,7 +148,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
 
         //// when advancing the cursor, we want some additional padding
         let padding = TEXT_INSETS.x0 * 2.;
-        if overall_text_width < self_width {
+        if overall_text_width < self_width - padding {
             // There's no offset if text is smaller than text box
             //
             // [***I*  ]
@@ -174,18 +182,22 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
+                let mut mouse = mouse.clone();
+                mouse.pos += Vec2::new(self.hscroll_offset, 0.0);
 
                 if !mouse.focus {
                     self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                    self.editor.click(mouse, data);
+                    self.editor.click(&mouse, data);
                 }
 
                 ctx.request_paint();
             }
             Event::MouseMove(mouse) => {
+                let mut mouse = mouse.clone();
+                mouse.pos += Vec2::new(self.hscroll_offset, 0.0);
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
-                    self.editor.drag(mouse, data);
+                    self.editor.drag(&mouse, data);
                     ctx.request_paint();
                 }
             }
@@ -351,7 +363,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 // (commonly when there is trailing whitespace) so we clamp it
                 // to the right edge.
                 let mut cursor = self.editor.cursor_line() + text_pos.to_vec2();
-                let dx = size.width - TEXT_INSETS.x_value() - cursor.p0.x;
+                let dx = size.width + self.hscroll_offset - TEXT_INSETS.x_value() - cursor.p0.x;
                 if dx < 0.0 {
                     cursor = cursor + Vec2::new(dx, 0.);
                 }
