@@ -148,7 +148,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
 
         //// when advancing the cursor, we want some additional padding
         let padding = TEXT_INSETS.x0 * 2.;
-        if overall_text_width < self_width {
+        if overall_text_width < self_width - padding {
             // There's no offset if text is smaller than text box
             //
             // [***I*  ]
