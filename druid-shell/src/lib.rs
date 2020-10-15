@@ -69,7 +69,7 @@ pub use error::Error;
 pub use hotkey::{HotKey, RawMods, SysMods};
 pub use keyboard::{Code, IntoKey, KbKey, KeyEvent, KeyState, Location, Modifiers};
 pub use menu::Menu;
-pub use mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+pub use mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent, PointerType};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};

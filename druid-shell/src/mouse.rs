@@ -19,6 +19,15 @@ use crate::piet::ImageBuf;
 use crate::platform;
 use crate::Modifiers;
 
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PointerType {
+    None,
+    Mouse,
+    Stylus,
+    Unknown,
+}
+
 /// Information about the mouse event.
 ///
 /// Every mouse event can have a new position. There is no guarantee of
@@ -54,6 +63,8 @@ pub struct MouseEvent {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     pub wheel_delta: Vec2,
+
+    pub pointer_type: PointerType,
 }
 
 /// An indicator of which mouse button was pressed.

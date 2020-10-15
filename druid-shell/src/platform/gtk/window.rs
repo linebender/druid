@@ -39,7 +39,7 @@ use crate::common_util::{ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent, PointerType};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
@@ -436,7 +436,8 @@ impl WindowBuilder {
                                     count,
                                     focus: false,
                                     button,
-                                    wheel_delta: Vec2::ZERO
+                                    wheel_delta: Vec2::ZERO,
+                                    pointer_type: get_mouse_pointer_type(event.get_device_tool()),
                                 },
                             );
                         }
@@ -461,7 +462,8 @@ impl WindowBuilder {
                                 count: 0,
                                 focus: false,
                                 button,
-                                wheel_delta: Vec2::ZERO
+                                wheel_delta: Vec2::ZERO,
+                                pointer_type: get_mouse_pointer_type(event.get_device_tool()),
                             },
                         );
                     }
@@ -483,7 +485,8 @@ impl WindowBuilder {
                         count: 0,
                         focus: false,
                         button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
+                        wheel_delta: Vec2::ZERO,
+                        pointer_type: get_mouse_pointer_type(motion.get_device_tool()),
                     };
 
                     state.with_handler(|h| h.mouse_move(&mouse_event));
@@ -505,7 +508,8 @@ impl WindowBuilder {
                         count: 0,
                         focus: false,
                         button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
+                        wheel_delta: Vec2::ZERO,
+                        pointer_type: get_mouse_pointer_type(crossing.get_device_tool()),
                     };
 
                     state.with_handler(|h| h.mouse_move(&mouse_event));
@@ -560,7 +564,8 @@ impl WindowBuilder {
                             count: 0,
                             focus: false,
                             button: MouseButton::None,
-                            wheel_delta
+                            wheel_delta,
+                            pointer_type: get_mouse_pointer_type(scroll.get_device_tool()),
                         };
 
                         state.with_handler(|h| h.wheel(&mouse_event));
@@ -1196,6 +1201,18 @@ fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
             log::warn!("Unexpected mouse click event type: {:?}", event_type);
             0
         }
+    }
+}
+
+fn get_mouse_pointer_type(device_tool: Option<gdk::DeviceTool>) -> PointerType{
+    if let Some(tool_type) = device_tool.map(|t| t.get_tool_type()) {
+        match tool_type {
+            gdk::DeviceToolType::Pen => PointerType::Stylus,
+            gdk::DeviceToolType::Mouse => PointerType::Mouse,
+            _ => PointerType::Unknown,
+        }
+    } else {
+        PointerType::Mouse // should be PointerType::None
     }
 }
 

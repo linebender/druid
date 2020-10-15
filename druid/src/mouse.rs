@@ -15,7 +15,7 @@
 //! The mousey bits
 
 use crate::kurbo::{Point, Vec2};
-use crate::{Cursor, Data, Modifiers, MouseButton, MouseButtons};
+use crate::{Cursor, Data, Modifiers, MouseButton, MouseButtons, PointerType};
 
 /// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
@@ -69,6 +69,8 @@ pub struct MouseEvent {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     pub wheel_delta: Vec2,
+
+    pub pointer_type: PointerType,
 }
 
 impl From<druid_shell::MouseEvent> for MouseEvent {
@@ -81,6 +83,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             focus,
             button,
             wheel_delta,
+            pointer_type,
         } = src;
         MouseEvent {
             pos,
@@ -91,6 +94,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             focus,
             button,
             wheel_delta,
+            pointer_type,
         }
     }
 }
