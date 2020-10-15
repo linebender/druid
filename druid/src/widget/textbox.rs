@@ -22,8 +22,8 @@ use crate::text::{
 };
 use crate::widget::prelude::*;
 use crate::{
-    theme, Affine, Cursor, FontDescriptor, HotKey, Insets, KbKey, KeyOrValue, Point, Selector,
-    SysMods, TimerToken,
+    theme, Affine, Color, Cursor, FontDescriptor, HotKey, Insets, KbKey, KeyOrValue, Point,
+    Selector, SysMods, TimerToken,
 };
 
 const BORDER_WIDTH: f64 = 1.;
@@ -106,6 +106,16 @@ impl<T> TextBox<T> {
         self
     }
 
+    /// Builder-style method for setting the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// [`Key<Color>`]: ../struct.Key.html
+    pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
+        self.set_text_color(color);
+        self
+    }
+
     /// Set the text size.
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
@@ -129,6 +139,19 @@ impl<T> TextBox<T> {
         let font = font.into();
         self.editor.layout_mut().set_font(font.clone());
         self.placeholder.set_font(font);
+    }
+
+    /// Set the text color.
+    ///
+    /// The argument can be either a `Color` or a [`Key<Color>`].
+    ///
+    /// If you change this property, you are responsible for calling
+    /// [`request_layout`] to ensure the label is updated.
+    ///
+    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
+    /// [`Key<Color>`]: ../struct.Key.html
+    pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
+        self.editor.layout_mut().set_text_color(color);
     }
 
     /// Return the [`Editor`] used by this `TextBox`.
