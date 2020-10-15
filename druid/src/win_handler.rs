@@ -21,7 +21,10 @@ use std::rc::Rc;
 
 use crate::kurbo::Size;
 use crate::piet::Piet;
-use crate::shell::{Application, IdleToken, MouseEvent, Region, Scale, WinHandler, WindowHandle};
+use crate::shell::{
+    Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region, Scale, WinHandler,
+    WindowHandle,
+};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
@@ -75,6 +78,7 @@ struct Inner<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
+    file_dialogs: HashMap<FileDialogToken, WindowId>,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
@@ -143,6 +147,7 @@ impl<T> AppState<T> {
             app,
             delegate,
             command_queue: VecDeque::new(),
+            file_dialogs: HashMap::new(),
             root_menu: None,
             ext_event_host,
             data,
@@ -606,9 +611,6 @@ impl<T: Data> AppState<T> {
 
     fn show_open_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd.get_unchecked(sys_cmd::SHOW_OPEN_PANEL).to_owned();
-        //FIXME: this is blocking; if we hold `borrow_mut` we are likely to cause
-        //a crash. as a workaround we take a clone of the window handle.
-        //it's less clear what the better solution would be.
         let handle = self
             .inner
             .borrow_mut()
@@ -616,14 +618,25 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let result = handle.and_then(|mut handle| handle.open_file_sync(options));
-        self.inner.borrow_mut().dispatch_cmd({
-            if let Some(info) = result {
+        let token = handle
+            .clone()
+            .and_then(|mut handle| handle.open_file(options.clone()));
+        if let Some(token) = token {
+            self.inner
+                .borrow_mut()
+                .file_dialogs
+                .insert(token, window_id);
+        } else {
+            // TODO: remove this (and also some spurious clones above) once all platforms support
+            // the non-sync version
+            let file_info = handle.and_then(|mut handle| handle.open_file_sync(options));
+            let cmd = if let Some(info) = file_info {
                 sys_cmd::OPEN_FILE.with(info).to(window_id)
             } else {
                 sys_cmd::OPEN_PANEL_CANCELLED.to(window_id)
-            }
-        });
+            };
+            self.inner.borrow_mut().dispatch_cmd(cmd);
+        }
     }
 
     fn show_save_panel(&mut self, cmd: Command, window_id: WindowId) {
@@ -635,14 +648,25 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let result = handle.and_then(|mut handle| handle.save_as_sync(options));
-        self.inner.borrow_mut().dispatch_cmd({
-            if let Some(info) = result {
+        let token = handle
+            .clone()
+            .and_then(|mut handle| handle.save_as(options.clone()));
+        if let Some(token) = token {
+            self.inner
+                .borrow_mut()
+                .file_dialogs
+                .insert(token, window_id);
+        } else {
+            // TODO: remove this (and also some spurious clones above) once all platforms support
+            // the non-sync version
+            let file_info = handle.and_then(|mut handle| handle.save_as_sync(options));
+            let cmd = if let Some(info) = file_info {
                 sys_cmd::SAVE_FILE.with(Some(info)).to(window_id)
             } else {
                 sys_cmd::SAVE_PANEL_CANCELLED.to(window_id)
-            }
-        });
+            };
+            self.inner.borrow_mut().dispatch_cmd(cmd);
+        }
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
@@ -757,6 +781,34 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn command(&mut self, id: u32) {
         self.app_state.handle_system_cmd(id, Some(self.window_id));
+    }
+
+    fn save_as(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.app_state.inner.borrow_mut();
+        if let Some(window_id) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                sys_cmd::SAVE_FILE.with(Some(info)).to(window_id)
+            } else {
+                sys_cmd::SAVE_PANEL_CANCELLED.to(window_id)
+            };
+            inner.dispatch_cmd(cmd);
+        } else {
+            log::error!("unknown save dialog token");
+        }
+    }
+
+    fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.app_state.inner.borrow_mut();
+        if let Some(window_id) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                sys_cmd::OPEN_FILE.with(info).to(window_id)
+            } else {
+                sys_cmd::OPEN_PANEL_CANCELLED.to(window_id)
+            };
+            inner.dispatch_cmd(cmd);
+        } else {
+            log::error!("unknown open dialog token");
+        }
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {

@@ -18,7 +18,6 @@ use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::TryFrom;
 use std::ffi::c_void;
-use std::ffi::OsString;
 use std::os::raw::{c_int, c_uint};
 use std::panic::Location;
 use std::ptr;
@@ -45,7 +44,7 @@ use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -149,6 +148,7 @@ pub(crate) struct WindowState {
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
+    deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
 #[derive(Clone)]
@@ -250,6 +250,7 @@ impl WindowBuilder {
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
+            deferred_queue: RefCell::new(Vec::new()),
         });
 
         self.app
@@ -623,7 +624,10 @@ impl WindowState {
             return None;
         }
 
-        self.with_handler_and_dont_check_the_other_borrows(f)
+        let ret = self.with_handler_and_dont_check_the_other_borrows(f);
+
+        self.run_deferred();
+        ret
     }
 
     #[track_caller]
@@ -688,6 +692,39 @@ impl WindowState {
             self.window.queue_draw();
         } else {
             log::warn!("Not invalidating rect because region already borrowed");
+        }
+    }
+
+    /// Pushes a deferred op onto the queue.
+    fn defer(&self, op: DeferredOp) {
+        self.deferred_queue.borrow_mut().push(op);
+    }
+
+    fn run_deferred(&self) {
+        let queue = self.deferred_queue.replace(Vec::new());
+        for op in queue {
+            match op {
+                DeferredOp::Open(options, token) => {
+                    let file_info = dialog::get_file_dialog_path(
+                        self.window.upcast_ref(),
+                        FileDialogType::Open,
+                        options,
+                    )
+                    .ok()
+                    .map(|s| FileInfo { path: s.into() });
+                    self.with_handler(|h| h.open_file(token, file_info));
+                }
+                DeferredOp::SaveAs(options, token) => {
+                    let file_info = dialog::get_file_dialog_path(
+                        self.window.upcast_ref(),
+                        FileDialogType::Save,
+                        options,
+                    )
+                    .ok()
+                    .map(|s| FileInfo { path: s.into() });
+                    self.with_handler(|h| h.save_as(token, file_info));
+                }
+            }
         }
     }
 }
@@ -900,16 +937,34 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.file_dialog(FileDialogType::Open, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(state) = self.state.upgrade() {
+            let tok = FileDialogToken::next();
+            state.defer(DeferredOp::Open(options, tok));
+            Some(tok)
+        } else {
+            None
+        }
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.file_dialog(FileDialogType::Save, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(state) = self.state.upgrade() {
+            let tok = FileDialogToken::next();
+            state.defer(DeferredOp::SaveAs(options, tok));
+            Some(tok)
+        } else {
+            None
+        }
+    }
+
+    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::error!("save as sync no longer supported on GTK");
+        None
+    }
+
+    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::error!("open file sync no longer supported on GTK");
+        None
     }
 
     /// Get a handle that can be used to schedule an idle task.
@@ -969,18 +1024,6 @@ impl WindowHandle {
     pub fn set_title(&self, title: impl Into<String>) {
         if let Some(state) = self.state.upgrade() {
             state.window.set_title(&(title.into()));
-        }
-    }
-
-    fn file_dialog(
-        &self,
-        ty: FileDialogType,
-        options: FileDialogOptions,
-    ) -> Result<OsString, ShellError> {
-        if let Some(state) = self.state.upgrade() {
-            dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
-        } else {
-            Err(anyhow!("Cannot upgrade state from weak pointer to arc").into())
         }
     }
 }
