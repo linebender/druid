@@ -12,3 +12,6 @@ default-members = [
     "druid-shell",
     "druid-derive",
 ]
+
+[patch.crates-io]
+piet-common = { version = "0.2.0-pre5", git ="https://github.com/linebender/piet.git", rev="8a72745" }
