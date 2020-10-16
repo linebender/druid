@@ -121,6 +121,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Examples
 
 - Specify feature requirements in a standard way. ([#1050] by [@xStrom])
+- Added `event_viewer` example ([#1326] by [@cmyr])
 
 ### Maintenance
 
@@ -503,6 +504,7 @@ Last release without a changelog :(
 [#1299]: https://github.com/linebender/druid/pull/1299
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
+[#1326]: https://github.com/linebender/druid/pull/1326
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
