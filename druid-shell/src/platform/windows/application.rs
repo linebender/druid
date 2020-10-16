@@ -38,7 +38,7 @@ use super::accels;
 use super::clipboard::Clipboard;
 use super::error::Error;
 use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
-use super::window::{self, DS_HANDLE_DEFERRED, DS_REQUEST_DESTROY};
+use super::window::{self, DS_REQUEST_DESTROY};
 
 #[derive(Clone)]
 pub(crate) struct Application {
@@ -112,11 +112,6 @@ impl Application {
             // NOTE: Code here will not run when we aren't in charge of the message loop. That
             // will include when moving or resizing the window, and when showing modal dialogs.
             loop {
-                if let Ok(state) = self.state.try_borrow() {
-                    for hwnd in &state.windows {
-                        SendMessageW(*hwnd, DS_HANDLE_DEFERRED, 0, 0);
-                    }
-                }
                 let mut msg = mem::MaybeUninit::uninit();
 
                 // Timer messages have a low priority and tend to get delayed. Peeking for them

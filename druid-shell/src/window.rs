@@ -138,9 +138,15 @@ impl FileDialogToken {
 /// 4. after some more processing, `WinHandler::mouse_up` returns
 /// 5. druid-shell displays the "save as" dialog that was requested in step 3.
 #[allow(dead_code)]
+#[derive(Debug)]
 pub(crate) enum DeferredOp {
     SaveAs(FileDialogOptions, FileDialogToken),
     Open(FileDialogOptions, FileDialogToken),
+    ShowTitlebar(bool),
+    SetPosition(Point),
+    SetSize(Size),
+    SetResizable(bool),
+    SetWindowState(WindowState),
 }
 
 /// Levels in the window system - Z order for display purposes.

@@ -753,6 +753,10 @@ impl WindowState {
                     .map(|s| FileInfo { path: s.into() });
                     self.with_handler(|h| h.save_as(token, file_info));
                 }
+                e => {
+                    // The other deferred ops shouldn't appear, because we don't defer them in GTK.
+                    log::error!("unexpected deferred op {:?}", e);
+                }
             }
         }
     }
