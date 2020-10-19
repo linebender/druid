@@ -16,8 +16,9 @@
 //!
 //! This example is fairly contrived; the basic idea is that there are three
 //! rows of widgets, each containing a ColorWell and two buttons. One button
-//! 'freezes' the ColorWell, sending it a color to display. The second button
-//! 'unfreezes' the ColorWell, which makes it start displaying random colors.
+//! 'pins' the ColorWell, sending it a color to display. The second button
+//! 'syncs' the ColorWell, which makes it start displaying random colors. just
+//! like the top widget
 //!
 //! The key insight is that each button is linked to a specific ColorWell, and
 //! can send messages that are only handled by that widget.
@@ -33,7 +34,7 @@ use std::time::Duration;
 use druid::kurbo::RoundedRect;
 use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::{
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, LocalizedString, PaintCtx, Rect, RenderContext, Selector, Size, TimerToken,
     UpdateCtx, Widget, WidgetExt, WindowDesc,
 };
@@ -44,24 +45,59 @@ const FREEZE_COLOR: Selector<Color> = Selector::new("identity-example.freeze-col
 const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
 
 /// Honestly: it's just a color in fancy clothing.
-#[derive(Debug, Clone, Data, Lens)]
+#[derive(Clone, Data)]
 struct OurData {
-    #[data(same_fn = "color_eq")]
     color: Color,
 }
 
-fn color_eq(one: &Color, two: &Color) -> bool {
-    one.as_rgba_u32() == two.as_rgba_u32()
+pub fn main() {
+    let window = WindowDesc::new(make_ui).title(
+        LocalizedString::new("identity-demo-window-title").with_placeholder("Color Freezing Fun"),
+    );
+    let data = OurData {
+        color: Color::BLACK,
+    };
+    AppLauncher::with_window(window)
+        .launch(data)
+        .expect("launch failed");
 }
 
-fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
-    let rgba = rgba.as_rgba_u32();
-    (
-        (rgba >> 24 & 255) as u8,
-        ((rgba >> 16) & 255) as u8,
-        ((rgba >> 8) & 255) as u8,
-        (rgba & 255) as u8,
-    )
+/// A constant `WidgetId`. This may be passed around and can be reused when
+/// rebuilding a widget graph; however it should only ever be associated with
+/// a single widget at a time.
+const ID_ONE: WidgetId = WidgetId::reserved(1);
+
+fn make_ui() -> impl Widget<OurData> {
+    // We can also generate these dynamically whenever we need it.
+    let id_two = WidgetId::next();
+    let id_three = WidgetId::next();
+
+    let mut column = Flex::column().with_flex_child(ColorWell::new(true), 1.0);
+    // This doenst need to be a loop, but it allows us to seperate the creation of the buttons and the colorwell.
+    for &id in &[ID_ONE, id_two, id_three] {
+        // Here we can se the `id` to make sure all the buttons corelate with the colorwell.
+        // We give the colorwell an id, and we use that same id to target our commands to that widget specifically.
+        // This allows us to send commands to only one widget, and not the whole window for example.
+        // In this case, when the buttons are clicked we send a command to the corresponding colorwell.
+        let colorwell = ColorWell::new(false).with_id(id);
+        let pin_button = Button::<OurData>::new("pin").on_click(move |ctx, data, _env| {
+            ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id))
+        });
+        let sync_button = Button::<OurData>::new("sync")
+            .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR.to(id)));
+
+        column = column.with_default_spacer().with_flex_child(
+            Flex::row()
+                .cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_flex_child(colorwell, 1.0)
+                .with_default_spacer()
+                .with_child(pin_button)
+                .with_default_spacer()
+                .with_child(sync_button),
+            0.5,
+        );
+    }
+    column.padding(10.0)
 }
 
 /// A widget that displays a color.
@@ -69,6 +105,8 @@ fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
 /// For the purpose of this fairly contrived demo, this widget works in one of two ways:
 /// either it is the main big color widget, which randomly cycles through colors, or else
 /// it is one of the freezable widgets, which can receive a command with a color to display.
+/// The implementation of this is not really relevant, the example is about the ids not this
+/// widget.
 struct ColorWell {
     randomize: bool,
     token: TimerToken,
@@ -97,7 +135,7 @@ impl Widget<OurData> for ColorWell {
         match event {
             Event::Timer(t) if t == &self.token => {
                 let time_since_start = (Instant::now() - self.start).as_nanos();
-                let (r, g, b, _) = split_rgba(&data.color);
+                let (r, g, b, _) = data.color.as_rgba8();
 
                 // there is no logic here; it's a very silly way of mutating the color.
                 data.color = match (time_since_start % 2, time_since_start % 3) {
@@ -124,7 +162,7 @@ impl Widget<OurData> for ColorWell {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {
-        if !old_data.same(data) {
+        if old_data.color.as_rgba_u32() != data.color.as_rgba_u32() {
             ctx.request_paint()
         }
     }
@@ -139,88 +177,4 @@ impl Widget<OurData> for ColorWell {
         let color = self.frozen.as_ref().unwrap_or(&data.color);
         ctx.fill(rect, color);
     }
-}
-
-pub fn main() {
-    let window = WindowDesc::new(make_ui).title(
-        LocalizedString::new("identity-demo-window-title").with_placeholder("Color Freezing Fun"),
-    );
-    AppLauncher::with_window(window)
-        .use_simple_logger()
-        .launch(OurData {
-            color: Color::BLACK,
-        })
-        .expect("launch failed");
-}
-
-/// A constant `WidgetId`. This may be passed around and can be reused when
-/// rebuilding a widget graph; however it should only ever be associated with
-/// a single widget at a time.
-const ID_ONE: WidgetId = WidgetId::reserved(1);
-
-fn make_ui() -> impl Widget<OurData> {
-    // two ids generated at runtime
-    let id_two = WidgetId::next();
-    let id_three = WidgetId::next();
-
-    Flex::column()
-        .with_flex_child(ColorWell::new(true), 1.0)
-        .with_default_spacer()
-        .with_flex_child(
-            Flex::row()
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .with_flex_child(ColorWell::new(false).with_id(ID_ONE), 1.0)
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(ID_ONE))
-                    }),
-                )
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR.to(ID_ONE))
-                    }),
-                ),
-            0.5,
-        )
-        .with_default_spacer()
-        .with_flex_child(
-            Flex::row()
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .with_flex_child(ColorWell::new(false).with_id(id_two), 1.)
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id_two))
-                    }),
-                )
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR.to(id_two))
-                    }),
-                ),
-            0.5,
-        )
-        .with_default_spacer()
-        .with_flex_child(
-            Flex::row()
-                .cross_axis_alignment(CrossAxisAlignment::Center)
-                .with_flex_child(ColorWell::new(false).with_id(id_three), 1.)
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("freeze").on_click(move |ctx, data, _env| {
-                        ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id_three))
-                    }),
-                )
-                .with_default_spacer()
-                .with_child(
-                    Button::<OurData>::new("unfreeze").on_click(move |ctx, _, _env| {
-                        ctx.submit_command(UNFREEZE_COLOR.to(id_three))
-                    }),
-                ),
-            0.5,
-        )
-        .padding(10.)
 }
