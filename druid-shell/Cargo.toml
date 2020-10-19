@@ -46,6 +46,7 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
             "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
 
 [target.'cfg(target_os="macos")'.dependencies]
+block = "0.1.6"
 cocoa = "0.23.0"
 objc = "0.2.7"
 core-graphics = "0.22.0"
