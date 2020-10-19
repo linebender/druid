@@ -14,11 +14,12 @@
 
 //! An example of sending commands to specific widgets.
 //!
-//! This example is fairly contrived; the basic idea is that there are three
-//! rows of widgets, each containing a ColorWell and two buttons. One button
-//! 'pins' the ColorWell, sending it a color to display. The second button
-//! 'syncs' the ColorWell, which makes it start displaying random colors. just
-//! like the top widget
+//! This example is fairly contrived; the basic idea is that there is one
+//! "top widget", displaying random colors, and are three rows of widgets,
+//! each containing a ColorWell and two buttons.
+//! One button 'pins' the ColorWell, sending it a color to display.
+//! The second button 'syncs' the ColorWell, which makes it start displaying
+//! the same random colors as the top widget.
 //!
 //! The key insight is that each button is linked to a specific ColorWell, and
 //! can send messages that are only handled by that widget.
@@ -41,8 +42,8 @@ use druid::{
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
 
-const FREEZE_COLOR: Selector<Color> = Selector::new("identity-example.freeze-color");
-const UNFREEZE_COLOR: Selector = Selector::new("identity-example.unfreeze-color");
+const PIN_COLOR: Selector<Color> = Selector::new("identity-example.pin-color");
+const SYNC_COLOR: Selector = Selector::new("identity-example.sync-color");
 
 /// Honestly: it's just a color in fancy clothing.
 #[derive(Clone, Data)]
@@ -73,18 +74,18 @@ fn make_ui() -> impl Widget<OurData> {
     let id_three = WidgetId::next();
 
     let mut column = Flex::column().with_flex_child(ColorWell::new(true), 1.0);
-    // This doenst need to be a loop, but it allows us to seperate the creation of the buttons and the colorwell.
+    // This doesn't need to be a loop, but it allows us to separate the creation of the buttons and the colorwell.
     for &id in &[ID_ONE, id_two, id_three] {
-        // Here we can se the `id` to make sure all the buttons corelate with the colorwell.
+        // Here we can see the `id` to make sure all the buttons correlate with the colorwell.
         // We give the colorwell an id, and we use that same id to target our commands to that widget specifically.
         // This allows us to send commands to only one widget, and not the whole window for example.
         // In this case, when the buttons are clicked we send a command to the corresponding colorwell.
         let colorwell = ColorWell::new(false).with_id(id);
         let pin_button = Button::<OurData>::new("pin").on_click(move |ctx, data, _env| {
-            ctx.submit_command(FREEZE_COLOR.with(data.color.clone()).to(id))
+            ctx.submit_command(PIN_COLOR.with(data.color.clone()).to(id))
         });
         let sync_button = Button::<OurData>::new("sync")
-            .on_click(move |ctx, _, _env| ctx.submit_command(UNFREEZE_COLOR.to(id)));
+            .on_click(move |ctx, _, _env| ctx.submit_command(SYNC_COLOR.to(id)));
 
         column = column.with_default_spacer().with_flex_child(
             Flex::row()
@@ -150,10 +151,10 @@ impl Widget<OurData> for ColorWell {
             Event::WindowConnected if self.randomize => {
                 self.token = ctx.request_timer(CYCLE_DURATION);
             }
-            Event::Command(cmd) if cmd.is(FREEZE_COLOR) => {
-                self.frozen = cmd.get(FREEZE_COLOR).cloned();
+            Event::Command(cmd) if cmd.is(PIN_COLOR) => {
+                self.frozen = cmd.get(PIN_COLOR).cloned();
             }
-            Event::Command(cmd) if cmd.is(UNFREEZE_COLOR) => self.frozen = None,
+            Event::Command(cmd) if cmd.is(SYNC_COLOR) => self.frozen = None,
             _ => (),
         }
     }
@@ -162,7 +163,7 @@ impl Widget<OurData> for ColorWell {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &OurData, data: &OurData, _: &Env) {
-        if old_data.color.as_rgba_u32() != data.color.as_rgba_u32() {
+        if old_data.color != data.color {
             ctx.request_paint()
         }
     }
