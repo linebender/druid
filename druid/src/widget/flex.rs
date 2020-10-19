@@ -619,13 +619,12 @@ impl<T: Data> Widget<T> for Flex<T> {
         // these two are calculated but only used if we're baseline aligned
         let mut max_above_baseline = 0f64;
         let mut max_below_baseline = 0f64;
-        let mut any_use_baseline = matches!(self.cross_alignment, CrossAxisAlignment::Baseline);
+        let mut any_use_baseline = self.cross_alignment == CrossAxisAlignment::Baseline;
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
         for child in &mut self.children {
-            any_use_baseline &=
-                matches!(child.params.alignment, Some(CrossAxisAlignment::Baseline));
+            any_use_baseline &= child.params.alignment == Some(CrossAxisAlignment::Baseline);
 
             if child.params.flex == 0.0 {
                 let child_bc = self
