@@ -22,6 +22,7 @@ use std::mem;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use block::ConcreteBlock;
 use cocoa::appkit::{
     CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
     NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
@@ -933,24 +934,54 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Open, options)
-            .map(|s| FileInfo { path: s.into() })
-    }
-
-    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        // TODO: implement this and get rid of open_file_sync
+    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("open_file_sync should no longer be called on mac!");
         None
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Save, options)
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        let token = FileDialogToken::next();
+        let self_clone = self.clone();
+        unsafe {
+            let panel = dialog::build_panel(FileDialogType::Open, options);
+            let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
+                let url = dialog::get_path(panel, response).map(|s| FileInfo { path: s.into() });
+                let view = self_clone.nsview.load();
+                if let Some(view) = (*view).as_ref() {
+                    let view_state: *mut c_void = *view.get_ivar("viewState");
+                    let view_state = &mut *(view_state as *mut ViewState);
+                    (*view_state).handler.open_file(token, url);
+                }
+            });
+            let block = block.copy();
+            let () = msg_send![panel, beginWithCompletionHandler: block];
+        }
+        Some(token)
     }
 
-    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        // TODO: implement this and get rid of save_as_sync
+    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("save_as_sync should no longer be called on mac!");
         None
+    }
+
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        let token = FileDialogToken::next();
+        let self_clone = self.clone();
+        unsafe {
+            let panel = dialog::build_panel(FileDialogType::Save, options);
+            let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
+                let url = dialog::get_path(panel, response).map(|s| FileInfo { path: s.into() });
+                let view = self_clone.nsview.load();
+                if let Some(view) = (*view).as_ref() {
+                    let view_state: *mut c_void = *view.get_ivar("viewState");
+                    let view_state = &mut *(view_state as *mut ViewState);
+                    (*view_state).handler.save_as(token, url);
+                }
+            });
+            let block = block.copy();
+            let () = msg_send![panel, beginWithCompletionHandler: block];
+        }
+        Some(token)
     }
 
     /// Set the title for this menu.
