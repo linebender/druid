@@ -940,23 +940,7 @@ impl WindowHandle {
     }
 
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        let token = FileDialogToken::next();
-        let self_clone = self.clone();
-        unsafe {
-            let panel = dialog::build_panel(FileDialogType::Open, options);
-            let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
-                let url = dialog::get_path(panel, response).map(|s| FileInfo { path: s.into() });
-                let view = self_clone.nsview.load();
-                if let Some(view) = (*view).as_ref() {
-                    let view_state: *mut c_void = *view.get_ivar("viewState");
-                    let view_state = &mut *(view_state as *mut ViewState);
-                    (*view_state).handler.open_file(token, url);
-                }
-            });
-            let block = block.copy();
-            let () = msg_send![panel, beginWithCompletionHandler: block];
-        }
-        Some(token)
+        self.open_save_impl(FileDialogType::Open, options)
     }
 
     pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
@@ -965,17 +949,29 @@ impl WindowHandle {
     }
 
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_save_impl(FileDialogType::Save, options)
+    }
+
+    fn open_save_impl(
+        &mut self,
+        ty: FileDialogType,
+        opts: FileDialogOptions,
+    ) -> Option<FileDialogToken> {
         let token = FileDialogToken::next();
         let self_clone = self.clone();
         unsafe {
-            let panel = dialog::build_panel(FileDialogType::Save, options);
+            let panel = dialog::build_panel(ty, opts);
             let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
                 let url = dialog::get_path(panel, response).map(|s| FileInfo { path: s.into() });
                 let view = self_clone.nsview.load();
                 if let Some(view) = (*view).as_ref() {
                     let view_state: *mut c_void = *view.get_ivar("viewState");
                     let view_state = &mut *(view_state as *mut ViewState);
-                    (*view_state).handler.save_as(token, url);
+                    if ty == FileDialogType::Open {
+                        (*view_state).handler.open_file(token, url);
+                    } else if ty == FileDialogType::Save {
+                        (*view_state).handler.save_as(token, url);
+                    }
                 }
             });
             let block = block.copy();
