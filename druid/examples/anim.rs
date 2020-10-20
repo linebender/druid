@@ -50,7 +50,8 @@ impl Widget<f64> for AnimWidget {
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
-        if data != old_data {
+        //this is just some margin of error, not very meaningfull in any real way.
+        if (data - old_data).abs() > 1e-8 {
             ctx.request_paint();
         }
     }
