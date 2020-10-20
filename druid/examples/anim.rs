@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! An example of an animating widget.
+//! An example of an animating widget. It is just a widget that
+//! requests an animation frame when it needs to, and draws the frame in the
+//! `paint` method.
+//! Once the animation is over it simply stops requesting animation frames.
+//! In this case the animation time(t) is in the data so that other widgets
+//! can also read the state of the animation if needed. This can also be in
+//! the widget itself, so that it is not part of the data.
 
 use std::f64::consts::PI;
 
@@ -20,44 +26,47 @@ use druid::kurbo::{Circle, Line};
 use druid::widget::prelude::*;
 use druid::{AppLauncher, Color, LocalizedString, Point, Vec2, WindowDesc};
 
-struct AnimWidget {
-    t: f64,
-}
+struct AnimWidget {}
 
-impl Widget<u32> for AnimWidget {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
+impl Widget<f64> for AnimWidget {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
-                self.t = 0.0;
+                *data = 0.0;
                 ctx.request_anim_frame();
             }
             Event::AnimFrame(interval) => {
-                ctx.request_paint();
-                self.t += (*interval as f64) * 1e-9;
-                if self.t < 1.0 {
+                *data += (*interval as f64) * 1e-9;
+                if *data < 1.0 {
                     ctx.request_anim_frame();
+                } else {
+                    *data = 0.0;
                 }
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
+        if data != old_data {
+            ctx.request_paint();
+        }
+    }
 
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &u32,
+        _data: &f64,
         _env: &Env,
     ) -> Size {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
-        let t = self.t;
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, _env: &Env) {
+        let t = *data;
         let center = Point::new(50.0, 50.0);
         ctx.paint_with_z_index(1, move |ctx| {
             let ambit = center + 45.0 * Vec2::from_angle((0.75 + t) * 2.0 * PI);
@@ -69,12 +78,12 @@ impl Widget<u32> for AnimWidget {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
+    let window = WindowDesc::new(|| AnimWidget {}).title(
         LocalizedString::new("anim-demo-window-title")
             .with_placeholder("You spin me right round..."),
     );
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(0)
+        .launch(0.0)
         .expect("launch failed");
 }
