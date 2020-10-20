@@ -36,8 +36,7 @@ use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
 use druid::widget::{Button, CrossAxisAlignment, Flex, WidgetId};
 use druid::{
-    AppLauncher, Color, Data, Lens, LocalizedString, Rect, Selector, TimerToken, WidgetExt,
-    WindowDesc,
+    AppLauncher, Color, Data, LocalizedString, Rect, Selector, TimerToken, WidgetExt, WindowDesc,
 };
 
 const CYCLE_DURATION: Duration = Duration::from_millis(100);
