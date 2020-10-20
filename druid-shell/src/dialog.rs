@@ -26,6 +26,7 @@ pub struct FileInfo {
 
 /// Type of file dialog.
 #[cfg(not(all(target_os = "linux", feature = "x11")))]
+#[derive(Clone, Copy, PartialEq)]
 pub enum FileDialogType {
     /// File open dialog.
     Open,
