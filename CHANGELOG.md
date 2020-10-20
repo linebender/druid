@@ -42,6 +42,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 - WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
 - CONFIGURE_WINDOW command to allow reconfiguration of an existing window. ([#1235] by [@rjwittams])
+- Added a ClipBox widget for building scrollable widgets ([#1248] by [@jneem])
 - `RawLabel` widget displays text `Data`. ([#1252] by [@cmyr])
 - 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1160] by [@rjwittams])
 - `RichText` and `Attribute` types for creating rich text ([#1255] by [@cmyr])
@@ -494,6 +495,7 @@ Last release without a changelog :(
 [#1238]: https://github.com/linebender/druid/pull/1238
 [#1241]: https://github.com/linebender/druid/pull/1241
 [#1245]: https://github.com/linebender/druid/pull/1245
+[#1248]: https://github.com/linebender/druid/pull/1248
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
 [#1255]: https://github.com/linebender/druid/pull/1255
