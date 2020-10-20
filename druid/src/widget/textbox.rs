@@ -44,6 +44,12 @@ pub struct TextBox<T> {
     cursor_timer: TimerToken,
     cursor_on: bool,
     multiline: bool,
+    /// true if a click event caused us to gain focus.
+    ///
+    /// On macOS, if focus happens via click then we set the selection based
+    /// on the click position; if focus happens automatically (e.g. on tab)
+    /// then we select our entire contents.
+    was_focused_from_click: bool,
 }
 
 impl TextBox<()> {
@@ -66,6 +72,7 @@ impl<T> TextBox<T> {
             cursor_on: false,
             placeholder,
             multiline: false,
+            was_focused_from_click: false,
         }
     }
 
@@ -196,6 +203,17 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         self.cursor_on = true;
         self.cursor_timer = token;
     }
+
+    // on macos we only draw the cursor if the selection is non-caret
+    #[cfg(target_os = "macos")]
+    fn should_draw_cursor(&self) -> bool {
+        self.cursor_on && self.editor.selection().is_caret()
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn should_draw_cursor(&self) -> bool {
+        self.cursor_on
+    }
 }
 
 impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
@@ -209,6 +227,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 mouse.pos += Vec2::new(self.hscroll_offset, 0.0);
 
                 if !mouse.focus {
+                    self.was_focused_from_click = true;
                     self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                     self.editor.click(&mouse, data);
                 }
@@ -284,7 +303,11 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.editor.set_text(data.to_owned());
                 self.editor.rebuild_if_needed(ctx.text(), env);
             }
-            LifeCycle::FocusChanged(_) => {
+            LifeCycle::FocusChanged(is_focused) => {
+                if cfg!(target_os = "macos") && *is_focused && !self.was_focused_from_click {
+                    self.editor.select_all(data);
+                }
+                self.was_focused_from_click = false;
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 ctx.request_paint();
             }
@@ -304,7 +327,6 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
-        let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         if self.multiline {
@@ -314,8 +336,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         self.editor.rebuild_if_needed(ctx.text(), env);
 
         let text_metrics = self.editor.layout().layout_metrics();
-        let text_height = text_metrics.size.height + TEXT_INSETS.y_value();
-        let height = text_height.max(min_height);
+        let height = text_metrics.size.height + TEXT_INSETS.y_value();
 
         let size = bc.constrain((width, height));
         let bottom_padding = (size.height - text_metrics.size.height) / 2.0;
@@ -328,7 +349,6 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = ctx.size();
-        let text_size = self.editor.layout().size();
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
@@ -356,15 +376,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-            // in the case that our text is smaller than the default size,
-            // we draw it vertically centered.
-            let extra_padding = if self.multiline {
-                0.
-            } else {
-                (size.height - text_size.height - TEXT_INSETS.y_value()).max(0.) / 2.
-            };
-
-            let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0 + extra_padding);
+            let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0);
 
             // Draw selection rect
             if !data.is_empty() {
@@ -381,7 +393,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             }
 
             // Paint the cursor if focused and there's no selection
-            if is_focused && self.cursor_on {
+            if is_focused && self.should_draw_cursor() {
                 // the cursor position can extend past the edge of the layout
                 // (commonly when there is trailing whitespace) so we clamp it
                 // to the right edge.

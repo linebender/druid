@@ -619,10 +619,13 @@ impl<T: Data> Widget<T> for Flex<T> {
         // these two are calculated but only used if we're baseline aligned
         let mut max_above_baseline = 0f64;
         let mut max_below_baseline = 0f64;
+        let mut any_use_baseline = self.cross_alignment == CrossAxisAlignment::Baseline;
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
         for child in &mut self.children {
+            any_use_baseline &= child.params.alignment == Some(CrossAxisAlignment::Baseline);
+
             if child.params.flex == 0.0 {
                 let child_bc = self
                     .direction
@@ -692,8 +695,8 @@ impl<T: Data> Widget<T> for Flex<T> {
         // the actual size needed to tightly fit the children on the minor axis.
         // Unlike the 'minor' var, this ignores the incoming constraints.
         let minor_dim = match self.direction {
-            Axis::Horizontal => max_below_baseline + max_above_baseline,
-            Axis::Vertical => minor,
+            Axis::Horizontal if any_use_baseline => max_below_baseline + max_above_baseline,
+            _ => minor,
         };
 
         let mut major = spacing.next().unwrap_or(0.);

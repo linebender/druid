@@ -42,6 +42,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WindowLevel` to control system window Z order, with Mac and GTK implementations  ([#1231] by [@rjwittams])
 - WIDGET_PADDING items added to theme and `Flex::with_default_spacer`/`Flex::add_default_spacer` ([#1220] by [@cmyr])
 - CONFIGURE_WINDOW command to allow reconfiguration of an existing window. ([#1235] by [@rjwittams])
+- Added a ClipBox widget for building scrollable widgets ([#1248] by [@jneem])
 - `RawLabel` widget displays text `Data`. ([#1252] by [@cmyr])
 - 'Tabs' widget allowing static and dynamic tabbed layouts. ([#1160] by [@rjwittams])
 - `RichText` and `Attribute` types for creating rich text ([#1255] by [@cmyr])
@@ -72,6 +73,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `LocalizedString` and `LabelText` use `ArcStr` instead of String ([#1245] by [@cmyr])
 - `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
 - `Delegate::command` now returns `Handled`, not `bool` ([#1298] by [@jneem])
+- `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 
 ### Deprecated
 
@@ -121,6 +123,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ### Examples
 
 - Specify feature requirements in a standard way. ([#1050] by [@xStrom])
+- Added `event_viewer` example ([#1326] by [@cmyr])
 
 ### Maintenance
 
@@ -492,17 +495,20 @@ Last release without a changelog :(
 [#1238]: https://github.com/linebender/druid/pull/1238
 [#1241]: https://github.com/linebender/druid/pull/1241
 [#1245]: https://github.com/linebender/druid/pull/1245
+[#1248]: https://github.com/linebender/druid/pull/1248
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
 [#1255]: https://github.com/linebender/druid/pull/1255
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
+[#1283]: https://github.com/linebender/druid/pull/1283
 [#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
+[#1326]: https://github.com/linebender/druid/pull/1326
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
