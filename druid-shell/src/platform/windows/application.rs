@@ -107,7 +107,10 @@ impl Application {
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         unsafe {
-            // Handle windows messages
+            // Handle windows messages.
+            //
+            // NOTE: Code here will not run when we aren't in charge of the message loop. That
+            // will include when moving or resizing the window, and when showing modal dialogs.
             loop {
                 if let Ok(state) = self.state.try_borrow() {
                     for hwnd in &state.windows {
