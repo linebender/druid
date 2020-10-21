@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! An example of a blocking function running in another thread. We have
-//! we give the other thread some data and then we also pass some data back
+//! An example of a blocking function running in another thread. We give
+//! the other thread some data and then we also pass some data back
 //! to the main thread using commands.
 
 use std::{thread, time};
