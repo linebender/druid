@@ -77,7 +77,7 @@ fn slow_function(number: u32) -> u32 {
     number + 1
 }
 
-struct Delegate {}
+struct Delegate;
 
 impl AppDelegate<AppState> for Delegate {
     fn command(
