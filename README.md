@@ -302,7 +302,7 @@ active and friendly community.
 [non-`druid` examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
-[LifeCycleCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
+[LifeCycleCtx]: https://docs.rs/druid/0.6.0/druid/struct.LifeCycleCtx.html
 [LayoutCtx]: https://docs.rs/druid/0.6.0/druid/struct.LayoutCtx.html
 [PaintCtx]: https://docs.rs/druid/0.6.0/druid/struct.PaintCtx.html
 [UpdateCtx]: https://docs.rs/druid/0.6.0/druid/struct.UpdateCtx.html
