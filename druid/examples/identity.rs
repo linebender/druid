@@ -58,6 +58,7 @@ pub fn main() {
         color: Color::BLACK,
     };
     AppLauncher::with_window(window)
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }
