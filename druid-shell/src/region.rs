@@ -45,6 +45,13 @@ impl Region {
         }
     }
 
+    #[deprecated(since = "0.7.0", note = "Use bounding_box() instead")]
+    // this existed on the previous Region type, and I've bumped into it
+    // a couple times while updating
+    pub fn to_rect(&self) -> Rect {
+        self.bounding_box()
+    }
+
     /// Returns `true` if this region has a non-empty intersection with the given rectangle.
     pub fn intersects(&self, rect: Rect) -> bool {
         self.rects.iter().any(|r| r.intersect(rect).area() > 0.0)
@@ -63,7 +70,7 @@ impl Region {
         let mut ret = BezPath::new();
         for rect in self.rects() {
             // Rect ignores the tolerance.
-            ret.extend(rect.to_bez_path(0.0));
+            ret.extend(rect.path_elements(0.0));
         }
         ret
     }
