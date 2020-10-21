@@ -19,7 +19,7 @@
 //! Usually we would put the state in the `Data`, but for things like animation
 //! we don't. This is because the animation state is not usefull to know for the
 //! rest of the app. If this is something the rest of your widgets should know
-//! about do put it in the `data`.
+//! about, you could put it in the data put it in the `data`.
 
 use std::f64::consts::PI;
 
