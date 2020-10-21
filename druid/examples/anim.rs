@@ -17,7 +17,7 @@
 //! `paint` method.
 //! Once the animation is over it simply stops requesting animation frames.
 //! Usually we would put the state in the `Data`, but for things like animation
-//! we don't. This is because the animation state is not usefull to know for the
+//! we don't. This is because the animation state is not useful to know for the
 //! rest of the app. If this is something the rest of your widgets should know
 //! about, you could put it in the data put it in the `data`.
 
