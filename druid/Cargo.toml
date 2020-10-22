@@ -26,6 +26,23 @@ image = ["druid-shell/image"]
 svg = ["usvg", "harfbuzz-sys"]
 x11 = ["druid-shell/x11"]
 
+# passing on all the image features. AVIF is not supported because it does not
+# support decoding, and thats al we use `Image` for.
+png = ["druid-shell/image_png"]
+jpeg = ["druid-shell/jpeg"]
+jpeg_rayon = ["druid-shell/jpeg_rayon"]
+gif = ["druid-shell/gif"]
+bmp = ["druid-shell/bmp"]
+ico = ["druid-shell/ico"]
+tiff = ["druid-shell/tiff"]
+webp = ["druid-shell/webp"]
+pnm = ["druid-shell/pnm"]
+dds = ["druid-shell/dds"]
+tga = ["druid-shell/tga"]
+farbfeld = ["druid-shell/farbfeld"]
+dxt = ["druid-shell/dxt"]
+hdr = ["druid-shell/hdr"]
+
 [dependencies]
 druid-shell = { version = "0.6.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.3.1", path = "../druid-derive" }
