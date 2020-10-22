@@ -167,23 +167,27 @@ fn derive_enum(
 
                     fn with<
                         #val_ty_par,
-                        #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par
+                        #func_ty_par
                     > (
                         &self,
                         data: &#ty#ty_generics,
                         f: #func_ty_par
-                    ) -> Option<#val_ty_par> {
+                    ) -> Option<#val_ty_par>
+                    where #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par
+                    {
                         #with_expr
                     }
 
                     fn with_mut<
                         #val_ty_par,
-                        #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par
+                        #func_ty_par
                     > (
                         &self,
                         data: &mut #ty#ty_generics,
                         f: #func_ty_par,
-                    ) -> Option<#val_ty_par> {
+                    ) -> Option<#val_ty_par>
+                    where #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par
+                    {
                         #with_expr
                     }
                 }

@@ -111,23 +111,27 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             #where_clause {
                 fn with<
                     #val_ty_par,
-                    #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par
+                    #func_ty_par
                 > (
                     &self,
                     data: &#ty#ty_generics,
                     f: #func_ty_par
-                ) -> #val_ty_par {
+                ) -> #val_ty_par
+                where #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par
+                {
                     f(&data.#field_name)
                 }
 
                 fn with_mut<
                     #val_ty_par,
-                    #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par
+                    #func_ty_par
                 > (
                     &self,
                     data: &mut #ty#ty_generics,
                     f: #func_ty_par
-                ) -> #val_ty_par {
+                ) -> #val_ty_par
+                where #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par
+                {
                     f(&mut data.#field_name)
                 }
             }

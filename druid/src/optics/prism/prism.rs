@@ -8,71 +8,75 @@ use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::Data;
 
-pub trait PartialPrism<S: ?Sized, A: ?Sized> {
-    fn with<V, F: FnOnce(&A) -> V>(&self, data: &S, f: F) -> Option<V>;
-    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut S, f: F) -> Option<V>;
+pub trait PartialPrism<T1: ?Sized, T2: ?Sized> {
+    fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&T2) -> V;
+    fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T2) -> V;
 }
 
-pub trait Prism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
-    fn replace<'a>(&self, data: &'a mut S, v: A) -> &'a mut S
+pub trait Prism<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
+    fn replace<'a>(&self, data: &'a mut T1, v: T2) -> &'a mut T1
     where
-        A: Sized;
+        T2: Sized;
 }
 
-pub trait DefaultUpgrade<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
-    fn default_upgrade(&self, v: A) -> S
+pub trait DefaultUpgrade<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
+    fn default_upgrade(&self, v: T2) -> T1
     where
-        A: Sized,
-        S: Default + Sized,
-        Self: Prism<S, A>,
+        T1: Default + Sized,
+        T2: Sized,
+        Self: Prism<T1, T2>,
     {
-        let mut base = S::default();
+        let mut base = T1::default();
         self.replace(&mut base, v);
         base
     }
 }
 
-impl<S: ?Sized, A: ?Sized, P> DefaultUpgrade<S, A> for P where P: PartialPrism<S, A> {}
+impl<T1: ?Sized, T2: ?Sized, P> DefaultUpgrade<T1, T2> for P where P: PartialPrism<T1, T2> {}
 
-pub trait RefPrism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
-    fn ref_replace<'a>(&self, data: &'a mut S, v: &A) -> &'a mut S
+pub trait RefPrism<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
+    fn ref_replace<'a>(&self, data: &'a mut T1, v: &T2) -> &'a mut T1
     where
-        A: Clone,
-        Self: Prism<S, A>,
+        T2: Clone,
+        Self: Prism<T1, T2>,
     {
         self.replace(data, v.clone())
     }
 }
 
 // TODO: see if is necessary
-pub trait RefDefaultPrism<S: ?Sized, A: ?Sized>: PartialPrism<S, A> {
-    fn ref_default_upgrade(&self, v: &A) -> S
+pub trait RefDefaultPrism<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
+    fn ref_default_upgrade(&self, v: &T2) -> T1
     where
-        A: Clone,
-        S: Default + Sized,
-        Self: Prism<S, A> + RefPrism<S, A>,
+        T1: Default + Sized,
+        T2: Clone,
+        Self: Prism<T1, T2> + RefPrism<T1, T2>,
     {
-        let mut data = S::default();
+        let mut data = T1::default();
         self.ref_replace(&mut data, v);
         data
     }
 }
 
-pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
+pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
     /// Copy the targeted value out of `data`
-    fn get(&self, data: &A) -> Option<B>
+    fn get(&self, data: &T1) -> Option<T2>
     where
-        B: Clone,
+        T2: Clone,
     {
-        self.with::<B, _>(data, |x| x.clone())
+        self.with::<T2, _>(data, |x| x.clone())
     }
 
     /// Set the targeted value in `data` to `value`
-    fn put(&self, data: &mut A, value: Option<B>)
+    fn put(&self, data: &mut T1, value: Option<T2>)
     where
-        B: Sized + Clone,
+        T2: Sized + Clone,
     {
-        self.with_mut::<Option<B>, _>(data, |x| {
+        self.with_mut::<Option<T2>, _>(data, |x| {
             match (x, value) {
                 // update the value; no discriminant change
                 (x, Some(value)) => {
@@ -88,45 +92,45 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
         });
     }
 
-    fn and_lens<L, C>(self, lens: L) -> affine_traversal::AndLens<Self, L, B>
+    fn and_lens<L, T3>(self, lens: L) -> affine_traversal::AndLens<Self, L, T2>
     where
-        L: lens::Lens<A, C> + Sized,
-        C: ?Sized,
+        T3: ?Sized,
         Self: Sized,
+        L: lens::Lens<T1, T3> + Sized,
     {
         affine_traversal::AndLens::new(self, lens)
     }
 
-    fn after_lens<L, BeforeA>(self, lens: L) -> affine_traversal::ThenAfterLens<L, Self, A>
+    fn after_lens<L, T0>(self, lens: L) -> affine_traversal::ThenAfterLens<L, Self, T1>
     where
-        L: lens::Lens<BeforeA, A> + Sized,
-        BeforeA: ?Sized,
+        T0: ?Sized,
         Self: Sized,
+        L: lens::Lens<T0, T1> + Sized,
     {
         affine_traversal::ThenAfterLens::new(lens, self)
     }
 
-    fn map<Get, Put, C>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, B>
+    fn map<Get, Put, T3>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, T2>
     where
-        Get: Fn(&B) -> Option<C>,
-        Put: Fn(&mut B, C),
+        Get: Fn(&T2) -> Option<T3>,
+        Put: Fn(&mut T2, T3),
         Self: Sized,
     {
         Then::new(self, Map::new(get, put))
     }
 
-    fn deref(self) -> Then<Self, Deref, B>
+    fn deref(self) -> Then<Self, Deref, T2>
     where
-        B: ops::Deref + ops::DerefMut,
+        T2: ops::Deref + ops::DerefMut,
         Self: Sized,
     {
         Then::new(self, Deref)
     }
 
-    fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
+    fn index<I>(self, index: I) -> Then<Self, Index<I>, T2>
     where
         I: Clone,
-        B: ops::Index<I> + ops::IndexMut<I>,
+        T2: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
         Then::new(self, Index::new(index))
@@ -134,15 +138,15 @@ pub trait PrismExt<A: ?Sized, B: ?Sized>: PartialPrism<A, B> {
 
     fn in_arc(self) -> InArc<Self>
     where
-        A: Clone,
-        B: Data,
+        T1: Clone,
+        T2: Data,
         Self: Sized,
     {
         InArc::new(self)
     }
 }
 
-impl<S: ?Sized, A: ?Sized, P: PartialPrism<S, A>> PrismExt<S, A> for P {}
+impl<T1: ?Sized, T2: ?Sized, P: PartialPrism<T1, T2>> PrismExt<T1, T2> for P {}
 
 pub struct PrismWrap<U, P, W> {
     inner: W,
@@ -161,40 +165,28 @@ impl<U, P, W> PrismWrap<U, P, W> {
     }
 }
 
-impl<S, A, P, W> Widget<S> for PrismWrap<A, P, W>
+impl<T1, T2, P, W> Widget<T1> for PrismWrap<T2, P, W>
 where
-    S: Data,
-    A: Data,
-    P: PartialPrism<S, A>,
-    W: Widget<A>,
+    T1: Data,
+    T2: Data,
+    P: PartialPrism<T1, T2>,
+    W: Widget<T2>,
 {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut S, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T1, env: &Env) {
         let inner = &mut self.inner;
         let _opt = self
             .prism
             .with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
-
-        // let id = ctx.widget_id();
-        // println!("{:?}" id);
-        // dbg!("event", _opt);
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &S, env: &Env) {
-        let id = ctx.widget_id();
-        println!("{:?} lifecycle", id);
-
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T1, env: &Env) {
         let inner = &mut self.inner;
         let _opt = self
             .prism
             .with::<(), _>(data, |data| inner.lifecycle(ctx, event, data, env));
-
-        dbg!((id, _opt));
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &S, data: &S, env: &Env) {
-        let id = ctx.widget_id();
-        // println!("{:?}" update, id);
-
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T1, data: &T1, env: &Env) {
         let inner = &mut self.inner;
         let prism = &self.prism;
 
@@ -237,8 +229,6 @@ where
 
                 // inner.update(ctx, older_data, older_data, env);
                 // inner.update(ctx, older_data, older_data, env);
-                dbg!("only has old data");
-                ()
             }) {
                 // already had only the older data,
                 // do nothing more.
@@ -246,30 +236,21 @@ where
                 // didn't have any of the older nor newer data,
                 // do nothing.
                 // TODO: check if this is right
-                None => {
-                    // dbg!("no old, no new");
-                }
+                None => {}
             },
         }
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &S, env: &Env) -> Size {
-        let id = ctx.widget_id();
-        println!("{:?} layout", id);
-
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T1, env: &Env) -> Size {
         let inner = &mut self.inner;
         self.prism
             .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
             .unwrap_or(Size::ZERO)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &S, env: &Env) {
-        let id = ctx.widget_id();
-        println!("{:?} paint", id);
-
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T1, env: &Env) {
         let inner = &mut self.inner;
         let _opt = self.prism.with(data, |data| inner.paint(ctx, data, env));
-        // dbg!("paint", _opt);
     }
 
     fn id(&self) -> Option<WidgetId> {
@@ -284,13 +265,13 @@ pub struct Variant<Get, GetMut, Replace> {
 }
 
 impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
-    pub fn new<S, A>(get: Get, get_mut: GetMut, replace: Replace) -> Self
+    pub fn new<T1, T2>(get: Get, get_mut: GetMut, replace: Replace) -> Self
     where
-        S: ?Sized,
-        A: Sized,
-        Get: Fn(&S) -> Option<&A>,
-        GetMut: Fn(&mut S) -> Option<&mut A>,
-        Replace: for<'a> Fn(&'a mut S, A) -> &'a mut S,
+        T1: ?Sized,
+        T2: Sized,
+        Get: Fn(&T1) -> Option<&T2>,
+        GetMut: Fn(&mut T1) -> Option<&mut T2>,
+        Replace: for<'a> Fn(&'a mut T1, T2) -> &'a mut T1,
     {
         Self {
             get,
@@ -300,34 +281,40 @@ impl<Get, GetMut, Replace> Variant<Get, GetMut, Replace> {
     }
 }
 
-impl<S, A, Get, GetMut, Replace> PartialPrism<S, A> for Variant<Get, GetMut, Replace>
+impl<T1, T2, Get, GetMut, Replace> PartialPrism<T1, T2> for Variant<Get, GetMut, Replace>
 where
-    S: ?Sized,
-    A: Sized,
-    Get: Fn(&S) -> Option<&A>,
-    GetMut: Fn(&mut S) -> Option<&mut A>,
-    Replace: for<'a> Fn(&'a mut S, A) -> &'a mut S,
+    T1: ?Sized,
+    T2: Sized,
+    Get: Fn(&T1) -> Option<&T2>,
+    GetMut: Fn(&mut T1) -> Option<&mut T2>,
+    Replace: for<'a> Fn(&'a mut T1, T2) -> &'a mut T1,
 {
-    fn with<V, F: FnOnce(&A) -> V>(&self, data: &S, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&T2) -> V,
+    {
         (self.get)(data).map(f)
     }
 
-    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut S, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T2) -> V,
+    {
         (self.get_mut)(data).map(f)
     }
 }
 
-impl<S, A, Get, GetMut, Replacer> Prism<S, A> for Variant<Get, GetMut, Replacer>
+impl<T1, T2, Get, GetMut, Replacer> Prism<T1, T2> for Variant<Get, GetMut, Replacer>
 where
-    S: ?Sized,
-    A: Sized,
-    Get: Fn(&S) -> Option<&A>,
-    GetMut: Fn(&mut S) -> Option<&mut A>,
-    Replacer: for<'a> Fn(&'a mut S, A) -> &'a mut S,
+    T1: ?Sized,
+    T2: Sized,
+    Get: Fn(&T1) -> Option<&T2>,
+    GetMut: Fn(&mut T1) -> Option<&mut T2>,
+    Replacer: for<'a> Fn(&'a mut T1, T2) -> &'a mut T1,
 {
-    fn replace<'a>(&self, data: &'a mut S, v: A) -> &'a mut S
+    fn replace<'a>(&self, data: &'a mut T1, v: T2) -> &'a mut T1
     where
-        A: Sized,
+        T2: Sized,
     {
         (self.replace)(data, v)
     }
@@ -376,17 +363,17 @@ macro_rules! prism {
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct Then<P1, P2, B: ?Sized> {
+pub struct Then<P1, P2, T2: ?Sized> {
     left: P1,
     right: P2,
-    _marker: PhantomData<B>,
+    _marker: PhantomData<T2>,
 }
 
-impl<P1, P2, B: ?Sized> Then<P1, P2, B> {
-    pub fn new<A: ?Sized, C: ?Sized>(left: P1, right: P2) -> Self
+impl<P1, P2, T2: ?Sized> Then<P1, P2, T2> {
+    pub fn new<T1: ?Sized, T3: ?Sized>(left: P1, right: P2) -> Self
     where
-        P1: PartialPrism<A, B>,
-        P2: PartialPrism<B, C>,
+        P1: PartialPrism<T1, T2>,
+        P2: PartialPrism<T2, T3>,
     {
         Self {
             left,
@@ -396,73 +383,79 @@ impl<P1, P2, B: ?Sized> Then<P1, P2, B> {
     }
 }
 
-impl<P1, P2, A, B, C> PartialPrism<A, C> for Then<P1, P2, B>
+impl<P1, P2, T1, T2, T3> PartialPrism<T1, T3> for Then<P1, P2, T2>
 where
-    A: ?Sized,
-    B: ?Sized,
-    C: ?Sized,
-    P1: PartialPrism<A, B>,
-    P2: PartialPrism<B, C>,
+    T1: ?Sized,
+    T2: ?Sized,
+    T3: ?Sized,
+    P1: PartialPrism<T1, T2>,
+    P2: PartialPrism<T2, T3>,
 {
-    fn with<V, F: FnOnce(&C) -> V>(&self, data: &A, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&T3) -> V,
+    {
         self.left.with(data, |b| self.right.with(b, f)).flatten()
     }
 
-    fn with_mut<V, F: FnOnce(&mut C) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T3) -> V,
+    {
         self.left
             .with_mut(data, |b| self.right.with_mut(b, f))
             .flatten()
     }
 }
 
-impl<P1, P2, A, B, C> Prism<A, C> for Then<P1, P2, B>
+impl<P1, P2, T1, T2, T3> Prism<T1, T3> for Then<P1, P2, T2>
 where
-    A: ?Sized + Default,
-    B: ?Sized + Default,
-    C: Sized + Clone,
-    P1: PartialPrism<A, B> + Prism<A, B> + RefPrism<A, B>,
-    P2: PartialPrism<B, C> + Prism<B, C> + RefPrism<B, C>,
+    T1: ?Sized + Default,
+    T2: ?Sized + Default,
+    T3: Sized + Clone,
+    P1: PartialPrism<T1, T2> + Prism<T1, T2> + RefPrism<T1, T2>,
+    P2: PartialPrism<T2, T3> + Prism<T2, T3> + RefPrism<T2, T3>,
 {
-    /// Given the matching path of `A` -> `B` -> `C`,
-    /// it is guaranteed that `A` will end up matching
-    /// to `B`, and that `B` will end up match to `C`.
+    /// Given the matching path of `T1` -> `T2` -> `T3`,
+    /// it is guaranteed that `T1` will end up matching
+    /// to `T2`, and that `T2` will end up match to `T3`.
     ///
-    /// First it tries replacing `B` -> `C`, and if
-    /// it's a success, this means that `A` -> `B` is
+    /// First it tries replacing `T2` -> `T3`, and if
+    /// it's a success, this means that `T1` -> `T2` is
     /// already in place.
     ///
-    /// Otherwise, if `A` is valued in some  
-    /// variant other than `B`, `C` is upgraded
-    /// to `B`, and `A` -> `B` is replaced.
-    fn replace<'a>(&self, data: &'a mut A, v: C) -> &'a mut A {
+    /// Otherwise, if `T1` is valued in some  
+    /// variant other than `T2`, `T3` is upgraded
+    /// to `T2`, and `T1` -> `T2` is replaced.
+    fn replace<'a>(&self, data: &'a mut T1, v: T3) -> &'a mut T1 {
         #[allow(clippy::unused_unit)]
         let some_replacement = self.left.with_mut(
             data,
-            // A -> B -> C was already set
-            // only replaces B -> C
-            // (as A -> B is already set)
+            // T1 -> T2 -> T3 was already set
+            // only replaces T2 -> T3
+            // (as T1 -> T2 is already set)
             |b| {
                 self.right.ref_replace(b, &v);
                 ()
             },
         );
         if some_replacement.is_none() {
-            // couldn't access A -> B,
+            // couldn't access T1 -> T2,
             // give up the replacement
-            // and build B -> C from scratch
-            let mut new_b = B::default();
+            // and build T2 -> T3 from scratch
+            let mut new_b = T2::default();
             self.right.replace(&mut new_b, v);
-            // replace A -> B
+            // replace T1 -> T2
             self.left.replace(data, new_b)
         } else {
-            // A -> B already set
+            // T1 -> T2 already set
             // (implicit with/with_mut above)
             data
         }
     }
 }
 
-impl<P1: Clone, P2: Clone, B> Clone for Then<P1, P2, B> {
+impl<P1: Clone, P2: Clone, T2> Clone for Then<P1, P2, T2> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),
@@ -479,25 +472,31 @@ pub struct Map<Get, Put> {
 }
 
 impl<Get, Put> Map<Get, Put> {
-    pub fn new<A: ?Sized, B>(get: Get, put: Put) -> Self
+    pub fn new<T1: ?Sized, T2>(get: Get, put: Put) -> Self
     where
-        Get: Fn(&A) -> Option<B>,
-        Put: Fn(&mut A, B),
+        Get: Fn(&T1) -> Option<T2>,
+        Put: Fn(&mut T1, T2),
     {
         Self { get, put }
     }
 }
 
-impl<A: ?Sized, B, Get, Put> PartialPrism<A, B> for Map<Get, Put>
+impl<T1: ?Sized, T2, Get, Put> PartialPrism<T1, T2> for Map<Get, Put>
 where
-    Get: Fn(&A) -> Option<B>,
-    Put: Fn(&mut A, B),
+    Get: Fn(&T1) -> Option<T2>,
+    Put: Fn(&mut T1, T2),
 {
-    fn with<V, F: FnOnce(&B) -> V>(&self, data: &A, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&T2) -> V,
+    {
         (&(self.get)(data)).as_ref().map(f)
     }
 
-    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, data: &mut A, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T2) -> V,
+    {
         let mut temp = (self.get)(data);
         let x = temp.as_mut().map(f);
         if let Some(b) = temp {
@@ -507,12 +506,12 @@ where
     }
 }
 
-impl<A, B, Get, Put> Prism<A, B> for Map<Get, Put>
+impl<T1, T2, Get, Put> Prism<T1, T2> for Map<Get, Put>
 where
-    Get: Fn(&A) -> Option<B>,
-    Put: Fn(&mut A, B),
+    Get: Fn(&T1) -> Option<T2>,
+    Put: Fn(&mut T1, T2),
 {
-    fn replace<'a>(&self, data: &'a mut A, v: B) -> &'a mut A {
+    fn replace<'a>(&self, data: &'a mut T1, v: T2) -> &'a mut T1 {
         (self.put)(data, v);
         data
     }
@@ -521,25 +520,31 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Deref;
 
-impl<S> PartialPrism<S, S::Target> for Deref
+impl<T> PartialPrism<T, T::Target> for Deref
 where
-    S: ?Sized + ops::Deref + ops::DerefMut,
+    T: ?Sized + ops::Deref + ops::DerefMut,
 {
-    fn with<V, F: FnOnce(&S::Target) -> V>(&self, data: &S, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &T, f: F) -> Option<V>
+    where
+        F: FnOnce(&T::Target) -> V,
+    {
         Some(f(data.deref()))
     }
 
-    fn with_mut<V, F: FnOnce(&mut S::Target) -> V>(&self, data: &mut S, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T::Target) -> V,
+    {
         Some(f(data.deref_mut()))
     }
 }
 
-impl<S> Prism<S, S::Target> for Deref
+impl<T> Prism<T, T::Target> for Deref
 where
-    S: ?Sized + ops::DerefMut,
-    S::Target: Sized,
+    T: ?Sized + ops::DerefMut,
+    T::Target: Sized,
 {
-    fn replace<'a>(&self, data: &'a mut S, v: S::Target) -> &'a mut S {
+    fn replace<'a>(&self, data: &'a mut T, v: T::Target) -> &'a mut T {
         *data.deref_mut() = v;
         data
     }
@@ -556,26 +561,32 @@ impl<I> Index<I> {
     }
 }
 
-impl<S, I> PartialPrism<S, S::Output> for Index<I>
+impl<T, I> PartialPrism<T, T::Output> for Index<I>
 where
-    S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
 {
-    fn with<V, F: FnOnce(&S::Output) -> V>(&self, data: &S, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &T, f: F) -> Option<V>
+    where
+        F: FnOnce(&T::Output) -> V,
+    {
         Some(f(&data[self.index.clone()]))
     }
-    fn with_mut<V, F: FnOnce(&mut S::Output) -> V>(&self, data: &mut S, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T::Output) -> V,
+    {
         Some(f(&mut data[self.index.clone()]))
     }
 }
 
-impl<S, I> Prism<S, S::Output> for Index<I>
+impl<T, I> Prism<T, T::Output> for Index<I>
 where
-    S: ?Sized + ops::Index<I> + ops::IndexMut<I>,
+    T: ?Sized + ops::Index<I> + ops::IndexMut<I>,
     I: Clone,
-    S::Output: Sized,
+    T::Output: Sized,
 {
-    fn replace<'a>(&self, data: &'a mut S, v: S::Output) -> &'a mut S {
+    fn replace<'a>(&self, data: &'a mut T, v: T::Output) -> &'a mut T {
         data[self.index.clone()] = v;
         data
     }
@@ -584,18 +595,24 @@ where
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Id;
 
-impl<S: ?Sized> PartialPrism<S, S> for Id {
-    fn with<V, F: FnOnce(&S) -> V>(&self, data: &S, f: F) -> Option<V> {
+impl<T: ?Sized> PartialPrism<T, T> for Id {
+    fn with<V, F>(&self, data: &T, f: F) -> Option<V>
+    where
+        F: FnOnce(&T) -> V,
+    {
         Some(f(data))
     }
 
-    fn with_mut<V, F: FnOnce(&mut S) -> V>(&self, data: &mut S, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut T, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T) -> V,
+    {
         Some(f(data))
     }
 }
 
-impl<S> Prism<S, S> for Id {
-    fn replace<'a>(&self, data: &'a mut S, v: S) -> &'a mut S {
+impl<T> Prism<T, T> for Id {
+    fn replace<'a>(&self, data: &'a mut T, v: T) -> &'a mut T {
         *data = v;
         data
     }
@@ -607,27 +624,33 @@ pub struct InArc<P> {
 }
 
 impl<P> InArc<P> {
-    pub fn new<S, A>(inner: P) -> Self
+    pub fn new<T1, T2>(inner: P) -> Self
     where
-        S: Clone,
-        A: Data,
-        P: PartialPrism<S, A>,
+        T1: Clone,
+        T2: Data,
+        P: PartialPrism<T1, T2>,
     {
         Self { inner }
     }
 }
 
-impl<S, A, P> PartialPrism<Arc<S>, A> for InArc<P>
+impl<T1, T2, P> PartialPrism<Arc<T1>, T2> for InArc<P>
 where
-    S: Clone,
-    A: Data,
-    P: PartialPrism<S, A>,
+    T1: Clone,
+    T2: Data,
+    P: PartialPrism<T1, T2>,
 {
-    fn with<V, F: FnOnce(&A) -> V>(&self, data: &Arc<S>, f: F) -> Option<V> {
+    fn with<V, F>(&self, data: &Arc<T1>, f: F) -> Option<V>
+    where
+        F: FnOnce(&T2) -> V,
+    {
         self.inner.with(data, f)
     }
 
-    fn with_mut<V, F: FnOnce(&mut A) -> V>(&self, data: &mut Arc<S>, f: F) -> Option<V> {
+    fn with_mut<V, F>(&self, data: &mut Arc<T1>, f: F) -> Option<V>
+    where
+        F: FnOnce(&mut T2) -> V,
+    {
         let mut temp = self.inner.with(data, |x| x.clone());
         let v = temp.as_mut().map(f);
 
@@ -643,14 +666,14 @@ where
     }
 }
 
-impl<S, A, P> Prism<Arc<S>, A> for InArc<P>
+impl<T1, T2, P> Prism<Arc<T1>, T2> for InArc<P>
 where
-    S: Clone + Default,
-    A: Data,
-    P: Prism<S, A> + DefaultUpgrade<S, A>,
-    Arc<S>: ops::DerefMut,
+    T1: Clone + Default,
+    T2: Data,
+    P: Prism<T1, T2> + DefaultUpgrade<T1, T2>,
+    Arc<T1>: ops::DerefMut,
 {
-    fn replace<'a>(&self, data: &'a mut Arc<S>, v: A) -> &'a mut Arc<S> {
+    fn replace<'a>(&self, data: &'a mut Arc<T1>, v: T2) -> &'a mut Arc<T1> {
         #[allow(clippy::unused_unit)]
         let some_replacement = self.with_mut(data, |x| {
             *x = v.clone();
