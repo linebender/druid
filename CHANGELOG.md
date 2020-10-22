@@ -74,6 +74,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `LensWrap` widget moved into widget module ([#1251] by [@cmyr])
 - `Delegate::command` now returns `Handled`, not `bool` ([#1298] by [@jneem])
 - `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
+- All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 
 ### Deprecated
 
