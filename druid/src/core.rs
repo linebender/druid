@@ -534,7 +534,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                  received WidgetAdded.",
                 ctx.widget_id()
             );
-            panic!();
         }
 
         // log if we seem not to be laid out when we should be
