@@ -18,29 +18,33 @@ use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::TryFrom;
 use std::ffi::c_void;
-use std::ffi::OsString;
 use std::os::raw::{c_int, c_uint};
+use std::panic::Location;
 use std::ptr;
 use std::slice;
 use std::sync::{Arc, Mutex, Weak};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::anyhow;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt};
+use cairo::Surface;
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
-use crate::keyboard::{KbKey, KeyState, KeyEvent, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::scale::{Scale, Scalable, ScaledArea};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::piet::ImageFormat;
+use crate::region::Region;
+use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::window;
+use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -94,6 +98,9 @@ pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
+    position: Option<Point>,
+    level: Option<WindowLevel>,
+    state: Option<window::WindowState>,
     size: Size,
     min_size: Option<Size>,
     resizable: bool,
@@ -112,15 +119,43 @@ enum IdleKind {
     Token(IdleToken),
 }
 
+// We use RefCells for interior mutability, but we try to structure things so that double-borrows
+// are impossible. See the documentation on crate::platform::x11::window::Window for more details,
+// since the idea there is basically the same.
 pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    /// Used to determine whether to honor close requests from the system: we inhibit them unless
+    /// this is true, and this gets set to true when our client requests a close.
+    closing: Cell<bool>,
     drawing_area: DrawingArea,
+    // A cairo surface for us to render to; we copy this to the drawing_area whenever necessary.
+    // This extra buffer is necessitated by DrawingArea's painting model: when our paint callback
+    // is called, we are given a cairo context that's already clipped to the invalid region. This
+    // doesn't match up with our painting model, because we need to call `prepare_paint` before we
+    // know what the invalid region is.
+    //
+    // The way we work around this is by always invalidating the entire DrawingArea whenever we
+    // need repainting; this ensures that GTK gives us an unclipped cairo context. Meanwhile, we
+    // keep track of the actual invalid region. We use that region to render onto `surface`, which
+    // we then copy onto `drawing_area`.
+    surface: RefCell<Option<Surface>>,
+    // The size of `surface` in pixels. This could be bigger than `drawing_area`.
+    surface_size: Cell<(i32, i32)>,
+    // The invalid region, in display points.
+    invalid: RefCell<Region>,
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-    current_keycode: RefCell<Option<u16>>,
+    current_keycode: Cell<Option<u16>>,
+    last_click: Cell<(f64, f64)>,
+    last_click_time: Cell<Instant>,
+    last_click_count: Cell<u8>,
+    deferred_queue: RefCell<Vec<DeferredOp>>,
 }
+
+#[derive(Clone)]
+pub struct CustomCursor(gdk::Cursor);
 
 impl WindowBuilder {
     pub fn new(app: Application) -> WindowBuilder {
@@ -130,6 +165,9 @@ impl WindowBuilder {
             title: String::new(),
             menu: None,
             size: Size::new(500.0, 400.0),
+            position: None,
+            level: None,
+            state: None,
             min_size: None,
             resizable: true,
             show_titlebar: true,
@@ -156,6 +194,18 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position);
+    }
+
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
+
+    pub fn set_window_state(&mut self, state: window::WindowState) {
+        self.state = Some(state);
+    }
+
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.title = title.into();
     }
@@ -176,11 +226,8 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
 
         // Get the scale factor based on the GTK reported DPI
-        let scale_factor = window
-            .get_display()
-            .map(|c| c.get_default_screen().get_resolution())
-            .unwrap_or(SCALE_TARGET_DPI)
-            / SCALE_TARGET_DPI;
+        let scale_factor =
+            window.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);
         let area = ScaledArea::from_dp(self.size, scale);
         let size_px = area.size_px();
@@ -198,10 +245,18 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
+            closing: Cell::new(false),
             drawing_area,
+            surface: RefCell::new(None),
+            surface_size: Cell::new((0, 0)),
+            invalid: RefCell::new(Region::EMPTY),
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
-            current_keycode: RefCell::new(None),
+            current_keycode: Cell::new(None),
+            last_click: Cell::new((0.0, 0.0)),
+            last_click_time: Cell::new(Instant::now()),
+            last_click_count: Cell::new(0),
+            deferred_queue: RefCell::new(Vec::new()),
         });
 
         self.app
@@ -213,9 +268,18 @@ impl WindowBuilder {
                 let _ = &win_state;
             }));
 
-        let handle = WindowHandle {
+        let mut handle = WindowHandle {
             state: Arc::downgrade(&win_state),
         };
+        if let Some(level) = self.level {
+            handle.set_level(level);
+        }
+        if let Some(pos) = self.position {
+            handle.set_position(pos);
+        }
+        if let Some(state) = self.state {
+            handle.set_window_state(state)
+        }
 
         if let Some(menu) = self.menu {
             let menu = menu.into_gtk_menubar(&handle, &accel_group);
@@ -268,47 +332,69 @@ impl WindowBuilder {
                         scale = reported_scale;
                         state.scale.set(scale);
                         scale_changed = true;
-                        if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                            handler_borrow.scale(scale);
-                        } else {
-                            log::warn!("Failed to inform the handler of scale change because it was already borrowed");
-                        }
+                        state.with_handler(|h| h.scale(scale));
                     }
                 }
 
-                // Check if the size of the window has changed
+                // Create a new cairo surface if necessary (either because there is no surface, or
+                // because the size or scale changed).
                 let extents = widget.get_allocation();
                 let size_px = Size::new(extents.width as f64, extents.height as f64);
-                if scale_changed || state.area.get().size_px() != size_px {
+                let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
+                if no_surface || scale_changed || state.area.get().size_px() != size_px {
                     let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
-                    if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                        handler_borrow.size(size_dp);
-                    } else {
-                        log::warn!("Failed to inform the handler of a resize because it was already borrowed");
+                    if let Err(e) = state.resize_surface(extents.width, extents.height) {
+                        log::error!("Failed to resize surface: {}", e);
                     }
+                    state.with_handler(|h| h.size(size_dp));
+                    state.invalidate_rect(size_dp.to_rect());
                 }
 
-                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    // For some reason piet needs a mutable context, so give it one I guess.
-                    let mut context = context.clone();
-                    context.scale(scale.x(), scale.y());
-                    let (x0, y0, x1, y1) = context.clip_extents();
-                    let invalid_rect = Rect::new(x0, y0, x1, y1);
+                state.with_handler(|h| h.prepare_paint());
 
-                    let mut piet_context = Piet::new(&mut context);
-                    let anim = handler_borrow
-                        .paint(&mut piet_context, invalid_rect);
-                    if let Err(e) = piet_context.finish() {
-                        eprintln!("piet error on render: {:?}", e);
+                let invalid = match state.invalid.try_borrow_mut() {
+                    Ok(mut invalid) => std::mem::replace(&mut *invalid, Region::EMPTY),
+                    Err(_) => {
+                        log::error!("invalid region borrowed while drawing");
+                        Region::EMPTY
                     }
+                };
 
-                    if anim {
-                        widget.queue_draw();
-                    }
+                if let Ok(Some(surface)) = state.surface.try_borrow().as_ref().map(|s| s.as_ref()) {
+                    // Note that we're borrowing the surface while calling the handler. This is ok,
+                    // because we don't return control to the system or re-borrow the surface from
+                    // any code that the client can call.
+                    // (TODO: the above comment isn't true yet because of save_as_sync and
+                    // open_sync, but it will be true soon)
+                    state.with_handler_and_dont_check_the_other_borrows(|handler| {
+                        let surface_context = cairo::Context::new(surface);
+
+                        // Clip to the invalid region, in order that our surface doesn't get
+                        // messed up if there's any painting outside them.
+                        for rect in invalid.rects() {
+                            surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
+                        }
+                        surface_context.clip();
+
+                        surface_context.scale(scale.x(), scale.y());
+                        let mut piet_context = Piet::new(&surface_context);
+                        handler.paint(&mut piet_context, &invalid);
+                        if let Err(e) = piet_context.finish() {
+                            log::error!("piet error on render: {:?}", e);
+                        }
+
+                        // Copy the entire surface to the drawing area (not just the invalid
+                        // region, because there might be parts of the drawing area that were
+                        // invalidated by external forces).
+                        let alloc = widget.get_allocation();
+                        context.set_source_surface(&surface, 0.0, 0.0);
+                        context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
+                        context.fill();
+                    });
                 } else {
-                    log::warn!("Drawing was skipped because the handler was already borrowed");
+                    log::warn!("Drawing was skipped because there was no surface");
                 }
             }
 
@@ -317,25 +403,46 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                state.with_handler(|handler| {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
-                        handler.mouse_down(
-                            &MouseEvent {
-                                pos: Point::from(event.get_position()).to_dp(scale),
-                                buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
-                                mods: get_modifiers(button_state),
-                                count: get_mouse_click_count(event.get_event_type()),
-                                focus: false,
-                                button,
-                                wheel_delta: Vec2::ZERO
-                            },
-                        );
+                        let gtk_count = get_mouse_click_count(event.get_event_type());
+                        let raw_pos = event.get_position();
+                        let count = if gtk_count == 1 {
+                            let this_click_time = Instant::now();
+                            let settings = state.drawing_area.get_settings().unwrap();
+                            let thresh_ms = settings.get_property_gtk_double_click_time();
+                            let thresh_dur = Duration::from_millis(thresh_ms as u64);
+                            let thresh_dist = settings.get_property_gtk_double_click_distance();
+                            let last_click = state.last_click.get();
+                            let dist = (raw_pos.0 - last_click.0).powi(2) + (raw_pos.1 - last_click.1).powi(2);
+                            if dist > (thresh_dist * thresh_dist) as f64 || this_click_time - state.last_click_time.get() > thresh_dur {
+                                state.last_click_count.set(0);
+                            }
+                            let count = state.last_click_count.get().saturating_add(1);
+                            state.last_click_count.set(count);
+                            state.last_click.set(raw_pos);
+                            state.last_click_time.set(this_click_time);
+                            count
+                        } else {
+                            0
+                        };
+                        if gtk_count == 0 || gtk_count == 1 {
+                            handler.mouse_down(
+                                &MouseEvent {
+                                    pos: Point::from(raw_pos).to_dp(scale),
+                                    buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
+                                    mods: get_modifiers(button_state),
+                                    count,
+                                    focus: false,
+                                    button,
+                                    wheel_delta: Vec2::ZERO
+                                },
+                            );
+                        }
                     }
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
+                });
             }
 
             Inhibit(true)
@@ -343,7 +450,7 @@ impl WindowBuilder {
 
         win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
+                state.with_handler(|handler| {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
@@ -359,161 +466,163 @@ impl WindowBuilder {
                             },
                         );
                     }
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
+                });
             }
 
             Inhibit(true)
         }));
 
-        win_state.drawing_area.connect_motion_notify_event(clone!(handle => move |_widget, motion| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let motion_state = motion.get_state();
-                let mouse_event = MouseEvent {
-                    pos: Point::from(motion.get_position()).to_dp(scale),
-                    buttons: get_mouse_buttons_from_modifiers(motion_state),
-                    mods: get_modifiers(motion_state),
-                    count: 0,
-                    focus: false,
-                    button: MouseButton::None,
-                    wheel_delta: Vec2::ZERO
-                };
-
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.mouse_move(&mouse_event);
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_leave_notify_event(clone!(handle => move |_widget, crossing| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let crossing_state = crossing.get_state();
-                let mouse_event = MouseEvent {
-                    pos: Point::from(crossing.get_position()).to_dp(scale),
-                    buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                    mods: get_modifiers(crossing_state),
-                    count: 0,
-                    focus: false,
-                    button: MouseButton::None,
-                    wheel_delta: Vec2::ZERO
-                };
-
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.mouse_move(&mouse_event);
-                } else {
-                    log::warn!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_scroll_event(clone!(handle => move |_widget, scroll| {
-            if let Some(state) = handle.state.upgrade() {
-                let scale = state.scale.get();
-                let mods = get_modifiers(scroll.get_state());
-
-                // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
-                // They claim that one "tick" on a scroll wheel should be 120 units.
-                let shift = mods.shift();
-                let wheel_delta = match scroll.get_direction() {
-                    ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
-                    ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
-                    ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
-                    ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
-                    ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
-                    ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
-                    ScrollDirection::Smooth => {
-                        //TODO: Look at how gtk's scroll containers implements it
-                        let (mut delta_x, mut delta_y) = scroll.get_delta();
-                        delta_x *= 120.;
-                        delta_y *= 120.;
-                        if shift {
-                            delta_x += delta_y;
-                            delta_y = 0.;
-                        }
-                        Some(Vec2::new(delta_x, delta_y))
-                    }
-                    e => {
-                        eprintln!(
-                            "Warning: the Druid widget got some whacky scroll direction {:?}",
-                            e
-                        );
-                        None
-                    }
-                };
-
-                if let Some(wheel_delta) = wheel_delta {
+        win_state.drawing_area.connect_motion_notify_event(
+            clone!(handle => move |_widget, motion| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let motion_state = motion.get_state();
                     let mouse_event = MouseEvent {
-                        pos: Point::from(scroll.get_position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
-                        mods,
+                        pos: Point::from(motion.get_position()).to_dp(scale),
+                        buttons: get_mouse_buttons_from_modifiers(motion_state),
+                        mods: get_modifiers(motion_state),
                         count: 0,
                         focus: false,
                         button: MouseButton::None,
-                        wheel_delta
+                        wheel_delta: Vec2::ZERO
                     };
 
-                    if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                        handler.wheel(&mouse_event);
-                    } else {
-                        log::info!("GTK event was dropped because the handler was already borrowed");
+                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                }
+
+                Inhibit(true)
+            }),
+        );
+
+        win_state.drawing_area.connect_leave_notify_event(
+            clone!(handle => move |_widget, crossing| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let crossing_state = crossing.get_state();
+                    let mouse_event = MouseEvent {
+                        pos: Point::from(crossing.get_position()).to_dp(scale),
+                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
+                        mods: get_modifiers(crossing_state),
+                        count: 0,
+                        focus: false,
+                        button: MouseButton::None,
+                        wheel_delta: Vec2::ZERO
+                    };
+
+                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                }
+
+                Inhibit(true)
+            }),
+        );
+
+        win_state
+            .drawing_area
+            .connect_scroll_event(clone!(handle => move |_widget, scroll| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let mods = get_modifiers(scroll.get_state());
+
+                    // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
+                    // They claim that one "tick" on a scroll wheel should be 120 units.
+                    let shift = mods.shift();
+                    let wheel_delta = match scroll.get_direction() {
+                        ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
+                        ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
+                        ScrollDirection::Down => Some(Vec2::new(0.0, 120.0)),
+                        ScrollDirection::Left => Some(Vec2::new(-120.0, 0.0)),
+                        ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
+                        ScrollDirection::Smooth => {
+                            //TODO: Look at how gtk's scroll containers implements it
+                            let (mut delta_x, mut delta_y) = scroll.get_delta();
+                            delta_x *= 120.;
+                            delta_y *= 120.;
+                            if shift {
+                                delta_x += delta_y;
+                                delta_y = 0.;
+                            }
+                            Some(Vec2::new(delta_x, delta_y))
+                        }
+                        e => {
+                            eprintln!(
+                                "Warning: the Druid widget got some whacky scroll direction {:?}",
+                                e
+                            );
+                            None
+                        }
+                    };
+
+                    if let Some(wheel_delta) = wheel_delta {
+                        let mouse_event = MouseEvent {
+                            pos: Point::from(scroll.get_position()).to_dp(scale),
+                            buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
+                            mods,
+                            count: 0,
+                            focus: false,
+                            button: MouseButton::None,
+                            wheel_delta
+                        };
+
+                        state.with_handler(|h| h.wheel(&mouse_event));
                     }
                 }
-            }
 
-            Inhibit(true)
-        }));
+                Inhibit(true)
+            }));
 
-        win_state.drawing_area.connect_key_press_event(clone!(handle => move |_widget, key| {
-            if let Some(state) = handle.state.upgrade() {
+        win_state
+            .drawing_area
+            .connect_key_press_event(clone!(handle => move |_widget, key| {
+                if let Some(state) = handle.state.upgrade() {
 
-                let mut current_keycode = state.current_keycode.borrow_mut();
-                let hw_keycode = key.get_hardware_keycode();
-                let repeat = *current_keycode == Some(hw_keycode);
+                    let hw_keycode = key.get_hardware_keycode();
+                    let repeat = state.current_keycode.get() == Some(hw_keycode);
 
-                *current_keycode = Some(hw_keycode);
+                    state.current_keycode.set(Some(hw_keycode));
 
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_down(make_key_event(key, repeat, KeyState::Down));
+                    state.with_handler(|h|
+                        h.key_down(make_key_event(key, repeat, KeyState::Down))
+                    );
+                }
+
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_key_release_event(clone!(handle => move |_widget, key| {
+                if let Some(state) = handle.state.upgrade() {
+
+                    if state.current_keycode.get() == Some(key.get_hardware_keycode()) {
+                        state.current_keycode.set(None);
+                    }
+
+
+                    state.with_handler(|h|
+                        h.key_up(make_key_event(key, false, KeyState::Up))
+                    );
+                }
+
+                Inhibit(true)
+            }));
+
+        win_state
+            .window
+            .connect_delete_event(clone!(handle => move |_widget, _ev| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|h| h.request_close());
+                    Inhibit(!state.closing.get())
                 } else {
-                    log::info!("GTK event was dropped because the handler was already borrowed");
+                    Inhibit(false)
                 }
-            }
-
-            Inhibit(true)
-        }));
-
-        win_state.drawing_area.connect_key_release_event(clone!(handle => move |_widget, key| {
-            if let Some(state) = handle.state.upgrade() {
-
-                let mut current_keycode = state.current_keycode.borrow_mut();
-                if *current_keycode == Some(key.get_hardware_keycode()) {
-                    *current_keycode = None;
-                }
-
-                if let Ok(mut handler) = state.handler.try_borrow_mut() {
-                    handler.key_up(make_key_event(key, false, KeyState::Up));
-                } else {
-                    log::info!("GTK event was dropped because the handler was already borrowed");
-                }
-            }
-
-            Inhibit(true)
-        }));
+            }));
 
         win_state
             .drawing_area
             .connect_destroy(clone!(handle => move |_widget| {
                 if let Some(state) = handle.state.upgrade() {
-                    state.handler.borrow_mut().destroy();
+                    state.with_handler(|h| h.destroy());
                 }
             }));
 
@@ -525,12 +634,127 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
-        let mut handler = win_state.handler.borrow_mut();
-        handler.connect(&handle.clone().into());
-        handler.scale(scale);
-        handler.size(self.size);
+        let size = self.size;
+        win_state.with_handler(|h| {
+            h.connect(&handle.clone().into());
+            h.scale(scale);
+            h.size(size);
+        });
 
         Ok(handle)
+    }
+}
+
+impl WindowState {
+    #[track_caller]
+    fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
+        if self.invalid.try_borrow_mut().is_err() || self.surface.try_borrow_mut().is_err() {
+            log::error!("other RefCells were borrowed when calling into the handler");
+            return None;
+        }
+
+        let ret = self.with_handler_and_dont_check_the_other_borrows(f);
+
+        self.run_deferred();
+        ret
+    }
+
+    #[track_caller]
+    fn with_handler_and_dont_check_the_other_borrows<T, F: FnOnce(&mut dyn WinHandler) -> T>(
+        &self,
+        f: F,
+    ) -> Option<T> {
+        match self.handler.try_borrow_mut() {
+            Ok(mut h) => Some(f(&mut **h)),
+            Err(_) => {
+                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                None
+            }
+        }
+    }
+
+    fn resize_surface(&self, width: i32, height: i32) -> Result<(), anyhow::Error> {
+        fn next_size(x: i32) -> i32 {
+            // We round up to the nearest multiple of `accuracy`, which is between x/2 and x/4.
+            // Don't bother rounding to anything smaller than 32 = 2^(7-1).
+            let accuracy = 1 << ((32 - x.leading_zeros()).max(7) - 2);
+            let mask = accuracy - 1;
+            (x + mask) & !mask
+        }
+
+        let mut surface = self.surface.borrow_mut();
+        let mut cur_size = self.surface_size.get();
+        let (width, height) = (next_size(width), next_size(height));
+        if surface.is_none() || cur_size != (width, height) {
+            cur_size = (width, height);
+            self.surface_size.set(cur_size);
+            if let Some(s) = surface.as_ref() {
+                s.finish();
+            }
+            *surface = None;
+
+            if let Some(w) = self.drawing_area.get_window() {
+                *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                if surface.is_none() {
+                    return Err(anyhow!("create_similar_surface failed"));
+                }
+            } else {
+                return Err(anyhow!("drawing area has no window"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Queues a call to `prepare_paint` and `paint`, but without marking any region for
+    /// invalidation.
+    fn request_anim_frame(&self) {
+        self.window.queue_draw();
+    }
+
+    /// Invalidates a rectangle, given in display points.
+    fn invalidate_rect(&self, rect: Rect) {
+        if let Ok(mut region) = self.invalid.try_borrow_mut() {
+            let scale = self.scale.get();
+            // We prefer to invalidate an integer number of pixels.
+            let rect = rect.to_px(scale).expand().to_dp(scale);
+            region.add_rect(rect);
+            self.window.queue_draw();
+        } else {
+            log::warn!("Not invalidating rect because region already borrowed");
+        }
+    }
+
+    /// Pushes a deferred op onto the queue.
+    fn defer(&self, op: DeferredOp) {
+        self.deferred_queue.borrow_mut().push(op);
+    }
+
+    fn run_deferred(&self) {
+        let queue = self.deferred_queue.replace(Vec::new());
+        for op in queue {
+            match op {
+                DeferredOp::Open(options, token) => {
+                    let file_info = dialog::get_file_dialog_path(
+                        self.window.upcast_ref(),
+                        FileDialogType::Open,
+                        options,
+                    )
+                    .ok()
+                    .map(|s| FileInfo { path: s.into() });
+                    self.with_handler(|h| h.open_file(token, file_info));
+                }
+                DeferredOp::SaveAs(options, token) => {
+                    let file_info = dialog::get_file_dialog_path(
+                        self.window.upcast_ref(),
+                        FileDialogType::Save,
+                        options,
+                    )
+                    .ok()
+                    .map(|s| FileInfo { path: s.into() });
+                    self.with_handler(|h| h.save_as(token, file_info));
+                }
+            }
+        }
     }
 }
 
@@ -553,9 +777,90 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_position(&self, position: Point) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.move_(position.x as i32, position.y as i32)
+        }
+    }
+
+    pub fn get_position(&self) -> Point {
+        if let Some(state) = self.state.upgrade() {
+            let (x, y) = state.window.get_position();
+            Point::new(x as f64, y as f64)
+        } else {
+            Point::new(0.0, 0.0)
+        }
+    }
+
+    pub fn set_level(&self, level: WindowLevel) {
+        if let Some(state) = self.state.upgrade() {
+            let hint = match level {
+                WindowLevel::AppWindow => WindowTypeHint::Normal,
+                WindowLevel::Tooltip => WindowTypeHint::Tooltip,
+                WindowLevel::DropDown => WindowTypeHint::DropdownMenu,
+                WindowLevel::Modal => WindowTypeHint::Dialog,
+            };
+
+            state.window.set_type_hint(hint);
+        }
+    }
+
+    pub fn set_size(&self, size: Size) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.resize(size.width as i32, size.height as i32)
+        }
+    }
+
+    pub fn get_size(&self) -> Size {
+        if let Some(state) = self.state.upgrade() {
+            let (x, y) = state.window.get_size();
+            Size::new(x as f64, y as f64)
+        } else {
+            log::warn!("Could not get size for GTK window");
+            Size::new(0., 0.)
+        }
+    }
+
+    pub fn set_window_state(&mut self, size_state: window::WindowState) {
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        let cur_size_state = self.get_window_state();
+        if let Some(state) = self.state.upgrade() {
+            match (size_state, cur_size_state) {
+                (s1, s2) if s1 == s2 => (),
+                (MAXIMIZED, _) => state.window.maximize(),
+                (MINIMIZED, _) => state.window.iconify(),
+                (RESTORED, MAXIMIZED) => state.window.unmaximize(),
+                (RESTORED, MINIMIZED) => state.window.deiconify(),
+                (RESTORED, RESTORED) => (), // Unreachable
+            }
+
+            state.window.unmaximize();
+        }
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        if let Some(state) = self.state.upgrade() {
+            if state.window.is_maximized() {
+                return MAXIMIZED;
+            } else if let Some(window) = state.window.get_parent_window() {
+                let state = window.get_state();
+                if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
+                    return MINIMIZED;
+                }
+            }
+        }
+        RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
+    }
+
     /// Close the window.
     pub fn close(&self) {
         if let Some(state) = self.state.upgrade() {
+            state.closing.set(true);
             state.window.close();
         }
     }
@@ -569,30 +874,30 @@ impl WindowHandle {
         }
     }
 
-    // Request invalidation of the entire window contents.
+    /// Request a new paint, but without invalidating anything.
+    pub fn request_anim_frame(&self) {
+        if let Some(state) = self.state.upgrade() {
+            state.request_anim_frame();
+        }
+    }
+
+    /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
         if let Some(state) = self.state.upgrade() {
-            state.window.queue_draw();
+            self.invalidate_rect(state.area.get().size_dp().to_rect());
         }
     }
 
-    /// Request invalidation of one rectangle, which is given relative to the drawing area.
+    /// Request invalidation of one rectangle, which is given in display points relative to the
+    /// drawing area.
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(state) = self.state.upgrade() {
-            // GTK takes rects with non-negative integer width/height.
-            let r = rect.abs().to_px(state.scale.get()).expand();
-            let origin = state.drawing_area.get_allocation();
-            state.window.queue_draw_area(
-                r.x0 as i32 + origin.x,
-                r.y0 as i32 + origin.y,
-                r.width() as i32,
-                r.height() as i32,
-            );
+            state.invalidate_rect(rect);
         }
     }
 
-    pub fn text(&self) -> Text {
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -611,14 +916,13 @@ impl WindowHandle {
         let token = TimerToken::next();
         let handle = self.clone();
 
-        gdk::threads_add_timeout(interval, move || {
+        glib::timeout_add(interval, move || {
             if let Some(state) = handle.state.upgrade() {
-                if let Ok(mut handler_borrow) = state.handler.try_borrow_mut() {
-                    handler_borrow.timer(token);
-                    return false;
+                if state.with_handler(|h| h.timer(token)).is_some() {
+                    return glib::Continue(false);
                 }
             }
-            true
+            glib::Continue(true)
         });
         token
     }
@@ -630,16 +934,66 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.file_dialog(FileDialogType::Open, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(state) = self.state.upgrade() {
+            if let Some(gdk_window) = state.window.get_window() {
+                // TODO: gtk::Pixbuf expects unpremultiplied alpha. We should convert.
+                let has_alpha = !matches!(desc.image.format(), ImageFormat::Rgb);
+                let bytes_per_pixel = desc.image.format().bytes_per_pixel();
+                let pixbuf = gdk_pixbuf::Pixbuf::from_mut_slice(
+                    desc.image.raw_pixels().to_owned(),
+                    gdk_pixbuf::Colorspace::Rgb,
+                    has_alpha,
+                    // bits_per_sample
+                    8,
+                    desc.image.width() as i32,
+                    desc.image.height() as i32,
+                    // row stride (in bytes)
+                    (desc.image.width() * bytes_per_pixel) as i32,
+                );
+                let c = gdk::Cursor::from_pixbuf(
+                    &gdk_window.get_display(),
+                    &pixbuf,
+                    desc.hot.x.round() as i32,
+                    desc.hot.y.round() as i32,
+                );
+                Some(Cursor::Custom(CustomCursor(c)))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.file_dialog(FileDialogType::Save, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(state) = self.state.upgrade() {
+            let tok = FileDialogToken::next();
+            state.defer(DeferredOp::Open(options, tok));
+            Some(tok)
+        } else {
+            None
+        }
+    }
+
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(state) = self.state.upgrade() {
+            let tok = FileDialogToken::next();
+            state.defer(DeferredOp::SaveAs(options, tok));
+            Some(tok)
+        } else {
+            None
+        }
+    }
+
+    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::error!("save as sync no longer supported on GTK");
+        None
+    }
+
+    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::error!("open file sync no longer supported on GTK");
+        None
     }
 
     /// Get a handle that can be used to schedule an idle task.
@@ -701,18 +1055,6 @@ impl WindowHandle {
             state.window.set_title(&(title.into()));
         }
     }
-
-    fn file_dialog(
-        &self,
-        ty: FileDialogType,
-        options: FileDialogOptions,
-    ) -> Result<OsString, ShellError> {
-        if let Some(state) = self.state.upgrade() {
-            dialog::get_file_dialog_path(state.window.upcast_ref(), ty, options)
-        } else {
-            Err(anyhow!("Cannot upgrade state from weak pointer to arc").into())
-        }
-    }
 }
 
 unsafe impl Send for IdleHandle {}
@@ -757,7 +1099,7 @@ impl IdleHandle {
 
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
-    if let Ok(mut handler) = state.handler.try_borrow_mut() {
+    let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
 
         for item in queue {
@@ -766,7 +1108,9 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
                 IdleKind::Token(it) => handler.idle(it),
             }
         }
-    } else {
+    });
+
+    if result.is_none() {
         log::warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
         // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
@@ -778,19 +1122,24 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
-    gdk::Cursor::new_from_name(
-        &gdk_window.get_display(),
-        match cursor {
-            // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
-            Cursor::Arrow => "default",
-            Cursor::IBeam => "text",
-            Cursor::Crosshair => "crosshair",
-            Cursor::OpenHand => "grab",
-            Cursor::NotAllowed => "not-allowed",
-            Cursor::ResizeLeftRight => "ew-resize",
-            Cursor::ResizeUpDown => "ns-resize",
-        },
-    )
+    if let Cursor::Custom(custom) = cursor {
+        Some(custom.0.clone())
+    } else {
+        gdk::Cursor::from_name(
+            &gdk_window.get_display(),
+            match cursor {
+                // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
+                Cursor::Arrow => "default",
+                Cursor::IBeam => "text",
+                Cursor::Crosshair => "crosshair",
+                Cursor::OpenHand => "grab",
+                Cursor::NotAllowed => "not-allowed",
+                Cursor::ResizeLeftRight => "ew-resize",
+                Cursor::ResizeUpDown => "ns-resize",
+                Cursor::Custom(_) => unreachable!(),
+            },
+        )
+    }
 }
 
 fn get_mouse_button(button: u32) -> Option<MouseButton> {
@@ -866,9 +1215,9 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let keyval = key.get_keyval();
     let hardware_keycode = key.get_hardware_keycode();
 
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
+    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or_else(|| keyval.clone());
 
-    let text = gdk::keyval_to_unicode(keyval);
+    let text = gdk::keys::keyval_to_unicode(*keyval);
     let mods = get_modifiers(key.get_state());
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
@@ -898,7 +1247,8 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
 
 /// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
 /// keyval with the lowest group and level
-fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
+fn hardware_keycode_to_keyval(keycode: u16) -> Option<keycodes::RawKey> {
+    use glib::translate::FromGlib;
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
 
@@ -921,7 +1271,7 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<u32> {
 
             let resolved_keyval = keys_slice.iter().enumerate().find_map(|(i, key)| {
                 if key.group == 0 && key.level == 0 {
-                    Some(keyvals_slice[i])
+                    Some(keycodes::RawKey::from_glib(keyvals_slice[i]))
                 } else {
                     None
                 }

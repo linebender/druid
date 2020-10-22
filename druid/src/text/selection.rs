@@ -28,20 +28,29 @@ pub struct Selection {
 
     /// The active edge of a selection, as a byte offset.
     pub end: usize,
+
+    /// The saved horizontal position, during vertical movement.
+    pub h_pos: Option<f64>,
 }
 
 impl Selection {
     /// Create a selection that begins at start and goes to end.
     /// Like dragging a mouse from start to end.
     pub fn new(start: usize, end: usize) -> Self {
-        Selection { start, end }
+        Selection {
+            start,
+            end,
+            h_pos: None,
+        }
     }
 
-    /// Create a selection that starts at the beginning and ends at text length.
-    /// TODO: can text length be at a non-codepoint or a non-grapheme?
-    pub fn all(&mut self, text: &impl EditableText) {
-        self.start = 0;
-        self.end = text.len();
+    /// Create a new selection constrained to the length of the provided text.
+    #[must_use = "constrained constructs a new Selection"]
+    pub fn constrained(mut self, s: &impl EditableText) -> Self {
+        let s_len = s.len();
+        self.start = min(self.start, s_len);
+        self.end = min(self.end, s_len);
+        self
     }
 
     /// Create a caret, which is just a selection with the same and start and end.
@@ -49,7 +58,14 @@ impl Selection {
         Selection {
             start: pos,
             end: pos,
+            h_pos: None,
         }
+    }
+
+    /// Construct a new selection from this selection, with the provided h_pos.
+    pub fn with_h_pos(mut self, h_pos: Option<f64>) -> Self {
+        self.h_pos = h_pos;
+        self
     }
 
     /// If start == end, it's a caret
@@ -70,13 +86,5 @@ impl Selection {
     /// Return a range from smallest to largest index
     pub fn range(self) -> Range<usize> {
         self.min()..self.max()
-    }
-
-    /// Constrain selection to be not greater than input string
-    pub fn constrain_to(mut self, s: &impl EditableText) -> Self {
-        let s_len = s.len();
-        self.start = min(self.start, s_len);
-        self.end = min(self.end, s_len);
-        self
     }
 }

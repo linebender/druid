@@ -20,19 +20,19 @@ use std::mem;
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
 
-use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
-use crate::shell::{Counter, Cursor, WindowHandle};
+use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
+use crate::app::PendingWindow;
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken, UpdateCtx, Widget,
-    WidgetId, WidgetPod, WindowDesc,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
+    TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -45,6 +45,7 @@ pub struct Window<T> {
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LabelText<T>,
     size: Size,
+    invalid: Region,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
     pub(crate) last_anim: Option<Instant>,
@@ -52,31 +53,39 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    ext_handle: ExtEventSink,
     // delegate?
 }
 
 impl<T> Window<T> {
-    pub(crate) fn new(id: WindowId, handle: WindowHandle, desc: WindowDesc<T>) -> Window<T> {
+    pub(crate) fn new(
+        id: WindowId,
+        handle: WindowHandle,
+        pending: PendingWindow<T>,
+        ext_handle: ExtEventSink,
+    ) -> Window<T> {
         Window {
             id,
-            root: WidgetPod::new(desc.root),
+            root: WidgetPod::new(pending.root),
             size: Size::ZERO,
-            title: desc.title,
-            menu: desc.menu,
+            invalid: Region::EMPTY,
+            title: pending.title,
+            menu: pending.menu,
             context_menu: None,
             last_anim: None,
             last_mouse_pos: None,
             focus: None,
             handle,
             timers: HashMap::new(),
+            ext_handle,
         }
     }
 }
 
 impl<T: Data> Window<T> {
-    /// `true` iff any child requested an animation frame during the last `AnimFrame` event.
+    /// `true` iff any child requested an animation frame since the last `AnimFrame` event.
     pub(crate) fn wants_animation_frame(&self) -> bool {
-        self.last_anim.is_some()
+        self.root.state().request_anim
     }
 
     pub(crate) fn focus_chain(&self) -> &[WidgetId] {
@@ -88,7 +97,7 @@ impl<T: Data> Window<T> {
     /// However when this returns `false` the widget is definitely not in this window.
     pub(crate) fn may_contain_widget(&self, widget_id: WidgetId) -> bool {
         // The bloom filter we're checking can return false positives.
-        self.root.state().children.may_contain(&widget_id)
+        widget_id == self.root.id() || self.root.state().children.may_contain(&widget_id)
     }
 
     pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
@@ -139,6 +148,13 @@ impl<T: Data> Window<T> {
         }
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
+
+        // If we need a new paint pass, make sure druid-shell knows it.
+        if self.wants_animation_frame() {
+            self.handle.request_anim_frame();
+        }
+        self.invalid.union_with(&widget_state.invalid);
+
         // If there are any commands and they should be processed
         if process_commands && !queue.is_empty() {
             // Ask the handler to call us back on idle
@@ -157,7 +173,7 @@ impl<T: Data> Window<T> {
         event: Event,
         data: &mut T,
         env: &Env,
-    ) -> bool {
+    ) -> Handled {
         match &event {
             Event::WindowSize(size) => self.size = *size,
             Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) | Event::Wheel(e) => {
@@ -178,7 +194,7 @@ impl<T: Data> Window<T> {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
                     log::error!("No widget found for timer {:?}", token);
-                    return false;
+                    return Handled::No;
                 }
             }
             other => other,
@@ -194,9 +210,10 @@ impl<T: Data> Window<T> {
             );
         }
 
-        let mut widget_state = WidgetState::new(self.root.id());
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let is_handled = {
-            let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+            let mut state =
+                ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
@@ -206,7 +223,7 @@ impl<T: Data> Window<T> {
             };
 
             self.root.event(&mut ctx, &event, data, env);
-            ctx.is_handled
+            Handled::from(ctx.is_handled)
         };
 
         // Clean up the timer token and do it immediately after the event handling
@@ -243,45 +260,28 @@ impl<T: Data> Window<T> {
         env: &Env,
         process_commands: bool,
     ) {
-        // for AnimFrame, the event the window receives doesn't have the correct
-        // elapsed time; we calculate it here.
-        let now = Instant::now();
-        let substitute_event = if let LifeCycle::AnimFrame(_) = event {
-            // TODO: this calculation uses wall-clock time of the paint call, which
-            // potentially has jitter.
-            //
-            // See https://github.com/linebender/druid/issues/85 for discussion.
-            let last = self.last_anim.take();
-            let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
-            Some(LifeCycle::AnimFrame(elapsed_ns))
-        } else {
-            None
-        };
-
-        let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
         };
-        let event = substitute_event.as_ref().unwrap_or(event);
         self.root.lifecycle(&mut ctx, event, data, env);
-
-        if substitute_event.is_some() && ctx.widget_state.request_anim {
-            self.last_anim = Some(now);
-        }
-
         self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
     pub(crate) fn update(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.update_title(data, env);
 
-        let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
+            prev_env: None,
+            env,
         };
 
         self.root.update(&mut update_ctx, data, env);
@@ -292,40 +292,72 @@ impl<T: Data> Window<T> {
         if self.root.state().needs_layout {
             self.handle.invalidate();
         } else {
-            let invalid = &self.root.state().invalid;
-            if !invalid.is_empty() {
-                self.handle.invalidate_rect(invalid.to_rect());
+            for rect in self.invalid.rects() {
+                self.handle.invalidate_rect(*rect);
             }
+            self.invalid.clear();
         }
     }
 
-    /// Do all the stuff we do in response to a paint call from the system:
-    /// layout, send an `AnimFrame` event, and then actually paint.
-    pub(crate) fn do_paint(
-        &mut self,
-        piet: &mut Piet,
-        invalid_rect: Rect,
-        queue: &mut CommandQueue,
-        data: &T,
-        env: &Env,
-    ) {
-        // FIXME: only do AnimFrame if root has requested_anim?
-        self.lifecycle(queue, &LifeCycle::AnimFrame(0), data, env, true);
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid(&self) -> &Region {
+        &self.invalid
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn invalid_mut(&mut self) -> &mut Region {
+        &mut self.invalid
+    }
+
+    /// Get ready for painting, by doing layout and sending an `AnimFrame` event.
+    pub(crate) fn prepare_paint(&mut self, queue: &mut CommandQueue, data: &mut T, env: &Env) {
+        let now = Instant::now();
+        // TODO: this calculation uses wall-clock time of the paint call, which
+        // potentially has jitter.
+        //
+        // See https://github.com/linebender/druid/issues/85 for discussion.
+        let last = self.last_anim.take();
+        let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
 
         if self.root.state().needs_layout {
             self.layout(queue, data, env);
         }
 
+        // Here, `self.wants_animation_frame()` refers to the animation frame that is currently
+        // being prepared for. (This is relying on the fact that `self.layout()` can't request
+        // an animation frame.)
+        if self.wants_animation_frame() {
+            self.event(queue, Event::AnimFrame(elapsed_ns), data, env);
+        }
+
+        // Here, `self.wants_animation_frame()` is true if we want *another* animation frame after
+        // the current one. (It got modified in the call to `self.event` above.)
+        if self.wants_animation_frame() {
+            self.last_anim = Some(now);
+        }
+    }
+
+    pub(crate) fn do_paint(
+        &mut self,
+        piet: &mut Piet,
+        invalid: &Region,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
         piet.fill(
-            invalid_rect,
+            invalid.bounding_box(),
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
         );
-        self.paint(piet, invalid_rect, queue, data, env);
+        self.paint(piet, invalid, queue, data, env);
     }
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        let mut widget_state = WidgetState::new(self.root.id());
-        let mut state = ContextState::new::<T>(queue, &self.handle, self.id, self.focus);
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -333,12 +365,8 @@ impl<T: Data> Window<T> {
         };
         let bc = BoxConstraints::tight(self.size);
         let size = self.root.layout(&mut layout_ctx, &bc, data, env);
-        self.root.set_layout_rect(
-            &mut layout_ctx,
-            data,
-            env,
-            Rect::from_origin_size(Point::ORIGIN, size),
-        );
+        self.root
+            .set_layout_rect(&mut layout_ctx, data, env, size.to_rect());
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
@@ -352,45 +380,45 @@ impl<T: Data> Window<T> {
     fn paint(
         &mut self,
         piet: &mut Piet,
-        invalid_rect: Rect,
+        invalid: &Region,
         queue: &mut CommandQueue,
         data: &T,
         env: &Env,
     ) {
-        // we need to destructure to get around some lifetime issues,
-        // just like in the good old days!
-        let id = self.id;
-        let focus = self.focus;
-        let Window { root, handle, .. } = self;
-
-        let widget_state = WidgetState::new(root.id());
-        let mut state = ContextState::new::<T>(queue, handle, id, focus);
+        let widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut state =
+            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
             widget_state: &widget_state,
             z_ops: Vec::new(),
-            region: invalid_rect.into(),
+            region: invalid.clone(),
             depth: 0,
         };
 
-        ctx.with_child_ctx(invalid_rect, |ctx| root.paint_raw(ctx, data, env));
+        let root = &mut self.root;
+        ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 
         for z_op in z_ops.into_iter() {
-            ctx.with_child_ctx(invalid_rect, |ctx| {
+            ctx.with_child_ctx(invalid.clone(), |ctx| {
                 ctx.with_save(|ctx| {
                     ctx.render_ctx.transform(z_op.transform);
                     (z_op.paint_func)(ctx);
                 });
             });
         }
+
+        if self.wants_animation_frame() {
+            self.handle.request_anim_frame();
+        }
     }
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.display_text());
+            self.handle.set_title(&self.title.display_text());
         }
     }
 

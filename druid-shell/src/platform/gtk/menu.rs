@@ -93,7 +93,7 @@ impl Menu {
                     key,
                     enabled,
                 } => {
-                    let item = GtkMenuItem::new_with_label(&name);
+                    let item = GtkMenuItem::with_label(&name);
                     item.set_sensitive(enabled);
 
                     if let Some(k) = key {
@@ -110,7 +110,7 @@ impl Menu {
                     menu.append(&item);
                 }
                 MenuItem::SubMenu(name, submenu) => {
-                    let item = GtkMenuItem::new_with_label(&name);
+                    let item = GtkMenuItem::with_label(&name);
                     item.set_submenu(Some(&submenu.into_gtk_menu(handle, accel_group)));
 
                     menu.append(&item);
@@ -147,7 +147,7 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
         KbKey::Character(text) => text.chars().next().unwrap() as u32,
         k => {
             if let Some(gdk_key) = keycodes::key_to_raw_key(k) {
-                gdk_key
+                *gdk_key
             } else {
                 log::warn!("Cannot map key {:?}", k);
                 return;
@@ -170,14 +170,8 @@ fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
     let modifiers: Modifiers = raw_modifiers.into();
 
     result.set(ModifierType::MOD1_MASK, modifiers.alt());
-    result.set(
-        ModifierType::CONTROL_MASK,
-        modifiers.ctrl(),
-    );
-    result.set(
-        ModifierType::SHIFT_MASK,
-        modifiers.shift(),
-    );
+    result.set(ModifierType::CONTROL_MASK, modifiers.ctrl());
+    result.set(ModifierType::SHIFT_MASK, modifiers.shift());
     result.set(ModifierType::META_MASK, modifiers.meta());
 
     result

@@ -14,10 +14,8 @@
 
 //! A widget that can dynamically switch between one of many views.
 
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    Point, Rect, Size, UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{Data, WidgetPod};
 
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
@@ -25,6 +23,7 @@ use crate::{
 type ChildPicker<T, U> = dyn Fn(&T, &Env) -> U;
 type ChildBuilder<T, U> = dyn Fn(&U, &T, &Env) -> Box<dyn Widget<T>>;
 
+/// A widget that dynamically switches between two children.
 pub struct ViewSwitcher<T, U> {
     child_picker: Box<ChildPicker<T, U>>,
     child_builder: Box<ChildBuilder<T, U>>,
@@ -90,7 +89,7 @@ impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(ctx, bc, data, env);
-                child.set_layout_rect(ctx, data, env, Rect::from_origin_size(Point::ORIGIN, size));
+                child.set_layout_rect(ctx, data, env, size.to_rect());
                 size
             }
             None => bc.max(),

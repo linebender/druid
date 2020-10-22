@@ -15,11 +15,9 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
-use crate::shell::kurbo::{Point, Rect, Size};
-use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::kurbo::Point;
+use crate::widget::prelude::*;
+use crate::{Color, Data, KeyOrValue, Rect, WidgetPod};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -46,7 +44,7 @@ impl<T: Data> Container<T> {
         }
     }
 
-    /// Set the background for this widget.
+    /// Builder-style method for setting the background for this widget.
     ///
     /// This can be passed anything which can be represented by a [`BackgroundBrush`];
     /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
@@ -58,11 +56,26 @@ impl<T: Data> Container<T> {
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
     pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
-        self.background = Some(brush.into());
+        self.set_background(brush);
         self
     }
 
-    /// Paint a border around the widget with a color and width.
+    /// Set the background for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
+    /// [`Color`]: ../struct.Color.thml
+    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Env`]: ../struct.Env.html
+    /// [`Painter`]: struct.Painter.html
+    pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
+        self.background = Some(brush.into());
+    }
+
+    /// Builder-style method for painting a border around the widget with a color and width.
     ///
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
@@ -73,17 +86,36 @@ impl<T: Data> Container<T> {
         color: impl Into<KeyOrValue<Color>>,
         width: impl Into<KeyOrValue<f64>>,
     ) -> Self {
+        self.set_border(color, width);
+        self
+    }
+
+    /// Paint a border around the widget with a color and width.
+    ///
+    /// Arguments can be either concrete values, or a [`Key`] of the respective
+    /// type.
+    ///
+    /// [`Key`]: struct.Key.html
+    pub fn set_border(
+        &mut self,
+        color: impl Into<KeyOrValue<Color>>,
+        width: impl Into<KeyOrValue<f64>>,
+    ) {
         self.border = Some(BorderStyle {
             color: color.into(),
             width: width.into(),
         });
+    }
+
+    /// Builder style method for rounding off corners of this container by setting a corner radius
+    pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
+        self.set_rounded(radius);
         self
     }
 
     /// Round off corners of this container by setting a corner radius
-    pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
+    pub fn set_rounded(&mut self, radius: impl Into<KeyOrValue<f64>>) {
         self.corner_radius = radius.into();
-        self
     }
 
     #[cfg(test)]

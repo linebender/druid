@@ -14,12 +14,13 @@
 
 //! A slider widget.
 
-use crate::kurbo::{Circle, Point, Rect, Shape, Size};
-use crate::theme;
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, LinearGradient,
-    PaintCtx, RenderContext, UnitPoint, UpdateCtx, Widget,
-};
+use crate::kurbo::{Circle, Shape};
+use crate::widget::prelude::*;
+use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
+
+const TRACK_THICKNESS: f64 = 4.0;
+const BORDER_WIDTH: f64 = 2.0;
+const KNOB_STROKE_WIDTH: f64 = 2.0;
 
 /// A slider, allowing interactive update of a numeric value.
 ///
@@ -120,33 +121,26 @@ impl Widget<f64> for Slider {
         ctx.request_paint();
     }
 
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &f64,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &f64, env: &Env) -> Size {
         bc.debug_check("Slider");
         let height = env.get(theme::BASIC_WIDGET_HEIGHT);
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let baseline_offset = (height / 2.0) - TRACK_THICKNESS;
+        ctx.set_baseline_offset(baseline_offset);
         bc.constrain((width, height))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
-        let rect = Rect::from_origin_size(Point::ORIGIN, ctx.size());
+        let rect = ctx.size().to_rect();
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let track_thickness = 4.;
-        let border_width = 2.;
-        let knob_stroke_width = 2.;
 
         //Paint the background
         let background_width = rect.width() - knob_size;
-        let background_origin = Point::new(knob_size / 2., (knob_size - track_thickness) / 2.);
-        let background_size = Size::new(background_width, track_thickness);
+        let background_origin = Point::new(knob_size / 2., (knob_size - TRACK_THICKNESS) / 2.);
+        let background_size = Size::new(background_width, TRACK_THICKNESS);
         let background_rect = Rect::from_origin_size(background_origin, background_size)
-            .inset(-border_width / 2.)
+            .inset(-BORDER_WIDTH / 2.)
             .to_rounded_rect(2.);
 
         let background_gradient = LinearGradient::new(
@@ -158,7 +152,7 @@ impl Widget<f64> for Slider {
             ),
         );
 
-        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), border_width);
+        ctx.stroke(background_rect, &env.get(theme::BORDER_DARK), BORDER_WIDTH);
 
         ctx.fill(background_rect, &background_gradient);
 
@@ -168,7 +162,7 @@ impl Widget<f64> for Slider {
 
         let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
-        let knob_circle = Circle::new(self.knob_pos, (knob_size - knob_stroke_width) / 2.);
+        let knob_circle = Circle::new(self.knob_pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
 
         let normal_knob_gradient = LinearGradient::new(
             UnitPoint::TOP,
@@ -200,7 +194,7 @@ impl Widget<f64> for Slider {
             env.get(theme::FOREGROUND_DARK)
         };
 
-        ctx.stroke(knob_circle, &border_color, knob_stroke_width);
+        ctx.stroke(knob_circle, &border_color, KNOB_STROKE_WIDTH);
 
         //Actually paint the knob
         ctx.fill(knob_circle, &knob_gradient);

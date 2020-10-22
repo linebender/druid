@@ -24,7 +24,7 @@ use winapi::um::winuser::*;
 
 use super::util::ToWide;
 use crate::hotkey::HotKey;
-use crate::keyboard::Modifiers;
+use crate::keyboard::{KbKey, Modifiers};
 
 /// A menu object, which can be either a top-level menubar or a
 /// submenu.
@@ -101,6 +101,11 @@ impl Menu {
         enabled: bool,
         selected: bool,
     ) {
+        let mut anno_text = text.to_string();
+        if let Some(key) = key {
+            anno_text.push('\t');
+            format_hotkey(&key, &mut anno_text);
+        }
         unsafe {
             let mut flags = MF_STRING;
             if !enabled {
@@ -109,7 +114,12 @@ impl Menu {
             if selected {
                 flags |= MF_CHECKED;
             }
-            AppendMenuW(self.hmenu, flags, id as UINT_PTR, text.to_wide().as_ptr());
+            AppendMenuW(
+                self.hmenu,
+                flags,
+                id as UINT_PTR,
+                anno_text.to_wide().as_ptr(),
+            );
         }
 
         if let Some(key) = key {
@@ -175,4 +185,40 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
         key: raw_key as u16,
         cmd: id as u16,
     })
+}
+
+/// Format the hotkey in a Windows-native way.
+fn format_hotkey(key: &HotKey, s: &mut String) {
+    let key_mods: Modifiers = key.mods.into();
+    if key_mods.ctrl() {
+        s.push_str("Ctrl+");
+    }
+    if key_mods.shift() {
+        s.push_str("Shift+");
+    }
+    if key_mods.alt() {
+        s.push_str("Alt+");
+    }
+    if key_mods.meta() {
+        s.push_str("Windows+");
+    }
+    match &key.key {
+        KbKey::Character(c) => match c.as_str() {
+            "+" => s.push_str("Plus"),
+            "-" => s.push_str("Minus"),
+            " " => s.push_str("Space"),
+            _ => s.extend(c.chars().flat_map(|c| c.to_uppercase())),
+        },
+        KbKey::Escape => s.push_str("Esc"),
+        KbKey::Delete => s.push_str("Del"),
+        KbKey::Insert => s.push_str("Ins"),
+        KbKey::PageUp => s.push_str("PgUp"),
+        KbKey::PageDown => s.push_str("PgDn"),
+        // These names match LibreOffice.
+        KbKey::ArrowLeft => s.push_str("Left"),
+        KbKey::ArrowRight => s.push_str("Right"),
+        KbKey::ArrowUp => s.push_str("Up"),
+        KbKey::ArrowDown => s.push_str("Down"),
+        _ => s.push_str(&format!("{:?}", key.key)),
+    }
 }

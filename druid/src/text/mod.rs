@@ -14,17 +14,24 @@
 
 //! Text editing utilities.
 
-mod editable_text;
-pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
-
-pub mod selection;
-pub use self::selection::Selection;
-
-pub mod movement;
-pub use self::movement::{movement, Movement};
-
+mod attribute;
 pub mod backspace;
-pub use self::backspace::offset_for_delete_backwards;
-
+mod editable_text;
+mod editor;
+mod font_descriptor;
+mod layout;
+pub mod movement;
+pub mod selection;
+mod storage;
 mod text_input;
+
+pub use self::attribute::{Attribute, AttributeSpans};
+pub use self::backspace::offset_for_delete_backwards;
+pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
+pub use self::font_descriptor::FontDescriptor;
+pub use self::layout::TextLayout;
+pub use self::movement::{movement, Movement};
+pub use self::selection::Selection;
 pub use self::text_input::{BasicTextInput, EditAction, MouseAction, TextInput};
+pub use editor::Editor;
+pub use storage::{ArcStr, RichText, TextStorage};

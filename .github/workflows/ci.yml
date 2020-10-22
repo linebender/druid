@@ -34,11 +34,87 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install libgtk-3-dev libx11-dev
+      - name: install libx11-dev
         run: |
           sudo apt update
-          sudo apt install libgtk-3-dev libx11-dev
+          sudo apt install libx11-dev
         if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      # Clippy packages in deeper-to-higher dependency order
+      - name: cargo clippy druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11 --no-default-features -- -D warnings
+
+      - name: cargo clippy druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/Cargo.toml --all-targets  --no-default-features --features=svg,image,im,x11 -- -D warnings
+
+      - name: cargo clippy druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+        # there's no platform specific code here so we only run once
+        if: contains(matrix.os, 'mac')
+
+      - name: cargo clippy book examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+        if: contains(matrix.os, 'mac')
+
+      # Test packages in deeper-to-higher dependency order
+      - name: cargo test druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11
+
+      - name: cargo test druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid/Cargo.toml --no-default-features --features=svg,image,im,x11
+
+      - name: cargo test druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-derive/Cargo.toml
+        if: contains(matrix.os, 'mac')
+
+      - name: cargo test book examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=docs/book_examples/Cargo.toml
+        if: contains(matrix.os, 'mac')
+
+  # we test the gtk backend as a separate job because gtk install takes
+  # a long time.
+  test-stable-gtk:
+    runs-on: ubuntu-latest
+    name: cargo clippy+test (gtk)
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install libgtk-3-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -61,19 +137,6 @@ jobs:
           command: clippy
           args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
 
-      - name: cargo clippy druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
-
-      - name: cargo clippy book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
-
-      # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -85,48 +148,6 @@ jobs:
         with:
           command: test
           args: --manifest-path=druid/Cargo.toml --features=svg,image,im
-
-      - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-derive/Cargo.toml
-
-      - name: cargo test book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
-
-      # After default features are done, also perform X11 clippy+testing on Linux.
-      # This is better than a separate job because common dependencies are already built.
-      - name: cargo clippy druid-shell (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11 -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo clippy druid (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=x11 -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo test druid-shell (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo test druid (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --features=x11
-        if: contains(matrix.os, 'ubuntu')
 
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
@@ -158,30 +179,31 @@ jobs:
           override: true
 
       # Clippy wasm32 relevant packages in deeper-to-higher dependency order
-      - name: cargo clippy druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      # FIXME: reenable clippy when rustc >= 1.47.1
+      #- name: cargo clippy druid-shell (wasm)
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          #args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
-      - name: cargo clippy druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
+      #- name: cargo clippy druid (wasm)
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          ## TODO: Add svg feature when it's no longer broken with wasm
+          #args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 
-      - name: cargo clippy druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      #- name: cargo clippy druid-derive (wasm)
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          #args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
-      - name: cargo clippy book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      #- name: cargo clippy book examples (wasm)
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          #args: --manifest-path=docs/book_examples/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
@@ -210,22 +232,22 @@ jobs:
           command: test
           args: --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
 
-      # Clippy and build the special druid-web-examples package.
-      - name: cargo clippy druid-web-examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      ## Clippy and build the special druid-web-examples package.
+      #- name: cargo clippy druid-web-examples
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          #args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
         run: wasm-pack build --dev --target web druid/examples/web
 
-      # Clippy and build the hello_web example
-      - name: cargo clippy hello_web example
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      ## Clippy and build the hello_web example
+      #- name: cargo clippy hello_web example
+        #uses: actions-rs/cargo@v1
+        #with:
+          #command: clippy
+          #args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build hello_web example
         run: wasm-pack build --dev --target web druid/examples/hello_web
@@ -239,10 +261,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install libgtk-dev libx11-dev
+      - name: install libx11-dev
         run: |
           sudo apt update
-          sudo apt install libgtk-3-dev libx11-dev
+          sudo apt install libx11-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
@@ -257,6 +279,52 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11
+
+      - name: cargo test druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid/Cargo.toml --no-default-features --features=svg,image,im,x11
+
+      - name: cargo test druid-derive
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-derive/Cargo.toml
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo test book examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=docs/book_examples/Cargo.toml
+        if: contains(matrix.os, 'windows')
+
+  # we test the gtk backend as a separate job because gtk install takes
+  # a long time.
+  test-nightly-gtk:
+    runs-on: ubuntu-latest
+    name: cargo test nightly (gtk)
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install libgtk-3-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+
+      - name: cargo test druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
           args: --manifest-path=druid-shell/Cargo.toml
 
       - name: cargo test druid
@@ -265,33 +333,6 @@ jobs:
           command: test
           args: --manifest-path=druid/Cargo.toml --features=svg,image,im
 
-      - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-derive/Cargo.toml
-
-      - name: cargo test book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
-
-      # After default features are done, also perform X11 testing on Linux.
-      # This is better than a separate job because common dependencies are already built.
-      - name: cargo test druid-shell (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo test druid (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --features=x11
-        if: contains(matrix.os, 'ubuntu')
 
   check-docs:
     name: Docs

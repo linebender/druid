@@ -14,11 +14,8 @@
 
 //! A widget that switches dynamically between two child views.
 
-use crate::kurbo::{Point, Rect, Size};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{Data, WidgetPod};
 
 /// A widget that switches between two possible child views.
 pub struct Either<T> {
@@ -80,23 +77,15 @@ impl<T: Data> Widget<T> for Either<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         if self.current {
             let size = self.true_branch.layout(ctx, bc, data, env);
-            self.true_branch.set_layout_rect(
-                ctx,
-                data,
-                env,
-                Rect::from_origin_size(Point::ORIGIN, size),
-            );
+            self.true_branch
+                .set_layout_rect(ctx, data, env, size.to_rect());
             ctx.set_paint_insets(self.true_branch.paint_insets());
             size
         } else {
             let size = self.false_branch.layout(ctx, bc, data, env);
-            self.false_branch.set_layout_rect(
-                ctx,
-                data,
-                env,
-                Rect::from_origin_size(Point::ORIGIN, size),
-            );
-            ctx.set_paint_insets(self.true_branch.paint_insets());
+            self.false_branch
+                .set_layout_rect(ctx, data, env, size.to_rect());
+            ctx.set_paint_insets(self.false_branch.paint_insets());
             size
         }
     }

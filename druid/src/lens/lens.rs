@@ -16,8 +16,6 @@ use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
 
-use crate::kurbo::Size;
-use crate::widget::prelude::*;
 use crate::Data;
 
 /// A lens is a datatype that gives access to a part of a larger
@@ -125,6 +123,53 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         self.then(Deref)
     }
 
+    /// Invoke a type's `AsRef` and `AsMut` impl.
+    ///
+    /// It also allows indexing arrays with the [`index`] lens as shown in the example.
+    /// This is necessary, because the `Index` trait in Rust is only implemented
+    /// for slices (`[T]`), but not for arrays (`[T; N]`).
+    ///
+    /// # Examples
+    ///
+    /// Using `ref` this works:
+    ///
+    /// ```
+    /// use druid::{widget::TextBox, Data, Lens, LensExt, Widget, WidgetExt};
+    ///
+    /// #[derive(Clone, Default, Data, Lens)]
+    /// struct State {
+    ///     data: [String; 2],
+    /// }
+    ///
+    /// fn with_ref() -> impl Widget<State> {
+    ///     TextBox::new().lens(State::data.as_ref().index(1))
+    /// }
+    /// ```
+    ///
+    /// While this fails:
+    ///
+    /// ```compile_fail
+    /// # use druid::*;
+    /// # #[derive(Clone, Default, Data, Lens)]
+    /// # struct State {
+    /// #     data: [String; 2],
+    /// # }
+    /// fn without_ref() -> impl Widget<State> {
+    ///     // results in: `[std::string::String; 2]` cannot be mutably indexed by `usize`
+    ///     TextBox::new().lens(State::data.index(1))
+    /// }
+    /// ```
+    ///
+    /// [`Lens`]: ./trait.Lens.html
+    /// [`index`]: #method.index
+    fn as_ref<T: ?Sized>(self) -> Then<Self, Ref, B>
+    where
+        B: AsRef<T> + AsMut<T>,
+        Self: Sized,
+    {
+        self.then(Ref)
+    }
+
     /// Access an index in a container
     ///
     /// ```
@@ -164,96 +209,6 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
 }
 
 impl<A: ?Sized, B: ?Sized, T: Lens<A, B>> LensExt<A, B> for T {}
-
-// A case can be made this should be in the `widget` module.
-
-/// A wrapper for its widget subtree to have access to a part
-/// of its parent's data.
-///
-/// Every widget in druid is instantiated with access to data of some
-/// type; the root widget has access to the entire application data.
-/// Often, a part of the widget hierarchy is only concerned with a part
-/// of that data. The `LensWrap` widget is a way to "focus" the data
-/// reference down, for the subtree. One advantage is performance;
-/// data changes that don't intersect the scope of the lens aren't
-/// propagated.
-///
-/// Another advantage is generality and reuse. If a widget (or tree of
-/// widgets) is designed to work with some chunk of data, then with a
-/// lens that same code can easily be reused across all occurrences of
-/// that chunk within the application state.
-///
-/// This wrapper takes a [`Lens`] as an argument, which is a specification
-/// of a struct field, or some other way of narrowing the scope.
-///
-/// [`Lens`]: trait.Lens.html
-pub struct LensWrap<U, L, W> {
-    inner: W,
-    lens: L,
-    // The following is a workaround for otherwise getting E0207.
-    phantom: PhantomData<U>,
-}
-
-impl<U, L, W> LensWrap<U, L, W> {
-    /// Wrap a widget with a lens.
-    ///
-    /// When the lens has type `Lens<T, U>`, the inner widget has data
-    /// of type `U`, and the wrapped widget has data of type `T`.
-    pub fn new(inner: W, lens: L) -> LensWrap<U, L, W> {
-        LensWrap {
-            inner,
-            lens,
-            phantom: Default::default(),
-        }
-    }
-}
-
-impl<T, U, L, W> Widget<T> for LensWrap<U, L, W>
-where
-    T: Data,
-    U: Data,
-    L: Lens<T, U>,
-    W: Widget<U>,
-{
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let inner = &mut self.inner;
-        self.lens
-            .with_mut(data, |data| inner.event(ctx, event, data, env))
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.lifecycle(ctx, event, data, env))
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        let inner = &mut self.inner;
-        let lens = &self.lens;
-        lens.with(old_data, |old_data| {
-            lens.with(data, |data| {
-                if !old_data.same(data) {
-                    inner.update(ctx, old_data, data, env);
-                }
-            })
-        })
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let inner = &mut self.inner;
-        self.lens
-            .with(data, |data| inner.layout(ctx, bc, data, env))
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let inner = &mut self.inner;
-        self.lens.with(data, |data| inner.paint(ctx, data, env));
-    }
-
-    fn id(&self) -> Option<WidgetId> {
-        self.inner.id()
-    }
-}
 
 /// Lens accessing a member of some type using accessor functions
 ///
@@ -307,10 +262,10 @@ where
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x[$index], |x| &mut x[$index])
+        $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
     };
     ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(|x| &x.$field, |x| &mut x.$field)
+        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
     };
 }
 
@@ -421,6 +376,28 @@ where
     }
 }
 
+/// [`Lens`] for invoking `AsRef` and `AsMut` on a type.
+///
+/// [`LensExt::ref`] offers an easy way to apply this,
+/// as well as more information and examples.
+///
+/// [`Lens`]: ../trait.Lens.html
+/// [`LensExt::ref`]: ../trait.LensExt.html#method.as_ref
+#[derive(Debug, Copy, Clone)]
+pub struct Ref;
+
+impl<T: ?Sized, U: ?Sized> Lens<T, U> for Ref
+where
+    T: AsRef<U> + AsMut<U>,
+{
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V {
+        f(data.as_ref())
+    }
+    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> V {
+        f(data.as_mut())
+    }
+}
+
 /// `Lens` for indexing containers
 #[derive(Debug, Copy, Clone)]
 pub struct Index<I> {
@@ -504,5 +481,31 @@ where
             self.inner.with_mut(Arc::make_mut(data), |x| *x = temp);
         }
         v
+    }
+}
+
+/// A `Lens` that always yields ().
+///
+/// This is useful when you wish to have a display only widget, require a type-erased widget, or
+/// obtain app data out of band and ignore your input. (E.g sub-windows)
+#[derive(Debug, Copy, Clone)]
+pub struct Unit<T> {
+    phantom_t: PhantomData<T>,
+}
+
+impl<T> Default for Unit<T> {
+    fn default() -> Self {
+        Unit {
+            phantom_t: Default::default(),
+        }
+    }
+}
+
+impl<T> Lens<T, ()> for Unit<T> {
+    fn with<V, F: FnOnce(&()) -> V>(&self, _data: &T, f: F) -> V {
+        f(&())
+    }
+    fn with_mut<V, F: FnOnce(&mut ()) -> V>(&self, _data: &mut T, f: F) -> V {
+        f(&mut ())
     }
 }
