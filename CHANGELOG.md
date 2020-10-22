@@ -109,6 +109,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Able to select text in multiple TextBoxes at once. ([#1276] by [@sysint64])
 - The scroll bar now shows when the contents of a scrollable area change size. ([#1278] by [@Majora320])
 - Fix `widget::Either` using the wrong paint insets ([#1299] by [@andrewhickman])
+- Various fixes to cross-platform menus ([#1306] by [@raphlinus])
 - Improve Windows 7 DXGI compatibility ([#1311] by [@raphlinus])
 
 ### Visual
@@ -506,6 +507,7 @@ Last release without a changelog :(
 [#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
+[#1306]: https://github.com/linebender/druid/pull/1306
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
 [#1326]: https://github.com/linebender/druid/pull/1326
