@@ -15,7 +15,9 @@
 //! Tools and infrastructure for testing widgets.
 
 use std::path::Path;
+use std::sync::Arc;
 
+use crate::app::PendingWindow;
 use crate::core::{CommandQueue, WidgetState};
 use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
@@ -66,10 +68,12 @@ pub struct TargetGuard<'a>(Option<BitmapTarget<'a>>);
 impl<'a> TargetGuard<'a> {
     /// Turns the TargetGuard into a array of pixels
     #[allow(dead_code)]
-    pub fn into_raw(mut self) -> Vec<u8> {
+    pub fn into_raw(mut self) -> Arc<[u8]> {
         let mut raw_target = self.0.take().unwrap();
-        let raw_pixels: Vec<u8> = raw_target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
-        raw_pixels
+        raw_target
+            .to_image_buf(ImageFormat::RgbaPremul)
+            .unwrap()
+            .raw_pixels_shared()
     }
 
     /// Saves the TargetGuard into a png
@@ -144,12 +148,12 @@ impl<T: Data> Harness<'_, T> {
         {
             let piet = target.0.as_mut().unwrap().render_context();
 
-            let desc = WindowDesc::new(|| root);
-            let window = Window::new(WindowId::next(), Default::default(), desc, ext_handle);
+            let pending = PendingWindow::new(|| root);
+            let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
             let inner = Inner {
                 data,
-                env: theme::init(),
+                env: Env::default(),
                 window,
                 cmds: Default::default(),
             };
@@ -214,9 +218,9 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Send a command to a target.
-    pub fn submit_command(&mut self, cmd: impl Into<Command>, target: impl Into<Option<Target>>) {
-        let target = target.into().unwrap_or_else(|| self.inner.window.id.into());
-        let event = Event::Internal(InternalEvent::TargetedCommand(target, cmd.into()));
+    pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+        let command = cmd.into().default_to(self.inner.window.id.into());
+        let event = Event::Internal(InternalEvent::TargetedCommand(command));
         self.event(event);
     }
 
@@ -243,9 +247,7 @@ impl<T: Data> Harness<'_, T> {
         loop {
             let cmd = self.inner.cmds.pop_front();
             match cmd {
-                Some((target, cmd)) => {
-                    self.event(Event::Internal(InternalEvent::TargetedCommand(target, cmd)))
-                }
+                Some(cmd) => self.event(Event::Internal(InternalEvent::TargetedCommand(cmd))),
                 None => break,
             }
         }
@@ -265,13 +267,22 @@ impl<T: Data> Harness<'_, T> {
         self.inner.layout()
     }
 
-    pub fn paint_rect(&mut self, invalid_rect: Rect) {
-        self.inner.paint_rect(&mut self.piet, invalid_rect)
+    /// Paints just the part of the window that was invalidated by calls to `request_paint` or
+    /// `request_paint_rect`.
+    ///
+    /// Also resets the invalid region.
+    #[allow(dead_code)]
+    pub fn paint_invalid(&mut self) {
+        let invalid = std::mem::replace(self.window_mut().invalid_mut(), Region::EMPTY);
+        self.inner.paint_region(&mut self.piet, &invalid);
     }
 
+    /// Paints the entire window and resets the invalid region.
     #[allow(dead_code)]
     pub fn paint(&mut self) {
-        self.paint_rect(self.window_size.to_rect())
+        self.window_mut().invalid_mut().clear();
+        self.inner
+            .paint_region(&mut self.piet, &self.window_size.to_rect().into());
     }
 }
 
@@ -296,14 +307,9 @@ impl<T: Data> Inner<T> {
     }
 
     #[allow(dead_code)]
-    fn paint_rect(&mut self, piet: &mut Piet, invalid_rect: Rect) {
-        self.window.do_paint(
-            piet,
-            &invalid_rect.into(),
-            &mut self.cmds,
-            &self.data,
-            &self.env,
-        );
+    fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
+        self.window
+            .do_paint(piet, &invalid, &mut self.cmds, &self.data, &self.env);
     }
 }
 
@@ -323,6 +329,6 @@ impl Drop for TargetGuard<'_> {
         let _ = self
             .0
             .take()
-            .map(|mut t| t.raw_pixels(piet::ImageFormat::RgbaPremul));
+            .map(|mut t| t.to_image_buf(piet::ImageFormat::RgbaPremul));
     }
 }

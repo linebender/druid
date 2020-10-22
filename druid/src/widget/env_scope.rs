@@ -14,11 +14,8 @@
 
 //! A widget that accepts a closure to update the environment for its child.
 
-use crate::kurbo::Size;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{Data, WidgetPod};
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {

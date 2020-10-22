@@ -24,15 +24,11 @@ use crate::error::Error;
 use crate::keyboard::KeyEvent;
 use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
-use crate::mouse::{Cursor, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
-
-// It's possible we'll want to make this type alias at a lower level,
-// see https://github.com/linebender/piet/pull/37 for more discussion.
-/// The platform text factory, reexported from piet.
-pub type Text<'a> = <piet_common::Piet<'a> as piet_common::RenderContext>::Text;
+use piet_common::PietText;
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -96,6 +92,80 @@ impl IdleToken {
     }
 }
 
+/// A token that uniquely identifies a file dialog request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct FileDialogToken(u64);
+
+impl FileDialogToken {
+    /// A token that does not correspond to any file dialog.
+    pub const INVALID: FileDialogToken = FileDialogToken(0);
+
+    /// Create a new token.
+    pub fn next() -> FileDialogToken {
+        static COUNTER: Counter = Counter::new();
+        FileDialogToken(COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> FileDialogToken {
+        FileDialogToken(id)
+    }
+
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
+        self.0
+    }
+}
+
+/// An enumeration of operations that might need to be deferred until the `WinHandler` is dropped.
+///
+/// We work hard to avoid calling into `WinHandler` re-entrantly. Since most of our backends use
+/// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
+/// that none of the `WindowHandle`'s methods can return control to the system's event loop
+/// (because if it did, the system could call back into druid-shell with some mouse event, and then
+/// we'd try to call the `WinHandler` again).
+///
+/// The solution is that for every `WindowHandle` method that *wants* to return control to the
+/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// immediately. The deferred operations will run whenever the currently running `WinHandler`
+/// method returns.
+///
+/// An example call trace might look like:
+/// 1. the system hands a mouse click event to druid-shell
+/// 2. druid-shell calls `WinHandler::mouse_up`
+/// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
+///   deferred op and returns immediately
+/// 4. after some more processing, `WinHandler::mouse_up` returns
+/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
+#[allow(dead_code)]
+pub(crate) enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+}
+
+/// Levels in the window system - Z order for display purposes.
+/// Describes the purpose of a window and should be mapped appropriately to match platform
+/// conventions.
+#[derive(Copy, Clone, Debug)]
+pub enum WindowLevel {
+    /// A top level app window.
+    AppWindow,
+    /// A window that should stay above app windows - like a tooltip
+    Tooltip,
+    /// A user interface element such as a dropdown menu or combo box
+    DropDown,
+    /// A modal dialog
+    Modal,
+}
+
+/// Contains the different states a Window can be in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindowState {
+    MAXIMIZED,
+    MINIMIZED,
+    RESTORED,
+}
+
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
 pub struct WindowHandle(platform::WindowHandle);
@@ -119,9 +189,89 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should show titlebar
+    /// Sets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
+    }
+
+    /// Gets the state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn get_window_state(&self) -> WindowState {
+        self.0.get_window_state()
+    }
+
+    /// Allows the operating system to handle a custom titlebar
+    /// like the default one.
+    ///
+    /// It should be used on Event::MouseMove in a widget:
+    /// `Event::MouseMove(_) => {
+    ///    if ctx.is_hot() {
+    ///        ctx.window().handle_titlebar(true);
+    ///    } else {
+    ///        ctx.window().handle_titlebar(false);
+    ///    }
+    ///}`
+    ///
+    /// This might not work or behave the same across all platforms.
+    pub fn handle_titlebar(&self, val: bool) {
+        self.0.handle_titlebar(val);
+    }
+
+    /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the position of the window in virtual screen coordinates.
+    /// [`position`] The position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&self, position: Point) {
+        self.0.set_position(position)
+    }
+
+    /// Returns the position in virtual screen coordinates.
+    /// [`Point`] The position in pixels.
+    ///
+    /// [`Point`]: struct.Point.html
+    pub fn get_position(&self) -> Point {
+        self.0.get_position()
+    }
+
+    /// Set the window's size in [display points].
+    ///
+    /// The actual window size in pixels will depend on the platform DPI settings.
+    ///
+    /// This should be considered a request to the platform to set the size of the window.
+    /// The platform might increase the size a tiny bit due to DPI.
+    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
+    ///
+    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
+    /// [display points]: struct.Scale.html
+    pub fn set_size(&self, size: Size) {
+        self.0.set_size(size)
+    }
+
+    /// Gets the window size.
+    /// [`Size`] Window size in pixels.
+    ///
+    /// [`Size`]: struct.Size.html
+    pub fn get_size(&self) -> Size {
+        self.0.get_size()
+    }
+
+    /// Sets the [`WindowLevel`] - ie Z order in the Window system / compositor
+    ///
+    /// We do not currently have a getter method - because it may imply keeping extra state in the WindowHandle if
+    /// multiple Druid levels map to one underlying system level.
+    /// If there is a use case it can be added.
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&self, level: WindowLevel) {
+        self.0.set_level(level)
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -162,7 +312,7 @@ impl WindowHandle {
     }
 
     /// Get access to a type that can perform text layout.
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         self.0.text()
     }
 
@@ -187,18 +337,44 @@ impl WindowHandle {
         self.0.set_cursor(cursor)
     }
 
-    /// Prompt the user to chose a file to open.
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        self.0.make_cursor(desc)
+    }
+
+    /// Prompt the user to choose a file to open.
     ///
     /// Blocks while the user picks the file.
     pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         self.0.open_file_sync(options)
     }
 
-    /// Prompt the user to chose a path for saving.
+    /// Prompt the user to choose a file to open.
+    ///
+    /// This won't block immediately; the file dialog will be shown whenever control returns to
+    /// `druid-shell`, and the [`WinHandler::open`] method will be called when the dialog is
+    /// closed.
+    ///
+    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.0.open_file(options)
+    }
+
+    /// Prompt the user to choose a path for saving.
     ///
     /// Blocks while the user picks a file.
     pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
         self.0.save_as_sync(options)
+    }
+
+    /// Prompt the user to choose a path for saving.
+    ///
+    /// This won't block immediately; the file dialog will be shown whenever control returns to
+    /// `druid-shell`, and the [`WinHandler::save_as`] method will be called when the dialog is
+    /// closed.
+    ///
+    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.0.save_as(options)
     }
 
     /// Display a pop-up menu at the given position.
@@ -272,14 +448,29 @@ impl WindowBuilder {
         self.0.set_min_size(size)
     }
 
-    /// Set whether the window should be resizable
+    /// Set whether the window should be resizable.
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should have a titlebar and decorations
+    /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Sets the initial window position in virtual screen coordinates.
+    /// [`position`] Position in pixels.
+    ///
+    /// [`position`]: struct.Point.html
+    pub fn set_position(&mut self, position: Point) {
+        self.0.set_position(position);
+    }
+
+    /// Sets the initial [`WindowLevel`]
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.0.set_level(level);
     }
 
     /// Set the window's initial title.
@@ -290,6 +481,13 @@ impl WindowBuilder {
     /// Set the window's menu.
     pub fn set_menu(&mut self, menu: Menu) {
         self.0.set_menu(menu.into_inner())
+    }
+
+    /// Sets the initial state of the window.
+    ///
+    /// [`state`]: enum.WindowState.html
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.0.set_window_state(state);
     }
 
     /// Attempt to construct the platform window.
@@ -358,6 +556,24 @@ pub trait WinHandler {
     /// Called when a menu item is selected.
     #[allow(unused_variables)]
     fn command(&mut self, id: u32) {}
+
+    /// Called when a "Save As" dialog is closed.
+    ///
+    /// `token` is the value returned by [`WindowHandle::save_as`]. `file` contains the information
+    /// of the chosen path, or `None` if the save dialog was cancelled.
+    ///
+    /// [`WindowHandle::save_as`]: trait.WindowHandle:#tymethod.save_as
+    #[allow(unused_variables)]
+    fn save_as(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
+
+    /// Called when an "Open" dialog is closed.
+    ///
+    /// `token` is the value returned by [`WindowHandle::open_file`]. `file` contains the information
+    /// of the chosen path, or `None` if the save dialog was cancelled.
+    ///
+    /// [`WindowHandle::open_file`]: trait.WindowHandle:#tymethod.open_file
+    #[allow(unused_variables)]
+    fn open_file(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
 
     /// Called on a key down event.
     ///

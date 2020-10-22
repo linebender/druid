@@ -22,6 +22,7 @@ use std::mem;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use block::ConcreteBlock;
 use cocoa::appkit::{
     CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
     NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
@@ -53,14 +54,41 @@ use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::keyboard_types::KeyState;
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
 const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
+
+#[allow(dead_code)]
+#[allow(non_upper_case_globals)]
+mod levels {
+    use crate::window::WindowLevel;
+
+    // These are the levels that AppKit seems to have.
+    pub const NSModalPanelLevel: i32 = 24;
+    pub const NSNormalWindowLevel: i32 = 0;
+    pub const NSFloatingWindowLevel: i32 = 3;
+    pub const NSTornOffMenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSSubmenuWindowLevel: i32 = NSFloatingWindowLevel;
+    pub const NSModalPanelWindowLevel: i32 = 8;
+    pub const NSStatusWindowLevel: i32 = 25;
+    pub const NSPopUpMenuWindowLevel: i32 = 101;
+    pub const NSScreenSaverWindowLevel: i32 = 1000;
+
+    pub fn as_raw_window_level(window_level: WindowLevel) -> i32 {
+        use WindowLevel::*;
+        match window_level {
+            AppWindow => NSNormalWindowLevel,
+            Tooltip => NSFloatingWindowLevel,
+            DropDown => NSFloatingWindowLevel,
+            Modal => NSModalPanelWindowLevel,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct WindowHandle {
@@ -86,6 +114,9 @@ pub(crate) struct WindowBuilder {
     menu: Option<Menu>,
     size: Size,
     min_size: Option<Size>,
+    position: Option<Point>,
+    level: Option<WindowLevel>,
+    window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
 }
@@ -115,6 +146,10 @@ struct ViewState {
     text: PietText,
 }
 
+#[derive(Clone)]
+// TODO: support custom cursors
+pub struct CustomCursor;
+
 impl WindowBuilder {
     pub fn new(_app: Application) -> WindowBuilder {
         WindowBuilder {
@@ -123,6 +158,9 @@ impl WindowBuilder {
             menu: None,
             size: Size::new(500.0, 400.0),
             min_size: None,
+            position: None,
+            level: None,
+            window_state: None,
             resizable: true,
             show_titlebar: true,
         }
@@ -145,8 +183,19 @@ impl WindowBuilder {
     }
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
-        // TODO: Use this in `self.build`
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
+
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position)
+    }
+
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.window_state = Some(state);
     }
 
     pub fn set_title(&mut self, title: impl Into<String>) {
@@ -160,9 +209,12 @@ impl WindowBuilder {
     pub fn build(self) -> Result<WindowHandle, Error> {
         assert_main_thread();
         unsafe {
-            let mut style_mask = NSWindowStyleMask::NSTitledWindowMask
-                | NSWindowStyleMask::NSClosableWindowMask
+            let mut style_mask = NSWindowStyleMask::NSClosableWindowMask
                 | NSWindowStyleMask::NSMiniaturizableWindowMask;
+
+            if self.show_titlebar {
+                style_mask |= NSWindowStyleMask::NSTitledWindowMask;
+            }
 
             if self.resizable {
                 style_mask |= NSWindowStyleMask::NSResizableWindowMask;
@@ -173,7 +225,8 @@ impl WindowBuilder {
                 NSSize::new(self.size.width, self.size.height),
             );
 
-            let window = NSWindow::alloc(nil).initWithContentRect_styleMask_backing_defer_(
+            let window: id = msg_send![WINDOW_CLASS.0, alloc];
+            let window = window.initWithContentRect_styleMask_backing_defer_(
                 rect,
                 style_mask,
                 NSBackingStoreBuffered,
@@ -202,10 +255,22 @@ impl WindowBuilder {
             content_view.addSubview_(view);
             let view_state: *mut c_void = *(*view).get_ivar("viewState");
             let view_state = &mut *(view_state as *mut ViewState);
-            let handle = WindowHandle {
+            let mut handle = WindowHandle {
                 nsview: view_state.nsview.clone(),
                 idle_queue,
             };
+
+            if let Some(pos) = self.position {
+                handle.set_position(pos);
+            }
+            if let Some(window_state) = self.window_state {
+                handle.set_window_state(window_state);
+            }
+
+            if let Some(level) = self.level {
+                handle.set_level(level)
+            }
+
             (*view_state).handler.connect(&handle.clone().into());
             (*view_state).handler.scale(Scale::default());
             (*view_state)
@@ -393,6 +458,24 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
 
         (view.autorelease(), queue_handle)
     }
+}
+
+struct WindowClass(*const Class);
+unsafe impl Sync for WindowClass {}
+
+lazy_static! {
+    static ref WINDOW_CLASS: WindowClass = unsafe {
+        let mut decl =
+            ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
+        decl.add_method(
+            sel!(canBecomeKeyWindow),
+            canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
+        );
+        extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
+            YES
+        }
+        WindowClass(decl.register())
+    };
 }
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
@@ -810,9 +893,16 @@ impl WindowHandle {
                 Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
                 Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
+                // TODO: support custom cursors
+                Cursor::Custom(_) => msg_send![nscursor, arrowCursor],
             };
             let () = msg_send![cursor, set];
         }
+    }
+
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the macOS backend");
+        None
     }
 
     pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
@@ -831,7 +921,7 @@ impl WindowHandle {
         token
     }
 
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         let view = self.nsview.load();
         unsafe {
             if let Some(view) = (*view).as_ref() {
@@ -844,14 +934,50 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Open, options)
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("open_file_sync should no longer be called on mac!");
+        None
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        dialog::get_file_dialog_path(FileDialogType::Save, options)
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_save_impl(FileDialogType::Open, options)
+    }
+
+    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
+        log::warn!("save_as_sync should no longer be called on mac!");
+        None
+    }
+
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_save_impl(FileDialogType::Save, options)
+    }
+
+    fn open_save_impl(
+        &mut self,
+        ty: FileDialogType,
+        opts: FileDialogOptions,
+    ) -> Option<FileDialogToken> {
+        let token = FileDialogToken::next();
+        let self_clone = self.clone();
+        unsafe {
+            let panel = dialog::build_panel(ty, opts);
+            let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
+                let url = dialog::get_path(panel, response).map(|s| FileInfo { path: s.into() });
+                let view = self_clone.nsview.load();
+                if let Some(view) = (*view).as_ref() {
+                    let view_state: *mut c_void = *view.get_ivar("viewState");
+                    let view_state = &mut *(view_state as *mut ViewState);
+                    if ty == FileDialogType::Open {
+                        (*view_state).handler.open_file(token, url);
+                    } else if ty == FileDialogType::Save {
+                        (*view_state).handler.save_as(token, url);
+                    }
+                }
+            });
+            let block = block.copy();
+            let () = msg_send![panel, beginWithCompletionHandler: block];
+        }
+        Some(token)
     }
 
     /// Set the title for this menu.
@@ -865,6 +991,105 @@ impl WindowHandle {
 
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
+
+    // Need to translate mac y coords, as they start from bottom left
+    pub fn set_position(&self, position: Point) {
+        unsafe {
+            // TODO this should be the max y in orig mac coords
+            let screen_height = crate::Screen::get_display_rect().height();
+            let window: id = msg_send![*self.nsview.load(), window];
+            let frame: NSRect = msg_send![window, frame];
+
+            let mut new_frame = frame;
+            new_frame.origin.x = position.x;
+            new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
+            let () = msg_send![window, setFrame: new_frame display: YES];
+        }
+    }
+
+    pub fn get_position(&self) -> Point {
+        unsafe {
+            // TODO this should be the max y in orig mac coords
+            let screen_height = crate::Screen::get_display_rect().height();
+
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+
+            Point::new(
+                current_frame.origin.x,
+                screen_height - current_frame.origin.y - current_frame.size.height,
+            )
+        }
+    }
+
+    pub fn set_level(&self, level: WindowLevel) {
+        unsafe {
+            let level = levels::as_raw_window_level(level);
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, setLevel: level];
+        }
+    }
+
+    pub fn set_size(&self, size: Size) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+            let mut new_frame = current_frame;
+            new_frame.size.width = size.width;
+            new_frame.size.height = size.height;
+            let () = msg_send![window, setFrame: new_frame display: YES];
+        }
+    }
+
+    pub fn get_size(&self) -> Size {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let current_frame: NSRect = msg_send![window, frame];
+            Size::new(current_frame.size.width, current_frame.size.height)
+        }
+    }
+
+    pub fn get_window_state(&self) -> WindowState {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let isMin: BOOL = msg_send![window, isMiniaturized];
+            if isMin != NO {
+                return WindowState::MINIMIZED;
+            }
+            let isZoomed: BOOL = msg_send![window, isZoomed];
+            if isZoomed != NO {
+                return WindowState::MAXIMIZED;
+            }
+        }
+        WindowState::RESTORED
+    }
+
+    pub fn set_window_state(&mut self, state: WindowState) {
+        let cur_state = self.get_window_state();
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            match (state, cur_state) {
+                (s1, s2) if s1 == s2 => (),
+                (WindowState::MINIMIZED, _) => {
+                    let () = msg_send![window, performMiniaturize: self];
+                }
+                (WindowState::MAXIMIZED, _) => {
+                    let () = msg_send![window, performZoom: self];
+                }
+                (WindowState::RESTORED, WindowState::MAXIMIZED) => {
+                    let () = msg_send![window, performZoom: self];
+                }
+                (WindowState::RESTORED, WindowState::MINIMIZED) => {
+                    let () = msg_send![window, deminiaturize: self];
+                }
+                (WindowState::RESTORED, WindowState::RESTORED) => {} // Can't be reached
+            }
+        }
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
+    }
 
     pub fn resizable(&self, resizable: bool) {
         unsafe {

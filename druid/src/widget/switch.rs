@@ -16,27 +16,38 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Circle, Point, Shape, Size};
-use crate::piet::{
-    FontFamily, LinearGradient, RenderContext, Text, TextLayout, TextLayoutBuilder, UnitPoint,
-};
-use crate::theme;
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget,
-};
+use crate::kurbo::{Circle, Shape};
+use crate::piet::{LinearGradient, RenderContext, UnitPoint};
+use crate::widget::prelude::*;
+use crate::{theme, ArcStr, Point, TextLayout};
 
 const SWITCH_CHANGE_TIME: f64 = 0.2;
 const SWITCH_PADDING: f64 = 3.;
 const SWITCH_WIDTH_RATIO: f64 = 2.75;
 
 /// A switch that toggles a `bool`.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Switch {
     knob_pos: Point,
     knob_hovered: bool,
     knob_dragged: bool,
     animation_in_progress: bool,
+    on_text: TextLayout<ArcStr>,
+    off_text: TextLayout<ArcStr>,
+}
+
+impl Default for Switch {
+    fn default() -> Self {
+        Switch {
+            knob_pos: Point::ZERO,
+            knob_hovered: false,
+            knob_dragged: false,
+            animation_in_progress: false,
+            //TODO: use localized strings, also probably make these configurable?
+            on_text: TextLayout::from_text("ON"),
+            off_text: TextLayout::from_text("OFF"),
+        }
+    }
 }
 
 impl Switch {
@@ -51,51 +62,27 @@ impl Switch {
     }
 
     fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
-        let font_name = env.get(theme::FONT_NAME);
-        let font_size = env.get(theme::TEXT_SIZE_NORMAL);
-        let text_color = env.get(theme::LABEL_COLOR);
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
-        let font = ctx
-            .text()
-            .font_family(font_name)
-            .unwrap_or(FontFamily::SYSTEM_UI);
+        let on_size = self.on_text.size();
+        let off_size = self.off_text.size();
 
-        // off/on labels
-        // TODO: use LocalizedString
-        let on_label_layout = ctx
-            .text()
-            .new_text_layout("ON")
-            .font(font.clone(), font_size)
-            .text_color(text_color.clone())
-            .build()
-            .unwrap();
-
-        let off_label_layout = ctx
-            .text()
-            .new_text_layout("OFF")
-            .font(font, font_size)
-            .text_color(text_color)
-            .build()
-            .unwrap();
-
-        let label_y = (switch_height - on_label_layout.size().height).max(0.0) / 2.0;
+        let label_y = (switch_height - on_size.height).max(0.0) / 2.0;
         let label_x_space = switch_width - knob_size - SWITCH_PADDING * 2.0;
         let off_pos = knob_size / 2. + SWITCH_PADDING;
         let knob_delta = self.knob_pos.x - off_pos;
 
-        let on_label_width = on_label_layout.size().width;
+        let on_label_width = on_size.width;
         let on_base_x_pos =
             -on_label_width - (label_x_space - on_label_width) / 2.0 + SWITCH_PADDING;
         let on_label_origin = Point::new(on_base_x_pos + knob_delta, label_y);
 
-        let off_base_x_pos =
-            knob_size + (label_x_space - off_label_layout.size().width) / 2.0 + SWITCH_PADDING;
+        let off_base_x_pos = knob_size + (label_x_space - off_size.width) / 2.0 + SWITCH_PADDING;
         let off_label_origin = Point::new(off_base_x_pos + knob_delta, label_y);
 
-        ctx.draw_text(&on_label_layout, on_label_origin);
-        ctx.draw_text(&off_label_layout, off_label_origin);
+        self.on_text.draw(ctx, on_label_origin);
+        self.off_text.draw(ctx, off_label_origin);
     }
 }
 
@@ -137,36 +124,41 @@ impl Widget<bool> for Switch {
                 }
                 ctx.request_paint();
             }
+            Event::AnimFrame(interval) => {
+                let delta = Duration::from_nanos(*interval).as_secs_f64();
+                let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+                let switch_width = switch_height * SWITCH_WIDTH_RATIO;
+                let knob_size = switch_height - 2. * SWITCH_PADDING;
+                let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
+                let off_pos = knob_size / 2. + SWITCH_PADDING;
+
+                // move knob to right position depending on the value
+                if self.animation_in_progress {
+                    let change_time = if *data {
+                        SWITCH_CHANGE_TIME
+                    } else {
+                        -SWITCH_CHANGE_TIME
+                    };
+                    let change = (switch_width / change_time) * delta;
+                    self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
+
+                    if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data)
+                    {
+                        ctx.request_anim_frame();
+                    } else {
+                        self.animation_in_progress = false;
+                    }
+                    ctx.request_paint();
+                }
+            }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
-        if let LifeCycle::AnimFrame(interval) = event {
-            let delta = Duration::from_nanos(*interval).as_secs_f64();
-            let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-            let switch_width = switch_height * SWITCH_WIDTH_RATIO;
-            let knob_size = switch_height - 2. * SWITCH_PADDING;
-            let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-            let off_pos = knob_size / 2. + SWITCH_PADDING;
-
-            // move knob to right position depending on the value
-            if self.animation_in_progress {
-                let change_time = if *data {
-                    SWITCH_CHANGE_TIME
-                } else {
-                    -SWITCH_CHANGE_TIME
-                };
-                let change = (switch_width / change_time) * delta;
-                self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
-
-                if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data) {
-                    ctx.request_anim_frame();
-                } else {
-                    self.animation_in_progress = false;
-                }
-                ctx.request_paint();
-            }
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, env: &Env) {
+        if matches!(event, LifeCycle::WidgetAdded) {
+            self.on_text.rebuild_if_needed(ctx.text(), env);
+            self.off_text.rebuild_if_needed(ctx.text(), env);
         }
     }
 
@@ -177,15 +169,16 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &bool,
-        env: &Env,
-    ) -> Size {
-        let width = env.get(theme::BORDERED_WIDGET_HEIGHT) * SWITCH_WIDTH_RATIO;
-        bc.constrain(Size::new(width, env.get(theme::BORDERED_WIDGET_HEIGHT)))
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &bool, env: &Env) -> Size {
+        let text_metrics = self.on_text.layout_metrics();
+        let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let width = height * SWITCH_WIDTH_RATIO;
+
+        let label_y = (height - text_metrics.size.height).max(0.0) / 2.0;
+        let text_bottom_padding = height - (text_metrics.size.height + label_y);
+        let text_baseline_offset = text_metrics.size.height - text_metrics.first_baseline;
+        ctx.set_baseline_offset(text_bottom_padding + text_baseline_offset);
+        bc.constrain(Size::new(width, height))
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {

@@ -107,7 +107,6 @@
 
 use std::num::NonZeroU32;
 
-use crate::keyboard_types::Key;
 use crate::kurbo::Point;
 use crate::shell::{HotKey, IntoKey, Menu as PlatformMenu, RawMods, SysMods};
 use crate::{commands, Command, Data, Env, LocalizedString, Selector};
@@ -266,7 +265,7 @@ impl<T: Data> MenuDesc<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
+    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector, Target};
     ///
     /// let num_items: usize = 4;
     /// const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
@@ -275,7 +274,7 @@ impl<T: Data> MenuDesc<T> {
     ///     .append_iter(|| (0..num_items).map(|i| {
     ///         MenuItem::new(
     ///             LocalizedString::new("hello-counter").with_arg("count", move |_, _| i.into()),
-    ///             Command::new(MENU_COUNT_ACTION, i),
+    ///             Command::new(MENU_COUNT_ACTION, i, Target::Auto),
     ///        )
     ///     })
     /// );
@@ -347,7 +346,7 @@ impl<T: Data> MenuDesc<T> {
                     item.platform_id = MenuItemId::next();
                     menu.add_item(
                         item.platform_id.as_u32(),
-                        item.title.localized_str(),
+                        &item.title.localized_str(),
                         item.hotkey.as_ref(),
                         item.enabled,
                         item.selected,
@@ -389,6 +388,7 @@ impl<T: Data> MenuDesc<T> {
 }
 
 impl<T> ContextMenu<T> {
+    /// Create a new `ContextMenu`.
     pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
         ContextMenu { menu, location }
     }
@@ -616,7 +616,6 @@ pub mod sys {
                     LocalizedString::new("win-menu-file-exit"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Alt, Key::F4)
             }
         }
     }

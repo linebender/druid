@@ -14,12 +14,10 @@
 
 //! A widget which splits an area in two, with a settable ratio, and optional draggable resizing.
 
-use crate::kurbo::{Line, Point, Rect, Size};
+use crate::kurbo::Line;
 use crate::widget::flex::Axis;
-use crate::{
-    theme, BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{theme, Color, Cursor, Data, Point, Rect, WidgetPod};
 
 /// A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {

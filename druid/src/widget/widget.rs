@@ -118,16 +118,33 @@ pub trait Widget<T> {
     /// [`Command`]: struct.Command.html
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);
 
-    /// Handle a change of data.
+    /// Update the widget's appearance in response to a change in the app's
+    /// [`Data`] or [`Env`].
     ///
-    /// This method is called whenever the data changes. When the appearance of
-    /// the widget depends on data, call [`request_paint`] so that it's scheduled
-    /// for repaint.
+    /// This method is called whenever the data or environment changes.
+    /// When the appearance of the widget needs to be updated in response to
+    /// these changes, you can call [`request_paint`] or [`request_layout`] on
+    /// the provided [`UpdateCtx`] to schedule calls to [`paint`] and [`layout`]
+    /// as required.
     ///
     /// The previous value of the data is provided in case the widget wants to
-    /// compute a fine-grained delta.
+    /// compute a fine-grained delta; you should try to only request a new
+    /// layout or paint pass if it is actually required.
     ///
+    /// To determine if the [`Env`] has changed, you can call [`env_changed`]
+    /// on the provided [`UpdateCtx`]; you can then call [`env_key_changed`]
+    /// with any keys that are used in your widget, to see if they have changed;
+    /// you can then request layout or paint as needed.
+    ///
+    /// [`Data`]: trait.Data.html
+    /// [`Env`]: struct.Env.html
+    /// [`UpdateCtx`]: struct.UpdateCtx.html
+    /// [`env_changed`]: struct.UpdateCtx.html#method.env_changed
+    /// [`env_key_changed`]: struct.UpdateCtx.html#method.env_changed
     /// [`request_paint`]: struct.UpdateCtx.html#method.request_paint
+    /// [`request_layout`]: struct.UpdateCtx.html#method.request_layout
+    /// [`layout`]: #tymethod.layout
+    /// [`paint`]: #tymethod.paint
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
 
     /// Compute layout.

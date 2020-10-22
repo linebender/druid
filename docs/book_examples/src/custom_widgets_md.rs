@@ -49,10 +49,10 @@ impl TextBoxActionController {
     }
 }
 
-impl Controller<String, TextBox> for TextBoxActionController {
+impl Controller<String, TextBox<String>> for TextBoxActionController {
     fn event(
         &mut self,
-        child: &mut TextBox,
+        child: &mut TextBox<String>,
         ctx: &mut EventCtx,
         event: &Event,
         data: &mut String,
@@ -60,14 +60,14 @@ impl Controller<String, TextBox> for TextBoxActionController {
     ) {
         match event {
             Event::KeyDown(k) if k.key == Key::Enter => {
-                ctx.submit_command(ACTION, None);
+                ctx.submit_command(ACTION);
             }
             Event::KeyUp(k) if k.key == Key::Enter => {
                 self.timer = Some(ctx.request_timer(DELAY));
                 child.event(ctx, event, data, env);
             }
             Event::Timer(token) if Some(*token) == self.timer => {
-                ctx.submit_command(ACTION, None);
+                ctx.submit_command(ACTION);
             }
             _ => child.event(ctx, event, data, env),
         }

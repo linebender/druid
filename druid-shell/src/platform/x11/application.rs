@@ -269,8 +269,7 @@ impl Application {
                 let w = self
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(ev)
-                    .context("KEY_PRESS - failed to handle")?;
+                w.handle_key_press(ev);
             }
             Event::ButtonPress(ev) => {
                 let w = self
@@ -283,8 +282,7 @@ impl Application {
                     w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(ev)
-                        .context("BUTTON_PRESS - failed to handle")?;
+                    w.handle_button_press(ev);
                 }
             }
             Event::ButtonRelease(ev) => {
@@ -295,23 +293,20 @@ impl Application {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(ev)
-                        .context("BUTTON_RELEASE - failed to handle")?;
+                    w.handle_button_release(ev);
                 }
             }
             Event::MotionNotify(ev) => {
                 let w = self
                     .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(ev)
-                    .context("MOTION_NOTIFY - failed to handle")?;
+                w.handle_motion_notify(ev);
             }
             Event::ClientMessage(ev) => {
                 let w = self
                     .window(ev.window)
                     .context("CLIENT_MESSAGE - failed to get window")?;
-                w.handle_client_message(ev)
-                    .context("CLIENT_MESSAGE - failed to handle")?;
+                w.handle_client_message(ev);
             }
             Event::DestroyNotify(ev) => {
                 if ev.window == self.window_id {
@@ -323,8 +318,7 @@ impl Application {
                 let w = self
                     .window(ev.window)
                     .context("DESTROY_NOTIFY - failed to get window")?;
-                w.handle_destroy_notify(ev)
-                    .context("DESTROY_NOTIFY - failed to handle")?;
+                w.handle_destroy_notify(ev);
 
                 // Remove our reference to the Window and allow it to be dropped
                 let windows_left = self
@@ -383,7 +377,8 @@ impl Application {
         loop {
             // Figure out when the next wakeup needs to happen
             let next_timeout = if let Ok(state) = self.state.try_borrow() {
-                state.windows
+                state
+                    .windows
                     .values()
                     .filter_map(|w| w.next_timeout())
                     .min()
@@ -401,8 +396,13 @@ impl Application {
             let mut event = self.connection.poll_for_event()?;
 
             if event.is_none() {
-                poll_with_timeout(&self.connection, self.idle_read, next_timeout, next_idle_time)
-                    .context("Error while waiting for X11 connection")?;
+                poll_with_timeout(
+                    &self.connection,
+                    self.idle_read,
+                    next_timeout,
+                    next_idle_time,
+                )
+                .context("Error while waiting for X11 connection")?;
             }
 
             while let Some(ev) = event {
@@ -532,7 +532,12 @@ fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
 /// writing into our idle pipe and the `timeout` has passed.
 // This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
 // https://github.com/psychon/x11rb/blob/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
-fn poll_with_timeout(conn: &Rc<XCBConnection>, idle: RawFd, timer_timeout: Option<Instant>, idle_timeout: Instant) -> Result<(), Error> {
+fn poll_with_timeout(
+    conn: &Rc<XCBConnection>,
+    idle: RawFd,
+    timer_timeout: Option<Instant>,
+    idle_timeout: Instant,
+) -> Result<(), Error> {
     use nix::poll::{poll, PollFd, PollFlags};
     use std::os::raw::c_int;
     use std::os::unix::io::AsRawFd;

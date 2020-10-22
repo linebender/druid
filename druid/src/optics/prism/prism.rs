@@ -1,12 +1,10 @@
-use crate::optics::{affine_traversal, lens};
+#![allow(missing_docs)]
 
+use crate::optics::{affine_traversal, lens};
+use crate::Data;
 use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
-
-use crate::kurbo::Size;
-use crate::widget::prelude::*;
-use crate::Data;
 
 pub trait PartialPrism<T1: ?Sized, T2: ?Sized> {
     fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
@@ -148,116 +146,6 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
 
 impl<T1: ?Sized, T2: ?Sized, P: PartialPrism<T1, T2>> PrismExt<T1, T2> for P {}
 
-pub struct PrismWrap<U, P, W> {
-    inner: W,
-    prism: P,
-    // The following is a workaround for otherwise getting E0207.
-    phantom: PhantomData<U>,
-}
-
-impl<U, P, W> PrismWrap<U, P, W> {
-    pub fn new(inner: W, prism: P) -> PrismWrap<U, P, W> {
-        PrismWrap {
-            inner,
-            prism,
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<T1, T2, P, W> Widget<T1> for PrismWrap<T2, P, W>
-where
-    T1: Data,
-    T2: Data,
-    P: PartialPrism<T1, T2>,
-    W: Widget<T2>,
-{
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T1, env: &Env) {
-        let inner = &mut self.inner;
-        let _opt = self
-            .prism
-            .with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T1, env: &Env) {
-        let inner = &mut self.inner;
-        let _opt = self
-            .prism
-            .with::<(), _>(data, |data| inner.lifecycle(ctx, event, data, env));
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T1, data: &T1, env: &Env) {
-        let inner = &mut self.inner;
-        let prism = &self.prism;
-
-        #[allow(clippy::blocks_in_if_conditions)]
-        match prism.with(data, |newer_data| {
-            if prism
-                .with(old_data, |older_data| {
-                    if !old_data.same(data) {
-                        // forwards older and newer data into inner
-                        inner.update(ctx, older_data, newer_data, env);
-                    }
-                })
-                .is_none()
-            {
-                // this is when this variant just got activated
-                // ie. does not have an old_data
-
-                // ctx.children_changed();
-                // ctx.request_layout(); // variant was changed
-                // ctx.request_paint(); // variant was changed
-                // inner.update(ctx, newer_data, newer_data, env);
-                // inner.update(ctx, newer_data, newer_data, env);
-            }
-        }) {
-            // already had the newer data,
-            // with or without older data.
-            // do nothing more
-            Some(()) => (),
-            // didn't have the newer data,
-            // check if at least the older data is available
-            #[allow(clippy::single_match)]
-            None => match prism.with(old_data, |_older_data| {
-                // only had the older data
-                // send older as both older and newer
-                // TODO: check if this is right
-                // maybe just ignore the inner update call..
-                // ctx.children_changed();
-                // ctx.request_layout(); // variant was changed
-                // ctx.request_paint(); // variant was changed
-
-                // inner.update(ctx, older_data, older_data, env);
-                // inner.update(ctx, older_data, older_data, env);
-            }) {
-                // already had only the older data,
-                // do nothing more.
-                Some(()) => (),
-                // didn't have any of the older nor newer data,
-                // do nothing.
-                // TODO: check if this is right
-                None => {}
-            },
-        }
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T1, env: &Env) -> Size {
-        let inner = &mut self.inner;
-        self.prism
-            .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
-            .unwrap_or(Size::ZERO)
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T1, env: &Env) {
-        let inner = &mut self.inner;
-        let _opt = self.prism.with(data, |data| inner.paint(ctx, data, env));
-    }
-
-    fn id(&self) -> Option<WidgetId> {
-        self.inner.id()
-    }
-}
-
 pub struct Variant<Get, GetMut, Replace> {
     get: Get,
     get_mut: GetMut,
@@ -320,13 +208,29 @@ where
     }
 }
 
+/// Construct a prism accessing a type's variant
+///
+/// This is a convenience macro for constructing `Variant` prisms for enums.
+///
+/// ```
+/// # use crate::druid::PrismExt;
+/// let res_ok = druid::prism!(Result<bool, u8>, Ok);
+/// assert_eq!(Some(true), res_ok.get(&Ok(true)));
+///
+/// # use druid::optics::affine_traversal::Then;
+/// type Outer = Result<Inner, f32>;
+/// type Inner = (u32, bool);
+/// let ok1 = druid::prism!(Outer, Ok).then(druid::lens!(Inner, 1));
+/// assert_eq!(Some(true), ok1.get(&Outer::Ok((3, true))));
+/// assert_eq!(None, ok1.get(&Outer::Err(5.5)));
+/// ```
 #[macro_export]
 macro_rules! prism {
     // enum type, variant name
     ($ty:ident < $( $N:ident ),* >, $variant:ident) => {{
         $crate::optics::prism::Variant::new::<$ty < $( $N ),* > , _>(
             // get
-            |x: &$ty< $( $N ),* >| {
+            move |x: &$ty< $( $N ),* >| {
                 if let $ty::< $( $N ),* >::$variant(ref v) = x {
                     Some(v)
                 } else {
@@ -334,7 +238,7 @@ macro_rules! prism {
                 }
             },
             // get mut
-            |x: &mut $ty< $( $N ),* >| {
+            move |x: &mut $ty< $( $N ),* >| {
                 if let $ty::< $( $N ),* >::$variant(ref mut v) = x {
                     Some(v)
                 } else {
@@ -342,7 +246,7 @@ macro_rules! prism {
                 }
             },
             // replace
-            |x: &mut $ty< $( $N ),* >, v: _| {
+            move |x: &mut $ty< $( $N ),* >, v: _| {
                 // only works for newtype-like variants
                 if let $ty::< $( $N ),* >::$variant(ref mut refv) = x {
                     // replace variant's value in-place

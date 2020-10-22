@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use crate::optics::{lens, prism, Lens};
 
 use std::marker::PhantomData;
@@ -16,6 +18,7 @@ mod layer {
 
 mod wrap {
     use super::{layer, lens, prism};
+    use crate::widget::{LensWrap, PrismWrap};
 
     pub trait Wrap<Layer, T1: ?Sized, T2: ?Sized, LayerKind> {
         type Target;
@@ -28,9 +31,9 @@ mod wrap {
         T2: Sized,
         L: lens::Lens<T1, T2>,
     {
-        type Target = lens::LensWrap<T2, L, W>;
+        type Target = LensWrap<T2, L, W>;
         fn wrap(self, lens: L) -> Self::Target {
-            lens::LensWrap::new(self, lens)
+            LensWrap::new(self, lens)
         }
     }
 
@@ -40,9 +43,9 @@ mod wrap {
         T2: Sized,
         P: prism::Prism<T1, T2>,
     {
-        type Target = prism::PrismWrap<T2, P, W>;
+        type Target = PrismWrap<T2, P, W>;
         fn wrap(self, prism: P) -> Self::Target {
-            prism::PrismWrap::new(self, prism)
+            PrismWrap::new(self, prism)
         }
     }
 }
@@ -148,41 +151,6 @@ mod then {
         fn then(self, prism: P2) -> Self::Target {
             prism::Then::new(self, prism)
         }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct LensWrap<L> {
-    inner: L,
-}
-
-impl<L> LensWrap<L> {
-    pub fn new<T1: ?Sized, T2: ?Sized>(inner: L) -> Self
-    where
-        L: Lens<T1, T2>,
-    {
-        Self { inner }
-    }
-}
-
-impl<L, T1, T2> AffineTraversal<T1, T2> for LensWrap<L>
-where
-    T1: ?Sized,
-    T2: ?Sized,
-    L: Lens<T1, T2>,
-{
-    fn with<V, F>(&self, data: &T1, f: F) -> Option<V>
-    where
-        F: FnOnce(&T2) -> V,
-    {
-        Some(self.inner.with(data, f))
-    }
-
-    fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
-    where
-        F: FnOnce(&mut T2) -> V,
-    {
-        Some(self.inner.with_mut(data, f))
     }
 }
 

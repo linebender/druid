@@ -32,15 +32,15 @@ fn main() -> Result<(), PlatformError> {
 }
 
 pub struct Container<S, A1, A2, P1, P2, W1, W2> {
-    w1: druid::prism::PrismWrap<A1, P1, W1>,
-    w2: druid::prism::PrismWrap<A2, P2, W2>,
+    w1: druid::widget::PrismWrap<A1, P1, W1>,
+    w2: druid::widget::PrismWrap<A2, P2, W2>,
     _marker: std::marker::PhantomData<S>,
 }
 
 impl<S, A1, A2, P1, P2, W1, W2> Container<S, A1, A2, P1, P2, W1, W2> {
     pub fn new(
-        w1: druid::prism::PrismWrap<A1, P1, W1>,
-        w2: druid::prism::PrismWrap<A2, P2, W2>,
+        w1: druid::widget::PrismWrap<A1, P1, W1>,
+        w2: druid::widget::PrismWrap<A2, P2, W2>,
     ) -> Self {
         Self {
             w1,
@@ -114,7 +114,7 @@ fn ui() -> impl Widget<AppState> {
 
 fn login_ui() -> impl Widget<LoginState> {
     fn login(ctx: &mut EventCtx, state: &mut LoginState, _: &Env) {
-        ctx.submit_command(LOGIN.with(MainState::from(state.clone())), None)
+        ctx.submit_command(LOGIN.with(MainState::from(state.clone())))
     }
 
     Flex::row()

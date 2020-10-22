@@ -21,9 +21,7 @@ use std::sync::Arc;
 use log::error;
 
 use crate::{
-    kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
-    EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx,
-    Widget,
+    kurbo::BezPath, widget::common::FillStrat, widget::prelude::*, Affine, Color, Data, Rect,
 };
 
 /// A widget that renders a SVG
