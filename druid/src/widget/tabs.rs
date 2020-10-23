@@ -126,7 +126,7 @@ pub struct StaticTabs<T> {
 
 impl<T> Default for StaticTabs<T> {
     fn default() -> Self {
-        StaticTabs {
+        Self {
             tabs: Rc::new(Vec::new()),
         }
     }
@@ -187,7 +187,7 @@ impl<T: Data> TabsPolicy for StaticTabs<T> {
     }
 
     fn build(build: Self::Build) -> Self {
-        StaticTabs {
+        Self {
             tabs: Rc::new(build),
         }
     }
@@ -744,15 +744,15 @@ pub enum TabsTransition {
 
 impl Default for TabsTransition {
     fn default() -> Self {
-        TabsTransition::Slide(Duration::from_millis(250).as_nanos() as Nanos)
+        Self::Slide(Duration::from_millis(250).as_nanos() as Nanos)
     }
 }
 
 impl TabsTransition {
     fn tab_changed(self, old: TabIndex, new: TabIndex) -> Option<TabsTransitionState> {
         match self {
-            TabsTransition::Instant => None,
-            TabsTransition::Slide(dur) => Some(TabsTransitionState::new(old, dur, old < new)),
+            Self::Instant => None,
+            Self::Slide(dur) => Some(TabsTransitionState::new(old, dur, old < new)),
         }
     }
 }

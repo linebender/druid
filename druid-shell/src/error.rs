@@ -35,12 +35,12 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Error::ApplicationAlreadyExists => {
+            Self::ApplicationAlreadyExists => {
                 write!(f, "An application instance has already been created.")
             }
-            Error::Platform(err) => fmt::Display::fmt(err, f),
-            Error::WindowDropped => write!(f, "The window has already been destroyed."),
-            Error::Other(s) => write!(f, "{}", s),
+            Self::Platform(err) => fmt::Display::fmt(err, f),
+            Self::WindowDropped => write!(f, "The window has already been destroyed."),
+            Self::Other(s) => write!(f, "{}", s),
         }
     }
 }

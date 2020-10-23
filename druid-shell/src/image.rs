@@ -37,7 +37,7 @@ pub struct ImageBuf {
 impl ImageBuf {
     /// Create an empty image buffer.
     pub fn empty() -> Self {
-        ImageBuf {
+        Self {
             pixels: Arc::new([]),
             width: 0,
             height: 0,
@@ -58,10 +58,10 @@ impl ImageBuf {
         format: ImageFormat,
         width: usize,
         height: usize,
-    ) -> ImageBuf {
+    ) -> Self {
         let pixels = pixels.into();
         assert_eq!(pixels.len(), width * height * format.bytes_per_pixel());
-        ImageBuf {
+        Self {
             pixels,
             format,
             width,
@@ -146,7 +146,7 @@ impl ImageBuf {
 
 impl Default for ImageBuf {
     fn default() -> Self {
-        ImageBuf::empty()
+        Self::empty()
     }
 }
 

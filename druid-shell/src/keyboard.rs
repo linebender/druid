@@ -77,10 +77,10 @@ pub trait IntoKey {
 impl KeyEvent {
     #[doc(hidden)]
     /// Create a key event for testing purposes.
-    pub fn for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> KeyEvent {
+    pub fn for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> Self {
         let mods = mods.into();
         let key = key.into_key();
-        KeyEvent {
+        Self {
             key,
             code: Code::Unidentified,
             location: Location::Standard,
@@ -93,20 +93,20 @@ impl KeyEvent {
 }
 
 impl Modifiers {
-    pub const ALT: Modifiers = Modifiers(keyboard_types::Modifiers::ALT);
-    pub const ALT_GRAPH: Modifiers = Modifiers(keyboard_types::Modifiers::ALT_GRAPH);
-    pub const CAPS_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::CAPS_LOCK);
-    pub const CONTROL: Modifiers = Modifiers(keyboard_types::Modifiers::CONTROL);
-    pub const FN: Modifiers = Modifiers(keyboard_types::Modifiers::FN);
-    pub const FN_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::FN_LOCK);
-    pub const META: Modifiers = Modifiers(keyboard_types::Modifiers::META);
-    pub const NUM_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::NUM_LOCK);
-    pub const SCROLL_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::SCROLL_LOCK);
-    pub const SHIFT: Modifiers = Modifiers(keyboard_types::Modifiers::SHIFT);
-    pub const SYMBOL: Modifiers = Modifiers(keyboard_types::Modifiers::SYMBOL);
-    pub const SYMBOL_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::SYMBOL_LOCK);
-    pub const HYPER: Modifiers = Modifiers(keyboard_types::Modifiers::HYPER);
-    pub const SUPER: Modifiers = Modifiers(keyboard_types::Modifiers::SUPER);
+    pub const ALT: Self = Self(keyboard_types::Modifiers::ALT);
+    pub const ALT_GRAPH: Self = Self(keyboard_types::Modifiers::ALT_GRAPH);
+    pub const CAPS_LOCK: Self = Self(keyboard_types::Modifiers::CAPS_LOCK);
+    pub const CONTROL: Self = Self(keyboard_types::Modifiers::CONTROL);
+    pub const FN: Self = Self(keyboard_types::Modifiers::FN);
+    pub const FN_LOCK: Self = Self(keyboard_types::Modifiers::FN_LOCK);
+    pub const META: Self = Self(keyboard_types::Modifiers::META);
+    pub const NUM_LOCK: Self = Self(keyboard_types::Modifiers::NUM_LOCK);
+    pub const SCROLL_LOCK: Self = Self(keyboard_types::Modifiers::SCROLL_LOCK);
+    pub const SHIFT: Self = Self(keyboard_types::Modifiers::SHIFT);
+    pub const SYMBOL: Self = Self(keyboard_types::Modifiers::SYMBOL);
+    pub const SYMBOL_LOCK: Self = Self(keyboard_types::Modifiers::SYMBOL_LOCK);
+    pub const HYPER: Self = Self(keyboard_types::Modifiers::HYPER);
+    pub const SUPER: Self = Self(keyboard_types::Modifiers::SUPER);
 
     /// Get the inner value.
     ///
@@ -117,26 +117,26 @@ impl Modifiers {
 
     /// Determine whether Shift is set.
     pub fn shift(&self) -> bool {
-        self.contains(Modifiers::SHIFT)
+        self.contains(Self::SHIFT)
     }
 
     /// Determine whether Ctrl is set.
     pub fn ctrl(&self) -> bool {
-        self.contains(Modifiers::CONTROL)
+        self.contains(Self::CONTROL)
     }
 
     /// Determine whether Alt is set.
     pub fn alt(&self) -> bool {
-        self.contains(Modifiers::ALT)
+        self.contains(Self::ALT)
     }
 
     /// Determine whether Meta is set.
     pub fn meta(&self) -> bool {
-        self.contains(Modifiers::META)
+        self.contains(Self::META)
     }
 
     /// Returns an empty set of modifiers.
-    pub fn empty() -> Modifiers {
+    pub fn empty() -> Self {
         Default::default()
     }
 
@@ -146,12 +146,12 @@ impl Modifiers {
     }
 
     /// Returns `true` if all the modifiers in `other` are set.
-    pub fn contains(&self, other: Modifiers) -> bool {
+    pub fn contains(&self, other: Self) -> bool {
         self.0.contains(other.0)
     }
 
     /// Inserts or removes the specified modifiers depending on the passed value.
-    pub fn set(&mut self, other: Modifiers, value: bool) {
+    pub fn set(&mut self, other: Self, value: bool) {
         self.0.set(other.0, value)
     }
 }
@@ -160,14 +160,14 @@ impl BitAnd for Modifiers {
     type Output = Self;
 
     fn bitand(self, rhs: Self) -> Self {
-        Modifiers(self.0 & rhs.0)
+        Self(self.0 & rhs.0)
     }
 }
 
 impl BitAndAssign for Modifiers {
     // rhs is the "right-hand side" of the expression `a &= b`
     fn bitand_assign(&mut self, rhs: Self) {
-        *self = Modifiers(self.0 & rhs.0)
+        *self = Self(self.0 & rhs.0)
     }
 }
 
@@ -175,14 +175,14 @@ impl BitOr for Modifiers {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self {
-        Modifiers(self.0 | rhs.0)
+        Self(self.0 | rhs.0)
     }
 }
 
 impl BitOrAssign for Modifiers {
     // rhs is the "right-hand side" of the expression `a &= b`
     fn bitor_assign(&mut self, rhs: Self) {
-        *self = Modifiers(self.0 | rhs.0)
+        *self = Self(self.0 | rhs.0)
     }
 }
 
@@ -190,14 +190,14 @@ impl BitXor for Modifiers {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self {
-        Modifiers(self.0 ^ rhs.0)
+        Self(self.0 ^ rhs.0)
     }
 }
 
 impl BitXorAssign for Modifiers {
     // rhs is the "right-hand side" of the expression `a &= b`
     fn bitxor_assign(&mut self, rhs: Self) {
-        *self = Modifiers(self.0 ^ rhs.0)
+        *self = Self(self.0 ^ rhs.0)
     }
 }
 
@@ -205,7 +205,7 @@ impl Not for Modifiers {
     type Output = Self;
 
     fn not(self) -> Self {
-        Modifiers(!self.0)
+        Self(!self.0)
     }
 }
 

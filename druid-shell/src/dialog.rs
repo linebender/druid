@@ -287,14 +287,14 @@ impl FileDialogOptions {
 }
 
 impl FileSpec {
-    pub const TEXT: FileSpec = FileSpec::new("Text", &["txt"]);
-    pub const JPG: FileSpec = FileSpec::new("Jpeg", &["jpg", "jpeg"]);
-    pub const GIF: FileSpec = FileSpec::new("Gif", &["gif"]);
-    pub const PDF: FileSpec = FileSpec::new("PDF", &["pdf"]);
-    pub const HTML: FileSpec = FileSpec::new("Web Page", &["htm", "html"]);
+    pub const TEXT: Self = Self::new("Text", &["txt"]);
+    pub const JPG: Self = Self::new("Jpeg", &["jpg", "jpeg"]);
+    pub const GIF: Self = Self::new("Gif", &["gif"]);
+    pub const PDF: Self = Self::new("PDF", &["pdf"]);
+    pub const HTML: Self = Self::new("Web Page", &["htm", "html"]);
 
     /// Create a new `FileSpec`.
     pub const fn new(name: &'static str, extensions: &'static [&'static str]) -> Self {
-        FileSpec { name, extensions }
+        Self { name, extensions }
     }
 }

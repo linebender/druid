@@ -38,7 +38,7 @@ pub struct Switch {
 
 impl Default for Switch {
     fn default() -> Self {
-        Switch {
+        Self {
             knob_pos: Point::ZERO,
             knob_hovered: false,
             knob_dragged: false,

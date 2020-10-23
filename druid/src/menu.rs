@@ -397,13 +397,13 @@ impl<T> ContextMenu<T> {
 impl MenuItemId {
     /// The value for a menu item that has not been instantiated by
     /// the platform.
-    const PLACEHOLDER: MenuItemId = MenuItemId(None);
+    const PLACEHOLDER: Self = Self(None);
 
     fn next() -> Self {
         use std::sync::atomic::{AtomicU32, Ordering};
         static MENU_ID: AtomicU32 = AtomicU32::new(1);
         let raw = NonZeroU32::new(MENU_ID.fetch_add(2, Ordering::Relaxed));
-        MenuItemId(raw)
+        Self(raw)
     }
 
     fn as_u32(self) -> u32 {

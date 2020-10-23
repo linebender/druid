@@ -100,7 +100,7 @@ pub(crate) struct WindowHandle {
 
 impl Default for WindowHandle {
     fn default() -> Self {
-        WindowHandle {
+        Self {
             nsview: unsafe { WeakPtr::new(nil) },
             idle_queue: Default::default(),
         }

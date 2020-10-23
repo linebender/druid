@@ -883,7 +883,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
 impl<T> Default for Windows<T> {
     fn default() -> Self {
-        Windows {
+        Self {
             windows: HashMap::new(),
             pending: HashMap::new(),
         }

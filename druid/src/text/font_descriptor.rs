@@ -70,7 +70,7 @@ impl FontDescriptor {
 
 impl Default for FontDescriptor {
     fn default() -> Self {
-        FontDescriptor {
+        Self {
             family: Default::default(),
             weight: Default::default(),
             style: Default::default(),

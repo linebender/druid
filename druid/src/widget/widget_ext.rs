@@ -254,11 +254,11 @@ impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
 
 #[doc(hidden)]
 impl<T: Data> SizedBox<T> {
-    pub fn fix_width(self, width: f64) -> SizedBox<T> {
+    pub fn fix_width(self, width: f64) -> Self {
         self.width(width)
     }
 
-    pub fn fix_height(self, height: f64) -> SizedBox<T> {
+    pub fn fix_height(self, height: f64) -> Self {
         self.height(height)
     }
 }
@@ -266,19 +266,19 @@ impl<T: Data> SizedBox<T> {
 // if two things are modifying an env one after another, just combine the modifications
 #[doc(hidden)]
 impl<T: Data, W> EnvScope<T, W> {
-    pub fn env_scope(self, f2: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, W> {
-        let EnvScope { f, child } = self;
+    pub fn env_scope(self, f2: impl Fn(&mut Env, &T) + 'static) -> Self {
+        let Self { f, child } = self;
         let new_f = move |env: &mut Env, data: &T| {
             f(env, data);
             f2(env, data);
         };
-        EnvScope {
+        Self {
             f: Box::new(new_f),
             child,
         }
     }
 
-    pub fn debug_paint_layout(self) -> EnvScope<T, W> {
+    pub fn debug_paint_layout(self) -> Self {
         self.env_scope(|env, _| env.set(Env::DEBUG_PAINT, true))
     }
 }

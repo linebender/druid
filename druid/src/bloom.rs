@@ -82,8 +82,8 @@ impl<T: ?Sized + Hash> Bloom<T> {
     }
 
     /// Create a new `Bloom` with the items from both filters.
-    pub fn union(&self, other: Bloom<T>) -> Bloom<T> {
-        Bloom {
+    pub fn union(&self, other: Bloom<T>) -> Self {
+        Self {
             bits: self.bits | other.bits,
             data: PhantomData,
             entry_count: self.entry_count + other.entry_count,

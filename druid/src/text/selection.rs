@@ -55,7 +55,7 @@ impl Selection {
 
     /// Create a caret, which is just a selection with the same and start and end.
     pub fn caret(pos: usize) -> Self {
-        Selection {
+        Self {
             start: pos,
             end: pos,
             h_pos: None,

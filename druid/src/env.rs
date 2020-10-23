@@ -156,8 +156,8 @@ impl<T: ValueType> KeyLike<T> for Key<T> {
 impl<T> KeyLike<T> for KeyOrValue<T> {
     fn changed(&self, old: &Env, new: &Env) -> bool {
         match self {
-            KeyOrValue::Concrete(_) => false,
-            KeyOrValue::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
+            Self::Concrete(_) => false,
+            Self::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
         }
     }
 }
@@ -377,7 +377,7 @@ impl Key<()> {
     ///
     /// [`Env`]: struct.Env.html
     pub const fn untyped(key: &'static str) -> Self {
-        Key {
+        Self {
             key,
             value_type: PhantomData,
         }
@@ -397,7 +397,7 @@ impl Value {
         }
     }
 
-    fn is_same_type(&self, other: &Value) -> bool {
+    fn is_same_type(&self, other: &Self) -> bool {
         use Value::*;
         match (self, other) {
             (Point(_), Point(_)) => true,
@@ -417,15 +417,15 @@ impl Value {
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Value::Point(p) => write!(f, "Point {:?}", p),
-            Value::Size(s) => write!(f, "Size {:?}", s),
-            Value::Rect(r) => write!(f, "Rect {:?}", r),
-            Value::Color(c) => write!(f, "Color {:?}", c),
-            Value::Float(x) => write!(f, "Float {}", x),
-            Value::Bool(b) => write!(f, "Bool {}", b),
-            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
-            Value::String(s) => write!(f, "String {:?}", s),
-            Value::Font(font) => write!(f, "Font {:?}", font),
+            Self::Point(p) => write!(f, "Point {:?}", p),
+            Self::Size(s) => write!(f, "Size {:?}", s),
+            Self::Rect(r) => write!(f, "Rect {:?}", r),
+            Self::Color(c) => write!(f, "Color {:?}", c),
+            Self::Float(x) => write!(f, "Float {}", x),
+            Self::Bool(b) => write!(f, "Bool {}", b),
+            Self::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
+            Self::String(s) => write!(f, "String {:?}", s),
+            Self::Font(font) => write!(f, "Font {:?}", font),
         }
     }
 }

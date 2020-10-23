@@ -25,8 +25,8 @@ pub struct IdentityWrapper<W> {
 
 impl<W> IdentityWrapper<W> {
     /// Assign an identity to a widget.
-    pub fn wrap(inner: W, id: WidgetId) -> IdentityWrapper<W> {
-        IdentityWrapper { id, inner }
+    pub fn wrap(inner: W, id: WidgetId) -> Self {
+        Self { id, inner }
     }
 }
 

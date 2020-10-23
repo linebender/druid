@@ -270,7 +270,7 @@ pub mod sys {
 
 impl Selector<()> {
     /// A selector that does nothing.
-    pub const NOOP: Selector = Selector::new("");
+    pub const NOOP: Self = Self::new("");
 
     /// Turns this into a command with the specified [`Target`].
     ///
@@ -459,8 +459,8 @@ impl<T> Clone for Selector<T> {
 
 impl Target {
     /// If `self` is `Auto` it will be replaced with `target`.
-    pub(crate) fn default(&mut self, target: Target) {
-        if self == &Target::Auto {
+    pub(crate) fn default(&mut self, target: Self) {
+        if self == &Self::Auto {
             *self = target;
         }
     }

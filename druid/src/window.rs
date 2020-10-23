@@ -469,8 +469,8 @@ impl<T: Data> Window<T> {
 
 impl WindowId {
     /// Allocate a new, unique window id.
-    pub fn next() -> WindowId {
+    pub fn next() -> Self {
         static WINDOW_COUNTER: Counter = Counter::new();
-        WindowId(WINDOW_COUNTER.next())
+        Self(WINDOW_COUNTER.next())
     }
 }

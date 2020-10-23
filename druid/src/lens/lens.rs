@@ -495,7 +495,7 @@ pub struct Unit<T> {
 
 impl<T> Default for Unit<T> {
     fn default() -> Self {
-        Unit {
+        Self {
             phantom_t: Default::default(),
         }
     }

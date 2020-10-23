@@ -227,21 +227,21 @@ impl From<SysMods> for RawMods {
     fn from(src: SysMods) -> RawMods {
         #[cfg(target_os = "macos")]
         match src {
-            SysMods::None => RawMods::None,
-            SysMods::Shift => RawMods::Shift,
-            SysMods::Cmd => RawMods::Meta,
-            SysMods::AltCmd => RawMods::AltMeta,
-            SysMods::CmdShift => RawMods::MetaShift,
-            SysMods::AltCmdShift => RawMods::AltMetaShift,
+            SysMods::None => Self::None,
+            SysMods::Shift => Self::Shift,
+            SysMods::Cmd => Self::Meta,
+            SysMods::AltCmd => Self::AltMeta,
+            SysMods::CmdShift => Self::MetaShift,
+            SysMods::AltCmdShift => Self::AltMetaShift,
         }
         #[cfg(not(target_os = "macos"))]
         match src {
-            SysMods::None => RawMods::None,
-            SysMods::Shift => RawMods::Shift,
-            SysMods::Cmd => RawMods::Ctrl,
-            SysMods::AltCmd => RawMods::AltCtrl,
-            SysMods::CmdShift => RawMods::CtrlShift,
-            SysMods::AltCmdShift => RawMods::AltCtrlShift,
+            SysMods::None => Self::None,
+            SysMods::Shift => Self::Shift,
+            SysMods::Cmd => Self::Ctrl,
+            SysMods::AltCmd => Self::AltCtrl,
+            SysMods::CmdShift => Self::CtrlShift,
+            SysMods::AltCmdShift => Self::AltCtrlShift,
         }
     }
 }

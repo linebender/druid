@@ -208,10 +208,10 @@ impl WidgetId {
     ///
     /// You must ensure that a given `WidgetId` is only ever used for one
     /// widget at a time.
-    pub fn next() -> WidgetId {
+    pub fn next() -> Self {
         use crate::shell::Counter;
         static WIDGET_ID_COUNTER: Counter = Counter::new();
-        WidgetId(WIDGET_ID_COUNTER.next_nonzero())
+        Self(WIDGET_ID_COUNTER.next_nonzero())
     }
 
     /// Create a reserved `WidgetId`, suitable for reuse.
@@ -223,10 +223,10 @@ impl WidgetId {
     /// be the same as the raw value that is passed in; it will be
     /// `u64::max_value() - raw`.
     #[allow(unsafe_code)]
-    pub const fn reserved(raw: u16) -> WidgetId {
+    pub const fn reserved(raw: u16) -> Self {
         let id = u64::max_value() - raw as u64;
         // safety: by construction this can never be zero.
-        WidgetId(unsafe { std::num::NonZeroU64::new_unchecked(id) })
+        Self(unsafe { std::num::NonZeroU64::new_unchecked(id) })
     }
 
     pub(crate) fn to_raw(self) -> u64 {

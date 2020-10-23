@@ -126,7 +126,7 @@ impl SvgData {
           </svg>
         "###;
 
-        SvgData {
+        Self {
             tree: Arc::new(usvg::Tree::from_str(empty_svg, &re_opt).unwrap()),
         }
     }
@@ -202,7 +202,7 @@ impl SvgData {
 
 impl Default for SvgData {
     fn default() -> Self {
-        SvgData::empty()
+        Self::empty()
     }
 }
 

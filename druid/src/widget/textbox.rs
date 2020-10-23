@@ -413,6 +413,6 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
 impl<T> Default for TextBox<T> {
     fn default() -> Self {
-        TextBox::new()
+        Self::new()
     }
 }

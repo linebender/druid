@@ -278,7 +278,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
 
 impl<T> Default for Editor<T> {
     fn default() -> Self {
-        Editor::new()
+        Self::new()
     }
 }
 

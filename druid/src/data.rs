@@ -330,11 +330,10 @@ impl Data for kurbo::PathEl {
 
 impl Data for kurbo::PathSeg {
     fn same(&self, other: &Self) -> bool {
-        use kurbo::PathSeg;
         match (self, other) {
-            (PathSeg::Line(l1), PathSeg::Line(l2)) => l1.same(l2),
-            (PathSeg::Quad(q1), PathSeg::Quad(q2)) => q1.same(q2),
-            (PathSeg::Cubic(c1), PathSeg::Cubic(c2)) => c1.same(c2),
+            (Self::Line(l1), Self::Line(l2)) => l1.same(l2),
+            (Self::Quad(q1), Self::Quad(q2)) => q1.same(q2),
+            (Self::Cubic(c1), Self::Cubic(c2)) => c1.same(c2),
             _ => false,
         }
     }
