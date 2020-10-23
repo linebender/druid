@@ -84,7 +84,7 @@ pub struct ClipBox<T, W> {
 impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Creates a new `ClipBox` wrapping `child`.
     pub fn new(child: W) -> Self {
-        ClipBox {
+        Self {
             child: WidgetPod::new(child),
             port: Default::default(),
             constrain_horizontal: false,

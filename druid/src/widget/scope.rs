@@ -58,7 +58,7 @@ impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer>
 {
     /// Create a `ScopePolicy` from a factory function and a `ScopeTransfer`.
     pub fn new(make_state: F, transfer: Transfer) -> Self {
-        DefaultScopePolicy {
+        Self {
             make_state,
             transfer,
         }
@@ -99,7 +99,7 @@ pub struct LensScopeTransfer<L: Lens<State, In>, In, State> {
 impl<L: Lens<State, In>, In, State> LensScopeTransfer<L, In, State> {
     /// Create a `ScopeTransfer` from a Lens onto a portion of the `Scope`'s state.
     pub fn new(lens: L) -> Self {
-        LensScopeTransfer {
+        Self {
             lens,
             phantom_in: PhantomData::default(),
             phantom_state: PhantomData::default(),
@@ -205,7 +205,7 @@ pub struct Scope<SP: ScopePolicy, W: Widget<SP::State>> {
 impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
     /// Create a new scope from a policy and an inner widget
     pub fn new(policy: SP, inner: W) -> Self {
-        Scope {
+        Self {
             content: ScopeContent::Policy {
                 policy: Some(policy),
             },

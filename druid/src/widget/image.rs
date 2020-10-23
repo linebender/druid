@@ -96,7 +96,7 @@ impl Image {
     /// [`FillStrat::Fill`]: ../widget/enum.FillStrat.html#variant.Fill
     /// [`InterpolationMode::Bilinear`]: ../piet/enum.InterpolationMode.html#variant.Bilinear
     pub fn new(image_data: ImageBuf) -> Self {
-        Image {
+        Self {
             image_data,
             paint_data: None,
             fill: FillStrat::default(),

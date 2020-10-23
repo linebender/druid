@@ -100,8 +100,8 @@ pub struct ControllerHost<W, C> {
 
 impl<W, C> ControllerHost<W, C> {
     /// Create a new `ControllerHost`.
-    pub fn new(widget: W, controller: C) -> ControllerHost<W, C> {
-        ControllerHost { widget, controller }
+    pub fn new(widget: W, controller: C) -> Self {
+        Self { widget, controller }
     }
 }
 

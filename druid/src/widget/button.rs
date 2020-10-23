@@ -46,8 +46,8 @@ impl<T: Data> Button<T> {
     /// ```
     ///
     /// [`.on_click`]: #method.on_click
-    pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
-        Button::from_label(Label::new(text))
+    pub fn new(text: impl Into<LabelText<T>>) -> Self {
+        Self::from_label(Label::new(text))
     }
 
     /// Create a new button with the provided [`Label`].

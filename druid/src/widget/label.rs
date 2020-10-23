@@ -419,7 +419,7 @@ impl<T: Data> Label<T> {
 
 impl Static {
     fn new(s: ArcStr) -> Self {
-        Static {
+        Self {
             string: s,
             resolved: false,
         }
@@ -445,18 +445,18 @@ impl<T: Data> LabelText<T> {
     /// Call callback with the text that should be displayed.
     pub fn with_display_text<V>(&self, mut cb: impl FnMut(&str) -> V) -> V {
         match self {
-            LabelText::Static(s) => cb(&s.string),
-            LabelText::Localized(s) => cb(&s.localized_str()),
-            LabelText::Dynamic(s) => cb(&s.resolved),
+            Self::Static(s) => cb(&s.string),
+            Self::Localized(s) => cb(&s.localized_str()),
+            Self::Dynamic(s) => cb(&s.resolved),
         }
     }
 
     /// Return the current resolved text.
     pub fn display_text(&self) -> ArcStr {
         match self {
-            LabelText::Static(s) => s.string.clone(),
-            LabelText::Localized(s) => s.localized_str(),
-            LabelText::Dynamic(s) => s.resolved.clone(),
+            Self::Static(s) => s.string.clone(),
+            Self::Localized(s) => s.localized_str(),
+            Self::Dynamic(s) => s.resolved.clone(),
         }
     }
 
@@ -466,9 +466,9 @@ impl<T: Data> LabelText<T> {
     /// Returns `true` if the string has changed.
     pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
         match self {
-            LabelText::Static(s) => s.resolve(),
-            LabelText::Localized(s) => s.resolve(data, env),
-            LabelText::Dynamic(s) => s.resolve(data, env),
+            Self::Static(s) => s.resolve(),
+            Self::Localized(s) => s.resolve(data, env),
+            Self::Dynamic(s) => s.resolve(data, env),
         }
     }
 }
@@ -578,32 +578,32 @@ impl<T> DerefMut for Label<T> {
 }
 impl<T> From<String> for LabelText<T> {
     fn from(src: String) -> LabelText<T> {
-        LabelText::Static(Static::new(src.into()))
+        Self::Static(Static::new(src.into()))
     }
 }
 
 impl<T> From<&str> for LabelText<T> {
-    fn from(src: &str) -> LabelText<T> {
-        LabelText::Static(Static::new(src.into()))
+    fn from(src: &str) -> Self {
+        Self::Static(Static::new(src.into()))
     }
 }
 
 impl<T> From<ArcStr> for LabelText<T> {
-    fn from(string: ArcStr) -> LabelText<T> {
-        LabelText::Static(Static::new(string))
+    fn from(string: ArcStr) -> Self {
+        Self::Static(Static::new(string))
     }
 }
 
 impl<T> From<LocalizedString<T>> for LabelText<T> {
-    fn from(src: LocalizedString<T>) -> LabelText<T> {
-        LabelText::Localized(src)
+    fn from(src: LocalizedString<T>) -> Self {
+        Self::Localized(src)
     }
 }
 
 impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
-    fn from(src: F) -> LabelText<T> {
+    fn from(src: F) -> Self {
         let f = Box::new(src);
-        LabelText::Dynamic(Dynamic {
+        Self::Dynamic(Dynamic {
             f,
             resolved: ArcStr::from(""),
         })

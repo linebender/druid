@@ -42,7 +42,7 @@ pub struct Stepper {
 impl Stepper {
     /// Create a new `Stepper`.
     pub fn new() -> Self {
-        Stepper {
+        Self {
             max: std::f64::MAX,
             min: std::f64::MIN,
             step: 1.0,

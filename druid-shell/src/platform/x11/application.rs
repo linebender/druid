@@ -89,7 +89,7 @@ struct State {
 }
 
 impl Application {
-    pub fn new() -> Result<Application, Error> {
+    pub fn new() -> Result<Self, Error> {
         // If we want to support OpenGL, we will need to open a connection with Xlib support (see
         // https://xcb.freedesktop.org/opengl/ for background).  There is some sample code for this
         // in the `rust-xcb` crate (see `connect_with_xlib_display`), although it may be missing
@@ -100,7 +100,7 @@ impl Application {
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let connection = Rc::new(conn);
-        let window_id = Application::create_event_window(&connection, screen_num as i32)?;
+        let window_id = Self::create_event_window(&connection, screen_num as i32)?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashMap::new(),
@@ -112,7 +112,7 @@ impl Application {
             // Allow disabling Present with an environment variable.
             None
         } else {
-            match Application::query_present_opcode(&connection) {
+            match Self::query_present_opcode(&connection) {
                 Ok(p) => p,
                 Err(e) => {
                     log::info!("failed to find Present extension: {}", e);
@@ -121,7 +121,7 @@ impl Application {
             }
         };
 
-        Ok(Application {
+        Ok(Self {
             connection,
             screen_num: screen_num as i32,
             window_id,

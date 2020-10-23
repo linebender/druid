@@ -25,7 +25,7 @@ pub struct ProgressBar;
 
 impl ProgressBar {
     /// Return a new `ProgressBar`.
-    pub fn new() -> ProgressBar {
+    pub fn new() -> Self {
         Self::default()
     }
 }

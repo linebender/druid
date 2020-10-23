@@ -63,8 +63,8 @@ impl<T> Window<T> {
         handle: WindowHandle,
         pending: PendingWindow<T>,
         ext_handle: ExtEventSink,
-    ) -> Window<T> {
-        Window {
+    ) -> Self {
+        Self {
             id,
             root: WidgetPod::new(pending.root),
             size: Size::ZERO,

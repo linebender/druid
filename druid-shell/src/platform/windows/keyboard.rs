@@ -491,7 +491,7 @@ impl KeyboardState {
     ///
     /// There should be one of these per window. It loads the current keyboard
     /// layout and retains some mapping information from it.
-    pub(crate) fn new() -> KeyboardState {
+    pub(crate) fn new() -> Self {
         unsafe {
             let hkl = GetKeyboardLayout(0);
             let key_vals = HashMap::new();
@@ -499,7 +499,7 @@ impl KeyboardState {
             let stash_vk = None;
             let stash_utf16 = Vec::new();
             let has_altgr = false;
-            let mut result = KeyboardState {
+            let mut result = Self {
                 hkl,
                 key_vals,
                 dead_keys,

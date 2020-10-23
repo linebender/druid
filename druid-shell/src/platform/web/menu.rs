@@ -27,15 +27,15 @@ impl Drop for Menu {
 }
 
 impl Menu {
-    pub fn new() -> Menu {
-        Menu
+    pub fn new() -> Self {
+        Self
     }
 
-    pub fn new_for_popup() -> Menu {
-        Menu
+    pub fn new_for_popup() -> Self {
+        Self
     }
 
-    pub fn add_dropdown(&mut self, _menu: Menu, _text: &str, _enabled: bool) {
+    pub fn add_dropdown(&mut self, _menu: Self, _text: &str, _enabled: bool) {
         log::warn!("unimplemented");
     }
 

@@ -29,16 +29,16 @@ pub struct Menu(platform::Menu);
 
 impl Menu {
     /// Create a new empty window or application menu.
-    pub fn new() -> Menu {
-        Menu(platform::Menu::new())
+    pub fn new() -> Self {
+        Self(platform::Menu::new())
     }
 
     /// Create a new empty context menu.
     ///
     /// Some platforms distinguish between these types of menus, and some
     /// do not.
-    pub fn new_for_popup() -> Menu {
-        Menu(platform::Menu::new_for_popup())
+    pub fn new_for_popup() -> Self {
+        Self(platform::Menu::new_for_popup())
     }
 
     /// Consume this `Menu`, returning the platform menu object.

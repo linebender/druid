@@ -68,13 +68,13 @@ pub struct PendingWindow<T> {
 
 impl<T: Data> PendingWindow<T> {
     /// Create a pending window from any widget.
-    pub fn new<W, F>(root: F) -> PendingWindow<T>
+    pub fn new<W, F>(root: F) -> Self
     where
         W: Widget<T> + 'static,
         F: FnOnce() -> W + 'static,
     {
         // This just makes our API slightly cleaner; callers don't need to explicitly box.
-        PendingWindow {
+        Self {
             root: Box::new(root()),
             title: LocalizedString::new("app-name").into(),
             menu: MenuDesc::platform_default(),
@@ -102,7 +102,7 @@ impl<T: Data> PendingWindow<T> {
 impl<T: Data> AppLauncher<T> {
     /// Create a new `AppLauncher` with the provided window.
     pub fn with_window(window: WindowDesc<T>) -> Self {
-        AppLauncher {
+        Self {
             windows: vec![window],
             env_setup: None,
             delegate: None,
@@ -185,7 +185,7 @@ impl<T: Data> AppLauncher<T> {
 
 impl Default for WindowConfig {
     fn default() -> Self {
-        WindowConfig {
+        Self {
             size: None,
             min_size: None,
             position: None,

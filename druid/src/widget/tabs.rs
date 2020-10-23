@@ -44,7 +44,7 @@ pub struct TabInfo<Input> {
 impl<Input> TabInfo<Input> {
     /// Create a new TabInfo
     pub fn new(name: impl Into<LabelText<Input>>, can_close: bool) -> Self {
-        TabInfo {
+        Self {
             name: name.into(),
             can_close,
         }
@@ -228,7 +228,7 @@ pub struct TabsState<TP: TabsPolicy> {
 impl<TP: TabsPolicy> TabsState<TP> {
     /// Create a new TabsState
     pub fn new(inner: TP::Input, selected: usize, policy: TP) -> Self {
-        TabsState {
+        Self {
             inner,
             selected,
             policy,
@@ -248,7 +248,7 @@ struct TabBar<TP: TabsPolicy> {
 impl<TP: TabsPolicy> TabBar<TP> {
     /// Create a new TabBar widget.
     fn new(axis: Axis, edge: TabsEdge) -> Self {
-        TabBar {
+        Self {
             axis,
             edge,
             tabs: vec![],
@@ -447,7 +447,7 @@ struct TabsTransitionState {
 
 impl TabsTransitionState {
     fn new(previous_idx: TabIndex, duration: Nanos, increasing: bool) -> Self {
-        TabsTransitionState {
+        Self {
             previous_idx,
             current_time: 0,
             duration,
@@ -514,8 +514,8 @@ struct TabsBody<TP: TabsPolicy> {
 }
 
 impl<TP: TabsPolicy> TabsBody<TP> {
-    fn new(axis: Axis, transition: TabsTransition) -> TabsBody<TP> {
-        TabsBody {
+    fn new(axis: Axis, transition: TabsTransition) -> Self {
+        Self {
             children: vec![],
             axis,
             transition,
@@ -779,7 +779,7 @@ pub struct InitialTab<T> {
 
 impl<T: Data> InitialTab<T> {
     fn new(name: impl Into<LabelText<T>>, child: impl Widget<T> + 'static) -> Self {
-        InitialTab {
+        Self {
             name: SingleUse::new(name.into()),
             child: SingleUse::new(child.boxed()),
         }
@@ -834,7 +834,7 @@ impl<T: Data> Tabs<StaticTabs<T>> {
     /// Create a new Tabs widget, using the static tabs policy.
     /// Use with_tab or add_tab to configure the set of tabs available.
     pub fn new() -> Self {
-        Tabs::building(Vec::new())
+        Self::building(Vec::new())
     }
 }
 
@@ -846,7 +846,7 @@ impl<T: Data> Default for Tabs<StaticTabs<T>> {
 
 impl<TP: TabsPolicy> Tabs<TP> {
     fn of_content(content: TabsContent<TP>) -> Self {
-        Tabs {
+        Self {
             axis: Axis::Horizontal,
             edge: Default::default(),
             transition: Default::default(),

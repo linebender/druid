@@ -103,7 +103,7 @@ impl<T: Data, W: Widget<T> + 'static> TestWidgetExt<T> for W {}
 #[allow(dead_code)]
 impl<S, T> ModularWidget<S, T> {
     pub fn new(state: S) -> Self {
-        ModularWidget {
+        Self {
             state,
             event: None,
             lifecycle: None,
@@ -196,7 +196,7 @@ impl<T: Data> ReplaceChild<T> {
     ) -> Self {
         let inner = WidgetPod::new(inner.boxed());
         let replacer = Box::new(move || f().boxed());
-        ReplaceChild { inner, replacer }
+        Self { inner, replacer }
     }
 }
 

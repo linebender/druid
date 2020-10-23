@@ -708,7 +708,7 @@ impl<'a> ContextState<'a> {
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
     ) -> Self {
-        ContextState {
+        Self {
             command_queue,
             ext_handle,
             window,

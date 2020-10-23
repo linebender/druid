@@ -57,9 +57,9 @@ impl<T> Padding<T> {
     /// ```
     ///
     /// [`kurbo::Insets`]: https://docs.rs/kurbo/0.5.3/kurbo/struct.Insets.html
-    pub fn new(insets: impl Into<Insets>, child: impl Widget<T> + 'static) -> Padding<T> {
+    pub fn new(insets: impl Into<Insets>, child: impl Widget<T> + 'static) -> Self {
         let insets = insets.into();
-        Padding {
+        Self {
             left: insets.x0,
             right: insets.x1,
             top: insets.y0,

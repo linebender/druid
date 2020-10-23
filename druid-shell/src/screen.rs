@@ -37,7 +37,7 @@ pub struct Monitor {
 impl Monitor {
     #[allow(dead_code)]
     pub(crate) fn new(primary: bool, rect: Rect, work_rect: Rect) -> Self {
-        Monitor {
+        Self {
             primary,
             rect,
             work_rect,

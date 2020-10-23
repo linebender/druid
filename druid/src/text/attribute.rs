@@ -265,7 +265,7 @@ impl<T: Clone> SpanSet<T> {
 
 impl<T> Span<T> {
     fn new(range: Range<usize>, attr: T) -> Self {
-        Span { range, attr }
+        Self { range, attr }
     }
 
     fn is_empty(&self) -> bool {
@@ -276,43 +276,43 @@ impl<T> Span<T> {
 impl Attribute {
     /// Create a new font size attribute.
     pub fn size(size: impl Into<KeyOrValue<f64>>) -> Self {
-        Attribute::FontSize(size.into())
+        Self::FontSize(size.into())
     }
 
     /// Create a new forground color attribute.
     pub fn text_color(color: impl Into<KeyOrValue<Color>>) -> Self {
-        Attribute::TextColor(color.into())
+        Self::TextColor(color.into())
     }
 
     /// Create a new font family attribute.
     pub fn font_family(family: FontFamily) -> Self {
-        Attribute::FontFamily(family)
+        Self::FontFamily(family)
     }
 
     /// Create a new `FontWeight` attribute.
     pub fn weight(weight: FontWeight) -> Self {
-        Attribute::Weight(weight)
+        Self::Weight(weight)
     }
 
     /// Create a new `FontStyle` attribute.
     pub fn style(style: FontStyle) -> Self {
-        Attribute::Style(style)
+        Self::Style(style)
     }
 
     /// Create a new underline attribute.
     pub fn underline(underline: bool) -> Self {
-        Attribute::Underline(underline)
+        Self::Underline(underline)
     }
 
     /// Create a new `FontDescriptor` attribute.
     pub fn font_descriptor(font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
-        Attribute::Descriptor(font.into())
+        Self::Descriptor(font.into())
     }
 }
 
 impl<T> Default for SpanSet<T> {
     fn default() -> Self {
-        SpanSet { spans: Vec::new() }
+        Self { spans: Vec::new() }
     }
 }
 

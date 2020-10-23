@@ -98,8 +98,8 @@ pub(crate) struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder {
+    pub fn new(app: Application) -> Self {
+        Self {
             app,
             handler: None,
             title: String::new(),
@@ -1355,8 +1355,8 @@ pub(crate) struct WindowHandle {
 }
 
 impl WindowHandle {
-    fn new(id: u32, window: Weak<Window>) -> WindowHandle {
-        WindowHandle { id, window }
+    fn new(id: u32, window: Weak<Window>) -> Self {
+        Self { id, window }
     }
 
     pub fn show(&self) {

@@ -37,7 +37,7 @@ impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
     pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
-        List {
+        Self {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
         }

@@ -138,7 +138,7 @@ struct DeferredQueue {
 
 impl DeferredQueue {
     pub fn new() -> Self {
-        DeferredQueue { queue: Vec::new() }
+        Self { queue: Vec::new() }
     }
 
     /// Adds a DeferredOp message to the queue.

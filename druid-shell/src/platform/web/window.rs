@@ -323,8 +323,8 @@ fn setup_web_callbacks(window_state: &Rc<WindowState>) {
 }
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
-        WindowBuilder {
+    pub fn new(_app: Application) -> Self {
+        Self {
             handler: None,
             title: String::new(),
             cursor: Cursor::Arrow,

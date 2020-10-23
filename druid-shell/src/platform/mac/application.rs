@@ -47,7 +47,7 @@ struct State {
 }
 
 impl Application {
-    pub fn new() -> Result<Application, Error> {
+    pub fn new() -> Result<Self, Error> {
         // macOS demands that we run not just on one thread,
         // but specifically the first thread of the app.
         util::assert_main_thread();
@@ -56,7 +56,7 @@ impl Application {
             let ns_app = NSApp();
             let state = Rc::new(RefCell::new(State { quitting: false }));
 
-            Ok(Application { ns_app, state })
+            Ok(Self { ns_app, state })
         }
     }
 

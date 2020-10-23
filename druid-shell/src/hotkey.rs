@@ -85,7 +85,7 @@ impl HotKey {
     /// [`SysMods`]: enum.SysMods.html
     /// [`RawMods`]: enum.RawMods.html
     pub fn new(mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
-        HotKey {
+        Self {
             mods: mods.into().unwrap_or(RawMods::None),
             key: key.into_key(),
         }

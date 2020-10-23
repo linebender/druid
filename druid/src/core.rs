@@ -142,11 +142,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// In a widget hierarchy, each widget is wrapped in a `WidgetPod`
     /// so it can participate in layout and event flow. The process of
     /// adding a child widget to a container should call this method.
-    pub fn new(inner: W) -> WidgetPod<T, W> {
+    pub fn new(inner: W) -> Self {
         let mut state = WidgetState::new(inner.id().unwrap_or_else(WidgetId::next), None);
         state.children_changed = true;
         state.needs_layout = true;
-        WidgetPod {
+        Self {
             state,
             old_data: None,
             env: None,
@@ -889,8 +889,8 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
 }
 
 impl WidgetState {
-    pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
-        WidgetState {
+    pub(crate) fn new(id: WidgetId, size: Option<Size>) -> Self {
+        Self {
             id,
             layout_rect: size.map(|s| s.to_rect()),
             paint_insets: Insets::ZERO,

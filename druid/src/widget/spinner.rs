@@ -33,8 +33,8 @@ pub struct Spinner {
 
 impl Spinner {
     /// Create a spinner widget
-    pub fn new() -> Spinner {
-        Spinner::default()
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Builder-style method for setting the spinner's color.

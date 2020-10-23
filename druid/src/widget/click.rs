@@ -43,7 +43,7 @@ pub struct Click<T> {
 impl<T: Data> Click<T> {
     /// Create a new clickable [`Controller`] widget.
     pub fn new(action: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Self {
-        Click {
+        Self {
             action: Box::new(action),
         }
     }

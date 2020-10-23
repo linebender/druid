@@ -52,7 +52,7 @@ impl Default for Switch {
 
 impl Switch {
     /// Create a new `Switch`.
-    pub fn new() -> Switch {
+    pub fn new() -> Self {
         Self::default()
     }
 

@@ -29,7 +29,7 @@ pub(crate) struct Application {
 }
 
 impl Application {
-    pub fn new() -> Result<Application, Error> {
+    pub fn new() -> Result<Self, Error> {
         // TODO: we should give control over the application ID to the user
         let gtk_app = match GtkApplication::new(
             Some("com.github.linebender.druid"),
@@ -52,7 +52,7 @@ impl Application {
             return Err(Error::Error(err));
         }
 
-        Ok(Application { gtk_app })
+        Ok(Self { gtk_app })
     }
 
     #[inline]

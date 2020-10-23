@@ -81,7 +81,7 @@ impl MouseButton {
     /// [`MouseButton::Left`]: #variant.Left
     #[inline]
     pub fn is_left(self) -> bool {
-        self == MouseButton::Left
+        self == Self::Left
     }
 
     /// Returns `true` if this is [`MouseButton::Right`].
@@ -89,7 +89,7 @@ impl MouseButton {
     /// [`MouseButton::Right`]: #variant.Right
     #[inline]
     pub fn is_right(self) -> bool {
-        self == MouseButton::Right
+        self == Self::Right
     }
 
     /// Returns `true` if this is [`MouseButton::Middle`].
@@ -97,7 +97,7 @@ impl MouseButton {
     /// [`MouseButton::Middle`]: #variant.Middle
     #[inline]
     pub fn is_middle(self) -> bool {
-        self == MouseButton::Middle
+        self == Self::Middle
     }
 
     /// Returns `true` if this is [`MouseButton::X1`].
@@ -105,7 +105,7 @@ impl MouseButton {
     /// [`MouseButton::X1`]: #variant.X1
     #[inline]
     pub fn is_x1(self) -> bool {
-        self == MouseButton::X1
+        self == Self::X1
     }
 
     /// Returns `true` if this is [`MouseButton::X2`].
@@ -113,7 +113,7 @@ impl MouseButton {
     /// [`MouseButton::X2`]: #variant.X2
     #[inline]
     pub fn is_x2(self) -> bool {
-        self == MouseButton::X2
+        self == Self::X2
     }
 }
 
@@ -126,8 +126,8 @@ pub struct MouseButtons(u8);
 impl MouseButtons {
     /// Create a new empty set.
     #[inline]
-    pub fn new() -> MouseButtons {
-        MouseButtons(0)
+    pub fn new() -> Self {
+        Self(0)
     }
 
     /// Add the `button` to the set.
@@ -144,14 +144,14 @@ impl MouseButtons {
 
     /// Builder-style method for adding the `button` to the set.
     #[inline]
-    pub fn with(mut self, button: MouseButton) -> MouseButtons {
+    pub fn with(mut self, button: MouseButton) -> Self {
         self.0 |= 1.min(button as u8) << button as u8;
         self
     }
 
     /// Builder-style method for removing the `button` from the set.
     #[inline]
-    pub fn without(mut self, button: MouseButton) -> MouseButtons {
+    pub fn without(mut self, button: MouseButton) -> Self {
         self.0 &= !(1.min(button as u8) << button as u8);
         self
     }
@@ -170,7 +170,7 @@ impl MouseButtons {
 
     /// Returns `true` if all the `buttons` are in the set.
     #[inline]
-    pub fn is_superset(self, buttons: MouseButtons) -> bool {
+    pub fn is_superset(self, buttons: Self) -> bool {
         self.0 & buttons.0 == buttons.0
     }
 
@@ -215,13 +215,13 @@ impl MouseButtons {
     }
 
     /// Adds all the `buttons` to the set.
-    pub fn extend(&mut self, buttons: MouseButtons) {
+    pub fn extend(&mut self, buttons: Self) {
         self.0 |= buttons.0;
     }
 
     /// Returns a union of the values in `self` and `other`.
     #[inline]
-    pub fn union(mut self, other: MouseButtons) -> MouseButtons {
+    pub fn union(mut self, other: Self) -> Self {
         self.0 |= other.0;
         self
     }
@@ -271,8 +271,8 @@ impl CursorDesc {
     /// `(0, 0)` at the top left. The hot spot is the logical position of the mouse cursor within
     /// the image. For example, if the image is a picture of a arrow, the hot spot might be the
     /// coordinates of the arrow's tip.
-    pub fn new(image: ImageBuf, hot: impl Into<Point>) -> CursorDesc {
-        CursorDesc {
+    pub fn new(image: ImageBuf, hot: impl Into<Point>) -> Self {
+        Self {
             image,
             hot: hot.into(),
         }

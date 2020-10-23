@@ -101,7 +101,7 @@ impl<T> Painter<T> {
     ///
     /// [`paint`]: ../trait.Widget.html#tymethod.paint
     pub fn new(f: impl FnMut(&mut PaintCtx, &T, &Env) + 'static) -> Self {
-        Painter(Box::new(f))
+        Self(Box::new(f))
     }
 }
 

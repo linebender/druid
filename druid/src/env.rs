@@ -361,7 +361,7 @@ impl<T> Key<T> {
     /// let color_key: Key<Color> = Key::new("org.linebender.example.a.very.nice.color");
     /// ```
     pub const fn new(key: &'static str) -> Self {
-        Key {
+        Self {
             key,
             value_type: PhantomData,
         }
@@ -515,8 +515,8 @@ impl<T> From<Key<T>> for ArcStr {
 }
 
 impl ValueTypeError {
-    fn new(expected: &'static str, found: Value) -> ValueTypeError {
-        ValueTypeError { expected, found }
+    fn new(expected: &'static str, found: Value) -> Self {
+        Self { expected, found }
     }
 }
 impl std::fmt::Display for ValueTypeError {

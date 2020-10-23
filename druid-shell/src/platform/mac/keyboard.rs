@@ -257,9 +257,9 @@ fn is_modifier_code(code: Code) -> bool {
 }
 
 impl KeyboardState {
-    pub(crate) fn new() -> KeyboardState {
+    pub(crate) fn new() -> Self {
         let last_mods = NSEventModifierFlags::empty();
-        KeyboardState { last_mods }
+        Self { last_mods }
     }
 
     pub(crate) fn process_native_event(&mut self, event: id) -> Option<KeyEvent> {

@@ -19,19 +19,19 @@ use crate::hotkey::HotKey;
 pub struct Menu;
 
 impl Menu {
-    pub fn new() -> Menu {
+    pub fn new() -> Self {
         // TODO(x11/menus): implement Menu::new (currently a no-op)
         log::warn!("Menu::new is currently unimplemented for X11 platforms.");
-        Menu {}
+        Self {}
     }
 
-    pub fn new_for_popup() -> Menu {
+    pub fn new_for_popup() -> Self {
         // TODO(x11/menus): implement Menu::new_for_popup (currently a no-op)
         log::warn!("Menu::new_for_popup is currently unimplemented for X11 platforms.");
-        Menu {}
+        Self {}
     }
 
-    pub fn add_dropdown(&mut self, mut _menu: Menu, _text: &str, _enabled: bool) {
+    pub fn add_dropdown(&mut self, mut _menu: Self, _text: &str, _enabled: bool) {
         // TODO(x11/menus): implement Menu::add_dropdown (currently a no-op)
         log::warn!("Menu::add_dropdown is currently unimplemented for X11 platforms.");
     }

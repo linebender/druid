@@ -100,8 +100,8 @@ impl Default for Scale {
 
 impl Scale {
     /// Create a new `Scale` based on the specified axis factors.
-    pub fn new(x: f64, y: f64) -> Scale {
-        Scale { x, y }
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
     }
 
     /// Returns the x axis scale factor.
@@ -156,15 +156,15 @@ impl Scalable for Point {
     /// Converts a `Point` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Point {
-        Point::new(self.x * scale.x, self.y * scale.y)
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(self.x * scale.x, self.y * scale.y)
     }
 
     /// Converts a `Point` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Point {
-        Point::new(self.x / scale.x, self.y / scale.y)
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(self.x / scale.x, self.y / scale.y)
     }
 }
 
@@ -172,15 +172,15 @@ impl Scalable for Line {
     /// Converts a `Line` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Line {
-        Line::new(self.p0.to_px(scale), self.p1.to_px(scale))
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(self.p0.to_px(scale), self.p1.to_px(scale))
     }
 
     /// Converts a `Line` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Line {
-        Line::new(self.p0.to_dp(scale), self.p1.to_dp(scale))
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(self.p0.to_dp(scale), self.p1.to_dp(scale))
     }
 }
 
@@ -189,16 +189,16 @@ impl Scalable for Size {
     /// using the x axis scale factor for `width`
     /// and the y axis scale factor for `height`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Size {
-        Size::new(self.width * scale.x, self.height * scale.y)
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(self.width * scale.x, self.height * scale.y)
     }
 
     /// Converts a `Size` from pixels into points,
     /// using the x axis scale factor for `width`
     /// and the y axis scale factor for `height`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Size {
-        Size::new(self.width / scale.x, self.height / scale.y)
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(self.width / scale.x, self.height / scale.y)
     }
 }
 
@@ -207,8 +207,8 @@ impl Scalable for Rect {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Rect {
-        Rect::new(
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(
             self.x0 * scale.x,
             self.y0 * scale.y,
             self.x1 * scale.x,
@@ -220,8 +220,8 @@ impl Scalable for Rect {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Rect {
-        Rect::new(
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(
             self.x0 / scale.x,
             self.y0 / scale.y,
             self.x1 / scale.x,
@@ -235,8 +235,8 @@ impl Scalable for Insets {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Insets {
-        Insets::new(
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(
             self.x0 * scale.x,
             self.y0 * scale.y,
             self.x1 * scale.x,
@@ -248,8 +248,8 @@ impl Scalable for Insets {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Insets {
-        Insets::new(
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(
             self.x0 / scale.x,
             self.y0 / scale.y,
             self.x1 / scale.x,
@@ -259,8 +259,8 @@ impl Scalable for Insets {
 }
 
 impl Default for ScaledArea {
-    fn default() -> ScaledArea {
-        ScaledArea {
+    fn default() -> Self {
+        Self {
             size_dp: Size::ZERO,
             size_px: Size::ZERO,
         }
@@ -269,10 +269,10 @@ impl Default for ScaledArea {
 
 impl ScaledArea {
     /// Create a new scaled area from pixels.
-    pub fn from_px<T: Into<Size>>(size: T, scale: Scale) -> ScaledArea {
+    pub fn from_px<T: Into<Size>>(size: T, scale: Scale) -> Self {
         let size_px = size.into();
         let size_dp = size_px.to_dp(scale);
-        ScaledArea { size_dp, size_px }
+        Self { size_dp, size_px }
     }
 
     /// Create a new scaled area from display points.
@@ -282,10 +282,10 @@ impl ScaledArea {
     /// as the `size` given to this function. To find out the new size in points use [`size_dp`].
     ///
     /// [`size_dp`]: #method.size_dp
-    pub fn from_dp<T: Into<Size>>(size: T, scale: Scale) -> ScaledArea {
+    pub fn from_dp<T: Into<Size>>(size: T, scale: Scale) -> Self {
         let size_px = size.into().to_px(scale).expand();
         let size_dp = size_px.to_dp(scale);
-        ScaledArea { size_dp, size_px }
+        Self { size_dp, size_px }
     }
 
     /// Returns the scaled area size in display points.

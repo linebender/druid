@@ -151,8 +151,8 @@ struct ViewState {
 pub struct CustomCursor;
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
-        WindowBuilder {
+    pub fn new(_app: Application) -> Self {
+        Self {
             handler: None,
             title: String::new(),
             menu: None,

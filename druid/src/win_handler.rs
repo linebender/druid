@@ -155,7 +155,7 @@ impl<T> AppState<T> {
             windows: Windows::default(),
         }));
 
-        AppState { inner }
+        Self { inner }
     }
 
     pub(crate) fn app(&self) -> Application {
@@ -460,8 +460,8 @@ impl<T: Data> Inner<T> {
 impl<T: Data> DruidHandler<T> {
     /// Note: the root widget doesn't go in here, because it gets added to the
     /// app state.
-    pub(crate) fn new_shared(app_state: AppState<T>, window_id: WindowId) -> DruidHandler<T> {
-        DruidHandler {
+    pub(crate) fn new_shared(app_state: AppState<T>, window_id: WindowId) -> Self {
+        Self {
             app_state,
             window_id,
         }

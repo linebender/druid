@@ -41,8 +41,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// This method will allow scrolling in all directions if child's bounds
     /// are larger than the viewport. Use [vertical](#method.vertical) and
     /// [horizontal](#method.horizontal) methods to limit scrolling to a specific axis.
-    pub fn new(child: W) -> Scroll<T, W> {
-        Scroll {
+    pub fn new(child: W) -> Self {
+        Self {
             clip: ClipBox::new(child),
             scroll_component: ScrollComponent::new(),
         }

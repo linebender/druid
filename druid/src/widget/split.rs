@@ -43,7 +43,7 @@ impl<T> Split<T> {
         child1: impl Widget<T> + 'static,
         child2: impl Widget<T> + 'static,
     ) -> Self {
-        Split {
+        Self {
             split_axis,
             split_point_chosen: 0.5,
             split_point_effective: 0.5,

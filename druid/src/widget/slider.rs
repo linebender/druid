@@ -37,8 +37,8 @@ pub struct Slider {
 
 impl Slider {
     /// Create a new `Slider`.
-    pub fn new() -> Slider {
-        Slider {
+    pub fn new() -> Self {
+        Self {
             min: 0.,
             max: 1.,
             knob_pos: Default::default(),

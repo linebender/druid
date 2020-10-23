@@ -35,7 +35,7 @@ impl Svg {
     ///
     /// The SVG will scale to fit its box constraints.
     pub fn new(svg_data: SvgData) -> Self {
-        Svg {
+        Self {
             svg_data,
             fill: FillStrat::default(),
         }

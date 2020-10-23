@@ -158,8 +158,8 @@ pub(crate) struct WindowState {
 pub struct CustomCursor(gdk::Cursor);
 
 impl WindowBuilder {
-    pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder {
+    pub fn new(app: Application) -> Self {
+        Self {
             app,
             handler: None,
             title: String::new(),

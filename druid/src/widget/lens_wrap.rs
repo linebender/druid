@@ -55,8 +55,8 @@ impl<U, L, W> LensWrap<U, L, W> {
     ///
     /// When the lens has type `Lens<T, U>`, the inner widget has data
     /// of type `U`, and the wrapped widget has data of type `T`.
-    pub fn new(inner: W, lens: L) -> LensWrap<U, L, W> {
-        LensWrap {
+    pub fn new(inner: W, lens: L) -> Self {
+        Self {
             inner,
             lens,
             phantom: Default::default(),

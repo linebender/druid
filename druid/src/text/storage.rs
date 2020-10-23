@@ -47,7 +47,7 @@ pub struct RichText {
 impl RichText {
     /// Create a new `RichText` object with the provided text.
     pub fn new(buffer: ArcStr) -> Self {
-        RichText {
+        Self {
             buffer,
             attrs: Arc::new(AttributeSpans::default()),
         }

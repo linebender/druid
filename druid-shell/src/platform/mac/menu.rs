@@ -57,20 +57,20 @@ fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, sele
 }
 
 impl Menu {
-    pub fn new() -> Menu {
+    pub fn new() -> Self {
         unsafe {
             let menu = NSMenu::alloc(nil).autorelease();
             let () = msg_send![menu, setAutoenablesItems: NO];
-            Menu { menu }
+            Self { menu }
         }
     }
 
-    pub fn new_for_popup() -> Menu {
+    pub fn new_for_popup() -> Self {
         // mac doesn't distinguish between application and context menu types.
-        Menu::new()
+        Self::new()
     }
 
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
+    pub fn add_dropdown(&mut self, menu: Self, text: &str, enabled: bool) {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil).autorelease();
             let title = make_nsstring(&strip_access_key(text));

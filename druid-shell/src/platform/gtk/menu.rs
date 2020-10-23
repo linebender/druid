@@ -44,15 +44,15 @@ enum MenuItem {
 }
 
 impl Menu {
-    pub fn new() -> Menu {
-        Menu { items: Vec::new() }
+    pub fn new() -> Self {
+        Self { items: Vec::new() }
     }
 
-    pub fn new_for_popup() -> Menu {
-        Menu { items: Vec::new() }
+    pub fn new_for_popup() -> Self {
+        Self { items: Vec::new() }
     }
 
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
+    pub fn add_dropdown(&mut self, menu: Self, text: &str, _enabled: bool) {
         // TODO: implement enabled dropdown
         self.items
             .push(MenuItem::SubMenu(strip_access_key(text), menu));

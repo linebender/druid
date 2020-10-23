@@ -116,7 +116,7 @@ impl Default for ScrollComponent {
 
 impl ScrollComponent {
     /// Constructs a new [`ScrollComponent`](struct.ScrollComponent.html) for use.
-    pub fn new() -> ScrollComponent {
+    pub fn new() -> Self {
         Default::default()
     }
 

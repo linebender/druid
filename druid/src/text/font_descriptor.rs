@@ -37,7 +37,7 @@ impl FontDescriptor {
     ///
     /// [`FontFamily`]: struct.FontFamily.html
     pub const fn new(family: FontFamily) -> Self {
-        FontDescriptor {
+        Self {
             family,
             size: crate::piet::util::DEFAULT_FONT_SIZE,
             weight: FontWeight::REGULAR,

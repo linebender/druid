@@ -208,16 +208,16 @@ impl Axis {
     /// Get the axis perpendicular to this one.
     pub fn cross(self) -> Axis {
         match self {
-            Axis::Horizontal => Axis::Vertical,
-            Axis::Vertical => Axis::Horizontal,
+            Self::Horizontal => Self::Vertical,
+            Self::Vertical => Self::Horizontal,
         }
     }
 
     /// Extract from the argument the magnitude along this axis
     pub fn major(self, coords: Size) -> f64 {
         match self {
-            Axis::Horizontal => coords.width,
-            Axis::Vertical => coords.height,
+            Self::Horizontal => coords.width,
+            Self::Vertical => coords.height,
         }
     }
 
@@ -229,8 +229,8 @@ impl Axis {
     /// Extract the extent of the argument in this axis as a pair.
     pub fn major_span(self, rect: Rect) -> (f64, f64) {
         match self {
-            Axis::Horizontal => (rect.x0, rect.x1),
-            Axis::Vertical => (rect.y0, rect.y1),
+            Self::Horizontal => (rect.x0, rect.x1),
+            Self::Vertical => (rect.y0, rect.y1),
         }
     }
 
@@ -242,8 +242,8 @@ impl Axis {
     /// Extract the coordinate locating the argument with respect to this axis.
     pub fn major_pos(self, pos: Point) -> f64 {
         match self {
-            Axis::Horizontal => pos.x,
-            Axis::Vertical => pos.y,
+            Self::Horizontal => pos.x,
+            Self::Vertical => pos.y,
         }
     }
 
@@ -256,19 +256,19 @@ impl Axis {
     /// an (x, y) pair.
     pub fn pack(self, major: f64, minor: f64) -> (f64, f64) {
         match self {
-            Axis::Horizontal => (major, minor),
-            Axis::Vertical => (minor, major),
+            Self::Horizontal => (major, minor),
+            Self::Vertical => (minor, major),
         }
     }
 
     /// Generate constraints with new values on the major axis.
     fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
         match self {
-            Axis::Horizontal => BoxConstraints::new(
+            Self::Horizontal => BoxConstraints::new(
                 Size::new(min_major, bc.min().height),
                 Size::new(major, bc.max().height),
             ),
-            Axis::Vertical => BoxConstraints::new(
+            Self::Vertical => BoxConstraints::new(
                 Size::new(bc.min().width, min_major),
                 Size::new(bc.max().width, major),
             ),
@@ -344,7 +344,7 @@ impl FlexParams {
     /// [`Flex`]: struct.Flex.html
     /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
     pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
-        FlexParams {
+        Self {
             flex,
             alignment: alignment.into(),
         }
@@ -353,7 +353,7 @@ impl FlexParams {
 
 impl<T> ChildWidget<T> {
     fn new(child: impl Widget<T> + 'static, params: FlexParams) -> Self {
-        ChildWidget {
+        Self {
             widget: WidgetPod::new(Box::new(child)),
             params,
         }
@@ -363,7 +363,7 @@ impl<T> ChildWidget<T> {
 impl<T: Data> Flex<T> {
     /// Create a new Flex oriented along the provided axis.
     pub fn for_axis(axis: Axis) -> Self {
-        Flex {
+        Self {
             direction: axis,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Center,
@@ -791,10 +791,10 @@ impl CrossAxisAlignment {
     /// this alignment.
     fn align(self, val: f64) -> f64 {
         match self {
-            CrossAxisAlignment::Start => 0.0,
+            Self::Start => 0.0,
             // in vertical layout, baseline is equivalent to center
-            CrossAxisAlignment::Center | CrossAxisAlignment::Baseline => (val / 2.0).round(),
-            CrossAxisAlignment::End => val,
+            Self::Center | Self::Baseline => (val / 2.0).round(),
+            Self::End => val,
         }
     }
 }
@@ -813,7 +813,7 @@ impl Spacing {
     /// this returns an iterator of `f64` spacing,
     /// where the first element is the spacing before any children
     /// and all subsequent elements are the spacing after children.
-    fn new(alignment: MainAxisAlignment, extra: f64, n_children: usize) -> Spacing {
+    fn new(alignment: MainAxisAlignment, extra: f64, n_children: usize) -> Self {
         let extra = if extra.is_finite() { extra } else { 0. };
         let equal_space = if n_children > 0 {
             match alignment {
@@ -826,7 +826,7 @@ impl Spacing {
         } else {
             0.
         };
-        Spacing {
+        Self {
             alignment,
             extra,
             n_children,
@@ -906,8 +906,8 @@ impl<T: Data> Widget<T> for Spacer {
 }
 
 impl From<f64> for FlexParams {
-    fn from(flex: f64) -> FlexParams {
-        FlexParams {
+    fn from(flex: f64) -> Self {
+        Self {
             flex,
             alignment: None,
         }

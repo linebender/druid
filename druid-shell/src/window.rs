@@ -87,8 +87,8 @@ pub struct IdleToken(usize);
 
 impl IdleToken {
     /// Create a new `IdleToken` with the given raw `usize` id.
-    pub const fn new(raw: usize) -> IdleToken {
-        IdleToken(raw)
+    pub const fn new(raw: usize) -> Self {
+        Self(raw)
     }
 }
 
@@ -101,14 +101,14 @@ impl FileDialogToken {
     pub const INVALID: FileDialogToken = FileDialogToken(0);
 
     /// Create a new token.
-    pub fn next() -> FileDialogToken {
+    pub fn next() -> Self {
         static COUNTER: Counter = Counter::new();
-        FileDialogToken(COUNTER.next())
+        Self(COUNTER.next())
     }
 
     /// Create a new token from a raw value.
-    pub const fn from_raw(id: u64) -> FileDialogToken {
-        FileDialogToken(id)
+    pub const fn from_raw(id: u64) -> Self {
+        Self(id)
     }
 
     /// Get the raw value for a token.
@@ -410,8 +410,8 @@ impl WindowBuilder {
     /// Takes the [`Application`] that this window is for.
     ///
     /// [`Application`]: struct.Application.html
-    pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder(platform::WindowBuilder::new(app.platform_app))
+    pub fn new(app: Application) -> Self {
+        Self(platform::WindowBuilder::new(app.platform_app))
     }
 
     /// Set the [`WinHandler`]. This is the object that will receive

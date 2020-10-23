@@ -61,8 +61,8 @@ pub struct Counter(AtomicU64);
 
 impl Counter {
     /// Create a new counter.
-    pub const fn new() -> Counter {
-        Counter(AtomicU64::new(1))
+    pub const fn new() -> Self {
+        Self(AtomicU64::new(1))
     }
 
     /// Creates a new counter with a given starting value.
@@ -70,8 +70,8 @@ impl Counter {
     /// # Safety
     ///
     /// The value must not be zero.
-    pub const unsafe fn new_unchecked(init: u64) -> Counter {
-        Counter(AtomicU64::new(init))
+    pub const unsafe fn new_unchecked(init: u64) -> Self {
+        Self(AtomicU64::new(init))
     }
 
     /// Return the next value.

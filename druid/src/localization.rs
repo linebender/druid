@@ -232,7 +232,7 @@ impl L10nManager {
 
         let current_bundle = res_mgr.get_bundle(&current_locale, &resources);
 
-        L10nManager {
+        Self {
             res_mgr,
             current_bundle,
             resources,
@@ -293,7 +293,7 @@ impl L10nManager {
 impl<T> LocalizedString<T> {
     /// Create a new `LocalizedString` with the given key.
     pub const fn new(key: &'static str) -> Self {
-        LocalizedString {
+        Self {
             key,
             args: None,
             placeholder: None,

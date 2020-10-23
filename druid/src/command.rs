@@ -320,7 +320,7 @@ impl Command {
     /// [`Selector::with`]: struct.Selector.html#method.with
     /// [`Target`]: enum.Target.html
     pub fn new<T: Any>(selector: Selector<T>, payload: T, target: impl Into<Target>) -> Self {
-        Command {
+        Self {
             symbol: selector.symbol(),
             payload: Arc::new(payload),
             target: target.into(),
@@ -329,7 +329,7 @@ impl Command {
 
     /// Used to create a `Command` from the types sent via an `ExtEventSink`.
     pub(crate) fn from_ext(symbol: SelectorSymbol, payload: Box<dyn Any>, target: Target) -> Self {
-        Command {
+        Self {
             symbol,
             payload: payload.into(),
             target,
@@ -423,7 +423,7 @@ impl Command {
 impl<T: Any> SingleUse<T> {
     /// Create a new single-use payload.
     pub fn new(data: T) -> Self {
-        SingleUse(Mutex::new(Some(data)))
+        Self(Mutex::new(Some(data)))
     }
 
     /// Takes the value, leaving a None in its place.
@@ -433,8 +433,8 @@ impl<T: Any> SingleUse<T> {
 }
 
 impl From<Selector> for Command {
-    fn from(selector: Selector) -> Command {
-        Command {
+    fn from(selector: Selector) -> Self {
+        Self {
             symbol: selector.symbol(),
             payload: Arc::new(()),
             target: Target::Auto,

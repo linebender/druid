@@ -23,8 +23,8 @@ use super::error::Error;
 pub(crate) struct Application;
 
 impl Application {
-    pub fn new() -> Result<Application, Error> {
-        Ok(Application)
+    pub fn new() -> Result<Self, Error> {
+        Ok(Self)
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {}

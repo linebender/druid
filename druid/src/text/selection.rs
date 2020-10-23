@@ -37,7 +37,7 @@ impl Selection {
     /// Create a selection that begins at start and goes to end.
     /// Like dragging a mouse from start to end.
     pub fn new(start: usize, end: usize) -> Self {
-        Selection {
+        Self {
             start,
             end,
             h_pos: None,

@@ -34,8 +34,8 @@ impl<T> Either<T> {
         closure: impl Fn(&T, &Env) -> bool + 'static,
         true_branch: impl Widget<T> + 'static,
         false_branch: impl Widget<T> + 'static,
-    ) -> Either<T> {
-        Either {
+    ) -> Self {
+        Self {
             closure: Box::new(closure),
             true_branch: WidgetPod::new(true_branch).boxed(),
             false_branch: WidgetPod::new(false_branch).boxed(),

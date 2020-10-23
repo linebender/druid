@@ -171,7 +171,7 @@ struct MenuItemId(Option<NonZeroU32>);
 impl<T> MenuItem<T> {
     /// Create a new `MenuItem`.
     pub fn new(title: LocalizedString<T>, command: impl Into<Command>) -> Self {
-        MenuItem {
+        Self {
             title,
             command: command.into(),
             hotkey: None,
@@ -239,7 +239,7 @@ impl<T: Data> MenuDesc<T> {
     /// Create a new menu with the given title.
     pub fn new(title: LocalizedString<T>) -> Self {
         let item = MenuItem::new(title, Selector::NOOP);
-        MenuDesc {
+        Self {
             item,
             items: Vec::new(),
         }
@@ -248,9 +248,9 @@ impl<T: Data> MenuDesc<T> {
     /// If this platform always expects windows to have a menu by default,
     /// returns a menu. Otherwise returns `None`.
     #[allow(unreachable_code)]
-    pub fn platform_default() -> Option<MenuDesc<T>> {
+    pub fn platform_default() -> Option<Self> {
         #[cfg(target_os = "macos")]
-        return Some(MenuDesc::empty().append(sys::mac::application::default()));
+        return Some(Self::empty().append(sys::mac::application::default()));
         #[cfg(target_os = "windows")]
         return None;
 
@@ -390,7 +390,7 @@ impl<T: Data> MenuDesc<T> {
 impl<T> ContextMenu<T> {
     /// Create a new `ContextMenu`.
     pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
-        ContextMenu { menu, location }
+        Self { menu, location }
     }
 }
 

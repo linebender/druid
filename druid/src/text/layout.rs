@@ -74,7 +74,7 @@ impl<T> TextLayout<T> {
     ///
     /// [`set_text`]: #method.set_text
     pub fn new() -> Self {
-        TextLayout {
+        Self {
             text: None,
             font: crate::theme::UI_FONT.into(),
             text_color: crate::theme::LABEL_COLOR.into(),
@@ -89,7 +89,7 @@ impl<T> TextLayout<T> {
     ///
     /// This is useful when the text is not died to application data.
     pub fn from_text(text: impl Into<T>) -> Self {
-        TextLayout {
+        Self {
             text: Some(text.into()),
             ..TextLayout::new()
         }

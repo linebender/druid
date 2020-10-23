@@ -52,8 +52,8 @@ pub struct Radio<T> {
 
 impl<T: Data> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
-    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
-        Radio {
+    pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Self {
+        Self {
             variant,
             child_label: Label::new(label),
         }

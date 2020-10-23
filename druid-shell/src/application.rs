@@ -74,14 +74,14 @@ impl Application {
     /// This may change in the future. See [druid#771] for discussion.
     ///
     /// [druid#771]: https://github.com/linebender/druid/issues/771
-    pub fn new() -> Result<Application, Error> {
+    pub fn new() -> Result<Self, Error> {
         if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
             return Err(Error::ApplicationAlreadyExists);
         }
         util::claim_main_thread();
         let platform_app = platform::Application::new()?;
         let state = Rc::new(RefCell::new(State { running: false }));
-        let app = Application {
+        let app = Self {
             platform_app,
             state,
         };
@@ -107,9 +107,9 @@ impl Application {
     /// [`run`]: #method.run
     /// [`try_global`]: #method.try_global
     #[inline]
-    pub fn global() -> Application {
+    pub fn global() -> Self {
         // Main thread assertion takes place in try_global()
-        Application::try_global().expect("There is no globally active Application")
+        Self::try_global().expect("There is no globally active Application")
     }
 
     /// Get the current globally active `Application`.
@@ -123,7 +123,7 @@ impl Application {
     ///
     /// [`new`]: #method.new
     /// [`run`]: #method.run
-    pub fn try_global() -> Option<Application> {
+    pub fn try_global() -> Option<Self> {
         util::assert_main_thread();
         GLOBAL_APP.with(|global_app| global_app.borrow().clone())
     }

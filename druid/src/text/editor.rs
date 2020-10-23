@@ -41,7 +41,7 @@ pub struct Editor<T> {
 impl<T> Editor<T> {
     /// Create a new `Editor`.
     pub fn new() -> Self {
-        Editor {
+        Self {
             layout: TextLayout::new(),
             selection: Selection::caret(0),
             multiline: false,

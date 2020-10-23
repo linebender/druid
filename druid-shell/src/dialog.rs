@@ -175,8 +175,8 @@ impl FileInfo {
 
 impl FileDialogOptions {
     /// Create a new set of options.
-    pub fn new() -> FileDialogOptions {
-        FileDialogOptions::default()
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Set hidden files and directories to be visible.

@@ -71,8 +71,8 @@ struct Rebuilder {
 }
 
 impl Rebuilder {
-    fn new() -> Rebuilder {
-        Rebuilder {
+    fn new() -> Self {
+        Self {
             inner: SizedBox::empty().boxed(),
         }
     }

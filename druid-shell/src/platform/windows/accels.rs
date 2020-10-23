@@ -48,10 +48,10 @@ pub(crate) struct AccelTable {
 }
 
 impl AccelTable {
-    fn new(accel: &[ACCEL]) -> AccelTable {
+    fn new(accel: &[ACCEL]) -> Self {
         let accel =
             unsafe { CreateAcceleratorTableW(accel as *const _ as *mut _, accel.len() as c_int) };
-        AccelTable {
+        Self {
             accel: AccelHandle(accel),
         }
     }
@@ -63,7 +63,7 @@ impl AccelTable {
 
 pub(crate) fn register_accel(hwnd: HWND, accel: &[ACCEL]) {
     let mut table = ACCEL_TABLES.lock().unwrap();
-    table.insert(WindowHandle(hwnd), Arc::new(AccelTable::new(accel)));
+    table.insert(WindowHandle(hwnd), Arc::new(Self::new(accel)));
 }
 
 impl Drop for AccelTable {

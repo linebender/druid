@@ -51,13 +51,13 @@ struct State {
 }
 
 impl Application {
-    pub fn new() -> Result<Application, Error> {
+    pub fn new() -> Result<Self, Error> {
         Application::init()?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashSet::new(),
         }));
-        Ok(Application { state })
+        Ok(Self { state })
     }
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
