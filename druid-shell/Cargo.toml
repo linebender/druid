@@ -19,7 +19,7 @@ gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pi
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
 
 # passing on all the image features. AVIF is not supported because it does not
-# support decoding, and thats al we use `Image` for.
+# support decoding, and that's all we use `Image` for.
 image_png = ["piet-common/image_png"]
 jpeg = ["piet-common/jpeg"]
 jpeg_rayon = ["piet-common/jpeg_rayon"]

@@ -27,7 +27,7 @@ svg = ["usvg", "harfbuzz-sys"]
 x11 = ["druid-shell/x11"]
 
 # passing on all the image features. AVIF is not supported because it does not
-# support decoding, and thats al we use `Image` for.
+# support decoding, and that's all we use `Image` for.
 png = ["druid-shell/image_png"]
 jpeg = ["druid-shell/jpeg"]
 jpeg_rayon = ["druid-shell/jpeg_rayon"]
