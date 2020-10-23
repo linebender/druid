@@ -131,8 +131,8 @@ impl AppData {
 }
 
 impl Grid {
-    pub fn new() -> ExtEventSink {
-        ExtEventSink {
+    pub fn new() -> Self {
+        Self {
             storage: Arc::new(vec![false; POOL_SIZE]),
         }
     }
@@ -181,7 +181,7 @@ impl Grid {
     }
 
     pub fn n_neighbors(&self, pos: GridPos) -> usize {
-        Grid::neighbors(pos)
+        Self::neighbors(pos)
             .iter()
             .filter(|x| x.is_some() && self[x.unwrap()])
             .count()

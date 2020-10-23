@@ -401,7 +401,7 @@ impl EventLogger {
     ///
     /// The logger will attempt to log events for with `f` returns `true`.
     fn new(f: impl Fn(&Event) -> bool + 'static) -> Self {
-        ExtEventSink {
+        Self {
             filter: Box::new(f),
         }
     }
