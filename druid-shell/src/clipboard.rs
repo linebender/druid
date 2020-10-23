@@ -209,8 +209,8 @@ impl From<&str> for ClipboardFormat {
 }
 
 impl From<platform::Clipboard> for Clipboard {
-    fn from(src: platform::Clipboard) -> Clipboard {
-        Clipboard(src)
+    fn from(src: platform::Clipboard) -> Self {
+        Self(src)
     }
 }
 

@@ -139,48 +139,48 @@ impl<T: Data> Widget<T> for Painter<T> {
 }
 
 impl<T> From<Color> for BackgroundBrush<T> {
-    fn from(src: Color) -> BackgroundBrush<T> {
-        BackgroundBrush::Color(src)
+    fn from(src: Color) -> Self {
+        Self::Color(src)
     }
 }
 
 impl<T> From<Key<Color>> for BackgroundBrush<T> {
-    fn from(src: Key<Color>) -> BackgroundBrush<T> {
-        BackgroundBrush::ColorKey(src)
+    fn from(src: Key<Color>) -> Self {
+        Self::ColorKey(src)
     }
 }
 
 impl<T> From<LinearGradient> for BackgroundBrush<T> {
-    fn from(src: LinearGradient) -> BackgroundBrush<T> {
-        BackgroundBrush::Linear(src)
+    fn from(src: LinearGradient) -> Self {
+        Self::Linear(src)
     }
 }
 
 impl<T> From<RadialGradient> for BackgroundBrush<T> {
-    fn from(src: RadialGradient) -> BackgroundBrush<T> {
-        BackgroundBrush::Radial(src)
+    fn from(src: RadialGradient) -> Self {
+        Self::Radial(src)
     }
 }
 
 impl<T> From<FixedGradient> for BackgroundBrush<T> {
-    fn from(src: FixedGradient) -> BackgroundBrush<T> {
-        BackgroundBrush::Fixed(src)
+    fn from(src: FixedGradient) -> Self {
+        Self::Fixed(src)
     }
 }
 
 impl<T> From<Painter<T>> for BackgroundBrush<T> {
-    fn from(src: Painter<T>) -> BackgroundBrush<T> {
-        BackgroundBrush::Painter(src)
+    fn from(src: Painter<T>) -> Self {
+        Self::Painter(src)
     }
 }
 
 impl<T> From<PaintBrush> for BackgroundBrush<T> {
-    fn from(src: PaintBrush) -> BackgroundBrush<T> {
+    fn from(src: PaintBrush) -> Self {
         match src {
-            PaintBrush::Linear(grad) => BackgroundBrush::Linear(grad),
-            PaintBrush::Radial(grad) => BackgroundBrush::Radial(grad),
-            PaintBrush::Fixed(grad) => BackgroundBrush::Fixed(grad),
-            PaintBrush::Color(color) => BackgroundBrush::Color(color),
+            PaintBrush::Linear(grad) => Self::Linear(grad),
+            PaintBrush::Radial(grad) => Self::Radial(grad),
+            PaintBrush::Fixed(grad) => Self::Fixed(grad),
+            PaintBrush::Color(color) => Self::Color(color),
         }
     }
 }

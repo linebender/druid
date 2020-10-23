@@ -63,7 +63,7 @@ impl DxgiSurfaceRenderTarget {
     /// # Safety
     /// TODO
     pub unsafe fn from_raw(raw: *mut ID2D1RenderTarget) -> Self {
-        DxgiSurfaceRenderTarget {
+        Self {
             ptr: ComPtr::from_raw(raw),
         }
     }
@@ -94,7 +94,7 @@ impl From<HRESULT> for Error {
 impl Debug for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+            Self::WinapiError(hr) => write!(f, "hresult {:x}", hr),
         }
     }
 }
@@ -102,7 +102,7 @@ impl Debug for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+            Self::WinapiError(hr) => write!(f, "hresult {:x}", hr),
         }
     }
 }

@@ -154,7 +154,7 @@ impl Default for ImageBuf {
 #[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 impl ImageBuf {
     /// Load an image from a DynamicImage from the image crate
-    pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageBuf {
+    pub fn from_dynamic_image(image_data: image::DynamicImage) -> Self {
         fn has_alpha_channel(color: image::ColorType) -> bool {
             use image::ColorType::*;
             matches!(color, La8 | Rgba8 | La16 | Rgba16 | Bgra8)
@@ -163,17 +163,17 @@ impl ImageBuf {
         let has_alpha_channel = has_alpha_channel(image_data.color());
 
         if has_alpha_channel {
-            ImageBuf::from_dynamic_image_with_alpha(image_data)
+            Self::from_dynamic_image_with_alpha(image_data)
         } else {
-            ImageBuf::from_dynamic_image_without_alpha(image_data)
+            Self::from_dynamic_image_without_alpha(image_data)
         }
     }
 
     /// Load an image from a DynamicImage with alpha
-    pub fn from_dynamic_image_with_alpha(image_data: image::DynamicImage) -> ImageBuf {
+    pub fn from_dynamic_image_with_alpha(image_data: image::DynamicImage) -> Self {
         let rgba_image = image_data.to_rgba();
         let sizeofimage = rgba_image.dimensions();
-        ImageBuf::from_raw(
+        Self::from_raw(
             rgba_image.to_vec(),
             ImageFormat::RgbaSeparate,
             sizeofimage.0 as usize,
@@ -182,10 +182,10 @@ impl ImageBuf {
     }
 
     /// Load an image from a DynamicImage without alpha
-    pub fn from_dynamic_image_without_alpha(image_data: image::DynamicImage) -> ImageBuf {
+    pub fn from_dynamic_image_without_alpha(image_data: image::DynamicImage) -> Self {
         let rgb_image = image_data.to_rgb();
         let sizeofimage = rgb_image.dimensions();
-        ImageBuf::from_raw(
+        Self::from_raw(
             rgb_image.to_vec(),
             ImageFormat::Rgb,
             sizeofimage.0 as usize,
@@ -196,15 +196,15 @@ impl ImageBuf {
     /// Attempt to load an image from raw bytes.
     ///
     /// If the image crate can't decode an image from the data an error will be returned.
-    pub fn from_data(raw_image: &[u8]) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_data(raw_image: &[u8]) -> Result<Self, Box<dyn Error>> {
         let image_data = image::load_from_memory(raw_image).map_err(|e| e)?;
-        Ok(ImageBuf::from_dynamic_image(image_data))
+        Ok(Self::from_dynamic_image(image_data))
     }
 
     /// Attempt to load an image from the file at the provided path.
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
         let image_data = image::open(path).map_err(|e| e)?;
-        Ok(ImageBuf::from_dynamic_image(image_data))
+        Ok(Self::from_dynamic_image(image_data))
     }
 }
 

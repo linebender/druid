@@ -81,12 +81,12 @@ macro_rules! map_keys {
         }
 
         impl From<i32> for KeyCode {
-            fn from(src: i32) -> KeyCode {
+            fn from(src: i32) -> Self {
                 match src {
                     $(
                         $id => $code
                     ),*,
-                    other => KeyCode::Unknown(other),
+                    other => Self::Unknown(other),
                 }
             }
         }

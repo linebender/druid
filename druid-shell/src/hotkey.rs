@@ -207,18 +207,18 @@ impl From<RawMods> for Modifiers {
             RawMods::CtrlMetaShift => (false, true, true, true),
             RawMods::AltCtrlMetaShift => (true, true, true, true),
         };
-        let mut mods = Modifiers::empty();
-        mods.set(Modifiers::ALT, alt);
-        mods.set(Modifiers::CONTROL, ctrl);
-        mods.set(Modifiers::META, meta);
-        mods.set(Modifiers::SHIFT, shift);
+        let mut mods = Self::empty();
+        mods.set(Self::ALT, alt);
+        mods.set(Self::CONTROL, ctrl);
+        mods.set(Self::META, meta);
+        mods.set(Self::SHIFT, shift);
         mods
     }
 }
 
 // we do this so that HotKey::new can accept `None` as an initial argument.
 impl From<SysMods> for Option<RawMods> {
-    fn from(src: SysMods) -> Option<RawMods> {
+    fn from(src: SysMods) -> Self {
         Some(src.into())
     }
 }

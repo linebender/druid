@@ -48,13 +48,13 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 impl From<anyhow::Error> for Error {
-    fn from(src: anyhow::Error) -> Error {
-        Error::Other(Arc::new(src))
+    fn from(src: anyhow::Error) -> Self {
+        Self::Other(Arc::new(src))
     }
 }
 
 impl From<platform::Error> for Error {
-    fn from(src: platform::Error) -> Error {
-        Error::Platform(src)
+    fn from(src: platform::Error) -> Self {
+        Self::Platform(src)
     }
 }

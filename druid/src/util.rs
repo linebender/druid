@@ -63,17 +63,17 @@ pub enum Handled {
 impl Handled {
     /// Has the event been handled yet?
     pub fn is_handled(self) -> bool {
-        self == Handled::Yes
+        self == Self::Yes
     }
 }
 
 impl From<bool> for Handled {
     /// Returns `Handled::Yes` if `handled` is true, and `Handled::No` otherwise.
-    fn from(handled: bool) -> Handled {
+    fn from(handled: bool) -> Self {
         if handled {
-            Handled::Yes
+            Self::Yes
         } else {
-            Handled::No
+            Self::No
         }
     }
 }

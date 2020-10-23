@@ -36,17 +36,17 @@ pub struct TimerToken(u64);
 
 impl TimerToken {
     /// A token that does not correspond to any timer.
-    pub const INVALID: TimerToken = TimerToken(0);
+    pub const INVALID: Self = Self(0);
 
     /// Create a new token.
-    pub fn next() -> TimerToken {
+    pub fn next() -> Self {
         static TIMER_COUNTER: Counter = Counter::new();
-        TimerToken(TIMER_COUNTER.next())
+        Self(TIMER_COUNTER.next())
     }
 
     /// Create a new token from a raw value.
-    pub const fn from_raw(id: u64) -> TimerToken {
-        TimerToken(id)
+    pub const fn from_raw(id: u64) -> Self {
+        Self(id)
     }
 
     /// Get the raw value for a token.
@@ -98,7 +98,7 @@ pub struct FileDialogToken(u64);
 
 impl FileDialogToken {
     /// A token that does not correspond to any file dialog.
-    pub const INVALID: FileDialogToken = FileDialogToken(0);
+    pub const INVALID: Self = Self(0);
 
     /// Create a new token.
     pub fn next() -> Self {
@@ -658,7 +658,7 @@ pub trait WinHandler {
 }
 
 impl From<platform::WindowHandle> for WindowHandle {
-    fn from(src: platform::WindowHandle) -> WindowHandle {
-        WindowHandle(src)
+    fn from(src: platform::WindowHandle) -> Self {
+        Self(src)
     }
 }

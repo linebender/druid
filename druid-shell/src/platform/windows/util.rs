@@ -52,8 +52,8 @@ pub fn as_result(hr: HRESULT) -> Result<(), Error> {
 }
 
 impl From<HRESULT> for Error {
-    fn from(hr: HRESULT) -> Error {
-        Error::Hr(hr)
+    fn from(hr: HRESULT) -> Self {
+        Self::Hr(hr)
     }
 }
 

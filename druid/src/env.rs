@@ -451,13 +451,13 @@ impl Data for Value {
 }
 
 impl Data for Env {
-    fn same(&self, other: &Env) -> bool {
+    fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0) || self.0.deref().same(other.0.deref())
     }
 }
 
 impl Data for EnvImpl {
-    fn same(&self, other: &EnvImpl) -> bool {
+    fn same(&self, other: &Self) -> bool {
         self.map.len() == other.map.len()
             && self
                 .map
@@ -509,8 +509,8 @@ impl Default for Env {
 }
 
 impl<T> From<Key<T>> for ArcStr {
-    fn from(src: Key<T>) -> ArcStr {
-        ArcStr::from(src.key)
+    fn from(src: Key<T>) -> Self {
+        Self::from(src.key)
     }
 }
 
@@ -582,21 +582,21 @@ impl<T: ValueType> KeyOrValue<T> {
     /// [`Env`]: struct.Env.html
     pub fn resolve(&self, env: &Env) -> T {
         match self {
-            KeyOrValue::Concrete(ref value) => value.to_owned(),
-            KeyOrValue::Key(key) => env.get(key),
+            Self::Concrete(ref value) => value.to_owned(),
+            Self::Key(key) => env.get(key),
         }
     }
 }
 
 impl<T: Into<Value>> From<T> for KeyOrValue<T> {
-    fn from(value: T) -> KeyOrValue<T> {
-        KeyOrValue::Concrete(value)
+    fn from(value: T) -> Self {
+        Self::Concrete(value)
     }
 }
 
 impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
-    fn from(key: Key<T>) -> KeyOrValue<T> {
-        KeyOrValue::Key(key)
+    fn from(key: Key<T>) -> Self {
+        Self::Key(key)
     }
 }
 

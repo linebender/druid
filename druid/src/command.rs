@@ -467,14 +467,14 @@ impl Target {
 }
 
 impl From<WindowId> for Target {
-    fn from(id: WindowId) -> Target {
-        Target::Window(id)
+    fn from(id: WindowId) -> Self {
+        Self::Window(id)
     }
 }
 
 impl From<WidgetId> for Target {
-    fn from(id: WidgetId) -> Target {
-        Target::Widget(id)
+    fn from(id: WidgetId) -> Self {
+        Self::Widget(id)
     }
 }
 

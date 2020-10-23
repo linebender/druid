@@ -68,8 +68,8 @@ impl<T: Data> Button<T> {
     ///
     /// [`Label`]: struct.Label.html
     /// [`.on_click`]: #method.on_click
-    pub fn from_label(label: Label<T>) -> Button<T> {
-        Button {
+    pub fn from_label(label: Label<T>) -> Self {
+        Self {
             label,
             label_size: Size::ZERO,
         }

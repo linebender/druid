@@ -441,14 +441,14 @@ impl<T> std::fmt::Debug for MenuDesc<T> {
 }
 
 impl<T> From<MenuItem<T>> for MenuEntry<T> {
-    fn from(src: MenuItem<T>) -> MenuEntry<T> {
-        MenuEntry::Item(src)
+    fn from(src: MenuItem<T>) -> Self {
+        Self::Item(src)
     }
 }
 
 impl<T> From<MenuDesc<T>> for MenuEntry<T> {
-    fn from(src: MenuDesc<T>) -> MenuEntry<T> {
-        MenuEntry::SubMenu(src)
+    fn from(src: MenuDesc<T>) -> Self {
+        Self::SubMenu(src)
     }
 }
 

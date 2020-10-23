@@ -72,7 +72,7 @@ pub struct MouseEvent {
 }
 
 impl From<druid_shell::MouseEvent> for MouseEvent {
-    fn from(src: druid_shell::MouseEvent) -> MouseEvent {
+    fn from(src: druid_shell::MouseEvent) -> Self {
         let druid_shell::MouseEvent {
             pos,
             buttons,
@@ -82,7 +82,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             button,
             wheel_delta,
         } = src;
-        MouseEvent {
+        Self {
             pos,
             window_pos: pos,
             buttons,

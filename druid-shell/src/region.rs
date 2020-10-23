@@ -107,7 +107,7 @@ impl std::ops::SubAssign<Vec2> for Region {
 }
 
 impl From<Rect> for Region {
-    fn from(rect: Rect) -> Region {
-        Region { rects: vec![rect] }
+    fn from(rect: Rect) -> Self {
+        Self { rects: vec![rect] }
     }
 }

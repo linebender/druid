@@ -119,7 +119,7 @@ impl<T: ?Sized> std::fmt::Debug for Bloom<T> {
 
 impl<T: ?Sized> Default for Bloom<T> {
     fn default() -> Self {
-        Bloom {
+        Self {
             bits: 0,
             data: PhantomData,
             entry_count: 0,
