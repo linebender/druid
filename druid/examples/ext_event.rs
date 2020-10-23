@@ -48,7 +48,7 @@ fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
 
 impl ColorWell {
     pub fn new() -> Self {
-        ColorWell
+        ExtEventSink
     }
 }
 

@@ -269,7 +269,7 @@ pub struct SquaresGrid<T> {
 
 impl<T> SquaresGrid<T> {
     pub fn new() -> Self {
-        SquaresGrid {
+        Self {
             widgets: vec![],
             drawable_widgets: 0,
             cell_size: DEFAULT_GRID_CELL_SIZE,

@@ -29,7 +29,7 @@ struct DynamicTabData {
 
 impl DynamicTabData {
     fn new(highest_tab: usize) -> Self {
-        DynamicTabData {
+        Self {
             highest_tab,
             removed_tabs: 0,
             tab_labels: (1..=highest_tab).collect(),

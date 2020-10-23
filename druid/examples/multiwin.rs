@@ -87,8 +87,8 @@ struct Glow<W> {
 }
 
 impl<W> Glow<W> {
-    pub fn new(inner: W) -> Glow<W> {
-        Glow { inner }
+    pub fn new(inner: W) -> Self {
+        Self { inner }
     }
 }
 

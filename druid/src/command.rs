@@ -282,8 +282,8 @@ impl Selector<()> {
 
 impl<T> Selector<T> {
     /// Create a new `Selector` with the given string.
-    pub const fn new(s: &'static str) -> Selector<T> {
-        Selector(s, PhantomData)
+    pub const fn new(s: &'static str) -> Self {
+        Self(s, PhantomData)
     }
 
     /// Returns the `SelectorSymbol` identifying this `Selector`.

@@ -122,7 +122,7 @@ impl ColorWell {
         } else {
             Some(Color::rgba(0., 0., 0., 0.2))
         };
-        ColorWell {
+        ExtEventSink {
             randomize,
             token: TimerToken::INVALID,
             start: Instant::now(),

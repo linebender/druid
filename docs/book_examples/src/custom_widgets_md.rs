@@ -45,7 +45,7 @@ struct TextBoxActionController {
 
 impl TextBoxActionController {
     pub fn new() -> Self {
-        TextBoxActionController { timer: None }
+        ExtEventSink { timer: None }
     }
 }
 

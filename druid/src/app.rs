@@ -340,12 +340,12 @@ impl<T: Data> WindowDesc<T> {
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
     ///
     /// [`Widget`]: trait.Widget.html
-    pub fn new<W, F>(root: F) -> WindowDesc<T>
+    pub fn new<W, F>(root: F) -> Self
     where
         W: Widget<T> + 'static,
         F: FnOnce() -> W + 'static,
     {
-        WindowDesc {
+        Self {
             pending: PendingWindow::new(root),
             config: WindowConfig::default(),
             id: WindowId::next(),

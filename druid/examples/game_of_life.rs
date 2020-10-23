@@ -131,8 +131,8 @@ impl AppData {
 }
 
 impl Grid {
-    pub fn new() -> Grid {
-        Grid {
+    pub fn new() -> ExtEventSink {
+        ExtEventSink {
             storage: Arc::new(vec![false; POOL_SIZE]),
         }
     }

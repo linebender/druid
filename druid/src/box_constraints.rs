@@ -44,7 +44,7 @@ impl BoxConstraints {
     /// An unbounded box constraints object.
     ///
     /// Can be satisfied by any nonnegative size.
-    pub const UNBOUNDED: BoxConstraints = BoxConstraints {
+    pub const UNBOUNDED: Self = Self {
         min: Size::ZERO,
         max: Size::new(f64::INFINITY, f64::INFINITY),
     };
@@ -57,8 +57,8 @@ impl BoxConstraints {
     /// so that the layout is aligned to integers.
     ///
     /// [rounded away from zero]: struct.Size.html#method.expand
-    pub fn new(min: Size, max: Size) -> BoxConstraints {
-        BoxConstraints {
+    pub fn new(min: Size, max: Size) -> Self {
+        Self {
             min: min.expand(),
             max: max.expand(),
         }
@@ -72,9 +72,9 @@ impl BoxConstraints {
     /// so that the layout is aligned to integers.
     ///
     /// [rounded away from zero]: struct.Size.html#method.expand
-    pub fn tight(size: Size) -> BoxConstraints {
+    pub fn tight(size: Size) -> Self {
         let size = size.expand();
-        BoxConstraints {
+        Self {
             min: size,
             max: size,
         }
@@ -83,8 +83,8 @@ impl BoxConstraints {
     /// Create a "loose" version of the constraints.
     ///
     /// Make a version with zero minimum size, but the same maximum size.
-    pub fn loosen(&self) -> BoxConstraints {
-        BoxConstraints {
+    pub fn loosen(&self) -> Self {
+        Self {
             min: Size::ZERO,
             max: self.max,
         }
@@ -150,7 +150,7 @@ impl BoxConstraints {
     /// so that the layout is aligned to integers.
     ///
     /// [rounded away from zero]: struct.Size.html#method.expand
-    pub fn shrink(&self, diff: impl Into<Size>) -> BoxConstraints {
+    pub fn shrink(&self, diff: impl Into<Size>) -> Self {
         let diff = diff.into().expand();
         let min = Size::new(
             (self.min().width - diff.width).max(0.),
@@ -161,7 +161,7 @@ impl BoxConstraints {
             (self.max().height - diff.height).max(0.),
         );
 
-        BoxConstraints::new(min, max)
+        Self::new(min, max)
     }
 
     /// Test whether these constraints contain the given `Size`.
