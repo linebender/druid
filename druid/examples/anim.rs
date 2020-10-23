@@ -44,6 +44,9 @@ impl Widget<()> for AnimWidget {
                 if self.t < 1.0 {
                     ctx.request_anim_frame();
                 } else {
+                    // We might have t>1.0 as the end of the animation,
+                    // we want to make sure the line points up at the
+                    // end of the animation.
                     self.t = 0.0;
                 }
             }
