@@ -95,7 +95,7 @@ impl<T: Data> Harness<'_, T> {
     pub fn create_simple(
         data: T,
         root: impl Widget<T> + 'static,
-        harness_closure: impl FnMut(&mut Self),
+        harness_closure: impl FnMut(&mut Harness<T>),
     ) {
         Self::create_with_render(data, root, DEFAULT_SIZE, harness_closure, |_target| {})
     }
