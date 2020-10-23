@@ -8,7 +8,7 @@ pub struct Region {
 
 impl Region {
     /// The empty region.
-    pub const EMPTY: Region = Region { rects: Vec::new() };
+    pub const EMPTY: Self = Self { rects: Vec::new() };
 
     /// Returns the collection of rectangles making up this region.
     #[inline]

@@ -93,8 +93,8 @@ pub trait Scalable {
 }
 
 impl Default for Scale {
-    fn default() -> Scale {
-        Scale { x: 1.0, y: 1.0 }
+    fn default() -> Self {
+        Self { x: 1.0, y: 1.0 }
     }
 }
 
@@ -140,15 +140,15 @@ impl Scalable for Vec2 {
     /// Converts a `Vec2` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: Scale) -> Vec2 {
-        Vec2::new(self.x * scale.x, self.y * scale.y)
+    fn to_px(&self, scale: Scale) -> Self {
+        Self::new(self.x * scale.x, self.y * scale.y)
     }
 
     /// Converts a `Vec2` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: Scale) -> Vec2 {
-        Vec2::new(self.x / scale.x, self.y / scale.y)
+    fn to_dp(&self, scale: Scale) -> Self {
+        Self::new(self.x / scale.x, self.y / scale.y)
     }
 }
 
