@@ -206,7 +206,7 @@ pub enum Axis {
 
 impl Axis {
     /// Get the axis perpendicular to this one.
-    pub fn cross(self) -> Axis {
+    pub fn cross(self) -> Self {
         match self {
             Self::Horizontal => Self::Vertical,
             Self::Vertical => Self::Horizontal,

@@ -31,8 +31,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Error::Error(err) => write!(f, "GTK Error: {}", err),
-            Error::BoolError(err) => write!(f, "GTK BoolError: {}", err),
+            Self::Error(err) => write!(f, "GTK Error: {}", err),
+            Self::BoolError(err) => write!(f, "GTK BoolError: {}", err),
         }
     }
 }

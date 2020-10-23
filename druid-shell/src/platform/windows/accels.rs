@@ -63,7 +63,7 @@ impl AccelTable {
 
 pub(crate) fn register_accel(hwnd: HWND, accel: &[ACCEL]) {
     let mut table = ACCEL_TABLES.lock().unwrap();
-    table.insert(WindowHandle(hwnd), Arc::new(Self::new(accel)));
+    table.insert(WindowHandle(hwnd), Arc::new(AccelTable::new(accel)));
 }
 
 impl Drop for AccelTable {

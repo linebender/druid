@@ -36,7 +36,7 @@ pub enum FillStrat {
 
 impl Default for FillStrat {
     fn default() -> Self {
-        FillStrat::Contain
+        Self::Contain
     }
 }
 
@@ -50,22 +50,22 @@ impl FillStrat {
         let raw_scaley = parent.height / fit_box.height;
 
         let (scalex, scaley) = match self {
-            FillStrat::Contain => {
+            Self::Contain => {
                 let scale = raw_scalex.min(raw_scaley);
                 (scale, scale)
             }
-            FillStrat::Cover => {
+            Self::Cover => {
                 let scale = raw_scalex.max(raw_scaley);
                 (scale, scale)
             }
-            FillStrat::Fill => (raw_scalex, raw_scaley),
-            FillStrat::FitHeight => (raw_scaley, raw_scaley),
-            FillStrat::FitWidth => (raw_scalex, raw_scalex),
-            FillStrat::ScaleDown => {
+            Self::Fill => (raw_scalex, raw_scaley),
+            Self::FitHeight => (raw_scaley, raw_scaley),
+            Self::FitWidth => (raw_scalex, raw_scalex),
+            Self::ScaleDown => {
                 let scale = raw_scalex.min(raw_scaley).min(1.0);
                 (scale, scale)
             }
-            FillStrat::None => (1.0, 1.0),
+            Self::None => (1.0, 1.0),
         };
 
         let origin_x = (parent.width - (fit_box.width * scalex)) / 2.0;

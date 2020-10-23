@@ -30,20 +30,20 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::NoWindow => write!(f, "No global window found"),
-            Error::NoDocument => write!(f, "No global document found"),
-            Error::Js(err) => write!(f, "JavaScript error: {:?}", err.as_string()),
-            Error::JsCast => write!(f, "JavaScript cast error"),
-            Error::NoElementById(err) => write!(f, "get_element_by_id error: {}", err),
-            Error::NoContext => write!(f, "Failed to get a draw context"),
-            Error::Unimplemented => write!(f, "Requested an unimplemented feature"),
+            Self::NoWindow => write!(f, "No global window found"),
+            Self::NoDocument => write!(f, "No global document found"),
+            Self::Js(err) => write!(f, "JavaScript error: {:?}", err.as_string()),
+            Self::JsCast => write!(f, "JavaScript cast error"),
+            Self::NoElementById(err) => write!(f, "get_element_by_id error: {}", err),
+            Self::NoContext => write!(f, "Failed to get a draw context"),
+            Self::Unimplemented => write!(f, "Requested an unimplemented feature"),
         }
     }
 }
 
 impl From<JsValue> for Error {
-    fn from(js: JsValue) -> Error {
-        Error::Js(js)
+    fn from(js: JsValue) -> Self {
+        Self::Js(js)
     }
 }
 

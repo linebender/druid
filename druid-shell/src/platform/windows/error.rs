@@ -68,16 +68,16 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Error::Hr(hr) => {
+            Self::Hr(hr) => {
                 write!(f, "HRESULT 0x{:x}", hr)?;
                 if let Some(description) = hresult_description(*hr) {
                     write!(f, ": {}", description)?;
                 }
                 Ok(())
             }
-            Error::D2Error => write!(f, "Direct2D error"),
-            Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
-            Error::NullHwnd => write!(f, "Window handle is Null"),
+            Self::D2Error => write!(f, "Direct2D error"),
+            Self::OldWindows => write!(f, "Attempted newer API on older Windows"),
+            Self::NullHwnd => write!(f, "Window handle is Null"),
         }
     }
 }

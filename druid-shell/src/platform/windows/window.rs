@@ -1500,14 +1500,14 @@ unsafe fn create_window(
 impl Cursor {
     fn get_hcursor(&self) -> HCURSOR {
         let name = match self {
-            Cursor::Arrow => IDC_ARROW,
-            Cursor::IBeam => IDC_IBEAM,
-            Cursor::Crosshair => IDC_CROSS,
-            Cursor::OpenHand => IDC_HAND,
-            Cursor::NotAllowed => IDC_NO,
-            Cursor::ResizeLeftRight => IDC_SIZEWE,
-            Cursor::ResizeUpDown => IDC_SIZENS,
-            Cursor::Custom(c) => {
+            Self::Arrow => IDC_ARROW,
+            Self::IBeam => IDC_IBEAM,
+            Self::Crosshair => IDC_CROSS,
+            Self::OpenHand => IDC_HAND,
+            Self::NotAllowed => IDC_NO,
+            Self::ResizeLeftRight => IDC_SIZEWE,
+            Self::ResizeUpDown => IDC_SIZENS,
+            Self::Custom(c) => {
                 return (c.0).0;
             }
         };
