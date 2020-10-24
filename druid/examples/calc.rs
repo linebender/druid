@@ -40,6 +40,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .with_flex_child(op_button('⌫'), 1.0)
         .with_spacer(1.0)
         .with_flex_child(op_button('÷'), 1.0);
+
     let row_1 = Flex::row()
         .with_flex_child(digit_button(7), 1.0)
         .with_spacer(1.0)
@@ -48,6 +49,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .with_flex_child(digit_button(9), 1.0)
         .with_spacer(1.0)
         .with_flex_child(op_button('×'), 1.0);
+
     let row_2 = Flex::row()
         .with_flex_child(digit_button(4), 1.0)
         .with_spacer(1.0)
@@ -56,6 +58,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .with_flex_child(digit_button(6), 1.0)
         .with_spacer(1.0)
         .with_flex_child(op_button('−'), 1.0);
+
     let row_3 = Flex::row()
         .with_flex_child(digit_button(1), 1.0)
         .with_spacer(1.0)
@@ -64,6 +67,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .with_flex_child(digit_button(3), 1.0)
         .with_spacer(1.0)
         .with_flex_child(op_button('+'), 1.0);
+
     let row_4 = Flex::row()
         .with_flex_child(op_button('±'), 1.0)
         .with_spacer(1.0)
@@ -72,6 +76,7 @@ fn build_calc() -> impl Widget<CalcState> {
         .with_flex_child(op_button('.'), 1.0)
         .with_spacer(1.0)
         .with_flex_child(op_button('='), 1.0);
+
     Flex::column()
         .with_flex_spacer(0.2)
         .with_child(display)
