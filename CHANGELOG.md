@@ -50,7 +50,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - TextBox supports vertical movement ([#1280] by [@cmyr])
 - Widgets can specify a baseline, flex rows can align baselines ([#1295] by [@cmyr])
 - `TextBox::with_text_color` and `TextBox::set_text_color` ([#1320] by [@cmyr])
-- `Checkbox::set_label` to update the label. ([#1346] by [@finnerale])
+- `Checkbox::set_text` to update the label. ([#1346] by [@finnerale])
 
 ### Changed
 
