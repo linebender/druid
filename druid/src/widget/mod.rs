@@ -34,7 +34,7 @@ mod list;
 mod padding;
 mod painter;
 mod parse;
-mod prism_wrap;
+pub mod prism_wrap;
 mod progress_bar;
 mod radio;
 mod scope;

@@ -1,4 +1,5 @@
 #![allow(missing_docs)]
+#![allow(clippy::too_many_arguments)]
 
 use crate::kurbo::Size;
 use crate::optics::PartialPrism;
@@ -115,3 +116,156 @@ where
         self.inner.id()
     }
 }
+
+macro_rules! prisms_impl {
+    ($name:ident ( $($idx:literal),+ ) ) => {
+        paste::paste! {
+
+            // start of $name def
+            /// Container for prisms that are based on
+            /// the same data type.
+            pub struct $name
+            <
+                // the outer data
+                T0,
+                // T1, T2, ..
+                // each variant's inner data
+                $([<T $idx>],)+
+                // P1, P2, ..
+                // each prism (T0 -> T1, T0 -> T2, ..)
+                $([<P $idx>],)+
+                // W1, W2, ..
+                // each wrapping widget
+                $([<W $idx>],)+
+            > {
+                // w1: PrismWrap<T1, P1, W1>,
+                // w2: PrismWrap<T2, P2, W2>,
+                // each field is a prismwrap widget
+                // with a correct data, prism and inner widget connected
+                $([<w $idx>]: PrismWrap<[<T $idx>], [<P $idx>], [<W $idx>]>,
+                )+
+                _marker: std::marker::PhantomData<T0>,
+            }
+            // end of $name def
+
+            // start of $name impl
+            impl
+            < // same as before
+                T0, $([<T $idx>],)+ $([<P $idx>],)+ $([<W $idx>],)+
+            > $name
+            < // same as before
+                T0, $([<T $idx>],)+ $([<P $idx>],)+ $([<W $idx>],)+
+            > {
+                pub fn new(
+                    // same as the struct fields
+                    $([<w $idx>]: PrismWrap<[<T $idx>], [<P $idx>], [<W $idx>]>,
+                    )+
+                ) -> Self {
+                    Self {
+                        // w1, w2, ..
+                        $([<w $idx>],
+                        )+
+                        _marker: std::marker::PhantomData,
+                    }
+                }
+            }
+            // end of $name impl
+
+            // start of Widget impl
+            impl
+            < // same as before
+                T0, $([<T $idx>],)+ $([<P $idx>],)+ $([<W $idx>],)+
+            > Widget<T0> for $name
+            < // same as before
+                T0, $([<T $idx>],)+ $([<P $idx>],)+ $([<W $idx>],)+
+            >
+            where
+                T0: Data,
+                // T1: Data, T2: Data, ..
+                $([<T $idx>]: Data,
+                )+
+                // P1: PartialPrism<T0, T1>,
+                // P2: PartialPrism<T0, T2>,
+                $([<P $idx>]: PartialPrism<T0, [<T $idx>]>,
+                )+
+                // W1: Widget<T1>,
+                // W2: Widget<T2>,
+                $([<W $idx>]: Widget<[<T $idx>]>,
+                )+
+            {
+                fn event(
+                    &mut self,
+                    ctx: &mut ::druid::EventCtx,
+                    event: &::druid::Event,
+                    data: &mut T0,
+                    env: &::druid::Env,
+                ) {
+                    // self.w1.event(ctx, event, data, env);
+                    // self.w2.event(ctx, event, data, env);
+                    $(self.[<w $idx>].event(ctx, event, data, env);
+                    )+
+                }
+
+                fn lifecycle(
+                    &mut self,
+                    ctx: &mut ::druid::LifeCycleCtx,
+                    event: &::druid::LifeCycle,
+                    data: &T0,
+                    env: &::druid::Env,
+                ) {
+                    // self.w1.lifecycle(ctx, event, data, env);
+                    // self.w2.lifecycle(ctx, event, data, env);
+                    $(self.[<w $idx>].lifecycle(ctx, event, data, env);
+                    )+
+                }
+
+                fn update(&mut self, ctx: &mut ::druid::UpdateCtx, old_data: &T0, data: &T0, env: &::druid::Env) {
+                    // self.w1.update(ctx, old_data, data, env);
+                    // self.w2.update(ctx, old_data, data, env);
+                    $(self.[<w $idx>].update(ctx, old_data, data, env);
+                    )+
+                }
+
+                fn layout(
+                    &mut self,
+                    ctx: &mut ::druid::LayoutCtx,
+                    bc: &::druid::BoxConstraints,
+                    data: &T0,
+                    env: &::druid::Env,
+                ) -> ::druid::Size {
+                    crate::Size::ZERO
+                    // self.w1.layout(ctx, bc, data, env) +
+                    // self.w2.layout(ctx, bc, data, env)
+                    $(+ self.[<w $idx>].layout(ctx, bc, data, env)
+                    )+
+                }
+
+                fn paint(&mut self, ctx: &mut ::druid::PaintCtx, data: &T0, env: &::druid::Env) {
+                    // self.w1.paint(ctx, data, env);
+                    // self.w2.paint(ctx, data, env);
+                    $(self.[<w $idx>].paint(ctx, data, env);
+                    )+
+                }
+            }
+            // end of Widget impl
+        }
+        // end of paste!
+    }
+}
+
+prisms_impl! { Prisms1 ( 1 ) }
+prisms_impl! { Prisms2 ( 1, 2 ) }
+prisms_impl! { Prisms3 ( 1, 2, 3 ) }
+prisms_impl! { Prisms4 ( 1, 2, 3, 4 ) }
+prisms_impl! { Prisms5 ( 1, 2, 3, 4, 5 ) }
+prisms_impl! { Prisms6 ( 1, 2, 3, 4, 5, 6 ) }
+prisms_impl! { Prisms7 ( 1, 2, 3, 4, 5, 6, 7 ) }
+prisms_impl! { Prisms8 ( 1, 2, 3, 4, 5, 6, 7, 8 ) }
+prisms_impl! { Prisms9 ( 1, 2, 3, 4, 5, 6, 7, 8, 9 ) }
+prisms_impl! { Prisms10 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ) }
+prisms_impl! { Prisms11 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ) }
+prisms_impl! { Prisms12 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ) }
+prisms_impl! { Prisms13 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 ) }
+prisms_impl! { Prisms14 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ) }
+prisms_impl! { Prisms15 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ) }
+prisms_impl! { Prisms16 ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ) }

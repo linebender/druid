@@ -1,10 +1,8 @@
 #![allow(missing_docs)]
 
-use crate::optics::{lens, prism, Lens};
-
-use std::marker::PhantomData;
-
 pub use crate::optics::PartialPrism as AffineTraversal;
+use crate::optics::{lens, prism, Lens};
+use std::marker::PhantomData;
 pub use then::Then;
 pub use wrap::Wrap;
 

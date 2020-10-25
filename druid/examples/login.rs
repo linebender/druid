@@ -1,5 +1,5 @@
 use druid::{
-    widget::{Button, Controller, Flex, Label, TextBox},
+    widget::{prism_wrap::Prisms2, Button, Controller, Flex, Label, TextBox},
     AppLauncher, Data, Env, Event, EventCtx, Lens, Prism, WidgetExt, WindowDesc,
 };
 use druid::{PlatformError, Selector, Widget};
@@ -31,80 +31,8 @@ fn main() -> Result<(), PlatformError> {
         .launch(state)
 }
 
-pub struct Container<S, A1, A2, P1, P2, W1, W2> {
-    w1: druid::widget::PrismWrap<A1, P1, W1>,
-    w2: druid::widget::PrismWrap<A2, P2, W2>,
-    _marker: std::marker::PhantomData<S>,
-}
-
-impl<S, A1, A2, P1, P2, W1, W2> Container<S, A1, A2, P1, P2, W1, W2> {
-    pub fn new(
-        w1: druid::widget::PrismWrap<A1, P1, W1>,
-        w2: druid::widget::PrismWrap<A2, P2, W2>,
-    ) -> Self {
-        Self {
-            w1,
-            w2,
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<S, A1, A2, P1, P2, W1, W2> Widget<S> for Container<S, A1, A2, P1, P2, W1, W2>
-where
-    S: Data,
-    A1: Data,
-    A2: Data,
-    P1: Prism<S, A1>,
-    P2: Prism<S, A2>,
-    W1: Widget<A1>,
-    W2: Widget<A2>,
-{
-    fn event(
-        &mut self,
-        ctx: &mut ::druid::EventCtx,
-        event: &::druid::Event,
-        data: &mut S,
-        env: &::druid::Env,
-    ) {
-        self.w1.event(ctx, event, data, env);
-        self.w2.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(
-        &mut self,
-        ctx: &mut ::druid::LifeCycleCtx,
-        event: &::druid::LifeCycle,
-        data: &S,
-        env: &::druid::Env,
-    ) {
-        self.w1.lifecycle(ctx, event, data, env);
-        self.w2.lifecycle(ctx, event, data, env);
-    }
-
-    fn update(&mut self, ctx: &mut ::druid::UpdateCtx, old_data: &S, data: &S, env: &::druid::Env) {
-        self.w1.update(ctx, old_data, data, env);
-        self.w2.update(ctx, old_data, data, env);
-    }
-
-    fn layout(
-        &mut self,
-        ctx: &mut ::druid::LayoutCtx,
-        bc: &::druid::BoxConstraints,
-        data: &S,
-        env: &::druid::Env,
-    ) -> ::druid::Size {
-        self.w1.layout(ctx, bc, data, env) + self.w2.layout(ctx, bc, data, env)
-    }
-
-    fn paint(&mut self, ctx: &mut ::druid::PaintCtx, data: &S, env: &::druid::Env) {
-        self.w1.paint(ctx, data, env);
-        self.w2.paint(ctx, data, env);
-    }
-}
-
 fn ui() -> impl Widget<AppState> {
-    Container::new(
+    Prisms2::new(
         login_ui().prism(AppState::login),
         main_ui().prism(AppState::main),
     )
