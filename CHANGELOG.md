@@ -50,6 +50,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - TextBox supports vertical movement ([#1280] by [@cmyr])
 - Widgets can specify a baseline, flex rows can align baselines ([#1295] by [@cmyr])
 - `TextBox::with_text_color` and `TextBox::set_text_color` ([#1320] by [@cmyr])
+- `Checkbox::set_label` to update the label. ([#1346] by [@finnerale])
 
 ### Changed
 
@@ -512,6 +513,7 @@ Last release without a changelog :(
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
 [#1326]: https://github.com/linebender/druid/pull/1326
+[#1346]: https://github.com/linebender/druid/pull/1346
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

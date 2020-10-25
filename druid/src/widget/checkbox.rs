@@ -31,6 +31,11 @@ impl Checkbox {
             child_label: Label::new(label),
         }
     }
+
+    /// Update the label.
+    pub fn set_label(&mut self, label: impl Into<LabelText<bool>>) {
+        self.child_label.set_text(label);
+    }
 }
 
 impl Widget<bool> for Checkbox {
