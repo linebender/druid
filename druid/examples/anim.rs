@@ -12,7 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! An example of an animating widget.
+//! An example of an animating widget. It is just a widget that
+//! requests an animation frame when it needs to, and draws the frame in the
+//! `paint` method.
+//! Once the animation is over it simply stops requesting animation frames.
+//! Usually we would put the state in the `Data`, but for things like animation
+//! we don't. This is because the animation state is not useful to know for the
+//! rest of the app. If this is something the rest of your widgets should know
+//! about, you could put it in the `data`.
 
 use std::f64::consts::PI;
 
@@ -24,8 +31,8 @@ struct AnimWidget {
     t: f64,
 }
 
-impl Widget<u32> for AnimWidget {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut u32, _env: &Env) {
+impl Widget<()> for AnimWidget {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut (), _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 self.t = 0.0;
@@ -36,27 +43,32 @@ impl Widget<u32> for AnimWidget {
                 self.t += (*interval as f64) * 1e-9;
                 if self.t < 1.0 {
                     ctx.request_anim_frame();
+                } else {
+                    // We might have t>1.0 at the end of the animation,
+                    // we want to make sure the line points up at the
+                    // end of the animation.
+                    self.t = 0.0;
                 }
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &u32, _env: &Env) {}
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &(), _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &u32, _data: &u32, _env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &(), _data: &(), _env: &Env) {}
 
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &u32,
+        _data: &(),
         _env: &Env,
     ) -> Size {
         bc.constrain((100.0, 100.0))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &u32, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &(), _env: &Env) {
         let t = self.t;
         let center = Point::new(50.0, 50.0);
         ctx.paint_with_z_index(1, move |ctx| {
@@ -75,6 +87,6 @@ pub fn main() {
     );
     AppLauncher::with_window(window)
         .use_simple_logger()
-        .launch(0)
+        .launch(())
         .expect("launch failed");
 }
