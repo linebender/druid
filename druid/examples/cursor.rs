@@ -65,8 +65,8 @@ fn ui_builder() -> impl Widget<AppState> {
     Button::new("Change cursor")
         .on_click(|ctx, data: &mut AppState, _env| {
             data.cursor = next_cursor(&data.cursor, data.custom.clone());
-            // Just like in the Controller we have to set the cursor then clicked as well
-            // otherwise the cursor will only change once we move.
+            // After changing the cursor, we need to update the active cursor
+            // via the context in order for the change to take effect immediately.
             ctx.set_cursor(&data.cursor);
         })
         .padding(50.0)
