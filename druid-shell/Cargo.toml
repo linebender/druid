@@ -21,8 +21,8 @@ default = ["gtk"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "0.2.0-pre4"
-kurbo = "0.6.3"
+piet-common = "=0.2.0-pre6"
+kurbo = "0.7.0"
 
 log = "0.4.11"
 lazy_static = "1.4.0"
