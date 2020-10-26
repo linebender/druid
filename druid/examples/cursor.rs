@@ -29,7 +29,7 @@ use druid::widget::{Button, Controller};
 
 use std::rc::Rc;
 
-/// This Controller sets the cursor to whichever one is selected
+/// This Controller switches the current cursor based on the selection.
 /// The crucial part of this code is actually making and initialising
 /// the cursor. This happens here. Because we cannot make the cursor
 /// before the window is open we have to do that on `WindowConnected`.
