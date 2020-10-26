@@ -26,6 +26,8 @@ use crate::{
     Selector, SysMods, TimerToken,
 };
 
+const MAC_OR_LINUX: bool = cfg!(any(target_os = "mac", target_os = "linux"));
+
 const BORDER_WIDTH: f64 = 1.;
 const TEXT_INSETS: Insets = Insets::new(4.0, 2.0, 0.0, 2.0);
 
@@ -304,7 +306,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.editor.rebuild_if_needed(ctx.text(), env);
             }
             LifeCycle::FocusChanged(is_focused) => {
-                if cfg!(target_os = "macos") && *is_focused && !self.was_focused_from_click {
+                if MAC_OR_LINUX && *is_focused && !self.was_focused_from_click {
                     self.editor.select_all(data);
                 }
                 self.was_focused_from_click = false;
