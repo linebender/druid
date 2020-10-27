@@ -68,8 +68,7 @@ impl CalcState {
                     '−' => self.operand - self.operand2,
                     '×' => self.operand * self.operand2,
                     '÷' => self.operand / self.operand2,
-                    '=' => self.operand,
-                    'C' => self.operand2,
+                    'C' | '=' => self.operand2,
                     _ => 0.0,
                 };
                 self.operand = result;
