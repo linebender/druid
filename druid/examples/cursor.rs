@@ -33,7 +33,6 @@ use std::rc::Rc;
 /// The crucial part of this code is actually making and initialising
 /// the cursor. This happens here. Because we cannot make the cursor
 /// before the window is open we have to do that on `WindowConnected`.
-/// On every MouseMove event we set the cursor.
 struct CursorArea;
 
 impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
@@ -47,12 +46,11 @@ impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
     ) {
         match event {
             Event::WindowConnected => {
-                let cursor_image =
-                    ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
-                let custom_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
-                data.custom = ctx.window().make_cursor(&custom_desc).map(Rc::new);
+                data.custom = ctx.window().make_cursor(&data.custom_desc).map(Rc::new);
             }
             Event::MouseMove(_) => {
+                // Because the cursor is reset to the default on every `MouseMove`
+                // event we have to explicitly overwrite this every event.
                 ctx.set_cursor(&data.cursor);
             }
             _ => {}
@@ -79,6 +77,7 @@ fn ui_builder() -> impl Widget<AppState> {
 struct AppState {
     cursor: Rc<Cursor>,
     custom: Option<Rc<Cursor>>,
+    custom_desc: Rc<CursorDesc>,
 }
 
 fn next_cursor(c: &Cursor, custom: Option<Rc<Cursor>>) -> Rc<Cursor> {
@@ -102,9 +101,13 @@ fn next_cursor(c: &Cursor, custom: Option<Rc<Cursor>>) -> Rc<Cursor> {
 
 pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
+    let cursor_image = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
+    let custom_desc = Rc::new(CursorDesc::new(cursor_image, (0.0, 0.0)));
+
     let data = AppState {
         cursor: Rc::new(Cursor::Arrow),
-        custom: None,
+		custom: None,
+		custom_desc,
     };
     AppLauncher::with_window(main_window)
         .use_simple_logger()
