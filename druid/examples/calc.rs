@@ -207,6 +207,7 @@ impl CalcState {
                     '−' => self.operand - self.operand2,
                     '×' => self.operand * self.operand2,
                     '÷' => self.operand / self.operand2,
+                    '=' => self.operand,
                     _ => self.operand2,
                 };
                 self.operand = result;
@@ -227,7 +228,6 @@ impl CalcState {
                 }
             }
             'c' => {
-                self.operand = 0.0;
                 self.operand2 = 0.0;
                 self.display2();
                 self.post_period = false;
