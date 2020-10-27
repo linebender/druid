@@ -23,6 +23,103 @@ use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, Painter};
 use druid::{theme, AppLauncher, Color, Data, Lens, LocalizedString, WidgetExt, WindowDesc};
 
+#[derive(Clone, Data, Lens)]
+struct CalcState {
+    /// The number displayed. Generally a valid float.
+    value: String,
+    operand: f64,
+    operand2: f64,
+    operator: char,
+    post_period: bool,
+    numbers_after_period: u32,
+}
+
+// This is not a very good implementation, but it is a simple one.
+// For example 5.999 will be displayed as 5.99900000... because of
+// floating point rounding.
+impl CalcState {
+    fn digit(&mut self, digit: u8) {
+        if self.post_period {
+            self.numbers_after_period += 1;
+            self.operand2 += digit as f64 / (10 as i64).pow(self.numbers_after_period) as f64
+        } else {
+            self.operand2 *= 10.0;
+            self.operand2 += digit as f64;
+        }
+        self.display2();
+    }
+
+    fn display(&mut self) {
+        self.value = self.operand.to_string();
+    }
+
+    fn display2(&mut self) {
+        self.value = self.operand2.to_string();
+        if self.post_period && self.numbers_after_period == 0 {
+            self.value.push('.');
+        }
+    }
+
+    fn op(&mut self, op: char) {
+        match op {
+            '+' | '−' | '×' | '÷' | '=' => {
+                let result = match self.operator {
+                    '+' => self.operand + self.operand2,
+                    '−' => self.operand - self.operand2,
+                    '×' => self.operand * self.operand2,
+                    '÷' => self.operand / self.operand2,
+                    '=' => self.operand,
+                    'C' => self.operand2,
+                    _ => 0.0,
+                };
+                self.operand = result;
+                self.operand2 = 0.0;
+                self.display();
+                self.operator = op;
+                self.post_period = false;
+            }
+            '±' => {
+                self.operand2 = -self.operand2;
+                self.display2();
+            }
+            '.' => {
+                if !self.post_period {
+                    self.post_period = true;
+                    self.numbers_after_period = 0;
+                    self.display2();
+                }
+            }
+            'c' => {
+                self.operand2 = 0.0;
+                self.display2();
+                self.post_period = false;
+                self.numbers_after_period = 0;
+            }
+            'C' => {
+                self.operand = 0.0;
+                self.operand2 = 0.0;
+                self.display2();
+                self.operator = 'C';
+                self.post_period = false;
+                self.numbers_after_period = 0;
+            }
+            '⌫' => {
+                self.value.pop();
+                self.operand2 = self.value.parse().unwrap_or(0.0);
+                if self.post_period {
+                    if self.numbers_after_period == 0 {
+                        self.post_period = false;
+                    } else {
+                        self.numbers_after_period -= 1;
+                    }
+                }
+                self.display2();
+            }
+            _ => {}
+        }
+    }
+}
+
 fn build_calc() -> impl Widget<CalcState> {
     // We have 5 rows that need to be displayed in a grid,
     // and one display at the top. Here we first declare the
@@ -160,100 +257,4 @@ pub fn main() {
         .use_simple_logger()
         .launch(calc_state)
         .expect("launch failed");
-}
-
-#[derive(Clone, Data, Lens)]
-struct CalcState {
-    /// The number displayed. Generally a valid float.
-    value: String,
-    operand: f64,
-    operand2: f64,
-    operator: char,
-    post_period: bool,
-    numbers_after_period: u32,
-}
-
-// This is not a very good implementation, but it is a simple one.
-// For example 5.999 will be displayed as 5.99900000... because of
-// floating point rounding.
-impl CalcState {
-    fn digit(&mut self, digit: u8) {
-        if self.post_period {
-            self.numbers_after_period += 1;
-            self.operand2 += digit as f64 / (10 as i64).pow(self.numbers_after_period) as f64
-        } else {
-            self.operand2 *= 10.0;
-            self.operand2 += digit as f64;
-        }
-        self.display2();
-    }
-
-    fn display(&mut self) {
-        self.value = self.operand.to_string();
-    }
-
-    fn display2(&mut self) {
-        self.value = self.operand2.to_string();
-        if self.post_period && self.numbers_after_period == 0 {
-            self.value.push('.');
-        }
-    }
-
-    fn op(&mut self, op: char) {
-        match op {
-            '+' | '−' | '×' | '÷' | '=' => {
-                let result = match self.operator {
-                    '+' => self.operand + self.operand2,
-                    '−' => self.operand - self.operand2,
-                    '×' => self.operand * self.operand2,
-                    '÷' => self.operand / self.operand2,
-                    '=' => self.operand,
-                    _ => self.operand2,
-                };
-                self.operand = result;
-                self.operand2 = 0.0;
-                self.display();
-                self.operator = op;
-                self.post_period = false;
-            }
-            '±' => {
-                self.operand2 = -self.operand2;
-                self.display2();
-            }
-            '.' => {
-                if !self.post_period {
-                    self.post_period = true;
-                    self.numbers_after_period = 0;
-                    self.display2();
-                }
-            }
-            'c' => {
-                self.operand2 = 0.0;
-                self.display2();
-                self.post_period = false;
-                self.numbers_after_period = 0;
-            }
-            'C' => {
-                self.operand = 0.0;
-                self.operand2 = 0.0;
-                self.display2();
-                self.operator = 'C';
-                self.post_period = false;
-                self.numbers_after_period = 0;
-            }
-            '⌫' => {
-                self.value.pop();
-                self.operand2 = self.value.parse().unwrap_or(0.0);
-                if self.post_period {
-                    if self.numbers_after_period == 0 {
-                        self.post_period = false;
-                    } else {
-                        self.numbers_after_period -= 1;
-                    }
-                }
-                self.display2();
-            }
-            _ => {}
-        }
-    }
 }
