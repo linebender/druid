@@ -46,11 +46,7 @@ impl<T> Either<T> {
 
 impl<T: Data> Widget<T> for Either<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.current {
-            self.true_branch.event(ctx, event, data, env)
-        } else {
-            self.false_branch.event(ctx, event, data, env)
-        }
+        self.current_widget().event(ctx, event, data, env)
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
@@ -67,34 +63,28 @@ impl<T: Data> Widget<T> for Either<T> {
             self.current = current;
             ctx.request_layout();
         }
-        if self.current {
-            self.true_branch.update(ctx, data, env);
-        } else {
-            self.false_branch.update(ctx, data, env);
-        }
+        self.current_widget().update(ctx, data, env)
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        if self.current {
-            let size = self.true_branch.layout(ctx, bc, data, env);
-            self.true_branch
-                .set_layout_rect(ctx, data, env, size.to_rect());
-            ctx.set_paint_insets(self.true_branch.paint_insets());
-            size
-        } else {
-            let size = self.false_branch.layout(ctx, bc, data, env);
-            self.false_branch
-                .set_layout_rect(ctx, data, env, size.to_rect());
-            ctx.set_paint_insets(self.false_branch.paint_insets());
-            size
-        }
+        let current_widget = self.current_widget();
+        let size = current_widget.layout(ctx, bc, data, env);
+        current_widget.set_layout_rect(ctx, data, env, size.to_rect());
+        ctx.set_paint_insets(current_widget.paint_insets());
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        self.current_widget().paint(ctx, data, env)
+    }
+}
+
+impl<T> Either<T> {
+    fn current_widget(&mut self) -> &mut WidgetPod<T, Box<dyn Widget<T>>> {
         if self.current {
-            self.true_branch.paint_raw(ctx, data, env);
+            &mut self.true_branch
         } else {
-            self.false_branch.paint_raw(ctx, data, env);
+            &mut self.false_branch
         }
     }
 }
