@@ -202,14 +202,18 @@ impl CalcState {
     fn op(&mut self, op: char) {
         match op {
             '+' | '−' | '×' | '÷' | '=' => {
+                println!("{}", self.operator);
+                println!("{}x{}", self.operand, self.operand2);
                 let result = match self.operator {
                     '+' => self.operand + self.operand2,
                     '−' => self.operand - self.operand2,
                     '×' => self.operand * self.operand2,
                     '÷' => self.operand / self.operand2,
+                    '=' => self.operand,
                     _ => self.operand2,
                 };
                 self.operand = result;
+                println!("{}x{}", self.operand, self.operand2);
                 self.operand2 = 0.0;
                 self.display();
                 self.operator = op;
@@ -227,7 +231,6 @@ impl CalcState {
                 }
             }
             'c' => {
-                self.operand = 0.0;
                 self.operand2 = 0.0;
                 self.display2();
                 self.post_period = false;
