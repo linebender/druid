@@ -45,7 +45,7 @@ pub(crate) type CommandQueue = VecDeque<Command>;
 ///
 /// [`update`]: trait.Widget.html#tymethod.update
 pub struct WidgetPod<T, W> {
-    state: WidgetState,
+    pub(crate) state: WidgetState,
     old_data: Option<T>,
     env: Option<Env>,
     inner: W,
