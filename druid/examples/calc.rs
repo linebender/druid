@@ -29,6 +29,7 @@ fn build_calc() -> impl Widget<CalcState> {
     // display and 5 rows, then we put it together in another Flex
     let display = Label::new(|data: &String, _env: &_| data.clone())
         .with_text_size(32.0)
+        .align_right()
         .lens(CalcState::value)
         .padding(5.0);
 
