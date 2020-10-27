@@ -46,15 +46,25 @@ impl<T> Either<T> {
 
 impl<T: Data> Widget<T> for Either<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.current_widget().event(ctx, event, data, env)
+        if event.should_propagate_to_hidden() {
+            self.true_branch.event(ctx, event, data, env);
+            self.false_branch.event(ctx, event, data, env);
+        } else {
+            self.current_widget().event(ctx, event, data, env)
+        }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             self.current = (self.closure)(data, env);
         }
-        self.true_branch.lifecycle(ctx, event, data, env);
-        self.false_branch.lifecycle(ctx, event, data, env);
+
+        if event.should_propagate_to_hidden() {
+            self.true_branch.lifecycle(ctx, event, data, env);
+            self.false_branch.lifecycle(ctx, event, data, env);
+        } else {
+            self.current_widget().lifecycle(ctx, event, data, env)
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
