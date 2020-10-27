@@ -77,7 +77,13 @@ fn ui_builder() -> impl Widget<AppState> {
 struct AppState {
     cursor: Rc<Cursor>,
     custom: Option<Rc<Cursor>>,
-    custom_desc: Rc<CursorDesc>,
+    // TODO refer to docs once they exist
+    // `#[data(ignore)]` says that this isn't actually part of the data.
+    // This means that the update method on widgets doesn't get called if this is updated.
+    // Since this doesn't get updated every anyways, is it very much static, this helps us.
+    // Here it helps us avoid an `Rc` wrapper, because `Data` is not implemented on `CursorDesc`.
+    #[data(ignore)]
+    custom_desc: CursorDesc,
 }
 
 fn next_cursor(c: &Cursor, custom: Option<Rc<Cursor>>) -> Rc<Cursor> {
@@ -104,7 +110,7 @@ pub fn main() {
     let cursor_image = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
     // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
     // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
-    let custom_desc = Rc::new(CursorDesc::new(cursor_image, (0.0, 0.0)));
+    let custom_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
 
     let data = AppState {
         cursor: Rc::new(Cursor::Arrow),
