@@ -515,6 +515,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         size
     }
 
+    /// Execute the closure with this widgets `EventCtx`.
+    #[cfg(feature = "crochet")]
+    pub fn with_event_context<F>(&mut self, parent_ctx: &mut EventCtx, mut fun: F)
+    where
+        F: FnMut(&mut W, &mut EventCtx),
+    {
+        let mut ctx = EventCtx {
+            state: parent_ctx.state,
+            widget_state: &mut self.state,
+            cursor: parent_ctx.cursor,
+            is_handled: false,
+            is_root: false,
+        };
+        fun(&mut self.inner, &mut ctx);
+        parent_ctx.widget_state.merge_up(&mut self.state);
+    }
+
     /// Propagate an event.
     ///
     /// Generally the [`event`] method of a container widget will call this
