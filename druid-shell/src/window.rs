@@ -229,8 +229,8 @@ impl WindowHandle {
     /// [`position`] The position in pixels.
     ///
     /// [`position`]: struct.Point.html
-    pub fn set_position(&self, position: Point) {
-        self.0.set_position(position)
+    pub fn set_position(&self, position: impl Into<Point>) {
+        self.0.set_position(position.into())
     }
 
     /// Returns the position in virtual screen coordinates.
@@ -251,8 +251,8 @@ impl WindowHandle {
     ///
     /// [`WinHandler::size`]: trait.WinHandler.html#method.size
     /// [display points]: struct.Scale.html
-    pub fn set_size(&self, size: Size) {
-        self.0.set_size(size)
+    pub fn set_size(&self, size: impl Into<Size>) {
+        self.0.set_size(size.into())
     }
 
     /// Gets the window size.
