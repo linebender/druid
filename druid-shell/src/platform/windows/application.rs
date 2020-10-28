@@ -28,8 +28,8 @@ use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PeekMessageW, PostMessageW,
-    PostQuitMessage, RegisterClassW, SendMessageW, TranslateAcceleratorW, TranslateMessage,
-    GA_ROOT, IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
+    PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
+    IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
 use crate::application::AppHandler;

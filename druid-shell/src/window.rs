@@ -349,13 +349,6 @@ impl WindowHandle {
 
     /// Prompt the user to choose a file to open.
     ///
-    /// Blocks while the user picks the file.
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.0.open_file_sync(options)
-    }
-
-    /// Prompt the user to choose a file to open.
-    ///
     /// This won't block immediately; the file dialog will be shown whenever control returns to
     /// `druid-shell`, and the [`WinHandler::open`] method will be called when the dialog is
     /// closed.
@@ -363,13 +356,6 @@ impl WindowHandle {
     /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         self.0.open_file(options)
-    }
-
-    /// Prompt the user to choose a path for saving.
-    ///
-    /// Blocks while the user picks a file.
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        self.0.save_as_sync(options)
     }
 
     /// Prompt the user to choose a path for saving.

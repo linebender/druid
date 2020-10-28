@@ -366,8 +366,6 @@ impl WindowBuilder {
                     // Note that we're borrowing the surface while calling the handler. This is ok,
                     // because we don't return control to the system or re-borrow the surface from
                     // any code that the client can call.
-                    // (TODO: the above comment isn't true yet because of save_as_sync and
-                    // open_sync, but it will be true soon)
                     state.with_handler_and_dont_check_the_other_borrows(|handler| {
                         let surface_context = cairo::Context::new(surface);
 
@@ -988,16 +986,6 @@ impl WindowHandle {
         } else {
             None
         }
-    }
-
-    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::error!("save as sync no longer supported on GTK");
-        None
-    }
-
-    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::error!("open file sync no longer supported on GTK");
-        None
     }
 
     /// Get a handle that can be used to schedule an idle task.
