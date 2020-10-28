@@ -426,7 +426,7 @@ impl Static {
     }
 
     fn resolve(&mut self) -> bool {
-        let is_first_call = self.resolved;
+        let is_first_call = !self.resolved;
         self.resolved = true;
         is_first_call
     }
