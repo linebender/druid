@@ -25,6 +25,7 @@ gtk = ["druid-shell/gtk"]
 image = ["druid-shell/image"]
 svg = ["usvg", "harfbuzz-sys"]
 x11 = ["druid-shell/x11"]
+crochet = []
 
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
