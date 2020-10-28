@@ -23,7 +23,7 @@ default-target = "x86_64-pc-windows-msvc"
 default = ["gtk"]
 gtk = ["druid-shell/gtk"]
 image = ["druid-shell/image"]
-svg = ["usvg", "harfbuzz-sys"]
+svg = ["usvg"]
 x11 = ["druid-shell/x11"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -61,9 +61,6 @@ instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 # Optional dependencies
 im = { version = "15.0.0", optional = true }
 usvg = { version = "0.11.0", optional = true }
-# We don't depend directly on harfbuzz-sys, it comes through usvg. But we need to pin
-# the version, because the latest release of harfbuzz_rs is broken with harfbuzz-sys 0.5.
-harfbuzz-sys = { version = "0.5.0", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 console_log = "0.2.0"
