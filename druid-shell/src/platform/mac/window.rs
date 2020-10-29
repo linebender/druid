@@ -934,18 +934,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("open_file_sync should no longer be called on mac!");
-        None
-    }
-
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         self.open_save_impl(FileDialogType::Open, options)
-    }
-
-    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("save_as_sync should no longer be called on mac!");
-        None
     }
 
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
