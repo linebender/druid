@@ -138,15 +138,15 @@ pub enum PresentStrategy {
 ///   deferred op and returns immediately
 /// 4. after some more processing, `WinHandler::mouse_up` returns
 /// 5. druid-shell displays the "save as" dialog that was requested in step 3.
-#[derive(Debug)]
 enum DeferredOp {
     SaveAs(FileDialogOptions, FileDialogToken),
     Open(FileDialogOptions, FileDialogToken),
+    ContextMenu(Menu, Point),
     ShowTitlebar(bool),
     SetPosition(Point),
     SetSize(Size),
     SetResizable(bool),
-    SetWindowState(WindowState),
+    SetWindowState(window::WindowState),
 }
 
 #[derive(Clone)]
@@ -544,6 +544,22 @@ impl MyWndProc {
                             .map(|s| FileInfo { path: s.into() })
                     };
                     self.with_wnd_state(|s| s.handler.open_file(token, info));
+                }
+                DeferredOp::ContextMenu(menu, pos) => {
+                    let hmenu = menu.into_hmenu();
+                    let pos = pos.to_px(self.scale()).round();
+                    unsafe {
+                        let mut point = POINT {
+                            x: pos.x as i32,
+                            y: pos.y as i32,
+                        };
+                        ClientToScreen(hwnd, &mut point);
+                        if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null())
+                            == FALSE
+                        {
+                            warn!("failed to track popup menu");
+                        }
+                    }
                 }
             }
         } else {
@@ -1698,22 +1714,7 @@ impl WindowHandle {
     }
 
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
-        let hmenu = menu.into_hmenu();
-        if let Some(w) = self.state.upgrade() {
-            let hwnd = w.hwnd.get();
-            let pos = pos.to_px(w.scale.get()).round();
-            unsafe {
-                let mut point = POINT {
-                    x: pos.x as i32,
-                    y: pos.y as i32,
-                };
-                ClientToScreen(hwnd, &mut point);
-                if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
-                {
-                    warn!("failed to track popup menu");
-                }
-            }
-        }
+        self.defer(DeferredOp::ContextMenu(menu, pos));
     }
 
     pub fn text(&self) -> PietText {
