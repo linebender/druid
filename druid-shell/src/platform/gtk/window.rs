@@ -44,7 +44,7 @@ use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -90,6 +90,14 @@ macro_rules! clone {
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
+}
+
+/// Operations that we defer in order to avoid re-entrancy. See the documentation in the windows
+/// backend for more details.
+enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+    ContextMenu(Menu, WindowHandle),
 }
 
 /// Builder abstraction for creating new windows
@@ -751,9 +759,14 @@ impl WindowState {
                     .map(|s| FileInfo { path: s.into() });
                     self.with_handler(|h| h.save_as(token, file_info));
                 }
-                e => {
-                    // The other deferred ops shouldn't appear, because we don't defer them in GTK.
-                    log::error!("unexpected deferred op {:?}", e);
+                DeferredOp::ContextMenu(menu, handle) => {
+                    let accel_group = AccelGroup::new();
+                    self.window.add_accel_group(&accel_group);
+
+                    let menu = menu.into_gtk_menu(&handle, &accel_group);
+                    menu.set_property_attach_widget(Some(&self.window));
+                    menu.show_all();
+                    menu.popup_easy(3, gtk::get_current_event_time());
                 }
             }
         }
@@ -1030,15 +1043,7 @@ impl WindowHandle {
 
     pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
         if let Some(state) = self.state.upgrade() {
-            let window = &state.window;
-
-            let accel_group = AccelGroup::new();
-            window.add_accel_group(&accel_group);
-
-            let menu = menu.into_gtk_menu(&self, &accel_group);
-            menu.set_property_attach_widget(Some(window));
-            menu.show_all();
-            menu.popup_easy(3, gtk::get_current_event_time());
+            state.defer(DeferredOp::ContextMenu(menu, self.clone()));
         }
     }
 

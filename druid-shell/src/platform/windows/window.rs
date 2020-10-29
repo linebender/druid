@@ -67,7 +67,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 /// The platform target DPI.
 ///
@@ -116,6 +116,37 @@ pub enum PresentStrategy {
     /// but with a redirection surface for GDI compatibility. Resize is
     /// very laggy and artifacty.
     FlipRedirect,
+}
+
+/// An enumeration of operations that might need to be deferred until the `WinHandler` is dropped.
+///
+/// We work hard to avoid calling into `WinHandler` re-entrantly. Since we use
+/// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
+/// that none of the `WindowHandle`'s methods can return control to the system's event loop
+/// (because if it did, the system could call back into druid-shell with some mouse event, and then
+/// we'd try to call the `WinHandler` again).
+///
+/// The solution is that for every `WindowHandle` method that *wants* to return control to the
+/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// immediately. The deferred operations will run whenever the currently running `WinHandler`
+/// method returns.
+///
+/// An example call trace might look like:
+/// 1. the system hands a mouse click event to druid-shell
+/// 2. druid-shell calls `WinHandler::mouse_up`
+/// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
+///   deferred op and returns immediately
+/// 4. after some more processing, `WinHandler::mouse_up` returns
+/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
+#[derive(Debug)]
+enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+    ShowTitlebar(bool),
+    SetPosition(Point),
+    SetSize(Size),
+    SetResizable(bool),
+    SetWindowState(WindowState),
 }
 
 #[derive(Clone)]
