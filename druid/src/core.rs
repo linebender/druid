@@ -550,21 +550,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // log if we seem not to be laid out when we should be
-        if self.state.layout_rect.is_none() {
-            match event {
-                Event::Internal(_) => (),
-                Event::Timer(_) => (),
-                Event::WindowConnected => (),
-                Event::WindowSize(_) => (),
-                _ => {
-                    log::warn!(
-                        "Widget '{}' received an event ({:?}) without having been laid out. \
-                        This likely indicates a missed call to set_layout_rect.",
-                        self.inner.type_name(),
-                        event,
-                    );
-                }
-            }
+        if self.state.layout_rect.is_none() && !event.should_propagate_to_hidden() {
+            log::warn!(
+                "Widget '{}' received an event ({:?}) without having been laid out. \
+                This likely indicates a missed call to set_layout_rect.",
+                self.inner.type_name(),
+                event,
+            );
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
