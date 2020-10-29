@@ -99,4 +99,4 @@ required-features = ["im"]
 
 [[example]]
 name = "widget_gallery"
-required-features = ["svg", "im", "image"]
+required-features = ["svg", "im", "image", "png"]
