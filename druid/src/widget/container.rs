@@ -51,8 +51,8 @@ impl<T: Data> Container<T> {
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../struct.Color.thml
-    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
     pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
@@ -67,8 +67,8 @@ impl<T: Data> Container<T> {
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../struct.Color.thml
-    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
     pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
