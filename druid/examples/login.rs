@@ -1,5 +1,7 @@
+// adapted from https://github.com/Finnerale/druid-enums/blob/master/examples/login.rs
+
 use druid::{
-    widget::{prism_wrap::Prisms2, Button, Controller, Flex, Label, TextBox},
+    widget::{overlay::Overlay2, Button, Controller, Flex, Label, TextBox},
     AppLauncher, Data, Env, Event, EventCtx, Lens, Prism, WidgetExt, WindowDesc,
 };
 use druid::{PlatformError, Selector, Widget};
@@ -32,8 +34,8 @@ fn main() -> Result<(), PlatformError> {
 }
 
 fn ui() -> impl Widget<AppState> {
-    Prisms2::new(
-        login_ui().prism(AppState::login),
+    Overlay2::new(
+        login_ui().prism(AppState::login).padding(0.2),
         main_ui().prism(AppState::main),
     )
     // .debug_paint_layout()
