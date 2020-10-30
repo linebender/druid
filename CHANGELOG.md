@@ -116,6 +116,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Various fixes to cross-platform menus ([#1306] by [@raphlinus])
 - Improve Windows 7 DXGI compatibility ([#1311] by [@raphlinus])
 - Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
+- Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 
 ### Visual
 
@@ -514,10 +515,12 @@ Last release without a changelog :(
 [#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
+[#1302]: https://github.com/linebender/druid/pull/1302
 [#1306]: https://github.com/linebender/druid/pull/1306
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
 [#1326]: https://github.com/linebender/druid/pull/1326
+[#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
 [#1351]: https://github.com/linebender/druid/pull/1351
 

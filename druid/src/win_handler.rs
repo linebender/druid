@@ -618,24 +618,12 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let token = handle
-            .clone()
-            .and_then(|mut handle| handle.open_file(options.clone()));
+        let token = handle.and_then(|mut handle| handle.open_file(options));
         if let Some(token) = token {
             self.inner
                 .borrow_mut()
                 .file_dialogs
                 .insert(token, window_id);
-        } else {
-            // TODO: remove this (and also some spurious clones above) once all platforms support
-            // the non-sync version
-            let file_info = handle.and_then(|mut handle| handle.open_file_sync(options));
-            let cmd = if let Some(info) = file_info {
-                sys_cmd::OPEN_FILE.with(info).to(window_id)
-            } else {
-                sys_cmd::OPEN_PANEL_CANCELLED.to(window_id)
-            };
-            self.inner.borrow_mut().dispatch_cmd(cmd);
         }
     }
 
@@ -648,24 +636,12 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let token = handle
-            .clone()
-            .and_then(|mut handle| handle.save_as(options.clone()));
+        let token = handle.and_then(|mut handle| handle.save_as(options));
         if let Some(token) = token {
             self.inner
                 .borrow_mut()
                 .file_dialogs
                 .insert(token, window_id);
-        } else {
-            // TODO: remove this (and also some spurious clones above) once all platforms support
-            // the non-sync version
-            let file_info = handle.and_then(|mut handle| handle.save_as_sync(options));
-            let cmd = if let Some(info) = file_info {
-                sys_cmd::SAVE_FILE.with(Some(info)).to(window_id)
-            } else {
-                sys_cmd::SAVE_PANEL_CANCELLED.to(window_id)
-            };
-            self.inner.borrow_mut().dispatch_cmd(cmd);
         }
     }
 

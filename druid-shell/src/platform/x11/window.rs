@@ -38,7 +38,7 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
@@ -1497,19 +1497,9 @@ impl WindowHandle {
         None
     }
 
-    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("WindowHandle::open_file_sync is currently unimplemented for X11 platforms.");
-        None
-    }
-
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file
         log::warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
-        None
-    }
-
-    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("WindowHandle::save_as_sync is currently unimplemented for X11 platforms.");
         None
     }
 
