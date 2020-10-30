@@ -92,6 +92,7 @@ pub struct LifeCycleCtx<'a, 'b> {
 pub struct UpdateCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) cursor: &'a mut Option<Cursor>,
     pub(crate) prev_env: Option<&'a Env>,
     pub(crate) env: &'a Env,
 }
@@ -251,6 +252,26 @@ impl_context_method!(
     }
 );
 
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
+    /// Set the cursor icon.
+    ///
+    /// Call this when handling a mouse move event, to set the cursor for the
+    /// widget. A container widget can safely call this method, then recurse
+    /// to its children, as a sequence of calls within an event propagation
+    /// only has the effect of the last one (ie no need to worry about
+    /// flashing).
+    ///
+    /// This method is expected to be called mostly from the [`MouseMove`]
+    /// event handler, but can also be called in response to other events,
+    /// for example pressing a key to change the behavior of a widget, or
+    /// in response to data changes.
+    ///
+    /// [`MouseMove`]: enum.Event.html#variant.MouseMove
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        *self.cursor = Some(cursor.clone());
+    }
+});
+
 // methods on event, update, and lifecycle
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {
     /// Request a [`paint`] pass. This is equivalent to calling
@@ -350,23 +371,6 @@ impl_context_method!(
 );
 
 impl EventCtx<'_, '_> {
-    /// Set the cursor icon.
-    ///
-    /// Call this when handling a mouse move event, to set the cursor for the
-    /// widget. A container widget can safely call this method, then recurse
-    /// to its children, as a sequence of calls within an event propagation
-    /// only has the effect of the last one (ie no need to worry about
-    /// flashing).
-    ///
-    /// This method is expected to be called mostly from the [`MouseMove`]
-    /// event handler, but can also be called in response to other events,
-    /// for example pressing a key to change the behavior of a widget.
-    ///
-    /// [`MouseMove`]: enum.Event.html#variant.MouseMove
-    pub fn set_cursor(&mut self, cursor: &Cursor) {
-        *self.cursor = Some(cursor.clone());
-    }
-
     /// Set the "active" state of the widget.
     ///
     /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active).

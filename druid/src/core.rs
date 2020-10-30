@@ -873,6 +873,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
+            cursor: ctx.cursor,
             prev_env,
             env,
         };
