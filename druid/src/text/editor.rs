@@ -222,7 +222,10 @@ impl<T: TextStorage + EditableText> Editor<T> {
     /// the data before us while handling an event; if this is the case we ignore
     /// the event, and our data will be updated in `update`.
     fn data_is_stale(&self, data: &T) -> bool {
-        self.layout.text().map(|t| !t.same(data)).unwrap_or(true)
+        self.layout
+            .text()
+            .map(|t| t.as_str() != data.as_str())
+            .unwrap_or(true)
     }
 
     fn insert(&mut self, data: &mut T, text: &str) {
