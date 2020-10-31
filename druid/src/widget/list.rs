@@ -15,13 +15,13 @@
 //! Simple list view widget.
 
 use std::cmp::Ordering;
+use std::f64;
 use std::sync::Arc;
 
 #[cfg(feature = "im")]
 use crate::im::Vector;
-
 use crate::kurbo::{Point, Rect, Size};
-
+use crate::widget::Axis;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     UpdateCtx, Widget, WidgetPod,
@@ -31,16 +31,26 @@ use crate::{
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    axis: Axis,
 }
 
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
-    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static, axis: Axis) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
+            axis,
         }
+    }
+
+    pub fn row<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+        Self::new(closure, Axis::Horizontal)
+    }
+
+    pub fn column<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+        Self::new(closure, Axis::Vertical)
     }
 
     /// When the widget is created or the data changes, create or remove children as needed
@@ -235,11 +245,14 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let mut width = bc.min().width;
-        let mut y = 0.0;
+        let axis = self.axis; // keep the borrow checker happy
+        let mut minor = axis.minor(bc.min());
+        let mut major = 0.0;
 
         let mut paint_rect = Rect::ZERO;
         let mut children = self.children.iter_mut();
+
+        // keep track of children's sizes for warning the user.
         data.for_each(|child_data, _| {
             let child = match children.next() {
                 Some(child) => child,
@@ -247,19 +260,25 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                     return;
                 }
             };
-            let child_bc = BoxConstraints::new(
-                Size::new(bc.min().width, 0.0),
-                Size::new(bc.max().width, std::f64::INFINITY),
-            );
+            let child_bc = match axis {
+                Axis::Horizontal => BoxConstraints::new(
+                    Size::new(0.0, bc.min().height),
+                    Size::new(f64::INFINITY, bc.max().height),
+                ),
+                Axis::Vertical => BoxConstraints::new(
+                    Size::new(bc.min().width, 0.0),
+                    Size::new(bc.max().width, f64::INFINITY),
+                ),
+            };
             let child_size = child.layout(ctx, &child_bc, child_data, env);
-            let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
+            let rect = Rect::from_origin_size(Point::from(axis.pack(major, 0.0)), child_size);
             child.set_layout_rect(ctx, child_data, env, rect);
             paint_rect = paint_rect.union(child.paint_rect());
-            width = width.max(child_size.width);
-            y += child_size.height;
+            minor = minor.max(axis.minor(child_size));
+            major += axis.major(child_size);
         });
 
-        let my_size = bc.constrain(Size::new(width, y));
+        let my_size = bc.constrain(Size::from(axis.pack(major, minor)));
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
         my_size
