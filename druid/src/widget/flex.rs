@@ -262,7 +262,12 @@ impl Axis {
     }
 
     /// Generate constraints with new values on the major axis.
-    fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
+    pub(crate) fn constraints(
+        self,
+        bc: &BoxConstraints,
+        min_major: f64,
+        major: f64,
+    ) -> BoxConstraints {
         match self {
             Axis::Horizontal => BoxConstraints::new(
                 Size::new(min_major, bc.min().height),
@@ -789,7 +794,7 @@ impl CrossAxisAlignment {
     /// Given the difference between the size of the container and the size
     /// of the child (on their minor axis) return the necessary offset for
     /// this alignment.
-    fn align(self, val: f64) -> f64 {
+    pub(crate) fn align(self, val: f64) -> f64 {
         match self {
             CrossAxisAlignment::Start => 0.0,
             // in vertical layout, baseline is equivalent to center
@@ -799,7 +804,7 @@ impl CrossAxisAlignment {
     }
 }
 
-struct Spacing {
+pub(crate) struct Spacing {
     alignment: MainAxisAlignment,
     extra: f64,
     n_children: usize,
@@ -813,7 +818,7 @@ impl Spacing {
     /// this returns an iterator of `f64` spacing,
     /// where the first element is the spacing before any children
     /// and all subsequent elements are the spacing after children.
-    fn new(alignment: MainAxisAlignment, extra: f64, n_children: usize) -> Spacing {
+    pub(crate) fn new(alignment: MainAxisAlignment, extra: f64, n_children: usize) -> Spacing {
         let extra = if extra.is_finite() { extra } else { 0. };
         let equal_space = if n_children > 0 {
             match alignment {

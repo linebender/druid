@@ -186,7 +186,7 @@ fn event_list() -> impl Widget<AppState> {
         )
         .with_spacer(COLUMN_PADDING)
         .with_flex_child(
-            Scroll::new(List::new(make_list_item).lens(AppState::events)).expand_width(),
+            Scroll::new(List::vertical(make_list_item).lens(AppState::events)).expand_width(),
             1.0,
         )
         .padding(10.0)

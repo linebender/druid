@@ -16,7 +16,9 @@
 
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
+use druid::widget::{
+    Button, CrossAxisAlignment, Flex, Label, List, ListMainAlignment, MainAxisAlignment, Scroll,
+};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
@@ -70,14 +72,17 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_flex_child(
-        Scroll::new(List::vertical(|| {
-            Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
-                .align_vertical(UnitPoint::LEFT)
-                .padding(10.0)
-                .expand()
-                .height(50.0)
-                .background(Color::rgb(0.5, 0.5, 0.5))
-        }))
+        Scroll::new(
+            List::vertical(|| {
+                Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+                    .align_vertical(UnitPoint::LEFT)
+                    .padding(10.0)
+                    .expand()
+                    .height(50.0)
+                    .background(Color::rgb(0.5, 0.5, 0.5))
+            })
+            .with_main_alignment(MainAxisAlignment::Start),
+        )
         .vertical()
         .lens(AppData::left),
         1.0,
@@ -125,7 +130,7 @@ fn ui_builder() -> impl Widget<AppData> {
     root.add_child(Label::new("Horizontal list"));
     root.add_child(
         List::horizontal(|| Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos)))
-            .with_flex(true)
+            .with_main_alignment(ListMainAlignment::FlexItems { spacing: 10. })
             .lens(AppData::right),
     );
 
