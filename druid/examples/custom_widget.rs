@@ -16,7 +16,7 @@
 //! We draw an image, some text, a shape, and a curve.
 
 use druid::kurbo::BezPath;
-use druid::piet::{FontFamily, ImageFormat, InterpolationMode};
+use druid::piet::{FontFamily, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 use druid::widget::prelude::*;
 use druid::{
     Affine, AppLauncher, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
@@ -112,6 +112,7 @@ impl Widget<String> for CustomWidget {
 
         // Text is easy; in real use TextLayout should either be stored in the
         // widget and reused, or a label child widget to manage it all.
+        // This is one way of doing it, you can also use a builder-style way.
         let mut layout = TextLayout::<String>::from_text(data);
         layout.set_font(FontDescriptor::new(FontFamily::SERIF).with_size(24.0));
         layout.set_text_color(fill_color);
@@ -122,10 +123,23 @@ impl Widget<String> for CustomWidget {
             // Now we can rotate the context (or set a clip path, for instance):
             // This makes it so that anything drawn after this (in the closure) is
             // transformed.
-            ctx.transform(Affine::rotate(0.1));
+            // The transformation is in radians, but be aware it transforms the canvas,
+            // not just the part you are drawing. So we draw at (80.0, 40.0) on the rotated
+            // canvas, this is NOT the same position as (80.0, 40.0) on the original canvas.
+            ctx.transform(Affine::rotate(std::f64::consts::FRAC_PI_4));
             layout.draw(ctx, (80.0, 40.0));
         });
         // When we exit with_save, the original context's rotation is restored
+
+        // This is the builder-style way of drawing text.
+        let text = ctx.text();
+        let layout = text
+            .new_text_layout(data.clone())
+            .font(FontFamily::SERIF, 24.0)
+            .text_color(Color::rgb8(128, 0, 0))
+            .build()
+            .unwrap();
+        ctx.draw_text(&layout, (100.0, 25.0));
 
         // Let's burn some CPU to make a (partially transparent) image buffer
         let image_data = make_image_data(256, 256);
