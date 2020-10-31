@@ -51,6 +51,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Widgets can specify a baseline, flex rows can align baselines ([#1295] by [@cmyr])
 - `TextBox::with_text_color` and `TextBox::set_text_color` ([#1320] by [@cmyr])
 - `Checkbox::set_text` to update the label. ([#1346] by [@finnerale])
+- `Event::should_propagate_to_hidden` and `Lifecycle::should_propagate_to_hidden` to determine whether an event should be sent to hidden widgets (e.g. in `Tabs` or `Either`). ([#1351] by [@andrewhickman])
 
 ### Changed
 
@@ -114,6 +115,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Fix `widget::Either` using the wrong paint insets ([#1299] by [@andrewhickman])
 - Various fixes to cross-platform menus ([#1306] by [@raphlinus])
 - Improve Windows 7 DXGI compatibility ([#1311] by [@raphlinus])
+- Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
 - Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 
 ### Visual
@@ -520,6 +522,7 @@ Last release without a changelog :(
 [#1326]: https://github.com/linebender/druid/pull/1326
 [#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
+[#1351]: https://github.com/linebender/druid/pull/1351
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
