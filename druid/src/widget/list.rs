@@ -32,6 +32,7 @@ pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     axis: Axis,
+    flex: bool,
 }
 
 impl<T: Data> List<T> {
@@ -42,15 +43,30 @@ impl<T: Data> List<T> {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
             axis,
+            flex: false,
         }
     }
 
-    pub fn row<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+    /// Create a list where items are in a left -> right row
+    pub fn horizontal<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         Self::new(closure, Axis::Horizontal)
     }
 
-    pub fn column<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+    /// Create a list where items are in a top -> bottom column
+    pub fn vertical<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         Self::new(closure, Axis::Vertical)
+    }
+
+    /// If set to `true`, each element will be given an equal share of the space available.
+    pub fn with_flex(mut self, flex: bool) -> Self {
+        self.flex = flex;
+        self
+    }
+
+    /// If set to `true`, each element will be given an equal share of the space available.
+    pub fn set_flex(&mut self, flex: bool) -> &mut Self {
+        self.flex = flex;
+        self
     }
 
     /// When the widget is created or the data changes, create or remove children as needed
@@ -252,6 +268,15 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let mut paint_rect = Rect::ZERO;
         let mut children = self.children.iter_mut();
 
+        // TODO quantize to whole pixels
+        // major constraint
+        let mc = if self.flex {
+            let div = axis.major(bc.max()) / (data.data_len() as f64);
+            (div, div)
+        } else {
+            (0., f64::INFINITY)
+        };
+
         // keep track of children's sizes for warning the user.
         data.for_each(|child_data, _| {
             let child = match children.next() {
@@ -262,12 +287,12 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             };
             let child_bc = match axis {
                 Axis::Horizontal => BoxConstraints::new(
-                    Size::new(0.0, bc.min().height),
-                    Size::new(f64::INFINITY, bc.max().height),
+                    Size::new(mc.0, bc.min().height),
+                    Size::new(mc.1, bc.max().height),
                 ),
                 Axis::Vertical => BoxConstraints::new(
-                    Size::new(bc.min().width, 0.0),
-                    Size::new(bc.max().width, f64::INFINITY),
+                    Size::new(bc.min().width, mc.0),
+                    Size::new(bc.max().width, mc.1),
                 ),
             };
             let child_size = child.layout(ctx, &child_bc, child_data, env);
@@ -278,6 +303,8 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             major += axis.major(child_size);
         });
 
+        // TODO I don't understand this logic. If we end up constraining here then our layout for
+        // the child elements is broken, no?
         let my_size = bc.constrain(Size::from(axis.pack(major, minor)));
         let insets = paint_rect - Rect::ZERO.with_size(my_size);
         ctx.set_paint_insets(insets);
