@@ -99,5 +99,9 @@ name = "tabs"
 required-features = ["im"]
 
 [[example]]
+name = "virt_list"
+required-features = ["im"]
+
+[[example]]
 name = "widget_gallery"
 required-features = ["svg", "im", "image", "png"]
