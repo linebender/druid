@@ -50,6 +50,7 @@ mod switch;
 mod tabs;
 mod textbox;
 mod view_switcher;
+mod virt_list;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
@@ -88,6 +89,7 @@ pub use switch::Switch;
 pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
+pub use virt_list::{RangeIter, VirtList};
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
 #[doc(hidden)]
