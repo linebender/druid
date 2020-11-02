@@ -90,6 +90,8 @@ macro_rules! clone {
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
+    // Ensure that we don't implement Send, because it isn't actually safe to send the WindowState.
+    marker: std::marker::PhantomData<*const ()>,
 }
 
 /// Builder abstraction for creating new windows
@@ -270,6 +272,7 @@ impl WindowBuilder {
 
         let mut handle = WindowHandle {
             state: Arc::downgrade(&win_state),
+            marker: std::marker::PhantomData,
         };
         if let Some(level) = self.level {
             handle.set_level(level);
@@ -916,16 +919,15 @@ impl WindowHandle {
         };
 
         let token = TimerToken::next();
-        let handle = self.clone();
 
-        glib::timeout_add(interval, move || {
-            if let Some(state) = handle.state.upgrade() {
+        if let Some(state) = self.state.upgrade() {
+            glib::timeout_add(interval, move || {
                 if state.with_handler(|h| h.timer(token)).is_some() {
                     return glib::Continue(false);
                 }
-            }
-            glib::Continue(true)
-        });
+                glib::Continue(true)
+            });
+        }
         token
     }
 
@@ -1049,8 +1051,10 @@ impl WindowHandle {
     }
 }
 
-unsafe impl Send for IdleHandle {}
-// WindowState needs to be Send + Sync so it can be passed into glib closures
+// WindowState needs to be Send + Sync so it can be passed into glib closures.
+// TODO: can we localize the unsafety more? Glib's idle loop always runs on the main thread,
+// and we always construct the WindowState on the main thread, so it should be ok (and also
+// WindowState isn't a public type).
 unsafe impl Send for WindowState {}
 unsafe impl Sync for WindowState {}
 
