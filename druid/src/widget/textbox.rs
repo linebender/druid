@@ -26,7 +26,7 @@ use crate::{
     Selector, SysMods, TimerToken,
 };
 
-const MAC_OR_LINUX: bool = cfg!(any(target_os = "mac", target_os = "linux"));
+const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 
 const BORDER_WIDTH: f64 = 1.;
 const TEXT_INSETS: Insets = Insets::new(4.0, 2.0, 0.0, 2.0);
