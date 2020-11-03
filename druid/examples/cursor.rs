@@ -77,11 +77,8 @@ fn ui_builder() -> impl Widget<AppState> {
 struct AppState {
     cursor: Rc<Cursor>,
     custom: Option<Rc<Cursor>>,
-    // TODO refer to docs once they exist
-    // `#[data(ignore)]` says that this isn't actually part of the data.
-    // This means that the update method on widgets doesn't get called if this is updated.
-    // Since this doesn't get updated every anyways, is it very much static, this helps us.
-    // Here it helps us avoid an `Rc` wrapper, because `Data` is not implemented on `CursorDesc`.
+    // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
+    // https://docs.rs/druid/0.6.0/druid/trait.Data.html
     #[data(ignore)]
     custom_desc: CursorDesc,
 }
