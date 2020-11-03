@@ -103,7 +103,7 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppState> {
-    use druid::optics::affine_traversal::{And, Then};
+    use druid::optics::affine_traversal::{AndMap, Then};
 
     let mut col = Flex::column();
     col.add_child(
@@ -115,7 +115,7 @@ fn ui_builder() -> impl Widget<AppState> {
         .prism(
             (AppState::panel)
                 .then(SliderOrLabel::slider)
-                .and(AppState::value),
+                .and_map(AppState::value),
         )
         .padding(5.0);
     let panel_label = label()
