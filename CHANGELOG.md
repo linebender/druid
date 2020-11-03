@@ -52,6 +52,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextBox::with_text_color` and `TextBox::set_text_color` ([#1320] by [@cmyr])
 - `Checkbox::set_text` to update the label. ([#1346] by [@finnerale])
 - `Event::should_propagate_to_hidden` and `Lifecycle::should_propagate_to_hidden` to determine whether an event should be sent to hidden widgets (e.g. in `Tabs` or `Either`). ([#1351] by [@andrewhickman])
+- `set_cursor` can be called in the `update` method. ([#1361] by [@jneem])
 
 ### Changed
 
@@ -523,6 +524,7 @@ Last release without a changelog :(
 [#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
 [#1351]: https://github.com/linebender/druid/pull/1351
+[#1361]: https://github.com/linebender/druid/pull/1361
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

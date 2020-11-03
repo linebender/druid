@@ -277,14 +277,20 @@ impl<T: Data> Window<T> {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state =
             ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+        let mut cursor = None;
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
+            cursor: &mut cursor,
             state: &mut state,
             prev_env: None,
             env,
         };
 
         self.root.update(&mut update_ctx, data, env);
+        if let Some(cursor) = cursor {
+            self.handle.set_cursor(&cursor);
+        }
+
         self.post_event_processing(&mut widget_state, queue, data, env, false);
     }
 
