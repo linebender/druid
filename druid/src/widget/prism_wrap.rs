@@ -62,10 +62,11 @@ where
                 // this is when this variant just got activated
                 // ie. does not have an old_data
 
-                // ctx.children_changed();
+                ctx.children_changed();
+
                 // ctx.request_layout(); // variant was changed
                 // ctx.request_paint(); // variant was changed
-                // inner.update(ctx, newer_data, newer_data, env);
+                inner.update(ctx, newer_data, newer_data, env);
                 // inner.update(ctx, newer_data, newer_data, env);
             }
         }) {
@@ -81,12 +82,13 @@ where
                 // send older as both older and newer
                 // TODO: check if this is right
                 // maybe just ignore the inner update call..
-                // ctx.children_changed();
+                ctx.children_changed();
+
                 // ctx.request_layout(); // variant was changed
                 // ctx.request_paint(); // variant was changed
 
-                // inner.update(ctx, older_data, older_data, env);
-                // inner.update(ctx, older_data, older_data, env);
+                inner.update(ctx, _older_data, _older_data, env);
+                // inner.update(ctx, _older_data, _older_data, env);
             }) {
                 // already had only the older data,
                 // do nothing more.

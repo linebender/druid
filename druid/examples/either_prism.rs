@@ -1,8 +1,7 @@
-use druid::widget::{Checkbox, Flex, Label, Slider};
+use druid::widget::{overlay, Checkbox, Flex, Label, Slider};
 use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 use druid::PartialPrism;
-use druid::PrismExt;
 use druid::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
 };
@@ -13,7 +12,7 @@ struct AppState {
     panel: SliderOrLabel,
 }
 
-#[derive(Clone, Data, PartialPrism)]
+#[derive(Clone, Data, Debug, PartialPrism)]
 pub enum SliderOrLabel {
     Slider {
         // TODO
@@ -26,7 +25,7 @@ impl From<bool> for SliderOrLabel {
     fn from(b: bool) -> Self {
         match b {
             false => Self::Slider { save_value: false },
-            true => Self::default(),
+            true => Self::Label("(From): Click to reveal slider".into()),
         }
     }
 }
@@ -42,7 +41,8 @@ impl From<&SliderOrLabel> for bool {
 
 impl Default for SliderOrLabel {
     fn default() -> Self {
-        Self::Label("Click to reveal slider".into())
+        Self::Label("(Default): Click to reveal slider".into())
+        // Self::Slider { save_value: false }
     }
 }
 
@@ -52,7 +52,8 @@ impl Widget<SliderOrLabel> for Checkbox {
         let mut data_after: bool = data_before;
         Widget::<bool>::event(self, ctx, event, &mut data_after, env);
         if data_before != data_after {
-            *data = data_after.into();
+            let data_after = SliderOrLabel::from(data_after);
+            *data = data_after;
         }
     }
     fn lifecycle(
@@ -102,9 +103,7 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<AppState> {
-    use druid::optics::affine_traversal::Then;
-
-    let label = Label::new("Click to reveal slider");
+    use druid::optics::affine_traversal::{And, Then};
 
     let mut col = Flex::column();
     col.add_child(
@@ -116,13 +115,17 @@ fn ui_builder() -> impl Widget<AppState> {
         .prism(
             (AppState::panel)
                 .then(SliderOrLabel::slider)
-                .and_lens(AppState::value),
+                .and(AppState::value),
         )
         .padding(5.0);
-    let panel_label = label
+    let panel_label = label()
         .padding(5.0)
         .prism((AppState::panel).then(SliderOrLabel::label));
-    col.add_child(panel_slider);
-    col.add_child(panel_label);
+    let panel = overlay::Overlay2::new(panel_slider, panel_label);
+    col.add_child(panel);
     col
+}
+
+fn label() -> impl Widget<String> {
+    Label::new(|data: &String, _env: &_| data.to_string())
 }

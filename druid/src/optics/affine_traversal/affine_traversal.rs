@@ -2,6 +2,7 @@
 
 pub use crate::optics::PartialPrism as AffineTraversal;
 use crate::optics::{lens, prism, Lens};
+pub use and::And;
 use std::marker::PhantomData;
 pub use then::Then;
 pub use wrap::Wrap;
@@ -150,6 +151,39 @@ mod then {
             prism::Then::new(self, prism)
         }
     }
+}
+
+mod and {
+    use super::{layer, lens, prism};
+
+    pub trait And<Other, T1: ?Sized, T2: ?Sized, T3: ?Sized, LayerKind1, LayerKind2> {
+        type Target;
+        fn and(self, other: Other) -> Self::Target;
+    }
+
+    /// Compose a `Prism<T1, T2>` with a `Lens<T1, T3>` to produce a `Prism<T1, T3>`.
+    impl<P1, L2, T1, T2, T3> And<L2, T1, T2, T3, layer::Prism, layer::Lens> for P1
+    where
+        T1: ?Sized,
+        T2: ?Sized,
+        T3: ?Sized,
+        P1: prism::PartialPrism<T1, T2>,
+        L2: lens::Lens<T1, T3>,
+    {
+        type Target = super::AndLens<P1, L2, T2>;
+        fn and(self, lens: L2) -> Self::Target {
+            super::AndLens::new(self, lens)
+        }
+    }
+
+    // Notes:
+    //
+    // - there is no Prism<T1, T2> AND Prism<T1, T3>,
+    // because if it goes from T1->T2, then it already does not goes to
+    // T1->Tx (for x != 2)
+    //
+    // - there is no Lens<T1, T2> AND _
+    // because Lenses are linear and thus AND doesn't make sense.
 }
 
 #[derive(Debug, Copy, PartialEq)]

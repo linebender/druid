@@ -90,15 +90,6 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
         });
     }
 
-    fn and_lens<L, T3>(self, lens: L) -> affine_traversal::AndLens<Self, L, T2>
-    where
-        T3: ?Sized,
-        Self: Sized,
-        L: lens::Lens<T1, T3> + Sized,
-    {
-        affine_traversal::AndLens::new(self, lens)
-    }
-
     fn after_lens<L, T0>(self, lens: L) -> affine_traversal::ThenAfterLens<L, Self, T1>
     where
         T0: ?Sized,
