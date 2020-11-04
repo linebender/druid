@@ -26,15 +26,6 @@ struct AppState {
     value: f64,
 }
 
-pub fn main() {
-    let main_window =
-        WindowDesc::new(ui_builder).title(druid::widget::LabelText::from("Switcheroo"));
-    AppLauncher::with_window(main_window)
-        .use_simple_logger()
-        .launch(AppState::default())
-        .expect("launch failed");
-}
-
 fn ui_builder() -> impl Widget<AppState> {
     // Our UI consists of a column with a button and an `Either` widget
     let button = Checkbox::new("Toggle slider")
@@ -51,4 +42,13 @@ fn ui_builder() -> impl Widget<AppState> {
         Label::new("Click to reveal slider").padding(5.0),
     );
     Flex::column().with_child(button).with_child(either)
+}
+
+pub fn main() {
+    let main_window =
+        WindowDesc::new(ui_builder).title(druid::widget::LabelText::from("Switcheroo"));
+    AppLauncher::with_window(main_window)
+        .use_simple_logger()
+        .launch(AppState::default())
+        .expect("launch failed");
 }
