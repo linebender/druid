@@ -205,6 +205,15 @@ pub trait LensExt<T1: ?Sized, T2: ?Sized>: Lens<T1, T2> {
         use aff::Guard;
         prism.guard(self)
     }
+
+    fn discard(self) -> Then<Self, Unit<T2>, T2>
+    where
+        Self: Sized,
+        T2: Sized,
+    {
+        use aff::Then;
+        self.then(Unit::default())
+    }
 }
 
 impl<S: ?Sized, A: ?Sized, L: Lens<S, A>> LensExt<S, A> for L {}

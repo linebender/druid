@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use crate::optics::{affine_traversal, lens};
+use crate::optics::{affine_traversal as aff, lens};
 use crate::Data;
 use std::marker::PhantomData;
 use std::ops;
@@ -90,13 +90,13 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
         });
     }
 
-    fn after_lens<L, T0>(self, lens: L) -> affine_traversal::ThenAfterLens<L, Self, T1>
+    fn after_lens<L, T0>(self, lens: L) -> aff::ThenAfterLens<L, Self, T1>
     where
         T0: ?Sized,
         Self: Sized,
         L: lens::Lens<T0, T1> + Sized,
     {
-        affine_traversal::ThenAfterLens::new(lens, self)
+        aff::ThenAfterLens::new(lens, self)
     }
 
     fn map<Get, Put, T3>(self, get: Get, put: Put) -> Then<Self, Map<Get, Put>, T2>
@@ -132,6 +132,15 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
         Self: Sized,
     {
         InArc::new(self)
+    }
+
+    fn discard(self) -> aff::ThenLens<Self, lens::Unit<T2>, T2>
+    where
+        Self: Sized,
+        T2: Sized,
+    {
+        use aff::Then;
+        self.then(lens::Unit::default())
     }
 }
 
