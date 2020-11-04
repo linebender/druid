@@ -90,7 +90,7 @@ struct EnvImpl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Key<T> {
     key: &'static str,
-    value_type: PhantomData<*const T>,
+    value_type: PhantomData<T>,
 }
 
 // we could do some serious deriving here: the set of types that can be stored
@@ -614,5 +614,12 @@ mod tests {
         let value: KeyOrValue<ArcStr> = ArcStr::from("Owned").into();
 
         assert_eq!(key.resolve(&env), value.resolve(&env));
+    }
+
+    #[test]
+    fn key_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Key<()>>();
     }
 }
