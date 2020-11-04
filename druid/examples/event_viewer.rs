@@ -56,6 +56,7 @@ pub fn main() {
 
     //start the application
     AppLauncher::with_window(main_window)
+        .use_simple_logger()
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
             env.set(theme::LABEL_COLOR, Color::grey8(0x11));
@@ -114,83 +115,86 @@ fn interactive_area() -> impl Widget<AppState> {
 
 /// The bottom part of the application, a list of received events.
 fn event_list() -> impl Widget<AppState> {
-    Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(
-            Flex::row()
-                .with_child(
-                    Label::new("#")
-                        .fix_width(40.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Event")
-                        .fix_width(80.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Point")
-                        .fix_width(90.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Wheel")
-                        .fix_width(80.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Button")
-                        .fix_width(60.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Count")
-                        .fix_width(50.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Repeat")
-                        .fix_width(50.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Key")
-                        .fix_width(60.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Code")
-                        .fix_width(60.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Modifiers")
-                        .fix_width(80.0)
-                        .background(HEADER_BACKGROUND),
-                )
-                .with_spacer(COLUMN_PADDING)
-                .with_child(
-                    Label::new("Location")
-                        .fix_width(60.0)
-                        .background(HEADER_BACKGROUND),
-                ),
-        )
-        .with_spacer(COLUMN_PADDING)
-        .with_flex_child(
-            Scroll::new(List::new(make_list_item).lens(AppState::events)).expand_width(),
-            1.0,
-        )
-        .padding(10.0)
-        .background(Color::WHITE)
+    Scroll::new(
+        Flex::column()
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .with_child(
+                Flex::row()
+                    .with_child(
+                        Label::new("#")
+                            .fix_width(40.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Event")
+                            .fix_width(80.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Point")
+                            .fix_width(90.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Wheel")
+                            .fix_width(80.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Button")
+                            .fix_width(60.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Count")
+                            .fix_width(50.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Repeat")
+                            .fix_width(50.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Key")
+                            .fix_width(60.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Code")
+                            .fix_width(60.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Modifiers")
+                            .fix_width(80.0)
+                            .background(HEADER_BACKGROUND),
+                    )
+                    .with_spacer(COLUMN_PADDING)
+                    .with_child(
+                        Label::new("Location")
+                            .fix_width(60.0)
+                            .background(HEADER_BACKGROUND),
+                    ),
+            )
+            .with_spacer(COLUMN_PADDING)
+            .with_flex_child(
+                Scroll::new(List::new(make_list_item).lens(AppState::events)).vertical(),
+                1.0,
+            )
+            .padding(10.0)
+            .background(Color::WHITE),
+    )
+    .horizontal()
 }
 
 /// A single event row.
@@ -282,6 +286,8 @@ enum EventType {
 struct EventLog {
     typ: EventType,
     number: usize,
+    // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
+    // https://docs.rs/druid/0.6.0/druid/trait.Data.html
     #[data(ignore)]
     mouse: Option<MouseEvent>,
     #[data(ignore)]
