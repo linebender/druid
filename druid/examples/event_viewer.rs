@@ -62,18 +62,18 @@ fn interactive_area() -> impl Widget<AppState> {
         .with_text_color(Color::rgb8(0xf0, 0xf0, 0xea))
         .lens(AppState::text_input)
         .fix_size(INTERACTIVE_AREA_DIM, INTERACTIVE_AREA_DIM)
-        .controller(EventLogger::new(
-            |event| matches!(event, Event::KeyDown(_) | Event::KeyUp(_)),
-        ));
+        .controller(EventLogger {
+            filter: |event| matches!(event, Event::KeyDown(_) | Event::KeyUp(_)),
+        });
 
     let mouse_box = SizedBox::empty()
         .fix_size(INTERACTIVE_AREA_DIM, INTERACTIVE_AREA_DIM)
         .background(INACTIVE_AREA_COLOR)
         .rounded(5.0)
         .border(Color::grey8(0xCC), 1.0)
-        .controller(EventLogger::new(
-            |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
-        ));
+        .controller(EventLogger {
+            filter: |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
+		});
 
     Flex::row()
         .with_flex_spacer(1.0)
@@ -302,22 +302,11 @@ impl EventLog {
     }
 }
 
-struct EventLogger {
-    filter: Box<dyn Fn(&Event) -> bool>,
+struct EventLogger<F: Fn(&Event) -> bool> {
+    filter: F,
 }
 
-impl EventLogger {
-    /// Create a new `EventLogger`.
-    ///
-    /// The logger will attempt to log events for with `f` returns `true`.
-    fn new(f: impl Fn(&Event) -> bool + 'static) -> Self {
-        EventLogger {
-            filter: Box::new(f),
-        }
-    }
-}
-
-impl<W: Widget<AppState>> Controller<AppState, W> for EventLogger {
+impl<W: Widget<AppState>, F: Fn(&Event) -> bool> Controller<AppState, W> for EventLogger<F> {
     fn event(
         &mut self,
         child: &mut W,
