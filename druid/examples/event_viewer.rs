@@ -16,8 +16,7 @@
 //! information about received events.
 
 use druid::widget::{
-    prelude::*, Controller, CrossAxisAlignment, Flex, Label, List, Painter, Scroll, SizedBox,
-    TextBox,
+    prelude::*, Controller, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, TextBox,
 };
 use druid::{
     theme, AppLauncher, Color, Data, Env, FontDescriptor, KeyEvent, Lens, LocalizedString,
@@ -27,8 +26,6 @@ use std::sync::Arc;
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Event Viewer");
 const INACTIVE_AREA_COLOR: Color = Color::grey8(0x55);
-const HOVER_AREA_COLOR: Color = Color::grey8(0xAA);
-const ACTIVE_AREA_COLOR: Color = Color::grey8(0xCC);
 const HEADER_BACKGROUND: Color = Color::grey8(0xCC);
 const COLUMN_PADDING: f64 = 2.0;
 const INTERACTIVE_AREA_DIM: f64 = 160.0;
@@ -51,33 +48,6 @@ struct AppState {
     /// The text in the text field
     text_input: String,
     events: Arc<Vec<EventLog>>,
-    total_events: usize,
-}
-
-pub fn main() {
-    //describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
-        .title(WINDOW_TITLE)
-        .window_size((760.0, 680.0));
-
-    //create the initial app state
-    let initial_state = AppState {
-        text_input: String::new(),
-        events: Arc::new(Vec::new()),
-        total_events: 0,
-    };
-
-    //start the application
-    AppLauncher::with_window(main_window)
-        .use_simple_logger()
-        .configure_env(|env, _| {
-            env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
-            env.set(theme::LABEL_COLOR, Color::grey8(0x11));
-            env.set(theme::WIDGET_PADDING_HORIZONTAL, COLUMN_PADDING);
-            env.set(theme::WIDGET_PADDING_VERTICAL, COLUMN_PADDING);
-        })
-        .launch(initial_state)
-        .expect("Failed to launch application");
 }
 
 fn build_root_widget() -> impl Widget<AppState> {
@@ -88,43 +58,29 @@ fn build_root_widget() -> impl Widget<AppState> {
 
 /// The top part of the application, that accepts keyboard and mouse input.
 fn interactive_area() -> impl Widget<AppState> {
+    let text_box = TextBox::multiline()
+        .with_text_color(Color::rgb8(0xf0, 0xf0, 0xea))
+        .lens(AppState::text_input)
+        .fix_size(INTERACTIVE_AREA_DIM, INTERACTIVE_AREA_DIM)
+        .controller(EventLogger::new(
+            |event| matches!(event, Event::KeyDown(_) | Event::KeyUp(_)),
+        ));
+
+    let mouse_box = SizedBox::empty()
+        .fix_size(INTERACTIVE_AREA_DIM, INTERACTIVE_AREA_DIM)
+        .background(INACTIVE_AREA_COLOR)
+        .rounded(5.0)
+        .border(Color::grey8(0xCC), 1.0)
+        .controller(EventLogger::new(
+            |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
+        ));
+
     Flex::row()
-        .with_flex_spacer(0.5)
-        .with_child(
-            TextBox::multiline()
-                .with_text_color(Color::rgb8(0xf0, 0xf0, 0xea))
-                .lens(AppState::text_input)
-                .controller(EventLogger::new(
-                    |event| matches!(event, Event::KeyDown(_) | Event::KeyUp(_)),
-                ))
-                .fix_size(INTERACTIVE_AREA_DIM, INTERACTIVE_AREA_DIM)
-        )
-        .with_flex_spacer(0.5)
-        .with_child(
-            SizedBox::empty()
-                .fix_width(INTERACTIVE_AREA_DIM)
-                .fix_height(INTERACTIVE_AREA_DIM)
-                .background(
-                Painter::new(|ctx, _, _env| {
-                    let bg_color = if ctx.is_active() {
-                        ACTIVE_AREA_COLOR
-                    } else if ctx.is_hot() {
-                        HOVER_AREA_COLOR
-                    } else {
-                        INACTIVE_AREA_COLOR
-                    };
-                    let rect = ctx.size().to_rect();
-                    ctx.fill(rect, &bg_color);
-                }))
-                .rounded(5.0)
-                .border(Color::grey8(0xCC), 1.0)
-                // an empty on-click handler just so we get hot/active changes in painter
-                .on_click(|_, _, _|{})
-                .controller(EventLogger::new(
-                    |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
-                ))
-        )
-        .with_flex_spacer(0.5)
+        .with_flex_spacer(1.0)
+        .with_child(text_box)
+        .with_flex_spacer(1.0)
+        .with_child(mouse_box)
+        .with_flex_spacer(1.0)
         .padding(10.0)
 }
 
@@ -162,75 +118,51 @@ fn event_list() -> impl Widget<AppState> {
 }
 
 /// A single event row.
-fn make_list_item() -> Box<dyn Widget<EventLog>> {
-    Box::new(
-        Flex::row()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.number())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[0].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.name())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[1].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.mouse_pos())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[2].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.wheel_delta())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[3].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.mouse_button())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[4].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.click_count())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[5].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.is_repeat())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[6].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.key())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[7].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.code())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[8].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.modifiers())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[9].1),
-            )
-            .with_default_spacer()
-            .with_child(
-                Label::dynamic(|d: &EventLog, _| d.location())
-                    .with_text_size(12.0)
-                    .fix_width(PROPERTIES[10].1),
-            ),
-    )
+fn make_list_item() -> impl Widget<EventLog> {
+    Flex::row()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.number()).fix_width(PROPERTIES[0].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.name()).fix_width(PROPERTIES[1].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.mouse_pos()).fix_width(PROPERTIES[2].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.wheel_delta()).fix_width(PROPERTIES[3].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.mouse_button()).fix_width(PROPERTIES[4].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.click_count()).fix_width(PROPERTIES[5].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.is_repeat()).fix_width(PROPERTIES[6].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.key()).fix_width(PROPERTIES[7].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.code()).fix_width(PROPERTIES[8].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.modifiers()).fix_width(PROPERTIES[9].1))
+        .with_default_spacer()
+        .with_child(Label::dynamic(|d: &EventLog, _| d.location()).fix_width(PROPERTIES[10].1))
+}
+
+pub fn main() {
+    //describe the main window
+    let main_window = WindowDesc::new(build_root_widget)
+        .title(WINDOW_TITLE)
+        .window_size((760.0, 680.0));
+
+    //start the application
+    AppLauncher::with_window(main_window)
+        .use_simple_logger()
+        .configure_env(|env, _| {
+            env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
+            env.set(theme::LABEL_COLOR, Color::grey8(0x11));
+            env.set(theme::WIDGET_PADDING_HORIZONTAL, COLUMN_PADDING);
+            env.set(theme::WIDGET_PADDING_VERTICAL, COLUMN_PADDING);
+        })
+        .launch(AppState {
+            text_input: String::new(),
+            events: Arc::new(Vec::new()),
+        })
+        .expect("Failed to launch application");
 }
 
 /// The types of events we display
@@ -307,7 +239,17 @@ impl EventLog {
     fn mouse_button(&self) -> String {
         self.mouse
             .as_ref()
-            .map(|m| mouse_button_string(m.button))
+            .map(|m| {
+                match m.button {
+                    MouseButton::Left => "Left",
+                    MouseButton::Right => "Right",
+                    MouseButton::X1 => "X1",
+                    MouseButton::X2 => "X2",
+                    MouseButton::None => "",
+                    MouseButton::Middle => "Middle",
+                }
+                .into()
+            })
             .unwrap_or_default()
     }
 
@@ -333,13 +275,11 @@ impl EventLog {
     }
 
     fn modifiers(&self) -> String {
-        let mods = self
-            .key
+        self.key
             .as_ref()
-            .map(|k| k.mods)
-            .or_else(|| self.mouse.as_ref().map(|m| m.mods))
-            .unwrap();
-        modifiers_string(mods)
+            .map(|k| modifiers_string(k.mods))
+            .or_else(|| self.mouse.as_ref().map(|m| modifiers_string(m.mods)))
+            .unwrap_or_default()
     }
 
     fn location(&self) -> String {
@@ -362,7 +302,6 @@ impl EventLog {
     }
 }
 
-/// A controller that logs events that match a predicate.
 struct EventLogger {
     filter: Box<dyn Fn(&Event) -> bool>,
 }
@@ -387,51 +326,34 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventLogger {
         data: &mut AppState,
         env: &Env,
     ) {
+        // Every time this controller receives an event we check if f() returns
+        // true. If it does this means that we can add it to the log.
         if (self.filter)(event) {
-            data.log_event(event);
+            if let Some(to_log) = EventLog::try_from_event(event, data.events.len()) {
+                Arc::make_mut(&mut data.events).push(to_log);
+            }
         }
+        // Always pass on the event!
         child.event(ctx, event, data, env)
-    }
-}
-
-impl AppState {
-    fn log_event(&mut self, event: &Event) {
-        if let Some(to_log) = EventLog::try_from_event(event, self.total_events) {
-            Arc::make_mut(&mut self.events).push(to_log);
-            self.total_events += 1;
-        }
     }
 }
 
 fn modifiers_string(mods: Modifiers) -> String {
     let mut result = String::new();
     if mods.shift() {
-        result.push_str("Shift");
+        result.push_str("Shift ");
     }
     if mods.ctrl() {
-        result.push_str("Ctrl");
+        result.push_str("Ctrl ");
     }
     if mods.alt() {
-        result.push_str("Alt");
+        result.push_str("Alt ");
     }
     if mods.meta() {
-        result.push_str("Meta");
+        result.push_str("Meta ");
     }
     if result.is_empty() {
-        "None".into()
-    } else {
-        result
+        result.push_str("None");
     }
-}
-
-fn mouse_button_string(button: MouseButton) -> String {
-    match button {
-        MouseButton::Left => "Left",
-        MouseButton::Right => "Right",
-        MouseButton::X1 => "X1",
-        MouseButton::X2 => "X2",
-        MouseButton::None => "None",
-        MouseButton::Middle => "Middle",
-    }
-    .into()
+    result
 }
