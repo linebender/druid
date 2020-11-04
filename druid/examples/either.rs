@@ -33,7 +33,7 @@ fn ui_builder() -> impl Widget<AppState> {
         .padding(5.0);
 
     // The Either widget has two children, one of which is visible at a time.
-    // you have to pass in a closure which takes `Data` and and `Env`.
+    // You pass in a closure which takes `Data` and `Env`.
     // This closure determines which widget gets displayed based on the
     // return value (a bool). False is the second widget and true is the first.
     let either = Either::new(
