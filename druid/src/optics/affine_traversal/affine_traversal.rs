@@ -2,8 +2,8 @@
 
 pub use crate::optics::PartialPrism as AffineTraversal;
 use crate::optics::{lens, prism, Lens};
-pub use and_map::AndMap;
-pub use or_map::OrMap;
+pub use fallback::Fallback;
+pub use guard::Guard;
 use std::marker::PhantomData;
 pub use then::Then;
 pub use wrap::Wrap;
@@ -158,20 +158,23 @@ mod then {
     }
 }
 
-mod and_map {
+mod guard {
     use super::{layer, lens, prism};
 
-    /// Turns a `Lens` inaccessible when a `Prism` is also inaccessible.
-    pub trait AndMap<Other, T1: ?Sized, T2: ?Sized, T3: ?Sized, LayerKind1, LayerKind2> {
+    /// Uses a `Prism` to guard a `Lens`.
+    /// Ie. turns a `Lens` inaccessible when a `Prism` is also inaccessible.
+    pub trait Guard<Other, T1: ?Sized, T2: ?Sized, T3: ?Sized, LayerKind1, LayerKind2> {
         /// The composed structure for the given `LayerKind1` and `LayerKind2`.
         type Target;
+        /// Guards a lens.
+        ///
         /// Composes `Self` with `Other`,
         /// so that `other` is directly applied if `self` is accessible.
-        fn and_map(self, other: Other) -> Self::Target;
+        fn guard(self, other: Other) -> Self::Target;
     }
 
     /// Compose a `Prism<T1, T2>` with a `Lens<T1, T3>` to produce a `Prism<T1, T3>`.
-    impl<P1, L2, T1, T2, T3> AndMap<L2, T1, T2, T3, layer::Prism, layer::Lens> for P1
+    impl<P1, L2, T1, T2, T3> Guard<L2, T1, T2, T3, layer::Prism, layer::Lens> for P1
     where
         T1: ?Sized,
         T2: ?Sized,
@@ -179,31 +182,31 @@ mod and_map {
         P1: prism::PartialPrism<T1, T2>,
         L2: lens::Lens<T1, T3>,
     {
-        type Target = super::AndMapLens<P1, L2, T2>;
-        fn and_map(self, lens: L2) -> Self::Target {
-            super::AndMapLens::new(self, lens)
+        type Target = super::PrismGuard<P1, L2, T2>;
+        fn guard(self, lens: L2) -> Self::Target {
+            super::PrismGuard::new(self, lens)
         }
     }
 }
 
-mod or_map {
+mod fallback {
     use super::{layer, lens, prism};
 
     /// Use `Other` as a fallback for a `Prism` (`Self`).
-    pub trait OrMap<Other, T1: ?Sized, T2: ?Sized, LayerKind1, LayerKind2> {
+    pub trait Fallback<Other, T1: ?Sized, T2: ?Sized, LayerKind1, LayerKind2> {
         /// The composed structure for the given `LayerKind1` and `LayerKind2`.
         type Target;
         /// Composes `Self` with `Other`,
         /// so that `other` is directly applied if `self` is not accessible.
         /// Otherwise, `self` is normally and directly applied.
-        fn or_map(self, other: Other) -> Self::Target;
+        fn with_fallback(self, other: Other) -> Self::Target;
     }
 
     /// Compose a `Prism<T1, T2>` with a `Lens<T1, T2>` to produce a `Lens<T1, T2>`.
     ///
     /// If `T2` is not accessible from the `Prism`, it is then accessed
     /// from the `Lens`.
-    impl<P1, L2, T1, T2> OrMap<L2, T1, T2, layer::Prism, layer::Lens> for P1
+    impl<P1, L2, T1, T2> Fallback<L2, T1, T2, layer::Prism, layer::Lens> for P1
     where
         T1: ?Sized,
         T2: ?Sized,
@@ -211,7 +214,7 @@ mod or_map {
         L2: lens::Lens<T1, T2>,
     {
         type Target = super::OrMapLens<P1, L2>;
-        fn or_map(self, lens: L2) -> Self::Target {
+        fn with_fallback(self, lens: L2) -> Self::Target {
             super::OrMapLens::new(self, lens)
         }
     }
@@ -220,7 +223,7 @@ mod or_map {
     ///
     /// If `T2` is not accessible from the first `Prism`,
     /// the second `Prism`is tried.
-    impl<P1, P2, T1, T2> OrMap<P2, T1, T2, layer::Prism, layer::Prism> for P1
+    impl<P1, P2, T1, T2> Fallback<P2, T1, T2, layer::Prism, layer::Prism> for P1
     where
         T1: ?Sized,
         T2: ?Sized,
@@ -228,7 +231,7 @@ mod or_map {
         P2: prism::PartialPrism<T1, T2>,
     {
         type Target = super::OrMapPrism<P1, P2>;
-        fn or_map(self, prism: P2) -> Self::Target {
+        fn with_fallback(self, prism: P2) -> Self::Target {
             super::OrMapPrism::new(self, prism)
         }
     }
@@ -422,13 +425,13 @@ impl<P1: Clone, L2: Clone> Clone for OrMapPrism<P1, L2> {
 }
 
 #[derive(Debug, Copy, PartialEq)]
-pub struct AndMapLens<P1, L2, T2: ?Sized> {
+pub struct PrismGuard<P1, L2, T2: ?Sized> {
     left: P1,
     right: L2,
     _marker: PhantomData<T2>,
 }
 
-impl<P1, L2, T2: ?Sized> AndMapLens<P1, L2, T2> {
+impl<P1, L2, T2: ?Sized> PrismGuard<P1, L2, T2> {
     pub fn new<T1: ?Sized, T3: ?Sized>(left: P1, right: L2) -> Self
     where
         P1: AffineTraversal<T1, T2>,
@@ -442,7 +445,7 @@ impl<P1, L2, T2: ?Sized> AndMapLens<P1, L2, T2> {
     }
 }
 
-impl<P1, L2, T1, T2, T3> AffineTraversal<T1, T3> for AndMapLens<P1, L2, T2>
+impl<P1, L2, T1, T2, T3> AffineTraversal<T1, T3> for PrismGuard<P1, L2, T2>
 where
     T1: ?Sized,
     T2: ?Sized,
@@ -469,7 +472,7 @@ where
     }
 }
 
-impl<P1: Clone, L2: Clone, T2> Clone for AndMapLens<P1, L2, T2> {
+impl<P1: Clone, L2: Clone, T2> Clone for PrismGuard<P1, L2, T2> {
     fn clone(&self) -> Self {
         Self {
             left: self.left.clone(),

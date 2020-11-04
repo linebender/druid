@@ -16,6 +16,8 @@ use std::marker::PhantomData;
 use std::ops;
 use std::sync::Arc;
 
+use crate::affine_traversal as aff;
+use crate::prism;
 use crate::Data;
 
 /// A lens is a datatype that gives access to a part of a larger
@@ -193,6 +195,15 @@ pub trait LensExt<T1: ?Sized, T2: ?Sized>: Lens<T1, T2> {
         Self: Sized,
     {
         InArc::new(self)
+    }
+
+    fn guarded_by<P1, T3>(self, prism: P1) -> aff::PrismGuard<P1, Self, T3>
+    where
+        Self: Sized,
+        P1: prism::Prism<T1, T3>,
+    {
+        use aff::Guard;
+        prism.guard(self)
     }
 }
 
