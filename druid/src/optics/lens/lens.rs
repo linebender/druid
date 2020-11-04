@@ -200,7 +200,7 @@ pub trait LensExt<T1: ?Sized, T2: ?Sized>: Lens<T1, T2> {
     fn guarded_by<P1, T3>(self, prism: P1) -> aff::PrismGuard<P1, Self, T3>
     where
         Self: Sized,
-        P1: prism::Prism<T1, T3>,
+        P1: prism::PartialPrism<T1, T3>,
     {
         use aff::Guard;
         prism.guard(self)
