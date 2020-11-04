@@ -459,7 +459,7 @@ where
     {
         self.left
             .with(data, |_b| ())
-            .and(Some(self.right.with(data, f)))
+            .map(|_: ()| self.right.with(data, f))
     }
 
     fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
@@ -468,7 +468,7 @@ where
     {
         self.left
             .with_mut(data, |_b| ())
-            .and(Some(self.right.with_mut(data, f)))
+            .map(|_: ()| self.right.with_mut(data, f))
     }
 }
 
