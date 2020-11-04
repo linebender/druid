@@ -33,6 +33,19 @@ const HEADER_BACKGROUND: Color = Color::grey8(0xCC);
 const COLUMN_PADDING: f64 = 2.0;
 const INTERACTIVE_AREA_DIM: f64 = 160.0;
 
+const PROPERTIES: &[(&str, f64)] = &[
+    ("#", 40.0),
+    ("Event", 80.0),
+    ("Point", 90.0),
+    ("Wheel", 80.0),
+    ("Button", 60.0),
+    ("Count", 50.0),
+    ("Repeat", 50.0),
+    ("Key", 60.0),
+    ("Code", 60.0),
+    ("Modifiers", 80.0),
+    ("Location", 60.0),
+];
 #[derive(Clone, Data, Lens)]
 struct AppState {
     /// The text in the text field
@@ -60,6 +73,8 @@ pub fn main() {
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
             env.set(theme::LABEL_COLOR, Color::grey8(0x11));
+            env.set(theme::WIDGET_PADDING_HORIZONTAL, COLUMN_PADDING);
+            env.set(theme::WIDGET_PADDING_VERTICAL, COLUMN_PADDING);
         })
         .launch(initial_state)
         .expect("Failed to launch application");
@@ -115,86 +130,35 @@ fn interactive_area() -> impl Widget<AppState> {
 
 /// The bottom part of the application, a list of received events.
 fn event_list() -> impl Widget<AppState> {
+    // Because this would be a HUGE block of repeated code with constants
+    // we just use a look to generate the header.
+    let mut header = Flex::row().with_child(
+        Label::new(PROPERTIES[0].0)
+            .fix_width(PROPERTIES[0].1)
+            .background(HEADER_BACKGROUND),
+    );
+
+    for (name, size) in PROPERTIES.into_iter().skip(1) {
+        header.add_default_spacer();
+        header.add_child(
+            Label::new(*name)
+                .fix_width(*size)
+                .background(HEADER_BACKGROUND),
+        );
+    }
     Scroll::new(
         Flex::column()
             .cross_axis_alignment(CrossAxisAlignment::Start)
-            .with_child(
-                Flex::row()
-                    .with_child(
-                        Label::new("#")
-                            .fix_width(40.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Event")
-                            .fix_width(80.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Point")
-                            .fix_width(90.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Wheel")
-                            .fix_width(80.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Button")
-                            .fix_width(60.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Count")
-                            .fix_width(50.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Repeat")
-                            .fix_width(50.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Key")
-                            .fix_width(60.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Code")
-                            .fix_width(60.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Modifiers")
-                            .fix_width(80.0)
-                            .background(HEADER_BACKGROUND),
-                    )
-                    .with_spacer(COLUMN_PADDING)
-                    .with_child(
-                        Label::new("Location")
-                            .fix_width(60.0)
-                            .background(HEADER_BACKGROUND),
-                    ),
-            )
-            .with_spacer(COLUMN_PADDING)
+            .with_child(header)
+            .with_default_spacer()
             .with_flex_child(
                 Scroll::new(List::new(make_list_item).lens(AppState::events)).vertical(),
                 1.0,
             )
-            .padding(10.0)
             .background(Color::WHITE),
     )
     .horizontal()
+    .padding(10.0)
 }
 
 /// A single event row.
@@ -202,77 +166,75 @@ fn make_list_item() -> Box<dyn Widget<EventLog>> {
     Box::new(
         Flex::row()
             .with_child(
-                Label::dynamic(|d: &EventLog, _| d.number.to_string())
+                Label::dynamic(|d: &EventLog, _| d.number())
                     .with_text_size(12.0)
-                    // this is very hacky; we just hard code some widths
-                    // that work.
-                    .fix_width(40.0),
+                    .fix_width(PROPERTIES[0].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.name())
                     .with_text_size(12.0)
-                    .fix_width(80.0),
+                    .fix_width(PROPERTIES[1].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.mouse_pos())
                     .with_text_size(12.0)
-                    .fix_width(90.0),
+                    .fix_width(PROPERTIES[2].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.wheel_delta())
                     .with_text_size(12.0)
-                    .fix_width(80.0),
+                    .fix_width(PROPERTIES[3].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.mouse_button())
                     .with_text_size(12.0)
-                    .fix_width(60.0),
+                    .fix_width(PROPERTIES[4].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.click_count())
                     .with_text_size(12.0)
-                    .fix_width(50.0),
+                    .fix_width(PROPERTIES[5].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.is_repeat())
                     .with_text_size(12.0)
-                    .fix_width(50.0),
+                    .fix_width(PROPERTIES[6].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.key())
                     .with_text_size(12.0)
-                    .fix_width(60.0),
+                    .fix_width(PROPERTIES[7].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.code())
                     .with_text_size(12.0)
-                    .fix_width(60.0),
+                    .fix_width(PROPERTIES[8].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.modifiers())
                     .with_text_size(12.0)
-                    .fix_width(80.0),
+                    .fix_width(PROPERTIES[9].1),
             )
-            .with_spacer(COLUMN_PADDING)
+            .with_default_spacer()
             .with_child(
                 Label::dynamic(|d: &EventLog, _| d.location())
                     .with_text_size(12.0)
-                    .fix_width(60.0),
+                    .fix_width(PROPERTIES[10].1),
             ),
     )
 }
 
 /// The types of events we display
-#[derive(Debug, Clone, Copy, Data, PartialEq)]
+#[derive(Clone, Copy, Data, PartialEq)]
 enum EventType {
     KeyDown,
     KeyUp,
@@ -282,7 +244,7 @@ enum EventType {
 }
 
 /// A type that represents any logged event.
-#[derive(Debug, Clone, Data)]
+#[derive(Clone, Data)]
 struct EventLog {
     typ: EventType,
     number: usize,
@@ -311,6 +273,9 @@ impl EventLog {
             mouse,
             key,
         })
+    }
+    fn number(&self) -> String {
+        self.number.to_string()
     }
 
     fn name(&self) -> String {
