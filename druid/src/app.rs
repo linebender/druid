@@ -422,8 +422,8 @@ impl<T: Data> WindowDesc<T> {
     /// [`position`] Position in pixels.
     ///
     /// [`position`]: struct.Point.html
-    pub fn set_position(mut self, position: Point) -> Self {
-        self.config = self.config.set_position(position);
+    pub fn set_position(mut self, position: impl Into<Point>) -> Self {
+        self.config = self.config.set_position(position.into());
         self
     }
 

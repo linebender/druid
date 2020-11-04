@@ -300,6 +300,38 @@ impl Event {
             _ => Some(self.clone()),
         }
     }
+
+    /// Whether this event should be sent to widgets which are currently not visible
+    /// (for example the hidden tabs in a tabs widget).
+    pub fn should_propagate_to_hidden(&self) -> bool {
+        match self {
+            Event::WindowConnected
+            | Event::WindowSize(_)
+            | Event::Timer(_)
+            | Event::AnimFrame(_)
+            | Event::Command(_)
+            | Event::Internal(_) => true,
+            Event::MouseDown(_)
+            | Event::MouseUp(_)
+            | Event::MouseMove(_)
+            | Event::Wheel(_)
+            | Event::KeyDown(_)
+            | Event::KeyUp(_)
+            | Event::Paste(_)
+            | Event::Zoom(_) => false,
+        }
+    }
+}
+
+impl LifeCycle {
+    /// Whether this event should be sent to widgets which are currently not visible
+    /// (for example the hidden tabs in a tabs widget).
+    pub fn should_propagate_to_hidden(&self) -> bool {
+        match self {
+            LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
+            LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
+        }
+    }
 }
 
 #[cfg(test)]

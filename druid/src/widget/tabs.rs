@@ -550,37 +550,9 @@ impl<TP: TabsPolicy> TabsBody<TP> {
     }
 }
 
-/// Possibly should be moved to Event
-fn hidden_should_receive_event(evt: &Event) -> bool {
-    match evt {
-        Event::WindowConnected
-        | Event::WindowSize(_)
-        | Event::Timer(_)
-        | Event::AnimFrame(_)
-        | Event::Command(_)
-        | Event::Internal(_) => true,
-        Event::MouseDown(_)
-        | Event::MouseUp(_)
-        | Event::MouseMove(_)
-        | Event::Wheel(_)
-        | Event::KeyDown(_)
-        | Event::KeyUp(_)
-        | Event::Paste(_)
-        | Event::Zoom(_) => false,
-    }
-}
-
-/// Possibly should be moved to Lifecycle.
-fn hidden_should_receive_lifecycle(lc: &LifeCycle) -> bool {
-    match lc {
-        LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
-        LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
-    }
-}
-
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
-        if hidden_should_receive_event(event) {
+        if event.should_propagate_to_hidden() {
             for child in self.child_pods() {
                 child.event(ctx, event, &mut data.inner, env);
             }
@@ -612,7 +584,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             ctx.request_layout();
         }
 
-        if hidden_should_receive_lifecycle(event) {
+        if event.should_propagate_to_hidden() {
             for child in self.child_pods() {
                 child.lifecycle(ctx, event, &data.inner, env);
             }

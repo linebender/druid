@@ -51,9 +51,12 @@ You can find its changes [documented below](#060---2020-06-01).
 - Widgets can specify a baseline, flex rows can align baselines ([#1295] by [@cmyr])
 - `TextBox::with_text_color` and `TextBox::set_text_color` ([#1320] by [@cmyr])
 - `Checkbox::set_text` to update the label. ([#1346] by [@finnerale])
+- `Event::should_propagate_to_hidden` and `Lifecycle::should_propagate_to_hidden` to determine whether an event should be sent to hidden widgets (e.g. in `Tabs` or `Either`). ([#1351] by [@andrewhickman])
+- `set_cursor` can be called in the `update` method. ([#1361] by [@jneem])
 
 ### Changed
 
+- Windows: Reduced flashing when windows are created on high-dpi displays ([#1272] by [@rhzk])
 - Windows: Improved DPI handling. Druid should now redraw correctly when dpi changes. ([#1037] by [@rhzk])
 - windows: Window created with OS default size if not set. ([#1037] by [@rhzk])
 - `Scale::from_scale` to `Scale::new`, and `Scale` methods `scale_x` / `scale_y` to `x` / `y`. ([#1042] by [@xStrom])
@@ -113,6 +116,8 @@ You can find its changes [documented below](#060---2020-06-01).
 - Fix `widget::Either` using the wrong paint insets ([#1299] by [@andrewhickman])
 - Various fixes to cross-platform menus ([#1306] by [@raphlinus])
 - Improve Windows 7 DXGI compatibility ([#1311] by [@raphlinus])
+- Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
+- Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 
 ### Visual
 
@@ -122,6 +127,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - Added documentation for the `Image` widget. ([#1018] by [@covercash2])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
+- Fixed broken links in `druid::widget::Container` documentation. ([#1357] by [@StarfightLP])
 
 ### Examples
 
@@ -502,6 +508,7 @@ Last release without a changelog :(
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
 [#1255]: https://github.com/linebender/druid/pull/1255
+[#1272]: https://github.com/linebender/druid/pull/1272
 [#1276]: https://github.com/linebender/druid/pull/1276
 [#1278]: https://github.com/linebender/druid/pull/1278
 [#1280]: https://github.com/linebender/druid/pull/1280
@@ -509,11 +516,15 @@ Last release without a changelog :(
 [#1295]: https://github.com/linebender/druid/pull/1280
 [#1298]: https://github.com/linebender/druid/pull/1298
 [#1299]: https://github.com/linebender/druid/pull/1299
+[#1302]: https://github.com/linebender/druid/pull/1302
 [#1306]: https://github.com/linebender/druid/pull/1306
 [#1311]: https://github.com/linebender/druid/pull/1311
 [#1320]: https://github.com/linebender/druid/pull/1320
 [#1326]: https://github.com/linebender/druid/pull/1326
+[#1328]: https://github.com/linebender/druid/pull/1328
 [#1346]: https://github.com/linebender/druid/pull/1346
+[#1351]: https://github.com/linebender/druid/pull/1351
+[#1361]: https://github.com/linebender/druid/pull/1361
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

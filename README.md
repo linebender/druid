@@ -25,7 +25,7 @@ For an overview of some key concepts, see the (work in progress) [Druid book].
 ## Contributions
 
 A very good place to ask questions and discuss development work is our [Zulip
-chat instance], in the #druid channel.
+chat instance], in the #druid-help and #druid channels, respectively.
 
 We gladly accept contributions via GitHub pull requests. Please see
 [CONTRIBUTING.md] for more details.

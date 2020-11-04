@@ -90,6 +90,8 @@ macro_rules! clone {
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
+    // Ensure that we don't implement Send, because it isn't actually safe to send the WindowState.
+    marker: std::marker::PhantomData<*const ()>,
 }
 
 /// Builder abstraction for creating new windows
@@ -270,6 +272,7 @@ impl WindowBuilder {
 
         let mut handle = WindowHandle {
             state: Arc::downgrade(&win_state),
+            marker: std::marker::PhantomData,
         };
         if let Some(level) = self.level {
             handle.set_level(level);
@@ -366,8 +369,6 @@ impl WindowBuilder {
                     // Note that we're borrowing the surface while calling the handler. This is ok,
                     // because we don't return control to the system or re-borrow the surface from
                     // any code that the client can call.
-                    // (TODO: the above comment isn't true yet because of save_as_sync and
-                    // open_sync, but it will be true soon)
                     state.with_handler_and_dont_check_the_other_borrows(|handler| {
                         let surface_context = cairo::Context::new(surface);
 
@@ -753,6 +754,10 @@ impl WindowState {
                     .map(|s| FileInfo { path: s.into() });
                     self.with_handler(|h| h.save_as(token, file_info));
                 }
+                e => {
+                    // The other deferred ops shouldn't appear, because we don't defer them in GTK.
+                    log::error!("unexpected deferred op {:?}", e);
+                }
             }
         }
     }
@@ -914,16 +919,15 @@ impl WindowHandle {
         };
 
         let token = TimerToken::next();
-        let handle = self.clone();
 
-        glib::timeout_add(interval, move || {
-            if let Some(state) = handle.state.upgrade() {
+        if let Some(state) = self.state.upgrade() {
+            glib::timeout_add(interval, move || {
                 if state.with_handler(|h| h.timer(token)).is_some() {
                     return glib::Continue(false);
                 }
-            }
-            glib::Continue(true)
-        });
+                glib::Continue(true)
+            });
+        }
         token
     }
 
@@ -984,16 +988,6 @@ impl WindowHandle {
         } else {
             None
         }
-    }
-
-    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::error!("save as sync no longer supported on GTK");
-        None
-    }
-
-    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        log::error!("open file sync no longer supported on GTK");
-        None
     }
 
     /// Get a handle that can be used to schedule an idle task.
@@ -1057,8 +1051,10 @@ impl WindowHandle {
     }
 }
 
-unsafe impl Send for IdleHandle {}
-// WindowState needs to be Send + Sync so it can be passed into glib closures
+// WindowState needs to be Send + Sync so it can be passed into glib closures.
+// TODO: can we localize the unsafety more? Glib's idle loop always runs on the main thread,
+// and we always construct the WindowState on the main thread, so it should be ok (and also
+// WindowState isn't a public type).
 unsafe impl Send for WindowState {}
 unsafe impl Sync for WindowState {}
 
