@@ -69,7 +69,7 @@ pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
 pub use label::{Label, LabelText, LineBreaking, RawLabel};
 pub use lens_wrap::LensWrap;
-pub use list::{List, ListIter, ListMainAlignment};
+pub use list::{List, ListIter, Spacing as ListSpacing};
 pub use padding::Padding;
 pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;

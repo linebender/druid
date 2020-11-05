@@ -18,98 +18,149 @@ mod iter;
 
 use std::cmp::Ordering;
 use std::f64;
+use std::fmt;
 
 pub use self::iter::ListIter;
 #[cfg(feature = "im")]
 use crate::im::Vector;
-use crate::kurbo::{common::FloatExt, Point, Rect, Size};
-use crate::widget::{flex::Spacing, Axis, CrossAxisAlignment, MainAxisAlignment};
+use crate::kurbo::{Rect, Size};
+use crate::widget::{Axis, CrossAxisAlignment};
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     UpdateCtx, Widget, WidgetPod,
 };
 
-#[derive(Copy, Clone)]
-pub enum ListMainAlignment {
-    /// Inherit options from `MainAxisAlignment`.
-    NoFlex(MainAxisAlignment),
-    /// Force children to use up all space evenly.
-    ///
-    /// Spacing will be added between items, but not at ends. If you don't want spacing set it to
-    /// `0.0`.
-    FlexItems { spacing: f64 },
+/// How to space out elements of the list
+#[derive(Debug, Copy, Clone)]
+pub enum Spacing {
+    /// Space should be flexed.
+    Flexed {
+        /// The value is only used if `List::flex_items` is true, and if so is the ratio between
+        /// the space size and the item size. For example, a value of `2` would mean that spaces
+        /// are twice the size of items.
+        ratio: f64,
+        /// 0, 0.5, or 1 usually.
+        end_ratio: f64,
+    },
+    /// Spaces should be a fixed width of `.0` units.
+    Fixed { size: f64 },
 }
 
-impl From<MainAxisAlignment> for ListMainAlignment {
-    fn from(from: MainAxisAlignment) -> Self {
-        ListMainAlignment::NoFlex(from)
+impl Spacing {
+    pub fn around(ratio: f64) -> Self {
+        Spacing::Flexed {
+            ratio,
+            end_ratio: 1.0,
+        }
+    }
+    pub fn evenly(ratio: f64) -> Self {
+        Spacing::Flexed {
+            ratio,
+            end_ratio: 0.5,
+        }
+    }
+    pub fn between(ratio: f64) -> Self {
+        Spacing::Flexed {
+            ratio,
+            end_ratio: 0.0,
+        }
+    }
+    pub fn fixed(size: f64) -> Self {
+        Spacing::Fixed { size }
+    }
+}
+
+impl Default for Spacing {
+    fn default() -> Self {
+        Spacing::Fixed { size: 0.0 }
     }
 }
 
 /// A list widget for a variable-size collection of items.
 pub struct List<T> {
-    closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
+    closure: Box<dyn FnMut() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     axis: Axis,
-    main_align: ListMainAlignment,
-    cross_align: CrossAxisAlignment,
+    /// How to space items
+    spacing: Spacing,
+    flex_items: bool,
+    cross_alignment: CrossAxisAlignment,
+}
+
+impl<T> fmt::Debug for List<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("List")
+            .field("axis", &self.axis)
+            .field("spacing", &self.spacing)
+            .field("flex_items", &self.flex_items)
+            .field("cross_alignment", &self.cross_alignment)
+            .finish()
+    }
 }
 
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
     #[inline]
-    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static, axis: Axis) -> Self {
+    pub fn new<W: Widget<T> + 'static>(
+        mut closure: impl FnMut() -> W + 'static,
+        axis: Axis,
+    ) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
             axis,
-            main_align: MainAxisAlignment::Start.into(),
-            cross_align: CrossAxisAlignment::Start,
+            spacing: Spacing::default(),
+            flex_items: false,
+            cross_alignment: CrossAxisAlignment::Start,
         }
     }
 
     /// Create a list where items are in a left -> right row
     #[inline]
-    pub fn horizontal<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+    pub fn horizontal<W: Widget<T> + 'static>(mut closure: impl FnMut() -> W + 'static) -> Self {
         Self::new(closure, Axis::Horizontal)
     }
 
     /// Create a list where items are in a top -> bottom column
     #[inline]
-    pub fn vertical<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
+    pub fn vertical<W: Widget<T> + 'static>(mut closure: impl FnMut() -> W + 'static) -> Self {
         Self::new(closure, Axis::Vertical)
     }
 
-    /// If set to `true`, each element will be given an equal share of the space available.
-    ///
-    /// Can pass either a `ListMainAlignment` or a `MainAxisAlignment`.
     #[inline]
-    pub fn with_main_alignment(mut self, main_align: impl Into<ListMainAlignment>) -> Self {
-        self.main_align = main_align.into();
+    pub fn with_spacing(mut self, spacing: Spacing) -> Self {
+        self.spacing = spacing;
         self
     }
 
-    /// If set to `true`, each element will be given an equal share of the space available.
-    ///
-    /// Can pass either a `ListMainAlignment` or a `MainAxisAlignment`.
     #[inline]
-    pub fn set_main_alignment(&mut self, main_align: impl Into<ListMainAlignment>) -> &mut Self {
-        self.main_align = main_align.into();
+    pub fn set_spacing(&mut self, spacing: Spacing) -> &mut Self {
+        self.spacing = spacing;
         self
     }
 
-    /// If non-zero, then spacing will be added between elements.
     #[inline]
-    pub fn with_cross_alignment(mut self, cross_align: CrossAxisAlignment) -> Self {
-        self.cross_align = cross_align;
+    pub fn with_flex_items(mut self, flex_items: bool) -> Self {
+        self.flex_items = flex_items;
         self
     }
 
-    /// If non-zero, then spacing will be added between elements.
     #[inline]
-    pub fn set_cross_alignment(&mut self, cross_align: CrossAxisAlignment) -> &mut Self {
-        self.cross_align = cross_align;
+    pub fn set_flex_items(&mut self, flex_items: bool) -> &mut Self {
+        self.flex_items = flex_items;
+        self
+    }
+
+    #[inline]
+    pub fn with_cross_alignment(mut self, cross_alignment: CrossAxisAlignment) -> Self {
+        self.cross_alignment = cross_alignment;
+        self
+    }
+
+    #[inline]
+    pub fn set_cross_alignment(&mut self, cross_alignment: CrossAxisAlignment) -> &mut Self {
+        self.cross_alignment = cross_alignment;
         self
     }
 
@@ -138,11 +189,8 @@ where
     T: ListIter<C>,
 {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let mut children = self.children.iter_mut();
-        data.for_each_mut(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.event(ctx, event, child_data, env);
-            }
+        zip_children_mut(&mut self.children, data, |child, data, _| {
+            child.event(ctx, event, data, env)
         });
     }
 
@@ -153,11 +201,8 @@ where
             }
         }
 
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.lifecycle(ctx, event, child_data, env);
-            }
+        zip_children(&mut self.children, data, |child, data, _| {
+            child.lifecycle(ctx, event, data, env)
         });
     }
 
@@ -165,11 +210,8 @@ where
         // we send update to children first, before adding or removing children;
         // this way we avoid sending update to newly added children, at the cost
         // of potentially updating children that are going to be removed.
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.update(ctx, child_data, env);
-            }
+        zip_children(&mut self.children, data, |child, data, _| {
+            child.update(ctx, data, env)
         });
 
         if self.update_child_count(data, env) {
@@ -178,138 +220,168 @@ where
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        // TODO quantize to whole pixels (do we need to)
+        // TODO cross-axis baseline alignment
+
         // keep the borrow checker happy
         let axis = self.axis;
-        let cross_align = self.cross_align;
+        let cross_align = self.cross_alignment;
+        let len = self.children.len();
 
-        let mut minor = axis.minor(bc.min());
-        let mut major = 0.0;
+        log::trace!("parameters: {:?}", self);
 
-        let mut paint_rect = Rect::ZERO;
-        let mut children = self.children.iter_mut();
-
-        // TODO quantize to whole pixels (do we need to)
-        // major constraint
-        let maj_c = match self.main_align {
-            // This is the only layout where children are constriained on the major axis.
-            ListMainAlignment::FlexItems { spacing } => {
-                let len = data.data_len() as f64;
-                // We need to take spacing into account when working out size, but we need to
-                // multiply by `(n - 1) / n` to fix the fence/fencepost problem.
-                let div = (axis.major(bc.max()) - spacing * (len - 1.)) / len;
-                (div, div)
-            }
-            _ => (0., f64::INFINITY),
+        // Calculate main axis constraints: it's complicated by spacing.
+        let main_constraints = if self.flex_items {
+            // Use as little space as possible - if the user wants us to fill more space they
+            // should expand the constraints.
+            let total = axis.major(bc.min());
+            let len = len as f64;
+            let size = match self.spacing {
+                Spacing::Flexed { ratio, end_ratio } => {
+                    total / (len + (len - 1. + 2. * end_ratio) * ratio)
+                }
+                Spacing::Fixed { size } => (total - (len - 1.) * size) / len,
+            };
+            (size, size)
+        } else {
+            (0., f64::INFINITY)
         };
-        // TODO cross axis alignment
+        let item_bc = axis.constraints(bc, main_constraints.0, main_constraints.1);
+        log::trace!("Child constraints: {:?}", item_bc);
 
-        // We branch on flex, because the flex option only requires 1 pass - we don't need to
-        // find out the sizes of the children because we will enforce size.
-        match self.main_align {
-            // 1 pass to layout items.
-            ListMainAlignment::FlexItems { spacing } => {
-                data.for_each(|child_data, _| {
-                    let child = match children.next() {
-                        Some(child) => child,
-                        None => {
-                            return;
-                        }
-                    };
-                    let child_bc = axis.constraints(bc, maj_c.0, maj_c.1);
-                    let child_size = child.layout(ctx, &child_bc, child_data, env);
-                    let rect =
-                        Rect::from_origin_size(Point::from(axis.pack(major, 0.0)), child_size);
-                    child.set_layout_rect(ctx, child_data, env, rect);
-                    paint_rect = paint_rect.union(child.paint_rect());
-                    minor = minor.max(axis.minor(child_size));
-                    major += axis.major(child_size) + spacing;
-                });
+        // A 2-pass strategy is used: the first pass is to allow children to find their size, and
+        // the second pass is then to position everything once we know the children's sizes.
 
-                // Correct for overshoot
-                major -= spacing;
+        // Pass 1 - let children calculate their sizes and store it in the child. We also calculate
+        // the max size on the cross axis and the total space on the main axis for positioning
+        // later.
+        let mut cross_max: f64 = 0.0;
+        let mut main_total = 0.0;
+        zip_children(&mut self.children, data, |child, data, _| {
+            let size = child.layout(ctx, &item_bc, data, env);
+            // The position is not yet correct - this will be calculated in the second pass, for
+            // now set to (0, 0).
+            let rect = Rect::ZERO.with_size(size);
+            child.set_layout_rect(ctx, data, env, rect);
+            // Update counters
+            cross_max = cross_max.max(axis.minor(size));
+            main_total += axis.major(size);
+        });
+        log::trace!("cross_max: {}, main_total: {}", cross_max, main_total);
 
-                let unconstrained_size: Size = axis.pack(major, minor).into();
-                let my_size = bc.constrain(unconstrained_size);
-                let insets = paint_rect - Rect::ZERO.with_size(my_size);
-                ctx.set_paint_insets(insets);
-                my_size
-            }
-            ListMainAlignment::NoFlex(main_align) => {
-                // Measure children.
-                let mut major_non_flex = 0.0;
-                let mut children = self.children.iter_mut();
-                data.for_each(|child_data, _| {
-                    let child = match children.next() {
-                        Some(child) => child,
-                        None => {
-                            return;
-                        }
-                    };
-                    let child_bc = axis.constraints(bc, maj_c.0, maj_c.1);
-                    let child_size = child.layout(ctx, &child_bc, child_data, env);
-
-                    if child_size.width.is_infinite() {
-                        log::warn!("A non-Flex child has an infinite width.");
+        // Pass 2 - position the children correctly.
+        // We need to tell druid the bounds of where our children will paint.
+        let mut paint_rect = Rect::ZERO;
+        let (spacing, mut main_position) = match self.spacing {
+            Spacing::Flexed { ratio, end_ratio } => {
+                if self.flex_items {
+                    (
+                        ratio * main_constraints.1,
+                        ratio * main_constraints.1 * end_ratio,
+                    )
+                } else {
+                    // We need to do the middle/ends calculation like for calculating size.
+                    if axis.major(bc.max()) < main_total {
+                        log::warn!("not enought space to lay out all children");
                     }
-
-                    if child_size.height.is_infinite() {
-                        log::warn!("A non-Flex child has an infinite height.");
+                    let min_main = axis.major(bc.min());
+                    let spare_space = main_total.max(min_main) - main_total;
+                    log::trace!("min_main = {}, spare_space = {}", min_main, spare_space);
+                    if spare_space < 1e-6 {
+                        (0.0, 0.0)
+                    } else {
+                        let spacing = spare_space / ((len as f64) - 1. + 2. * end_ratio);
+                        (spacing, end_ratio * spacing)
                     }
-
-                    major_non_flex += axis.major(child_size).expand();
-                    minor = minor.max(axis.minor(child_size).expand());
-                    // Stash size.
-                    let rect = child_size.to_rect();
-                    child.set_layout_rect(ctx, child_data, env, rect);
-                });
-
-                let total_major = axis.major(bc.max());
-                let extra = (total_major - major_non_flex).max(0.0);
-                let mut spacing = Spacing::new(main_align, extra, self.children.len());
-
-                // Lay out the children.
-                let mut major = spacing.next().unwrap_or(0.);
-                let mut child_paint_rect = Rect::ZERO;
-                let mut children = self.children.iter_mut();
-                data.for_each(|child_data, _| {
-                    let child = match children.next() {
-                        Some(child) => child,
-                        None => {
-                            return;
-                        }
-                    };
-                    let child_size = child.layout_rect().size();
-                    let child_minor_offset = {
-                        let extra_minor = minor - axis.minor(child_size);
-                        cross_align.align(extra_minor)
-                    };
-
-                    let child_pos: Point = axis.pack(major, child_minor_offset).into();
-                    let child_frame = Rect::from_origin_size(child_pos, child_size);
-                    child.set_layout_rect(ctx, child_data, env, child_frame);
-                    child_paint_rect = child_paint_rect.union(child.paint_rect());
-                    major += axis.major(child_size).expand();
-                    major += spacing.next().unwrap_or(0.);
-                });
-
-                let my_size: Size = axis.pack(major, minor).into();
-                let max_major = axis.major(bc.max());
-                let my_size = axis.constraints(bc, 0.0, max_major).constrain(my_size);
-
-                let my_bounds = Rect::ZERO.with_size(my_size);
-                let insets = child_paint_rect - my_bounds;
-                ctx.set_paint_insets(insets);
-                my_size
+                }
             }
+            Spacing::Fixed { size } => (size, 0.0),
+        };
+        log::trace!("spacing = {}, main_position = {}", spacing, main_position);
+
+        zip_children(&mut self.children, data, |child, data, _| {
+            let size = child.layout_rect().size();
+            let cross_position = cross_align.align(cross_max - axis.minor(size));
+            // Now we can set the correct position
+            let rect = Rect::from_origin_size(axis.pack(main_position, cross_position), size);
+            child.set_layout_rect(ctx, data, env, rect);
+            // for calculating insets
+            paint_rect = paint_rect.union(rect);
+
+            main_position += axis.major(size) + spacing;
+        });
+
+        // Correct for end spacing
+        let end_ratio = match self.spacing {
+            Spacing::Flexed { end_ratio, .. } => end_ratio,
+            Spacing::Fixed { .. } => 0.0,
+        };
+        let main_end = main_position + spacing * (end_ratio - 1.0);
+        log::trace!(
+            "end_ratio = {}, main_position = {}, spacing = {}, main_end = {}",
+            end_ratio,
+            main_position,
+            spacing,
+            main_end
+        );
+
+        // Calculate insets and return our size.
+        let unconstrained_size: Size = axis.pack(main_end, cross_max).into();
+        let size = bc.constrain(unconstrained_size);
+        if size != unconstrained_size {
+            log::warn!(
+                "`List` was constrained from {:?} to {:?}",
+                unconstrained_size,
+                size
+            );
         }
+        let insets = paint_rect - Rect::ZERO.with_size(size);
+        ctx.set_paint_insets(insets);
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut children = self.children.iter_mut();
-        data.for_each(|child_data, _| {
-            if let Some(child) = children.next() {
-                child.paint(ctx, child_data, env);
-            }
+        zip_children(&mut self.children, data, |child, data, _| {
+            child.paint(ctx, data, env)
         });
     }
+}
+
+/// These should disappear once GATs lands (we don't need to use callbacks then).
+///
+/// The two lists may be of different lengths, and that's ok: we just do the shorter. All the
+/// widgets themselves are identical, so adding and removing widgets can happen before or after
+/// layout, as long as they aren't included in the algorithm.
+fn zip_children<T>(
+    children: &mut Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    children_data: &impl ListIter<T>,
+    mut cb: impl FnMut(&mut WidgetPod<T, Box<dyn Widget<T>>>, &T, usize),
+) {
+    let mut children = children.iter_mut();
+    children_data.for_each(|data, idx| {
+        let child = match children.next() {
+            Some(child) => child,
+            None => {
+                return;
+            }
+        };
+        cb(child, data, idx)
+    });
+}
+
+fn zip_children_mut<T>(
+    children: &mut Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    children_data: &mut impl ListIter<T>,
+    mut cb: impl FnMut(&mut WidgetPod<T, Box<dyn Widget<T>>>, &mut T, usize),
+) {
+    let mut children = children.iter_mut();
+    children_data.for_each_mut(|data, idx| {
+        let child = match children.next() {
+            Some(child) => child,
+            None => {
+                return;
+            }
+        };
+        cb(child, data, idx)
+    });
 }

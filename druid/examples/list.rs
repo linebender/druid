@@ -16,9 +16,7 @@
 
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
-use druid::widget::{
-    Button, CrossAxisAlignment, Flex, Label, List, ListMainAlignment, MainAxisAlignment, Scroll,
-};
+use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, ListSpacing, Scroll};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
@@ -72,17 +70,14 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_flex_child(
-        Scroll::new(
-            List::vertical(|| {
-                Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
-                    .align_vertical(UnitPoint::LEFT)
-                    .padding(10.0)
-                    .expand()
-                    .height(50.0)
-                    .background(Color::rgb(0.5, 0.5, 0.5))
-            })
-            .with_main_alignment(MainAxisAlignment::Start),
-        )
+        Scroll::new(List::vertical(|| {
+            Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+                .align_vertical(UnitPoint::LEFT)
+                .padding(10.0)
+                .expand()
+                .height(50.0)
+                .background(Color::rgb(0.5, 0.5, 0.5))
+        }))
         .vertical()
         .lens(AppData::left),
         1.0,
@@ -90,29 +85,33 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a list with shared data
     lists.add_flex_child(
-        Scroll::new(List::vertical(|| {
-            Flex::row()
-                .with_child(
-                    Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
-                        format!("List item #{}", item)
-                    })
-                    .align_vertical(UnitPoint::LEFT),
-                )
-                .with_flex_spacer(1.0)
-                .with_child(
-                    Button::new("Delete")
-                        .on_click(|_ctx, (shared, item): &mut (Vector<u32>, u32), _env| {
-                            // We have access to both child's data and shared data.
-                            // Remove element from right list.
-                            shared.retain(|v| v != item);
+        Scroll::new(
+            List::vertical(|| {
+                Flex::row()
+                    .with_child(
+                        Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
+                            format!("List item #{}", item)
                         })
-                        .fix_size(80.0, 20.0)
-                        .align_vertical(UnitPoint::CENTER),
-                )
-                .padding(10.0)
-                .background(Color::rgb(0.5, 0.0, 0.5))
-                .fix_height(50.0)
-        }))
+                        .align_vertical(UnitPoint::LEFT),
+                    )
+                    .with_flex_spacer(1.0)
+                    .with_child(
+                        Button::new("Delete")
+                            .on_click(|_ctx, (shared, item): &mut (Vector<u32>, u32), _env| {
+                                // We have access to both child's data and shared data.
+                                // Remove element from right list.
+                                shared.retain(|v| v != item);
+                            })
+                            .fix_size(80.0, 20.0)
+                            .align_vertical(UnitPoint::CENTER),
+                    )
+                    .padding(10.0)
+                    .background(Color::rgb(0.5, 0.0, 0.5))
+                    .fix_height(50.0)
+            })
+            .with_spacing(ListSpacing::fixed(10.))
+            .padding((0., 5.)),
+        )
         .vertical()
         .lens(lens::Id.map(
             // Expose shared data with children data
@@ -127,10 +126,40 @@ fn ui_builder() -> impl Widget<AppData> {
 
     root.add_flex_child(lists, 1.0);
 
-    root.add_child(Label::new("Horizontal list"));
+    root.add_child(Label::new("Horizontal lists"));
+    let mut padding = [(0.0, 0.0), (0.0, 10.0)].iter().cycle();
+    root.add_child(
+        List::horizontal(move || {
+            Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos))
+                .padding(*padding.next().unwrap())
+        })
+        .with_cross_alignment(CrossAxisAlignment::End)
+        .align_right()
+        .lens(AppData::right),
+    );
     root.add_child(
         List::horizontal(|| Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos)))
-            .with_main_alignment(ListMainAlignment::FlexItems { spacing: 10. })
+            .with_spacing(ListSpacing::between(1.))
+            .expand_width()
+            .lens(AppData::right),
+    );
+    root.add_child(
+        List::horizontal(|| Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos)))
+            .with_spacing(ListSpacing::around(1.))
+            .expand_width()
+            .lens(AppData::right),
+    );
+    root.add_child(
+        List::horizontal(|| Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos)))
+            .with_spacing(ListSpacing::evenly(1.))
+            .expand_width()
+            .lens(AppData::right),
+    );
+    root.add_child(
+        List::horizontal(|| Label::new(|pos: &u32, _env: &_| format!("List item #{}", pos)))
+            .with_flex_items(true)
+            .with_spacing(ListSpacing::evenly(1.))
+            .expand_width()
             .lens(AppData::right),
     );
 
