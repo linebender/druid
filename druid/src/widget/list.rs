@@ -21,8 +21,6 @@ use std::f64;
 use std::fmt;
 
 pub use self::iter::ListIter;
-#[cfg(feature = "im")]
-use crate::im::Vector;
 use crate::kurbo::{Rect, Size};
 use crate::widget::{Axis, CrossAxisAlignment};
 use crate::{
@@ -39,32 +37,41 @@ pub enum Spacing {
         /// the space size and the item size. For example, a value of `2` would mean that spaces
         /// are twice the size of items.
         ratio: f64,
-        /// 0, 0.5, or 1 usually.
+        /// The ratio of the size of end spacing to middle. A value of 0. means no end spacing, 1.
+        /// means the same as the middle, and e.g. 0.5 matches `SpaceEvenly` behavor.
         end_ratio: f64,
     },
-    /// Spaces should be a fixed width of `.0` units.
-    Fixed { size: f64 },
+    /// Spaces should be a fixed width. In this case padding at the start and end of the axis
+    /// should be added using e.g. `WidgetExt::padding`.
+    Fixed {
+        /// The size, in logical pixels, that the space should be.
+        size: f64,
+    },
 }
 
 impl Spacing {
+    /// Create a spacing strategy like `SpaceAround`.
     pub fn around(ratio: f64) -> Self {
         Spacing::Flexed {
             ratio,
             end_ratio: 1.0,
         }
     }
+    /// Create a spacing strategy like `SpaceEvenly`.
     pub fn evenly(ratio: f64) -> Self {
         Spacing::Flexed {
             ratio,
             end_ratio: 0.5,
         }
     }
+    /// Create a spacing strategy like `SpaceBetween`.
     pub fn between(ratio: f64) -> Self {
         Spacing::Flexed {
             ratio,
             end_ratio: 0.0,
         }
     }
+    /// Create a spacing strategy with a fixed size spacer.
     pub fn fixed(size: f64) -> Self {
         Spacing::Fixed { size }
     }
@@ -118,46 +125,52 @@ impl<T: Data> List<T> {
 
     /// Create a list where items are in a left -> right row
     #[inline]
-    pub fn horizontal<W: Widget<T> + 'static>(mut closure: impl FnMut() -> W + 'static) -> Self {
+    pub fn horizontal<W: Widget<T> + 'static>(closure: impl FnMut() -> W + 'static) -> Self {
         Self::new(closure, Axis::Horizontal)
     }
 
     /// Create a list where items are in a top -> bottom column
     #[inline]
-    pub fn vertical<W: Widget<T> + 'static>(mut closure: impl FnMut() -> W + 'static) -> Self {
+    pub fn vertical<W: Widget<T> + 'static>(closure: impl FnMut() -> W + 'static) -> Self {
         Self::new(closure, Axis::Vertical)
     }
 
+    /// Set the strategy for adding spacing. Defaults to packing the items tightly to the left/top.
     #[inline]
     pub fn with_spacing(mut self, spacing: Spacing) -> Self {
         self.spacing = spacing;
         self
     }
 
+    /// Set the strategy for adding spacing. Defaults to packing the items tightly to the left/top.
     #[inline]
     pub fn set_spacing(&mut self, spacing: Spacing) -> &mut Self {
         self.spacing = spacing;
         self
     }
 
+    /// Whether items should expand to take up available space.
     #[inline]
     pub fn with_flex_items(mut self, flex_items: bool) -> Self {
         self.flex_items = flex_items;
         self
     }
 
+    /// Whether items should expand to take up available space.
     #[inline]
     pub fn set_flex_items(&mut self, flex_items: bool) -> &mut Self {
         self.flex_items = flex_items;
         self
     }
 
+    /// How to align elements if they are not all the same size in the cross axis.
     #[inline]
     pub fn with_cross_alignment(mut self, cross_alignment: CrossAxisAlignment) -> Self {
         self.cross_alignment = cross_alignment;
         self
     }
 
+    /// How to align elements if they are not all the same size in the cross axis.
     #[inline]
     pub fn set_cross_alignment(&mut self, cross_alignment: CrossAxisAlignment) -> &mut Self {
         self.cross_alignment = cross_alignment;

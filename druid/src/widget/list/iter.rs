@@ -1,6 +1,6 @@
-use crate::Data;
 #[cfg(feature = "im")]
-use im::Vector;
+use crate::im::Vector;
+use crate::Data;
 use std::sync::Arc;
 
 /// This iterator enables writing List widget for any `Data`.
