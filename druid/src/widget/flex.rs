@@ -627,9 +627,10 @@ impl<T: Data> Widget<T> for Flex<T> {
             any_use_baseline &= child.params.alignment == Some(CrossAxisAlignment::Baseline);
 
             if child.params.flex == 0.0 {
+                let remaining_major = (self.direction.major(bc.max()) - major_non_flex).max(0.0);
                 let child_bc = self
                     .direction
-                    .constraints(&loosened_bc, 0., std::f64::INFINITY);
+                    .constraints(&loosened_bc, 0., remaining_major);
                 let child_size = child.widget.layout(ctx, &child_bc, data, env);
                 let baseline_offset = child.widget.baseline_offset();
 
