@@ -88,12 +88,25 @@ impl<T: TextStorage + EditableText> Editor<T> {
     ///
     /// [`WidgetAdded`]: ../enum.LifeCycle.html#variant.WidgetAdded
     pub fn set_text(&mut self, text: T) {
-        self.layout.set_text(text)
+        self.selection = self.selection.constrained(&text);
+        self.layout.set_text(text);
     }
 
     /// Return the current selection.
     pub fn selection(&self) -> &Selection {
         &self.selection
+    }
+
+    /// Set the current selection.
+    ///
+    /// The selection will be constrained to the current text.
+    pub fn set_selection(&mut self, selection: Selection) {
+        let selection = self
+            .layout
+            .text()
+            .map(|t| selection.constrained(t))
+            .unwrap_or_else(|| Selection::caret(0));
+        self.selection = selection;
     }
 
     /// Returns the `Rect`s representing the  current selection.

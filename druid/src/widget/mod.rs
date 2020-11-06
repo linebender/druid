@@ -86,7 +86,7 @@ pub use stepper::Stepper;
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
-pub use textbox::TextBox;
+pub use textbox::{TextBox, TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
