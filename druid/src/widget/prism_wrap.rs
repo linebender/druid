@@ -31,6 +31,7 @@ where
     W: Widget<T2>,
 {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T1, env: &Env) {
+        dbg!("event", &event);
         let inner = &mut self.inner;
         let _opt = self
             .prism
@@ -45,67 +46,75 @@ where
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T1, data: &T1, env: &Env) {
+        dbg!("update");
         let inner = &mut self.inner;
         let prism = &self.prism;
 
         #[allow(clippy::blocks_in_if_conditions)]
-        match prism.with(data, |newer_data| {
+        if prism
+            .with(data, |newer_data| {
+                if prism
+                    .with(old_data, |older_data| {
+                        // this means this variant is currently active
+                        // and also was previously active as well
+                        //
+                        // (has both old and new data)
+                        if !old_data.same(data) {
+                            // forwards older and newer data into inner
+                            dbg!("+old +new");
+                            inner.update(ctx, older_data, newer_data, env);
+                        }
+                    })
+                    .is_none()
+                {
+                    // doesn't have an old_data,
+                    // so this variant just got activated
+
+                    dbg!("-old +new");
+                    ctx.children_changed();
+                    inner.update(ctx, newer_data, newer_data, env);
+                    // ctx.request_layout(); // variant was changed
+                    // ctx.request_paint(); // variant was changed
+                    // inner.update(ctx, newer_data, newer_data, env);
+                }
+            })
+            .is_none()
+        {
+            // this means the new_data is missing,
+            // so maybe this variant just got de-activated,
+            // or it was never active.
+            //
+            // check to see if it was just de-activated,
+            // or was never active:
+            #[allow(clippy::single_match)]
             if prism
-                .with(old_data, |older_data| {
-                    if !old_data.same(data) {
-                        // forwards older and newer data into inner
-                        inner.update(ctx, older_data, newer_data, env);
-                    }
+                .with(old_data, |_older_data| {
+                    // this means it just got de-activated.
+
+                    dbg!("+old -new");
+                    ctx.children_changed();
+                    // ctx.request_layout(); // variant was changed
+                    // ctx.request_paint(); // variant was changed
+                    inner.update(ctx, _older_data, _older_data, env);
+                    // inner.update(ctx, _older_data, _older_data, env);
                 })
                 .is_none()
             {
-                // this is when this variant just got activated
-                // ie. does not have an old_data
-
-                ctx.children_changed();
-
-                // ctx.request_layout(); // variant was changed
-                // ctx.request_paint(); // variant was changed
-                inner.update(ctx, newer_data, newer_data, env);
-                // inner.update(ctx, newer_data, newer_data, env);
+                // this means it was never active.
+                {
+                    dbg!("-old -new");
+                }
             }
-        }) {
-            // already had the newer data,
-            // with or without older data.
-            // do nothing more
-            Some(()) => (),
-            // didn't have the newer data,
-            // check if at least the older data is available
-            #[allow(clippy::single_match)]
-            None => match prism.with(old_data, |_older_data| {
-                // only had the older data
-                // send older as both older and newer
-                // TODO: check if this is right
-                // maybe just ignore the inner update call..
-                ctx.children_changed();
-
-                // ctx.request_layout(); // variant was changed
-                // ctx.request_paint(); // variant was changed
-
-                inner.update(ctx, _older_data, _older_data, env);
-                // inner.update(ctx, _older_data, _older_data, env);
-            }) {
-                // already had only the older data,
-                // do nothing more.
-                Some(()) => (),
-                // didn't have any of the older nor newer data,
-                // do nothing.
-                // TODO: check if this is right
-                None => {}
-            },
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T1, env: &Env) -> Size {
+        dbg!("layout");
+        // if self.new_variant {
         let inner = &mut self.inner;
         self.prism
             .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
-            .unwrap_or(Size::ZERO)
+            .unwrap_or_else(|| bc.min())
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T1, env: &Env) {

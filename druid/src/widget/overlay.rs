@@ -109,7 +109,10 @@ macro_rules! overlay_impl {
                     data: &T0,
                     env: &::druid::Env,
                 ) -> ::druid::Size {
-                    let last = crate::Size::ZERO;
+
+                    // let last = bc.min(); // gives some weird error
+                    let last = Size::ZERO;
+
                     let (max_width, max_height) = (last.width, last.height);
                     // //
                     // let last = self.w1.layout(ctx, bc, data, env);
