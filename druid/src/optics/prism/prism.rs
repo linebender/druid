@@ -66,7 +66,7 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
     where
         T2: Clone,
     {
-        self.with::<T2, _>(data, |x| x.clone())
+        self.with::<T2, _>(data, |t2| t2.clone())
     }
 
     /// Set the targeted value in `data` to `value`
@@ -74,17 +74,17 @@ pub trait PrismExt<T1: ?Sized, T2: ?Sized>: PartialPrism<T1, T2> {
     where
         T2: Sized + Clone,
     {
-        self.with_mut::<Option<T2>, _>(data, |x| {
-            match (x, value) {
+        self.with_mut::<Option<T2>, _>(data, |t2| {
+            match (t2, value) {
                 // update the value; no discriminant change
-                (x, Some(value)) => {
-                    *x = value;
+                (t2, Some(value)) => {
+                    *t2 = value;
                     None // no problem
                 }
                 // would need to change into another discriminant
-                (x, None) => {
+                (t2, None) => {
                     // (only haws access to x, not the whole option)
-                    Some(x.clone()) // cannot put
+                    Some(t2.clone()) // cannot put
                 }
             }
         });
@@ -230,33 +230,33 @@ macro_rules! prism {
     ($ty:ident < $( $N:ident ),* >, $variant:ident) => {{
         $crate::optics::prism::Variant::new::<$ty < $( $N ),* > , _>(
             // get
-            move |x: &$ty< $( $N ),* >| {
-                if let $ty::< $( $N ),* >::$variant(ref v) = x {
+            move |t1: &$ty< $( $N ),* >| {
+                if let $ty::< $( $N ),* >::$variant(ref v) = t1 {
                     Some(v)
                 } else {
                     None
                 }
             },
             // get mut
-            move |x: &mut $ty< $( $N ),* >| {
-                if let $ty::< $( $N ),* >::$variant(ref mut v) = x {
+            move |t1: &mut $ty< $( $N ),* >| {
+                if let $ty::< $( $N ),* >::$variant(ref mut v) = t1 {
                     Some(v)
                 } else {
                     None
                 }
             },
             // replace
-            move |x: &mut $ty< $( $N ),* >, v: _| {
+            move |t1: &mut $ty< $( $N ),* >, v: _| {
                 // only works for newtype-like variants
-                if let $ty::< $( $N ),* >::$variant(ref mut refv) = x {
+                if let $ty::< $( $N ),* >::$variant(ref mut refv) = t1 {
                     // replace variant's value in-place
                     *refv = v;
-                    x
+                    t1
                 } else {
                     // upgrade the variant value
                     // and replace the whole enum
-                    *x = $ty::$variant(v);
-                    x
+                    *t1 = $ty::$variant(v);
+                    t1
                 }
             },
         )
@@ -299,7 +299,7 @@ where
     where
         F: FnOnce(&T3) -> V,
     {
-        self.left.with(data, |b| self.right.with(b, f)).flatten()
+        self.left.with(data, |t2| self.right.with(t2, f)).flatten()
     }
 
     fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
@@ -307,7 +307,7 @@ where
         F: FnOnce(&mut T3) -> V,
     {
         self.left
-            .with_mut(data, |b| self.right.with_mut(b, f))
+            .with_mut(data, |t2| self.right.with_mut(t2, f))
             .flatten()
     }
 }
@@ -338,8 +338,8 @@ where
             // T1 -> T2 -> T3 was already set
             // only replaces T2 -> T3
             // (as T1 -> T2 is already set)
-            |b| {
-                self.right.ref_replace(b, &v);
+            |t2| {
+                self.right.ref_replace(t2, &v);
                 ()
             },
         );
@@ -347,10 +347,10 @@ where
             // couldn't access T1 -> T2,
             // give up the replacement
             // and build T2 -> T3 from scratch
-            let mut new_b = T2::default();
-            self.right.replace(&mut new_b, v);
+            let mut new_t2 = T2::default();
+            self.right.replace(&mut new_t2, v);
             // replace T1 -> T2
-            self.left.replace(data, new_b)
+            self.left.replace(data, new_t2)
         } else {
             // T1 -> T2 already set
             // (implicit with/with_mut above)
@@ -555,16 +555,16 @@ where
     where
         F: FnOnce(&mut T2) -> V,
     {
-        let mut temp = self.inner.with(data, |x| x.clone());
+        let mut temp = self.inner.with(data, |t2| t2.clone());
         let v = temp.as_mut().map(f);
 
         if let Some(true) = self
             .inner
-            .with(data, |x| temp.as_ref().map(|b| !x.same(b)))
+            .with(data, |t2| temp.as_ref().map(|t2_| !t2.same(t2_)))
             .flatten()
         {
             self.inner
-                .with_mut(Arc::make_mut(data), |x| temp.map(|b| *x = b));
+                .with_mut(Arc::make_mut(data), |t2| temp.map(|t2_| *t2 = t2_));
         }
         v
     }
@@ -579,8 +579,8 @@ where
 {
     fn replace<'a>(&self, data: &'a mut Arc<T1>, v: T2) -> &'a mut Arc<T1> {
         #[allow(clippy::unused_unit)]
-        let some_replacement = self.with_mut(data, |x| {
-            *x = v.clone();
+        let some_replacement = self.with_mut(data, |t2| {
+            *t2 = v.clone();
             ()
         });
         if some_replacement.is_none() {

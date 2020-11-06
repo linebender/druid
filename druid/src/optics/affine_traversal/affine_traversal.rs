@@ -270,14 +270,14 @@ where
     where
         F: FnOnce(&T3) -> V,
     {
-        self.left.with(data, |b| self.right.with(b, f))
+        self.left.with(data, |t2| self.right.with(t2, f))
     }
 
     fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
     where
         F: FnOnce(&mut T3) -> V,
     {
-        self.left.with_mut(data, |b| self.right.with_mut(b, f))
+        self.left.with_mut(data, |t2| self.right.with_mut(t2, f))
     }
 }
 
@@ -306,10 +306,10 @@ where
     {
         self.left.replace(base, {
             // build T2 -> T3 from scratch
-            let mut new_b = T2::default();
-            let () = self.right.with_mut(&mut new_b, |c| *c = v);
+            let mut new_t2 = T2::default();
+            let () = self.right.with_mut(&mut new_t2, |t3| *t3 = v);
 
-            new_b
+            new_t2
         })
     }
 }
@@ -458,7 +458,7 @@ where
         F: FnOnce(&T3) -> V,
     {
         self.left
-            .with(data, |_b| ())
+            .with(data, |_t2| ())
             .map(|_: ()| self.right.with(data, f))
     }
 
@@ -467,7 +467,7 @@ where
         F: FnOnce(&mut T3) -> V,
     {
         self.left
-            .with_mut(data, |_b| ())
+            .with_mut(data, |_t2| ())
             .map(|_: ()| self.right.with_mut(data, f))
     }
 }
@@ -515,14 +515,14 @@ where
     where
         F: FnOnce(&T3) -> V,
     {
-        self.left.with(data, |b| self.right.with(b, f))
+        self.left.with(data, |t2| self.right.with(t2, f))
     }
 
     fn with_mut<V, F>(&self, data: &mut T1, f: F) -> Option<V>
     where
         F: FnOnce(&mut T3) -> V,
     {
-        self.left.with_mut(data, |b| self.right.with_mut(b, f))
+        self.left.with_mut(data, |t2| self.right.with_mut(t2, f))
     }
 }
 
@@ -557,8 +557,8 @@ where
             // T1 -> T2 was already set
             // only replaces T2 -> T3
             // (as T1 -> T2 is already set)
-            |b| {
-                self.right.replace(b, v);
+            |t2| {
+                self.right.replace(t2, v);
                 ()
             },
         );

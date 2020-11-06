@@ -65,7 +65,7 @@ pub trait LensExt<T1: ?Sized, T2: ?Sized>: Lens<T1, T2> {
     where
         T2: Clone,
     {
-        self.with(data, |x| x.clone())
+        self.with(data, |t2| t2.clone())
     }
 
     /// Set the targeted value in `data` to `value`
@@ -73,7 +73,7 @@ pub trait LensExt<T1: ?Sized, T2: ?Sized>: Lens<T1, T2> {
     where
         T2: Sized,
     {
-        self.with_mut(data, |x| *x = value);
+        self.with_mut(data, |t2| *t2 = value);
     }
 
     /// Combine a `Lens<T1, T2>` with a function that can transform a `T2` and its inverse.
@@ -276,10 +276,10 @@ where
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
-        $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
+        $crate::lens::Field::new::<$ty, _>(move |t1| &t1[$index], move |t1| &mut t1[$index])
     };
     ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
+        $crate::lens::Field::new::<$ty, _>(move |t1| &t1.$field, move |t1| &mut t1.$field)
     };
 }
 
@@ -320,15 +320,15 @@ where
     where
         F: FnOnce(&T3) -> V,
     {
-        let bf = |b: &T2| self.right.with(b, f);
-        self.left.with(data, bf)
+        let t2f = |t2: &T2| self.right.with(t2, f);
+        self.left.with(data, t2f)
     }
 
     fn with_mut<V, F>(&self, data: &mut T1, f: F) -> V
     where
         F: FnOnce(&mut T3) -> V,
     {
-        self.left.with_mut(data, |b| self.right.with_mut(b, f))
+        self.left.with_mut(data, |t2| self.right.with_mut(t2, f))
     }
 }
 
@@ -526,10 +526,10 @@ where
     where
         F: FnOnce(&mut T2) -> V,
     {
-        let mut temp = self.inner.with(data, |x| x.clone());
+        let mut temp = self.inner.with(data, |t2| t2.clone());
         let v = f(&mut temp);
-        if self.inner.with(data, |x| !x.same(&temp)) {
-            self.inner.with_mut(Arc::make_mut(data), |x| *x = temp);
+        if self.inner.with(data, |t2| !t2.same(&temp)) {
+            self.inner.with_mut(Arc::make_mut(data), |t2| *t2 = temp);
         }
         v
     }
