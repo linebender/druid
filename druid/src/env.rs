@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
-use crate::{ArcStr, Color, Data, Point, Rect, Size};
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -104,6 +104,7 @@ pub enum Value {
     Point(Point),
     Size(Size),
     Rect(Rect),
+    Insets(Insets),
     Color(Color),
     Float(f64),
     Bool(bool),
@@ -403,6 +404,7 @@ impl Value {
             (Point(_), Point(_)) => true,
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
+            (Insets(_), Insets(_)) => true,
             (Color(_), Color(_)) => true,
             (Float(_), Float(_)) => true,
             (Bool(_), Bool(_)) => true,
@@ -420,6 +422,7 @@ impl Debug for Value {
             Value::Point(p) => write!(f, "Point {:?}", p),
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
+            Value::Insets(i) => write!(f, "Insets {:?}", i),
             Value::Color(c) => write!(f, "Color {:?}", c),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
@@ -435,10 +438,13 @@ impl Data for Value {
         use Value::*;
         match (self, other) {
             (Point(p1), Point(p2)) => p1.x.same(&p2.x) && p1.y.same(&p2.y),
+            (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
             (Rect(r1), Rect(r2)) => {
                 r1.x0.same(&r2.x0) && r1.y0.same(&r2.y0) && r1.x1.same(&r2.x1) && r1.y1.same(&r2.y1)
             }
-            (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
+            (Insets(i1), Insets(i2)) => {
+                i1.x0.same(&i2.x0) && i1.y0.same(&i2.y0) && i1.x1.same(&i2.x1) && i1.y1.same(&i2.y1)
+            }
             (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
             (Float(f1), Float(f2)) => f1.same(&f2),
             (Bool(b1), Bool(b2)) => b1 == b2,
@@ -572,6 +578,7 @@ impl_value_type!(Color, Color);
 impl_value_type!(Rect, Rect);
 impl_value_type!(Point, Point);
 impl_value_type!(Size, Size);
+impl_value_type!(Insets, Insets);
 impl_value_type!(ArcStr, String);
 impl_value_type!(FontDescriptor, Font);
 
