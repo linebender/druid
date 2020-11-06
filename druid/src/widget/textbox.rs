@@ -22,15 +22,11 @@ use crate::text::{
 };
 use crate::widget::prelude::*;
 use crate::{
-    theme, Affine, Color, Cursor, FontDescriptor, HotKey, Insets, KbKey, KeyOrValue, Point,
-    Selector, SysMods, TimerToken,
+    theme, Affine, Color, Cursor, FontDescriptor, HotKey, KbKey, KeyOrValue, Point, Selector,
+    SysMods, TimerToken,
 };
 
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
-
-const BORDER_WIDTH: f64 = 1.;
-const TEXT_INSETS: Insets = Insets::new(4.0, 2.0, 0.0, 2.0);
-
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
 /// A widget that allows user text input.
@@ -55,13 +51,13 @@ pub struct TextBox<T> {
 }
 
 impl TextBox<()> {
-    /// Perform an `EditAction`. The payload *must* be an `EditAction`.
+    /// Perform an `EditAction`.
     pub const PERFORM_EDIT: Selector<EditAction> =
         Selector::new("druid-builtin.textbox.perform-edit");
 }
 
 impl<T> TextBox<T> {
-    /// Create a new TextBox widget
+    /// Create a new TextBox widget.
     pub fn new() -> Self {
         let mut placeholder = TextLayout::from_text("");
         placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
@@ -174,30 +170,35 @@ impl<T> TextBox<T> {
 
 impl<T: TextStorage + EditableText> TextBox<T> {
     /// Calculate a stateful scroll offset
-    fn update_hscroll(&mut self, self_width: f64) {
+    fn update_hscroll(&mut self, self_width: f64, env: &Env) {
         let cursor_x = self.editor.cursor_line().p0.x;
         let overall_text_width = self.editor.layout().size().width;
+        let text_insets = env.get(theme::TEXTBOX_INSETS);
 
-        //// when advancing the cursor, we want some additional padding
-        let padding = TEXT_INSETS.x0 * 2.;
-        if overall_text_width < self_width - padding {
+        if overall_text_width < self_width - text_insets.x_value() {
             // There's no offset if text is smaller than text box
             //
             // [***I*  ]
             // ^
             self.hscroll_offset = 0.;
-        } else if cursor_x > self_width + self.hscroll_offset - padding {
+        } else if cursor_x > self_width - text_insets.x_value() + self.hscroll_offset {
             // If cursor goes past right side, bump the offset
             //       ->
             // **[****I]****
             //   ^
-            self.hscroll_offset = cursor_x - self_width + padding;
+            self.hscroll_offset = cursor_x - self_width + text_insets.x_value();
         } else if cursor_x < self.hscroll_offset {
             // If cursor goes past left side, match the offset
             //    <-
             // **[I****]****
             //   ^
-            self.hscroll_offset = cursor_x
+            self.hscroll_offset = cursor_x;
+        } else {
+            // If the text is getting shorter, keep as small offset as possible
+            //        <-
+            // **[****I]
+            //   ^
+            self.hscroll_offset = overall_text_width - self_width + text_insets.x_value();
         }
     }
 
@@ -219,14 +220,15 @@ impl<T: TextStorage + EditableText> TextBox<T> {
 }
 
 impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.suppress_adjust_hscroll = false;
         match event {
             Event::MouseDown(mouse) => {
                 ctx.request_focus();
                 ctx.set_active(true);
                 let mut mouse = mouse.clone();
-                mouse.pos += Vec2::new(self.hscroll_offset, 0.0);
+                let text_insets = env.get(theme::TEXTBOX_INSETS);
+                mouse.pos += Vec2::new(self.hscroll_offset - text_insets.x0, 0.0);
 
                 if !mouse.focus {
                     self.was_focused_from_click = true;
@@ -238,7 +240,8 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             }
             Event::MouseMove(mouse) => {
                 let mut mouse = mouse.clone();
-                mouse.pos += Vec2::new(self.hscroll_offset, 0.0);
+                let text_insets = env.get(theme::TEXTBOX_INSETS);
+                mouse.pos += Vec2::new(self.hscroll_offset - text_insets.x0, 0.0);
                 ctx.set_cursor(&Cursor::IBeam);
                 if ctx.is_active() {
                     self.editor.drag(&mouse, data);
@@ -320,7 +323,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, _: &T, data: &T, env: &Env) {
         self.editor.update(ctx, data, env);
         if !self.suppress_adjust_hscroll && !self.multiline {
-            self.update_hscroll(ctx.size().width);
+            self.update_hscroll(ctx.size().width, env);
         }
         if ctx.env_changed() && self.placeholder.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
@@ -329,16 +332,17 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let text_insets = env.get(theme::TEXTBOX_INSETS);
 
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         if self.multiline {
             self.editor
-                .set_wrap_width(bc.max().width - TEXT_INSETS.x_value());
+                .set_wrap_width(bc.max().width - text_insets.x_value());
         }
         self.editor.rebuild_if_needed(ctx.text(), env);
 
         let text_metrics = self.editor.layout().layout_metrics();
-        let height = text_metrics.size.height + TEXT_INSETS.y_value();
+        let height = text_metrics.size.height + text_insets.y_value();
 
         let size = bc.constrain((width, height));
         let bottom_padding = (size.height - text_metrics.size.height) / 2.0;
@@ -354,6 +358,8 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let selection_color = env.get(theme::SELECTION_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
+        let border_width = env.get(theme::TEXTBOX_BORDER_WIDTH);
+        let text_insets = env.get(theme::TEXTBOX_INSETS);
 
         let is_focused = ctx.is_focused();
 
@@ -364,9 +370,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         };
 
         // Paint the background
-        let clip_rect = Size::new(size.width - BORDER_WIDTH, size.height)
+        let clip_rect = Size::new(size.width - border_width, size.height)
             .to_rect()
-            .inset(-BORDER_WIDTH / 2.0)
+            .inset(-border_width / 2.0)
             .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
 
         ctx.fill(clip_rect, &background_color);
@@ -378,7 +384,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-            let text_pos = Point::new(TEXT_INSETS.x0, TEXT_INSETS.y0);
+            let text_pos = Point::new(text_insets.x0, text_insets.y0);
 
             // Draw selection rect
             if !data.is_empty() {
@@ -400,7 +406,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 // (commonly when there is trailing whitespace) so we clamp it
                 // to the right edge.
                 let mut cursor = self.editor.cursor_line() + text_pos.to_vec2();
-                let dx = size.width + self.hscroll_offset - TEXT_INSETS.x_value() - cursor.p0.x;
+                let dx = size.width + self.hscroll_offset - text_insets.x1 - cursor.p0.x;
                 if dx < 0.0 {
                     cursor = cursor + Vec2::new(dx, 0.);
                 }
@@ -409,7 +415,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         });
 
         // Paint the border
-        ctx.stroke(clip_rect, &border_color, BORDER_WIDTH);
+        ctx.stroke(clip_rect, &border_color, border_width);
     }
 }
 
