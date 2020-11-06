@@ -19,6 +19,7 @@ pub mod backspace;
 mod editable_text;
 mod editor;
 mod font_descriptor;
+pub mod format;
 mod layout;
 pub mod movement;
 pub mod selection;
