@@ -15,7 +15,7 @@
 //! X11 window creation and window management.
 
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
@@ -50,6 +50,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
+use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
 use crate::window;
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
@@ -330,6 +331,7 @@ impl WindowBuilder {
             idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
             buffers,
+            active_text_input: Cell::new(None),
         });
         window.set_title(&self.title);
 
@@ -437,6 +439,7 @@ pub(crate) struct Window {
     /// actually been presented.
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
+    active_text_input: Cell<Option<TextInputToken>>,
 }
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
@@ -888,7 +891,11 @@ impl Window {
             repeat: false,
             is_composing: false,
         };
-        self.with_handler(|h| h.key_down(key_event));
+        self.with_handler(|h| {
+            if !h.key_down(key_event.clone()) {
+                simulate_text_input(h, self.active_text_input.get(), key_event);
+            }
+        });
     }
 
     pub fn handle_button_press(&self, button_press: &xproto::ButtonPressEvent) {
@@ -1496,6 +1503,28 @@ impl WindowHandle {
 
     pub fn text(&self) -> PietText {
         PietText::new()
+    }
+
+    pub fn add_text_input(&self) -> TextInputToken {
+        TextInputToken::next()
+    }
+
+    pub fn remove_text_input(&self, token: TextInputToken) {
+        if let Some(window) = self.window.upgrade() {
+            if window.active_text_input.get() == Some(token) {
+                window.active_text_input.set(None)
+            }
+        }
+    }
+
+    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+        if let Some(window) = self.window.upgrade() {
+            window.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+        // noop until we get a real text input implementation
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

@@ -59,6 +59,7 @@ mod platform;
 mod region;
 mod scale;
 mod screen;
+mod text_input;
 mod window;
 
 pub use application::{AppHandler, Application};
@@ -73,6 +74,10 @@ pub use mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
+pub use text_input::{
+    Affinity, TextDirection, TextInputAction, TextInputHandler, TextInputToken, TextInputUpdate,
+    TextMovement, TextSelection, VerticalMovement, WritingDirection,
+};
 pub use window::{
     FileDialogToken, IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle,
     WindowLevel, WindowState,

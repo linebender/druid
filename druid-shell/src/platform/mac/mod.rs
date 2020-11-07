@@ -24,5 +24,6 @@ pub mod error;
 mod keyboard;
 pub mod menu;
 pub mod screen;
+pub mod text_input;
 pub mod util;
 pub mod window;

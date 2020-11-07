@@ -29,14 +29,14 @@ use cocoa::appkit::{
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
-    NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
+    NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
 };
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
-use objc::runtime::{Class, Object, Sel};
+use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 use tracing::{debug, error, info};
 
@@ -53,6 +53,7 @@ use super::application::Application;
 use super::dialog;
 use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
+use super::text_input::NSRange;
 use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
@@ -60,6 +61,7 @@ use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
+use crate::text_input::{TextInputHandler, TextInputToken, TextInputUpdate};
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
 use crate::Error;
 
@@ -155,6 +157,7 @@ struct ViewState {
     mouse_left: bool,
     keyboard_state: KeyboardState,
     text: PietText,
+    active_text_input: Option<TextInputToken>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -445,8 +448,67 @@ lazy_static! {
             sel!(windowWillClose:),
             window_will_close as extern "C" fn(&mut Object, Sel, id),
         );
+
+        // methods for NSTextInputClient
+        decl.add_method(sel!(hasMarkedText), super::text_input::has_marked_text as extern fn(&mut Object, Sel) -> BOOL);
+        decl.add_method(
+            sel!(markedRange),
+            super::text_input::marked_range as extern fn(&mut Object, Sel) -> NSRange,
+        );
+        decl.add_method(sel!(selectedRange), super::text_input::selected_range as extern fn(&mut Object, Sel) -> NSRange);
+        decl.add_method(
+            sel!(setMarkedText:selectedRange:replacementRange:),
+            super::text_input::set_marked_text as extern fn(&mut Object, Sel, id, NSRange, NSRange),
+        );
+        decl.add_method(sel!(unmarkText), super::text_input::unmark_text as extern fn(&mut Object, Sel));
+        decl.add_method(
+            sel!(validAttributesForMarkedText),
+            super::text_input::valid_attributes_for_marked_text as extern fn(&mut Object, Sel) -> id,
+        );
+        decl.add_method(
+            sel!(attributedSubstringForProposedRange:actualRange:),
+            super::text_input::attributed_substring_for_proposed_range
+                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> id,
+        );
+        decl.add_method(
+            sel!(insertText:replacementRange:),
+            super::text_input::insert_text as extern fn(&mut Object, Sel, id, NSRange),
+        );
+        decl.add_method(
+            sel!(characterIndexForPoint:),
+            super::text_input::character_index_for_point as extern fn(&mut Object, Sel, NSPoint) -> NSUInteger,
+        );
+        decl.add_method(
+            sel!(firstRectForCharacterRange:actualRange:),
+            super::text_input::first_rect_for_character_range
+                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> NSRect,
+        );
+        decl.add_method(
+            sel!(doCommandBySelector:),
+            super::text_input::do_command_by_selector as extern fn(&mut Object, Sel, Sel),
+        );
+
+        let protocol = Protocol::get("NSTextInputClient").unwrap();
+        decl.add_protocol(&protocol);
+
         ViewClass(decl.register())
     };
+}
+
+pub(super) fn get_edit_lock_from_window(
+    this: &mut Object,
+    mutable: bool,
+) -> Option<Box<dyn TextInputHandler>> {
+    let view_state = unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        &mut (*view_state)
+    };
+    Some(
+        view_state
+            .handler
+            .text_input(view_state.active_text_input?, mutable),
+    )
 }
 
 fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
@@ -464,6 +526,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             mouse_left: true,
             keyboard_state,
             text: PietText::new_with_unique_state(),
+            active_text_input: None,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -709,7 +772,13 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         &mut *(view_state as *mut ViewState)
     };
     if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
-        (*view_state).handler.key_down(event);
+        if !(*view_state).handler.key_down(event) {
+            // key down not handled; foward to text input system
+            unsafe {
+                let events = NSArray::arrayWithObjects(nil, &[nsevent]);
+                let _: () = msg_send![*(*view_state).nsview.load(), interpretKeyEvents: events];
+            }
+        }
     }
 }
 
@@ -1018,6 +1087,59 @@ impl WindowHandle {
                 // this codepath should only happen during tests in druid, when view is nil
                 PietText::new_with_unique_state()
             }
+        }
+    }
+
+    pub fn add_text_input(&self) -> TextInputToken {
+        TextInputToken::next()
+    }
+
+    pub fn remove_text_input(&self, token: TextInputToken) {
+        let mut state = unsafe {
+            let view = self.nsview.load().as_ref().unwrap();
+            let state: *mut c_void = *view.get_ivar("viewState");
+            &mut (*(state as *mut ViewState))
+        };
+        if state.active_text_input == Some(token) {
+            state.active_text_input = None;
+        }
+    }
+
+    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+        let mut state = unsafe {
+            let view = self.nsview.load().as_ref().unwrap();
+            let state: *mut c_void = *view.get_ivar("viewState");
+            &mut (*(state as *mut ViewState))
+        };
+        if let Some(old_field) = state.active_text_input {
+            self.update_text_input(old_field, TextInputUpdate::Reset);
+        }
+        state.active_text_input = active_field;
+        if let Some(new_field) = active_field {
+            self.update_text_input(new_field, TextInputUpdate::Reset);
+        }
+    }
+
+    pub fn update_text_input(&self, token: TextInputToken, update: TextInputUpdate) {
+        let state = unsafe {
+            let view = self.nsview.load().as_ref().unwrap();
+            let state: *mut c_void = *view.get_ivar("viewState");
+            &mut (*(state as *mut ViewState))
+        };
+        if state.active_text_input != Some(token) {
+            return;
+        }
+        match update {
+            TextInputUpdate::LayoutChanged => unsafe {
+                let input_context: id = msg_send![*self.nsview.load(), inputContext];
+                let _: () = msg_send![input_context, invalidateCharacterCoordinates];
+            },
+            TextInputUpdate::Reset | TextInputUpdate::SelectionChanged => unsafe {
+                let input_context: id = msg_send![*self.nsview.load(), inputContext];
+                let _: () = msg_send![input_context, discardMarkedText];
+                let mut edit_lock = state.handler.text_input(token, true);
+                edit_lock.set_composition_range(None);
+            },
         }
     }
 
