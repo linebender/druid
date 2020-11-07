@@ -260,7 +260,7 @@ fn event_list() -> impl Widget<AppState> {
             .background(HEADER_BACKGROUND),
     );
 
-    for (name, size) in PROPERTIES.into_iter().skip(1) {
+    for (name, size) in PROPERTIES.iter().skip(1) {
         // Keep in mind that later on, in the main function,
         // we set the default spacer values. Without explicitly
         // setting them the default spacer is bigger, and is
