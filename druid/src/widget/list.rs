@@ -241,7 +241,7 @@ where
         let cross_align = self.cross_alignment;
         let len = self.children.len();
 
-        log::trace!("parameters: {:?}", self);
+        //log::trace!("parameters: {:?}", self);
 
         // Calculate main axis constraints: it's complicated by spacing.
         let main_constraints = if self.flex_items {
@@ -260,7 +260,7 @@ where
             (0., f64::INFINITY)
         };
         let item_bc = axis.constraints(bc, main_constraints.0, main_constraints.1);
-        log::trace!("Child constraints: {:?}", item_bc);
+        //log::trace!("Child constraints: {:?}", item_bc);
 
         // A 2-pass strategy is used: the first pass is to allow children to find their size, and
         // the second pass is then to position everything once we know the children's sizes.
@@ -280,7 +280,7 @@ where
             cross_max = cross_max.max(axis.minor(size));
             main_total += axis.major(size);
         });
-        log::trace!("cross_max: {}, main_total: {}", cross_max, main_total);
+        //log::trace!("cross_max: {}, main_total: {}", cross_max, main_total);
 
         // Pass 2 - position the children correctly.
         // We need to tell druid the bounds of where our children will paint.
@@ -299,7 +299,7 @@ where
                     }
                     let min_main = axis.major(bc.min());
                     let spare_space = main_total.max(min_main) - main_total;
-                    log::trace!("min_main = {}, spare_space = {}", min_main, spare_space);
+                    //log::trace!("min_main = {}, spare_space = {}", min_main, spare_space);
                     if spare_space < 1e-6 {
                         (0.0, 0.0)
                     } else {
@@ -310,7 +310,7 @@ where
             }
             Spacing::Fixed { size } => (size, 0.0),
         };
-        log::trace!("spacing = {}, main_position = {}", spacing, main_position);
+        //log::trace!("spacing = {}, main_position = {}", spacing, main_position);
 
         zip_children(&mut self.children, data, |child, data, _| {
             let size = child.layout_rect().size();
@@ -319,7 +319,7 @@ where
             let rect = Rect::from_origin_size(axis.pack(main_position, cross_position), size);
             child.set_layout_rect(ctx, data, env, rect);
             // for calculating insets
-            paint_rect = paint_rect.union(rect);
+            paint_rect = paint_rect.union(rect + child.paint_insets());
 
             main_position += axis.major(size) + spacing;
         });
@@ -330,13 +330,6 @@ where
             Spacing::Fixed { .. } => 0.0,
         };
         let main_end = main_position + spacing * (end_ratio - 1.0);
-        log::trace!(
-            "end_ratio = {}, main_position = {}, spacing = {}, main_end = {}",
-            end_ratio,
-            main_position,
-            spacing,
-            main_end
-        );
 
         // Calculate insets and return our size.
         let unconstrained_size: Size = axis.pack(main_end, cross_max).into();
