@@ -28,6 +28,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
+use crate::text_input::{TextInputHandler, TextInputToken, TextInputUpdate};
 use piet_common::PietText;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -277,6 +278,31 @@ impl WindowHandle {
         self.0.text()
     }
 
+    /// Indicates there's a new editable text input in the window.
+    /// Returns the `TextInputToken` associated with this new text input.
+    /// `WinHandler::text_input` should be able to serve edit locks for the returned token
+    /// at any point in time until the application passes the token to `remove_text_input`.
+    pub fn add_text_input(&self) -> TextInputToken {
+        self.0.add_text_input()
+    }
+
+    /// Indicates a text input has been removed from the window.
+    pub fn remove_text_input(&self, token: TextInputToken) {
+        self.0.remove_text_input(token)
+    }
+
+    /// Sets the currently focused text input.
+    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+        self.0.set_active_text_input(active_field)
+    }
+
+    /// Indicates some aspect of the text input has updated; the selection, contents, etc.
+    /// This method should *never* be called in response to edits from a `TextInputHandler`;
+    /// only in response to changes from the application: scrolling, remote edits, etc.
+    pub fn update_text_input(&self, token: TextInputToken, update: TextInputUpdate) {
+        self.0.update_text_input(token, update)
+    }
+
     /// Schedule a timer.
     ///
     /// This causes a [`WinHandler::timer`] call at the deadline. The
@@ -511,6 +537,23 @@ pub trait WinHandler {
     /// on Windows, or keyUp(withEvent:) on macOS.
     #[allow(unused_variables)]
     fn key_up(&mut self, event: KeyEvent) {}
+
+    /// Grabs a lock for the text document specified by `token`.
+    ///
+    /// If `mutable` is true, the lock should be a write lock, and allow calling mutating methods on TextInputHandler.
+    /// This method is called from the top level of the event loop and expects to acquire a lock successfully.
+    ///
+    /// Why does text input acquire a lock, instead of sending text input events? It turns out many input methods need
+    /// to know the context around the selection in order to make edits — think about how autocomplete works on most phones,
+    /// for example. If the input method is on a different process, as is the case on many platforms, not using a lock
+    /// will cause race conditions. As an example, imagine an input method detects that the caret is at the end of the
+    /// word "helo", and wants to autocorrect it to "hello", so it issues commands to delete backwards one grapheme and
+    /// insert "lo". If we allow concurrent edits without locks, the user might have simultaneously moved the caret to a
+    /// different part of the document, and we'll get "lo" inserted in some random place!
+    #[allow(unused_variables)]
+    fn text_input(&mut self, token: TextInputToken, mutable: bool) -> Box<dyn TextInputHandler> {
+        panic!("text_input was called on a WinHandler that did not expect text input.")
+    }
 
     /// Called on a mouse wheel event.
     ///

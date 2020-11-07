@@ -47,6 +47,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
 use crate::window;
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
@@ -174,6 +175,7 @@ pub(crate) struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
     click_counter: ClickCounter,
+    active_text_input: Cell<Option<TextInputToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
@@ -292,6 +294,7 @@ impl WindowBuilder {
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
             click_counter: ClickCounter::default(),
+            active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
         });
 
@@ -624,7 +627,7 @@ impl WindowBuilder {
                     state.current_keycode.set(Some(hw_keycode));
 
                     state.with_handler(|h|
-                        h.key_down(make_key_event(key, repeat, KeyState::Down))
+                        simulate_text_input(h, state.active_text_input.get(), make_key_event(key, repeat, KeyState::Down))
                     );
                 }
 
@@ -976,6 +979,28 @@ impl WindowHandle {
 
     pub fn text(&self) -> PietText {
         PietText::new()
+    }
+
+    pub fn add_text_input(&self) -> TextInputToken {
+        TextInputToken::next()
+    }
+
+    pub fn remove_text_input(&self, token: TextInputToken) {
+        if let Some(state) = self.state.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None)
+            }
+        }
+    }
+
+    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+        if let Some(state) = self.state.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+        // noop until we get a real text input implementation
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {

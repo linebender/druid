@@ -44,6 +44,7 @@ use crate::scale::{Scale, ScaledArea};
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
+use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
 use crate::window;
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
@@ -109,6 +110,7 @@ struct WindowState {
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
+    active_text_input: Cell<Option<TextInputToken>>,
 }
 
 // TODO: support custom cursors
@@ -295,7 +297,10 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }
-        state.handler.borrow_mut().key_down(kb_event);
+        let mut handler = state.handler.borrow_mut();
+        if !handler.key_down(kb_event.clone()) {
+            simulate_text_input(&mut **handler, state.active_text_input.get(), kb_event);
+        }
     });
 }
 
@@ -436,6 +441,7 @@ impl WindowBuilder {
             context,
             invalid: RefCell::new(Region::EMPTY),
             click_counter: ClickCounter::default(),
+            active_text_input: Cell::new(None),
         });
 
         setup_web_callbacks(&window);
@@ -545,6 +551,28 @@ impl WindowHandle {
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
         PietText::new(s.context.clone())
+    }
+
+    pub fn add_text_input(&self) -> TextInputToken {
+        TextInputToken::next()
+    }
+
+    pub fn remove_text_input(&self, token: TextInputToken) {
+        if let Some(state) = self.0.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None);
+            }
+        }
+    }
+
+    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+        if let Some(state) = self.0.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+        // no-op for now, until we get a properly implemented text input
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
