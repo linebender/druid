@@ -97,7 +97,7 @@ pub struct Key<T> {
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Data, PartialEq)]
 #[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
@@ -429,29 +429,6 @@ impl Debug for Value {
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
             Value::Font(font) => write!(f, "Font {:?}", font),
-        }
-    }
-}
-
-impl Data for Value {
-    fn same(&self, other: &Value) -> bool {
-        use Value::*;
-        match (self, other) {
-            (Point(p1), Point(p2)) => p1.x.same(&p2.x) && p1.y.same(&p2.y),
-            (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
-            (Rect(r1), Rect(r2)) => {
-                r1.x0.same(&r2.x0) && r1.y0.same(&r2.y0) && r1.x1.same(&r2.x1) && r1.y1.same(&r2.y1)
-            }
-            (Insets(i1), Insets(i2)) => {
-                i1.x0.same(&i2.x0) && i1.y0.same(&i2.y0) && i1.x1.same(&i2.x1) && i1.y1.same(&i2.y1)
-            }
-            (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (Float(f1), Float(f2)) => f1.same(&f2),
-            (Bool(b1), Bool(b2)) => b1 == b2,
-            (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
-            (String(s1), String(s2)) => s1.same(s2),
-            (Font(s1), Font(s2)) => s1.same(s2),
-            _ => false,
         }
     }
 }
