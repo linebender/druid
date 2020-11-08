@@ -253,7 +253,7 @@ fn interactive_area() -> impl Widget<AppState> {
 /// The bottom part of the application, a list of received events.
 fn event_list() -> impl Widget<AppState> {
     // Because this would be a HUGE block of repeated code with constants
-    // we just use a look to generate the header.
+    // we just use a loop to generate the header.
     let mut header = Flex::row().with_child(
         Label::new(PROPERTIES[0].0)
             .fix_width(PROPERTIES[0].1)
@@ -264,7 +264,7 @@ fn event_list() -> impl Widget<AppState> {
         // Keep in mind that later on, in the main function,
         // we set the default spacer values. Without explicitly
         // setting them the default spacer is bigger, and is
-        // probably not desirable for your porpoises.
+        // probably not desirable for your purposes.
         header.add_default_spacer();
         header.add_child(
             Label::new(*name)
