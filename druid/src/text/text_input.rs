@@ -15,7 +15,7 @@
 //! Map input to `EditAction`s
 
 use super::Movement;
-use crate::{HotKey, KbKey, KeyEvent, Modifiers, SysMods};
+use crate::{HotKey, KbKey, KeyEvent, Modifiers, RawMods, SysMods};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
@@ -60,6 +60,10 @@ pub trait TextInput {
 #[derive(Default, Debug, Clone)]
 pub struct BasicTextInput;
 
+/// Common to all platforms.
+#[derive(Default, Debug, Clone)]
+struct SharedTextInput;
+
 impl BasicTextInput {
     /// Create a new `BasicTextInput`.
     pub fn new() -> Self {
@@ -68,16 +72,24 @@ impl BasicTextInput {
 }
 
 impl TextInput for BasicTextInput {
+    #[cfg(target_os = "macos")]
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
+        MacOSBasicTextInput
+            .handle_event(event)
+            .or_else(|| SharedTextInput.handle_event(event))
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
+        GenericNonMacOSTextInput
+            .handle_event(event)
+            .or_else(|| SharedTextInput.handle_event(event))
+    }
+}
+
+impl TextInput for SharedTextInput {
     fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
         let action = match event {
-            // Select left word (Shift+Ctrl+ArrowLeft || Shift+Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowLeft)).matches(k_e) => {
-                EditAction::ModifySelection(Movement::LeftWord)
-            }
-            // Select right word (Shift+Ctrl+ArrowRight || Shift+Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowRight)).matches(k_e) => {
-                EditAction::ModifySelection(Movement::RightWord)
-            }
             // Select to home (Shift+Home)
             k_e if (HotKey::new(SysMods::Shift, KbKey::Home)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::PrecedingLineBreak)
@@ -96,14 +108,6 @@ impl TextInput for BasicTextInput {
             }
             // Select all (Ctrl+A || Cmd+A)
             k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
-            // Left word (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowLeft)).matches(k_e) => {
-                EditAction::Move(Movement::LeftWord)
-            }
-            // Right word (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowRight)).matches(k_e) => {
-                EditAction::Move(Movement::RightWord)
-            }
             // Move left (ArrowLeft)
             k_e if (HotKey::new(None, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
@@ -123,14 +127,6 @@ impl TextInput for BasicTextInput {
             }
             k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowDown)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Down)
-            }
-            // Delete left word
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::Backspace)).matches(k_e) => {
-                EditAction::JumpBackspace(Movement::LeftWord)
-            }
-            // Delete right word
-            k_e if (HotKey::new(SysMods::Cmd, KbKey::Delete)).matches(k_e) => {
-                EditAction::JumpDelete(Movement::RightWord)
             }
             // Backspace
             k_e if (HotKey::new(None, KbKey::Backspace)).matches(k_e) => EditAction::Backspace,
@@ -152,6 +148,100 @@ impl TextInput for BasicTextInput {
         };
 
         Some(action)
+    }
+}
+
+/// A handler for "not macOS"; this may need to get split up at some point.
+#[cfg(not(target_os = "macos"))]
+struct GenericNonMacOSTextInput;
+
+/// A handler for macos-specific actions.
+#[cfg(target_os = "macos")]
+struct MacOSBasicTextInput;
+
+#[cfg(not(target_os = "macos"))]
+impl TextInput for GenericNonMacOSTextInput {
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
+        match event {
+            // Delete left word
+            k_e if (HotKey::new(RawMods::Ctrl, KbKey::Backspace)).matches(k_e) => {
+                Some(EditAction::JumpBackspace(Movement::LeftWord))
+            }
+            // Delete right word
+            k_e if (HotKey::new(RawMods::Ctrl, KbKey::Delete)).matches(k_e) => {
+                Some(EditAction::JumpDelete(Movement::RightWord))
+            }
+            k_e if (HotKey::new(RawMods::Ctrl, KbKey::ArrowLeft)).matches(k_e) => {
+                Some(EditAction::Move(Movement::LeftWord))
+            }
+            k_e if (HotKey::new(RawMods::Ctrl, KbKey::ArrowRight)).matches(k_e) => {
+                Some(EditAction::Move(Movement::RightWord))
+            }
+            // Select left word
+            k_e if (HotKey::new(RawMods::CtrlShift, KbKey::ArrowLeft)).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::LeftWord))
+            }
+            // Select right word
+            k_e if (HotKey::new(RawMods::CtrlShift, KbKey::ArrowRight)).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::RightWord))
+            }
+            _ => None,
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl TextInput for MacOSBasicTextInput {
+    fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
+        match event {
+            k_e if HotKey::new(RawMods::AltCtrl, KbKey::Backspace).matches(k_e)
+                || HotKey::new(RawMods::Alt, KbKey::Backspace).matches(k_e) =>
+            {
+                Some(EditAction::JumpBackspace(Movement::LeftWord))
+            }
+            k_e if HotKey::new(RawMods::AltCtrl, KbKey::Delete).matches(k_e) => {
+                Some(EditAction::JumpBackspace(Movement::RightWord))
+            }
+            k_e if HotKey::new(RawMods::Meta, KbKey::ArrowLeft).matches(k_e) => {
+                Some(EditAction::Move(Movement::PrecedingLineBreak))
+            }
+            k_e if HotKey::new(RawMods::MetaShift, KbKey::ArrowLeft).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::PrecedingLineBreak))
+            }
+            k_e if HotKey::new(RawMods::Alt, KbKey::ArrowLeft).matches(k_e) => {
+                Some(EditAction::Move(Movement::LeftWord))
+            }
+            k_e if HotKey::new(RawMods::AltShift, KbKey::ArrowLeft).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::LeftWord))
+            }
+            k_e if HotKey::new(RawMods::Meta, KbKey::ArrowRight).matches(k_e) => {
+                Some(EditAction::Move(Movement::NextLineBreak))
+            }
+            k_e if HotKey::new(RawMods::MetaShift, KbKey::ArrowRight).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::NextLineBreak))
+            }
+            k_e if HotKey::new(RawMods::Alt, KbKey::ArrowRight).matches(k_e) => {
+                Some(EditAction::Move(Movement::RightWord))
+            }
+            k_e if HotKey::new(RawMods::AltShift, KbKey::ArrowRight).matches(k_e) => {
+                Some(EditAction::ModifySelection(Movement::RightWord))
+            }
+
+            //readline things: these could probably be shared?
+            k_e if HotKey::new(RawMods::Ctrl, KbKey::Character("a".into())).matches(k_e) => {
+                Some(EditAction::Move(Movement::PrecedingLineBreak))
+            }
+            k_e if HotKey::new(RawMods::Ctrl, KbKey::Character("e".into())).matches(k_e) => {
+                Some(EditAction::Move(Movement::NextLineBreak))
+            }
+            k_e if HotKey::new(RawMods::Ctrl, KbKey::Character("d".into())).matches(k_e) => {
+                Some(EditAction::Delete)
+            }
+            k_e if HotKey::new(RawMods::Ctrl, KbKey::Character("b".into())).matches(k_e) => {
+                Some(EditAction::Delete)
+            }
+            _ => None,
+        }
     }
 }
 
