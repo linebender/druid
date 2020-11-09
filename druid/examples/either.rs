@@ -32,10 +32,10 @@ fn ui_builder() -> impl Widget<AppState> {
         .lens(AppState::which)
         .padding(5.0);
 
-    // The either widget has 2 children, one of which is visible.
-    // you have to pass in a closure which takes `Data` and and `Env`.
-    // This closure determines which widget gets displayed based on the
-    // return value (a bool). False is the second widget and true is the first.
+    // The `Either` widget has two children, only one of which is visible at a time.
+    // To determine which child is visible, you pass it a closure that takes the
+    // `Data` and the `Env` and returns a bool; if it returns `true`, the first
+    // widget will be visible, and if `false`, the second.
     let either = Either::new(
         |data, _env| data.which,
         Slider::new().lens(AppState::value).padding(5.0),
