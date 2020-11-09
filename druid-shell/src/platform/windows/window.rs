@@ -147,6 +147,7 @@ enum DeferredOp {
     SetSize(Size),
     SetResizable(bool),
     SetWindowState(window::WindowState),
+    ReleaseMouseCapture,
 }
 
 #[derive(Clone)]
@@ -561,6 +562,16 @@ impl MyWndProc {
                         }
                     }
                 }
+                DeferredOp::ReleaseMouseCapture => unsafe {
+                    if ReleaseCapture() == FALSE {
+                        let result = HRESULT_FROM_WIN32(GetLastError());
+                        // When result is zero, it appears to just mean that the capture was already released
+                        // (which can easily happen since this is deferred).
+                        if result != 0 {
+                            warn!("failed to release mouse capture: {}", Error::Hr(result));
+                        }
+                    }
+                },
             }
         } else {
             warn!("Could not get HWND");
@@ -982,7 +993,6 @@ impl WndProc for MyWndProc {
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
-                let mut should_release_capture = false;
                 if let Some(button) = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(MouseButton::Left),
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(MouseButton::Right),
@@ -1050,23 +1060,11 @@ impl WndProc for MyWndProc {
                             s.handler.mouse_down(&event);
                         } else {
                             s.handler.mouse_up(&event);
-                            should_release_capture = s.exit_mouse_capture(button);
+                            if s.exit_mouse_capture(button) {
+                                self.handle.borrow().defer(DeferredOp::ReleaseMouseCapture);
+                            }
                         }
                     });
-                }
-
-                // ReleaseCapture() is deferred: it needs to be called without having a mutable
-                // reference to the window state, because it will generate a reentrant
-                // WM_CAPTURECHANGED event.
-                if should_release_capture {
-                    unsafe {
-                        if ReleaseCapture() == FALSE {
-                            warn!(
-                                "failed to release mouse capture: {}",
-                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                            );
-                        }
-                    }
                 }
 
                 Some(0)
