@@ -117,7 +117,7 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
         .adding(TEXTBOX_BORDER_WIDTH, 1.)
-        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 0.0, 2.0))
+        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 4.0, 2.0))
         .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLLBAR_MAX_OPACITY, 0.7)

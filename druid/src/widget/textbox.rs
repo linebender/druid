@@ -193,7 +193,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
             // **[I****]****
             //   ^
             self.hscroll_offset = cursor_x;
-        } else {
+        } else if self.hscroll_offset > overall_text_width - self_width + text_insets.x_value() {
             // If the text is getting shorter, keep as small offset as possible
             //        <-
             // **[****I]
