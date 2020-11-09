@@ -9,6 +9,7 @@ use std::marker::PhantomData;
 pub struct PrismWrap<U, P, W> {
     inner: W,
     prism: P,
+    lifecycle_widget_added: bool,
     // The following is a workaround for otherwise getting E0207.
     phantom: PhantomData<U>,
 }
@@ -18,6 +19,7 @@ impl<U, P, W> PrismWrap<U, P, W> {
         PrismWrap {
             inner,
             prism,
+            lifecycle_widget_added: false,
             phantom: PhantomData,
         }
     }
@@ -31,24 +33,39 @@ where
     W: Widget<T2>,
 {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T1, env: &Env) {
-        dbg!("event", &event);
+        let prism = &self.prism;
         let inner = &mut self.inner;
-        let _opt = self
-            .prism
-            .with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
+        let _opt = prism.with_mut::<(), _>(data, |data| inner.event(ctx, event, data, env));
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T1, env: &Env) {
+        let prism = &self.prism;
         let inner = &mut self.inner;
-        let _opt = self
-            .prism
-            .with::<(), _>(data, |data| inner.lifecycle(ctx, event, data, env));
+        let lifecycle_widget_added = &mut self.lifecycle_widget_added;
+
+        #[allow(clippy::blocks_in_if_conditions)]
+        let _opt = prism.with::<(), _>(data, |data| {
+            match event {
+                druid::LifeCycle::Internal(druid::InternalLifeCycle::RouteWidgetAdded) => {
+                    if !*lifecycle_widget_added {
+                        *lifecycle_widget_added = true;
+                        inner.lifecycle(ctx, &druid::LifeCycle::WidgetAdded, data, env);
+                    };
+                }
+                druid::LifeCycle::WidgetAdded => {
+                    *lifecycle_widget_added = true;
+                }
+                _ => (),
+            };
+
+            inner.lifecycle(ctx, event, data, env)
+        });
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T1, data: &T1, env: &Env) {
-        dbg!("update");
-        let inner = &mut self.inner;
         let prism = &self.prism;
+        let inner = &mut self.inner;
+        let lifecycle_widget_added = &self.lifecycle_widget_added;
 
         #[allow(clippy::blocks_in_if_conditions)]
         if prism
@@ -61,7 +78,6 @@ where
                         // (has both old and new data)
                         if !old_data.same(data) {
                             // forwards older and newer data into inner
-                            dbg!("+old +new");
                             inner.update(ctx, older_data, newer_data, env);
                         }
                     })
@@ -69,13 +85,12 @@ where
                 {
                     // doesn't have an old_data,
                     // so this variant just got activated
-
-                    dbg!("-old +new");
                     ctx.children_changed();
-                    inner.update(ctx, newer_data, newer_data, env);
-                    // ctx.request_layout(); // variant was changed
-                    // ctx.request_paint(); // variant was changed
-                    // inner.update(ctx, newer_data, newer_data, env);
+                    if *lifecycle_widget_added {
+                        inner.update(ctx, newer_data, newer_data, env);
+                        // note: widget must be WidgetAdded or else it cannot
+                        // be WidgetAdded later, after this update run.
+                    }
                 }
             })
             .is_none()
@@ -84,42 +99,35 @@ where
             // so maybe this variant just got de-activated,
             // or it was never active.
             //
-            // check to see if it was just de-activated,
-            // or was never active:
+            // check to see which case it is:
             #[allow(clippy::single_match)]
             if prism
-                .with(old_data, |_older_data| {
+                .with(old_data, |older_data| {
                     // this means it just got de-activated.
-
-                    dbg!("+old -new");
                     ctx.children_changed();
-                    // ctx.request_layout(); // variant was changed
-                    // ctx.request_paint(); // variant was changed
-                    inner.update(ctx, _older_data, _older_data, env);
-                    // inner.update(ctx, _older_data, _older_data, env);
+                    assert!(*lifecycle_widget_added);
+                    inner.update(ctx, older_data, older_data, env);
                 })
                 .is_none()
             {
                 // this means it was never active.
-                {
-                    dbg!("-old -new");
-                }
+                {}
             }
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T1, env: &Env) -> Size {
-        dbg!("layout");
-        // if self.new_variant {
+        let prism = &self.prism;
         let inner = &mut self.inner;
-        self.prism
+        prism
             .with::<Size, _>(data, |data| inner.layout(ctx, bc, data, env))
             .unwrap_or_else(|| bc.min())
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T1, env: &Env) {
+        let prism = &self.prism;
         let inner = &mut self.inner;
-        let _opt = self.prism.with(data, |data| inner.paint(ctx, data, env));
+        let _opt = prism.with(data, |data| inner.paint(ctx, data, env));
     }
 
     fn id(&self) -> Option<WidgetId> {
