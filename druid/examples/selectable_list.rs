@@ -61,7 +61,7 @@ fn ui_builder() -> impl Widget<AppData> {
             data.list_labels = list_labels;
         },
     );
-    List::vertical(list_item).center().lens(l)
+    List::new(list_item).center().lens(l)
 }
 
 fn list_item() -> impl Widget<(Option<usize>, ListItem)> {
