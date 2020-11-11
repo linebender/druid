@@ -16,6 +16,7 @@
 
 use std::{
     any::{Any, TypeId},
+    collections::VecDeque,
     ops::{Deref, DerefMut},
     time::Duration,
 };
@@ -25,8 +26,9 @@ use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
-    commands, Affine, Command, ContextMenu, Cursor, Env, ExtEventSink, Insets, MenuDesc, Point,
-    Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc, WindowHandle, WindowId,
+    commands, Affine, Command, ContextMenu, Cursor, Env, ExtEventSink, Insets, MenuDesc,
+    Notification, Point, Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc,
+    WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -64,6 +66,7 @@ pub(crate) struct ContextState<'a> {
 pub struct EventCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) notifications: &'a mut VecDeque<Notification>,
     pub(crate) cursor: &'a mut Option<Cursor>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
@@ -371,6 +374,34 @@ impl_context_method!(
 );
 
 impl EventCtx<'_, '_> {
+    /// Submit a [`Notification`].
+    ///
+    /// The provided argument can be a [`Selector`] or a [`Command`]; this lets
+    /// us work with the existing API for addding a payload to a [`Selector`].
+    ///
+    /// If the argument is a `Command`, the command's target will be ignored.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::{Event, EventCtx, Selector};
+    /// const IMPORTANT_EVENT: Selector<String> = Selector::new("druid-example.important-event");
+    ///
+    /// fn check_event(ctx: &mut EventCtx, event: &Event) {
+    ///     if is_this_the_event_we_were_looking_for(event) {
+    ///         ctx.submit_notification(IMPORTANT_EVENT.with("That's the one".to_string()))
+    ///     }
+    /// }
+    ///
+    /// # fn is_this_the_event_we_were_looking_for(event: &Event) -> bool { true }
+    /// ```
+    ///
+    /// [`Selector`]: crate::Selector
+    pub fn submit_notification(&mut self, note: impl Into<Command>) {
+        let note = note.into().into_notification(self.widget_state.id);
+        self.notifications.push_back(note);
+    }
+
     /// Set the "active" state of the widget.
     ///
     /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active).

@@ -191,7 +191,7 @@ pub use crate::core::WidgetPod;
 pub use app::{AppLauncher, WindowConfig, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
-pub use command::{sys as commands, Command, Selector, SingleUse, Target};
+pub use command::{sys as commands, Command, Notification, Selector, SingleUse, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};

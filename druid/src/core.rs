@@ -22,8 +22,8 @@ use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target,
-    TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
+    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -752,13 +752,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
             Event::Command(_) => true,
+            Event::Notification(_) => false,
         };
 
         if recurse {
+            let mut notifications = VecDeque::new();
             let mut inner_ctx = EventCtx {
                 cursor: ctx.cursor,
                 state: ctx.state,
                 widget_state: &mut self.state,
+                notifications: &mut notifications,
                 is_handled: false,
                 is_root: false,
             };
@@ -769,11 +772,63 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
             ctx.is_handled |= inner_ctx.is_handled;
+            // we try to handle the notifications that occured below us in the tree
+            self.send_notifications(ctx, &mut notifications, data, env);
         }
 
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
         // Doing this conditionally only makes sense when there's a measurable performance boost.
         ctx.widget_state.merge_up(&mut self.state);
+    }
+
+    /// Send notifications originating from this widget's children to this
+    /// widget.
+    ///
+    /// Notifications that are unhandled will be added to the notification
+    /// list for the parent's `EventCtx`, to be retried there.
+    fn send_notifications(
+        &mut self,
+        ctx: &mut EventCtx,
+        notifications: &mut VecDeque<Notification>,
+        data: &mut T,
+        env: &Env,
+    ) {
+        let EventCtx {
+            cursor,
+            state,
+            notifications: parent_notifications,
+            ..
+        } = ctx;
+        let mut sentinal = VecDeque::new();
+        let mut inner_ctx = EventCtx {
+            cursor,
+            state,
+            notifications: &mut sentinal,
+            widget_state: &mut self.state,
+            is_handled: false,
+            is_root: false,
+        };
+
+        for _ in 0..notifications.len() {
+            let notification = notifications.pop_front().unwrap();
+            let event = Event::Notification(notification);
+            self.inner.event(&mut inner_ctx, &event, data, env);
+            if inner_ctx.is_handled {
+                inner_ctx.is_handled = false;
+            } else if let Event::Notification(notification) = event {
+                // we will try again with the next parent
+                parent_notifications.push_back(notification);
+            } else {
+                unreachable!()
+            }
+        }
+
+        if !inner_ctx.notifications.is_empty() {
+            log::warn!(
+                "A Notification was submitted while handling another \
+            notification; the submitted notification will be ignored."
+            );
+        }
     }
 
     /// Propagate a [`LifeCycle`] event.

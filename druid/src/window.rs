@@ -14,7 +14,7 @@
 
 //! Management of multiple windows.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::mem;
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
@@ -215,15 +215,23 @@ impl<T: Data> Window<T> {
         let is_handled = {
             let mut state =
                 ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+            let mut notifications = VecDeque::new();
             let mut ctx = EventCtx {
                 cursor: &mut cursor,
                 state: &mut state,
+                notifications: &mut notifications,
                 widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
             };
 
             self.root.event(&mut ctx, &event, data, env);
+            if !ctx.notifications.is_empty() {
+                log::info!("{} unhandled notifications:", ctx.notifications.len());
+                for (i, n) in ctx.notifications.iter().enumerate() {
+                    log::info!("{}: {:?}", i, n);
+                }
+            }
             Handled::from(ctx.is_handled)
         };
 
