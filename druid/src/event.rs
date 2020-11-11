@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, WidgetId};
+use crate::{Command, Notification, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -130,6 +130,24 @@ pub enum Event {
     /// [`Widget`]: trait.Widget.html
     /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
     Command(Command),
+    /// A [`Notification`] from one of this widget's descendants.
+    ///
+    /// While handling events, widgets can submit notifications to be
+    /// delivered to their ancestors immdiately after they return.
+    ///
+    /// If you handle a [`Notification`], you should call [`EventCtx::set_handled`]
+    /// to stop the notification from being delivered to further ancestors.
+    ///
+    /// ## Special considerations
+    ///
+    /// Notifications are slightly different from other events; they originate
+    /// inside Druid, and they are delivered as part of the handling of another
+    /// event. In this sense, they can sort of be thought of as an augmentation
+    /// of an event; they are a way for multiple widgets to coordinate the
+    /// handling of an event.
+    ///
+    /// [`EventCtx::set_handled`]: crate::EventCtx::set_handled
+    Notification(Notification),
     /// Internal druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -310,6 +328,7 @@ impl Event {
             | Event::Timer(_)
             | Event::AnimFrame(_)
             | Event::Command(_)
+            | Event::Notification(_)
             | Event::Internal(_) => true,
             Event::MouseDown(_)
             | Event::MouseUp(_)
