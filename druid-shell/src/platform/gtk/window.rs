@@ -375,6 +375,7 @@ impl WindowBuilder {
                         // Clip to the invalid region, in order that our surface doesn't get
                         // messed up if there's any painting outside them.
                         for rect in invalid.rects() {
+                            let rect = rect.to_px(scale);
                             surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
                         }
                         surface_context.clip();
