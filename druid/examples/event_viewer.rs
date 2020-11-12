@@ -281,7 +281,7 @@ fn event_list() -> impl Widget<AppState> {
                 // `List::new` generates a list entry for every element in the `Vec`.
                 // In this case it shows a log entry for every element in `AppState::events`.
                 // `make_list_item` generates this new log entry.
-                Scroll::new(List::new(make_list_item).lens(AppState::events)).vertical(),
+                Scroll::new(List::vertical(make_list_item).lens(AppState::events)).vertical(),
                 1.0,
             )
             .background(Color::WHITE),
