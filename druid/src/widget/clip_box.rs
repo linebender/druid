@@ -70,6 +70,47 @@ impl Viewport {
             false
         }
     }
+
+    /// Pan the smallest distance that makes the target [`Rect`] visible.
+    ///
+    /// If the target rect is larger than viewport size, we will prioritize
+    /// the region of the target closest to its origin.
+    pub fn pan_to_visible(&mut self, rect: Rect) -> bool {
+        /// Given a position and the min and max edges of an axis,
+        /// return a delta by which to adjust that axis such that the value
+        /// falls between its edges.
+        ///
+        /// if the value already falls between the two edges, return 0.0.
+        fn closest_on_axis(val: f64, min: f64, max: f64) -> f64 {
+            assert!(min <= max);
+            if val > min && val < max {
+                0.0
+            } else if val <= min {
+                val - min
+            } else {
+                val - max
+            }
+        }
+
+        // clamp the target region size to our own size.
+        // this means we will show the portion of the target region that
+        // includes the origin.
+        let target_size = Size::new(
+            rect.width().min(self.rect.width()),
+            rect.height().min(self.rect.height()),
+        );
+        let rect = rect.with_size(target_size);
+
+        let x0 = closest_on_axis(rect.min_x(), self.rect.min_x(), self.rect.max_x());
+        let x1 = closest_on_axis(rect.max_x(), self.rect.min_x(), self.rect.max_x());
+        let y0 = closest_on_axis(rect.min_y(), self.rect.min_y(), self.rect.max_y());
+        let y1 = closest_on_axis(rect.max_y(), self.rect.min_y(), self.rect.max_y());
+
+        let delta_x = if x0.abs() > x1.abs() { x0 } else { x1 };
+        let delta_y = if y0.abs() > y1.abs() { y0 } else { y1 };
+        let new_origin = self.rect.origin() + Vec2::new(delta_x, delta_y);
+        self.pan_to(new_origin)
+    }
 }
 
 /// A widget exposing a rectangular view into its child, which can be used as a building block for
@@ -188,6 +229,24 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         }
     }
 
+    /// Adjust the viewport to display as much of the target region as is possible.
+    ///
+    /// Returns `true` if the viewport changes.
+    ///
+    /// This will move the viewport the smallest distance that fully shows
+    /// the target region. If the target region is larger than the viewport,
+    /// we will display the portion that fits, prioritizing the portion closest
+    /// to the origin.
+    pub fn pan_to_visible(&mut self, region: Rect) -> bool {
+        if self.port.pan_to_visible(region) {
+            self.child
+                .set_viewport_offset(self.viewport_origin().to_vec2());
+            true
+        } else {
+            false
+        }
+    }
+
     /// Returns the origin of the viewport rectangle.
     pub fn viewport_origin(&self) -> Point {
         self.port.rect.origin()
@@ -260,5 +319,29 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
             visible += offset;
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn pan_to_visible() {
+        let mut viewport = Viewport {
+            content_size: Size::new(400., 400.),
+            rect: Rect::from_origin_size((20., 20.), (20., 20.)),
+        };
+
+        assert!(!viewport.pan_to_visible(Rect::from_origin_size((22., 22.,), (5., 5.))));
+        assert!(viewport.pan_to_visible(Rect::from_origin_size((10., 10.,), (5., 5.))));
+        assert_eq!(viewport.rect.origin(), Point::new(10., 10.));
+        assert_eq!(viewport.rect.size(), Size::new(20., 20.));
+        assert!(!viewport.pan_to_visible(Rect::from_origin_size((10., 10.,), (50., 50.))));
+        assert_eq!(viewport.rect.origin(), Point::new(10., 10.));
+
+        assert!(viewport.pan_to_visible(Rect::from_origin_size((30., 10.,), (5., 5.))));
+        assert_eq!(viewport.rect.origin(), Point::new(15., 10.));
+        assert!(viewport.pan_to_visible(Rect::from_origin_size((5., 5.,), (5., 5.))));
+        assert_eq!(viewport.rect.origin(), Point::new(5., 5.));
     }
 }

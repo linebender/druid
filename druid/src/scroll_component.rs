@@ -90,6 +90,7 @@ pub enum BarHeldState {
 /// [`ClipBox`]: ../widget/struct.ClipBox.html
 /// [`event`]: struct.ScrollComponent.html#method.event
 /// [`handle_scroll`]: struct.ScrollComponent.html#method.handle_scroll
+/// [`draw_bars`]: #method.draw_bars
 /// [`lifecycle`]: struct.ScrollComponent.html#method.lifecycle
 #[derive(Debug, Copy, Clone)]
 pub struct ScrollComponent {
