@@ -70,7 +70,7 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_flex_child(
-        Scroll::new(List::new(|| {
+        Scroll::new(List::vertical(|| {
             Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                 .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
@@ -85,29 +85,32 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a list with shared data
     lists.add_flex_child(
-        Scroll::new(List::new(|| {
-            Flex::row()
-                .with_child(
-                    Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
-                        format!("List item #{}", item)
-                    })
-                    .align_vertical(UnitPoint::LEFT),
-                )
-                .with_flex_spacer(1.0)
-                .with_child(
-                    Button::new("Delete")
-                        .on_click(|_ctx, (shared, item): &mut (Vector<u32>, u32), _env| {
-                            // We have access to both child's data and shared data.
-                            // Remove element from right list.
-                            shared.retain(|v| v != item);
+        Scroll::new(
+            List::vertical(|| {
+                Flex::row()
+                    .with_child(
+                        Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
+                            format!("List item #{}", item)
                         })
-                        .fix_size(80.0, 20.0)
-                        .align_vertical(UnitPoint::CENTER),
-                )
-                .padding(10.0)
-                .background(Color::rgb(0.5, 0.0, 0.5))
-                .fix_height(50.0)
-        }))
+                        .align_vertical(UnitPoint::LEFT),
+                    )
+                    .with_flex_spacer(1.0)
+                    .with_child(
+                        Button::new("Delete")
+                            .on_click(|_ctx, (shared, item): &mut (Vector<u32>, u32), _env| {
+                                // We have access to both child's data and shared data.
+                                // Remove element from right list.
+                                shared.retain(|v| v != item);
+                            })
+                            .fix_size(80.0, 20.0)
+                            .align_vertical(UnitPoint::CENTER),
+                    )
+                    .padding(10.0)
+                    .background(Color::rgb(0.5, 0.0, 0.5))
+                    .fix_height(50.0)
+            })
+            .with_spacing(10.),
+        )
         .vertical()
         .lens(lens::Id.map(
             // Expose shared data with children data
@@ -122,6 +125,19 @@ fn ui_builder() -> impl Widget<AppData> {
 
     root.add_flex_child(lists, 1.0);
 
-    // Mark the widget as needing its layout rects painted
-    root.debug_paint_layout()
+    root.with_child(Label::new("horizontal list"))
+        .with_child(
+            Scroll::new(
+                List::horizontal(|| {
+                    Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+                        .padding(10.0)
+                        .background(Color::rgb(0.5, 0.5, 0.0))
+                        .fix_height(50.0)
+                })
+                .with_spacing(10.)
+                .lens(AppData::left),
+            )
+            .horizontal(),
+        )
+        .debug_paint_layout()
 }
