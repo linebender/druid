@@ -298,7 +298,10 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 ctx.request_paint();
             }
             _ => (),
-        }
+        };
+        // if an edit occurred, rebuild the editor so that things like cursor
+        // positions are up to date,
+        self.editor.rebuild_if_needed(ctx.text(), env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {

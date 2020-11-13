@@ -173,7 +173,12 @@ impl<T: TextStorage + EditableText> Editor<T> {
         self.layout.rebuild_if_needed(factory, env);
     }
 
-    /// Perform an [`EditAction`](enum.EditAction.html).
+    /// Perform an [`EditAction`].
+    ///
+    /// After editing, the inner layout is not valid until [`rebuild_if_needed`]
+    /// is called.
+    ///
+    /// [`rebuild_if_needed`]: Editor::rebuild_if_needed
     pub fn do_edit(&mut self, edit: EditAction, data: &mut T) {
         if self.data_is_stale(data) {
             log::warn!("editor data changed externally, skipping event {:?}", &edit);
@@ -208,6 +213,8 @@ impl<T: TextStorage + EditableText> Editor<T> {
             EditAction::Drag(action) => self.selection.end = action.column,
             EditAction::SelectAll => self.selection = Selection::new(0, data.len()),
         }
+        // layout checks that this has changed before actually invalidating
+        self.layout.set_text(data.to_owned());
     }
 
     /// Draw this editor at the provided point.
