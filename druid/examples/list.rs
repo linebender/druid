@@ -70,7 +70,7 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a simple list
     lists.add_flex_child(
-        Scroll::new(List::vertical(|| {
+        Scroll::new(List::new(|| {
             Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                 .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
@@ -86,7 +86,7 @@ fn ui_builder() -> impl Widget<AppData> {
     // Build a list with shared data
     lists.add_flex_child(
         Scroll::new(
-            List::vertical(|| {
+            List::new(|| {
                 Flex::row()
                     .with_child(
                         Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
@@ -128,12 +128,13 @@ fn ui_builder() -> impl Widget<AppData> {
     root.with_child(Label::new("horizontal list"))
         .with_child(
             Scroll::new(
-                List::horizontal(|| {
+                List::new(|| {
                     Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
                         .padding(10.0)
                         .background(Color::rgb(0.5, 0.5, 0.0))
                         .fix_height(50.0)
                 })
+                .horizontal()
                 .with_spacing(10.)
                 .lens(AppData::left),
             )

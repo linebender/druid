@@ -39,25 +39,19 @@ pub struct List<T> {
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
-    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static, axis: Axis) -> Self {
+    pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
-            axis,
+            axis: Axis::Vertical,
             spacing: KeyOrValue::Concrete(0.),
         }
     }
 
-    /// Create a new vertical list widget. Closure will be called every time when a new child
-    /// needs to be constructed.
-    pub fn vertical<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
-        List::new(closure, Axis::Vertical)
-    }
-
-    /// Create a new horizontal list widget. Closure will be called every time when a new child
-    /// needs to be constructed.
-    pub fn horizontal<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
-        List::new(closure, Axis::Horizontal)
+    /// Sets the widget to display the list horizontally, not vertically.
+    pub fn horizontal(mut self) -> Self {
+        self.axis = Axis::Horizontal;
+        self
     }
 
     /// Set the spacing between elements.

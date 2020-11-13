@@ -105,7 +105,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 "Checkbox",
             ))
             .with_child(label_widget(
-                List::vertical(|| {
+                List::new(|| {
                     Label::new(|data: &String, _: &_| format!("List item: {}", data))
                         .center()
                         .background(Color::hlc(230.0, 50.0, 50.0))
