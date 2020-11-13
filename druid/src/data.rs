@@ -147,6 +147,18 @@ impl_data_simple!(u128);
 impl_data_simple!(usize);
 impl_data_simple!(char);
 impl_data_simple!(bool);
+impl_data_simple!(std::num::NonZeroI8);
+impl_data_simple!(std::num::NonZeroI16);
+impl_data_simple!(std::num::NonZeroI32);
+impl_data_simple!(std::num::NonZeroI64);
+impl_data_simple!(std::num::NonZeroI128);
+impl_data_simple!(std::num::NonZeroIsize);
+impl_data_simple!(std::num::NonZeroU8);
+impl_data_simple!(std::num::NonZeroU16);
+impl_data_simple!(std::num::NonZeroU32);
+impl_data_simple!(std::num::NonZeroU64);
+impl_data_simple!(std::num::NonZeroU128);
+impl_data_simple!(std::num::NonZeroUsize);
 //TODO: remove me!?
 impl_data_simple!(String);
 
