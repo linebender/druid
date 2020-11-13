@@ -488,20 +488,10 @@ where
 ///
 /// This is useful when you wish to have a display only widget, require a type-erased widget, or
 /// obtain app data out of band and ignore your input. (E.g sub-windows)
-#[derive(Debug, Copy, Clone)]
-pub struct Unit<T> {
-    phantom_t: PhantomData<T>,
-}
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Unit;
 
-impl<T> Default for Unit<T> {
-    fn default() -> Self {
-        Unit {
-            phantom_t: Default::default(),
-        }
-    }
-}
-
-impl<T> Lens<T, ()> for Unit<T> {
+impl<T> Lens<T, ()> for Unit {
     fn with<V, F: FnOnce(&()) -> V>(&self, _data: &T, f: F) -> V {
         f(&())
     }
