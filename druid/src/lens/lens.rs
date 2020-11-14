@@ -206,6 +206,34 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     {
         InArc::new(self)
     }
+
+    /// A lens that reverses a boolean value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::*;
+    /// use druid::LensExt;
+    ///
+    /// #[derive(Lens)]
+    /// struct MyThing {
+    ///     first: bool
+    /// }
+    ///
+    /// let lens = MyThing::first.not();
+    /// let mut val = MyThing { first: false };
+    /// assert_eq!(lens.with(&val, |v| *v), true);
+    /// lens.with_mut(&mut val, |v| *v = false);
+    /// assert_eq!(val.first, true);
+    /// ```
+    fn not(self) -> Then<Self, Not, B>
+    where
+        Self: Sized,
+        B: Sized + Into<bool> + Copy,
+        bool: Into<B>,
+    {
+        self.then(Not)
+    }
 }
 
 impl<A: ?Sized, B: ?Sized, T: Lens<A, B>> LensExt<A, B> for T {}
@@ -507,5 +535,25 @@ impl<T> Lens<T, ()> for Unit<T> {
     }
     fn with_mut<V, F: FnOnce(&mut ()) -> V>(&self, _data: &mut T, f: F) -> V {
         f(&mut ())
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Not;
+
+impl<T> Lens<T, bool> for Not
+where
+    T: Into<bool> + Copy,
+    bool: Into<T>,
+{
+    fn with<V, F: FnOnce(&bool) -> V>(&self, data: &T, f: F) -> V {
+        let tmp = !<T as Into<bool>>::into(*data);
+        f(&tmp)
+    }
+    fn with_mut<V, F: FnOnce(&mut bool) -> V>(&self, data: &mut T, f: F) -> V {
+        let mut tmp = !<T as Into<bool>>::into(*data);
+        let out = f(&mut tmp);
+        *data = (!tmp).into();
+        out
     }
 }
