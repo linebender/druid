@@ -20,7 +20,7 @@ use std::{env, fs};
 /// Ideally this list will eventually be empty.
 const EXCEPTIONS: &[&str] = &[
     "svg",               // usvg doesn't currently build as Wasm.
-    "async_event",         // the web backend doesn't currently support spawning threads.
+    "async_event",       // the web backend doesn't currently support spawning threads.
     "blocking_function", // the web backend doesn't currently support spawning threads.
 ];
 
