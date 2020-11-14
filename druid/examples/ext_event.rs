@@ -39,12 +39,12 @@ pub fn main() {
     // should be used. For sending commands from within widgets you can always call
     // `ctx.submit_command`
     let event_sink = launcher.get_external_handle();
-    //We create a new thread and generate colours in it.
-    //This happens on a second thread so that we can run the UI in the
-    //main thread. Generating some colours nicely follows the pattern for what
-    //should be done like this: generating something over time
-    //(like this or reacting to external events), or something that takes a
-    //long time and shouldn't block main UI updates.
+    // We create a new thread and generate colours in it.
+    // This happens on a second thread so that we can run the UI in the
+    // main thread. Generating some colours nicely follows the pattern for what
+    // should be done like this: generating something over time
+    // (like this or reacting to external events), or something that takes a
+    // long time and shouldn't block main UI updates.
     thread::spawn(move || generate_colours(event_sink));
 
     launcher
@@ -90,12 +90,6 @@ fn generate_colours(event_sink: druid::ExtEventSink) {
 /// A widget that displays a color.
 struct ColorWell;
 
-impl ColorWell {
-    pub fn new() -> Self {
-        ColorWell {}
-    }
-}
-
 impl Widget<Color> for ColorWell {
     fn event(&mut self, _ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
         match event {
@@ -125,12 +119,13 @@ impl Widget<Color> for ColorWell {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
-        ctx.fill(ctx.size().to_rounded_rect(5.0), data);
+        let rect = ctx.size().to_rounded_rect(5.0);
+        ctx.fill(rect, data);
     }
 }
 
 fn make_ui() -> impl Widget<Color> {
-    ColorWell::new()
+    ColorWell {}
         .fix_width(300.0)
         .fix_height(300.0)
         .padding(10.0)
