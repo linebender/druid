@@ -30,40 +30,27 @@ use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
 // look at the docs for Selector for more detail.
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
-/// A widget that displays a color.
-struct ColorWell;
+pub fn main() {
+    let window = WindowDesc::new(make_ui).title("External Event Demo");
 
-impl ColorWell {
-    pub fn new() -> Self {
-        ColorWell {}
-    }
-}
+    let launcher = AppLauncher::with_window(window);
 
-impl Widget<Color> for ColorWell {
-    fn event(&mut self, _ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
-        match event {
-            Event::Command(cmd) if cmd.is(SET_COLOR) => {
-                *data = cmd.get_unchecked(SET_COLOR).clone();
-            }
-            _ => (),
-        }
-    }
+    // If we want to create commands from another thread `launcher.get_external_handle()`
+    // should be used. For sending commands from within widgets you can always call
+    // `ctx.submit_command`
+    let event_sink = launcher.get_external_handle();
+    //We create a new thread and generate colours in it.
+    //This happens on a second thread so that we can run the UI in the
+    //main thread. Generating some colours nicely follows the pattern for what
+    //should be done like this: generating something over time
+    //(like this or reacting to external events), or something that takes a
+    //long time and shouldn't block main UI updates.
+    thread::spawn(move || generate_colours(event_sink));
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &Color, _: &Env) {}
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Color, data: &Color, _: &Env) {
-        if old_data != data {
-            ctx.request_paint()
-        }
-    }
-
-    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &Color, _: &Env) -> Size {
-        bc.max()
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
-        ctx.fill(ctx.size().to_rounded_rect(5.0), data);
-    }
+    launcher
+        .use_simple_logger()
+        .launch(Color::BLACK)
+        .expect("launch failed");
 }
 
 fn generate_colours(event_sink: druid::ExtEventSink) {
@@ -100,24 +87,46 @@ fn generate_colours(event_sink: druid::ExtEventSink) {
     }
 }
 
-pub fn main() {
-    let window = WindowDesc::new(make_ui).title("External Event Demo");
+/// A widget that displays a color.
+struct ColorWell;
 
-    let launcher = AppLauncher::with_window(window);
+impl ColorWell {
+    pub fn new() -> Self {
+        ColorWell {}
+    }
+}
 
-    let event_sink = launcher.get_external_handle();
-    //We create a new thread and generate colours in it.
-    //This happens on a second thread so that we can run the UI in the
-    //main thread. Generating some colours nicely follows the pattern for what
-    //should be done like this: generating something over time
-    //(like this or reacting to external events), or something that takes a
-    //long time and shouldn't block main UI updates.
-    thread::spawn(move || generate_colours(event_sink));
+impl Widget<Color> for ColorWell {
+    fn event(&mut self, _ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
+        match event {
+            // This is where we handle our command.
+            Event::Command(cmd) if cmd.is(SET_COLOR) => {
+                // We don't do much data processing in the `event` method.
+                // All we really do is just set the data. This causes a call
+                // to `update` which requests a paint. You can also request a paint
+                // during the event, but this should be reserved for changes to self.
+                // For changes to `Data` always make `update` to the paint requesting.
+                *data = cmd.get_unchecked(SET_COLOR).clone();
+            }
+            _ => (),
+        }
+    }
 
-    launcher
-        .use_simple_logger()
-        .launch(Color::BLACK)
-        .expect("launch failed");
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &Color, _: &Env) {}
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Color, data: &Color, _: &Env) {
+        if old_data != data {
+            ctx.request_paint()
+        }
+    }
+
+    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &Color, _: &Env) -> Size {
+        bc.max()
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
+        ctx.fill(ctx.size().to_rounded_rect(5.0), data);
+    }
 }
 
 fn make_ui() -> impl Widget<Color> {
