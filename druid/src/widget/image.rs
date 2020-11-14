@@ -127,6 +127,12 @@ impl Image {
         self.interpolation = interpolation;
         self.paint_data = None;
     }
+
+    /// Set new `ImageBuf`.
+    pub fn set_image_data(&mut self, image_data: ImageBuf) {
+        self.image_data = image_data;
+        self.paint_data = None;
+    }
 }
 
 impl<T: Data> Widget<T> for Image {

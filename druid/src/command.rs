@@ -44,7 +44,7 @@ pub(crate) type SelectorSymbol = &'static str;
 /// [`get_unchecked`]: struct.Command.html#method.get_unchecked
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
-pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
+pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 
 /// An arbitrary command.
 ///
@@ -388,7 +388,7 @@ impl Command {
                 panic!(
                     "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
-                )
+                );
             }))
         } else {
             None
@@ -500,5 +500,12 @@ mod tests {
         let payload = vec![0, 1, 2];
         let command = Command::new(sel, payload, Target::Auto);
         assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
+    }
+
+    #[test]
+    fn selector_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Selector>();
     }
 }

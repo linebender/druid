@@ -48,6 +48,7 @@ pub struct Window<T> {
     invalid: Region,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
+    // This will be `Some` whenever the most recently displayed frame was an animation frame.
     pub(crate) last_anim: Option<Instant>,
     pub(crate) last_mouse_pos: Option<Point>,
     pub(crate) focus: Option<WidgetId>,
@@ -327,20 +328,8 @@ impl<T: Data> Window<T> {
         let last = self.last_anim.take();
         let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
 
-        if self.root.state().needs_layout {
-            self.layout(queue, data, env);
-        }
-
-        // Here, `self.wants_animation_frame()` refers to the animation frame that is currently
-        // being prepared for. (This is relying on the fact that `self.layout()` can't request
-        // an animation frame.)
         if self.wants_animation_frame() {
             self.event(queue, Event::AnimFrame(elapsed_ns), data, env);
-        }
-
-        // Here, `self.wants_animation_frame()` is true if we want *another* animation frame after
-        // the current one. (It got modified in the call to `self.event` above.)
-        if self.wants_animation_frame() {
             self.last_anim = Some(now);
         }
     }
@@ -353,6 +342,10 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
+        if self.root.state().needs_layout {
+            self.layout(queue, data, env);
+        }
+
         piet.fill(
             invalid.bounding_box(),
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),

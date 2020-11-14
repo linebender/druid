@@ -34,7 +34,7 @@ use super::error::Error;
 use super::keycodes::convert_keyboard_event;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 

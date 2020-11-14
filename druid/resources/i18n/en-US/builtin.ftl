@@ -1,10 +1,6 @@
 -app-name = Druid
 
 hello-counter = Current value is { $count }
-either-demo-window-title = {$view ->
-    [0] Now you see me...
-    *[other] ...now you don't
-}
 
 # The 'application' menu on macOS
 macos-menu-about-app = About { -app-name }

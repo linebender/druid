@@ -161,6 +161,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         &self.state
     }
 
+    /// Returns `true` if the widget has received [`LifeCycle::WidgetAdded`].
+    ///
+    /// [`LifeCycle::WidgetAdded`]: ./enum.LifeCycle.html#variant.WidgetAdded
+    pub fn is_initialized(&self) -> bool {
+        self.old_data.is_some()
+    }
+
     /// Query the "active" state of the widget.
     pub fn is_active(&self) -> bool {
         self.state.is_active
@@ -423,6 +430,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return;
         }
 
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: paint method called before receiving WidgetAdded.",
+                ctx.widget_id()
+            );
+            return;
+        }
+
         ctx.with_save(|ctx| {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
@@ -489,6 +504,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &T,
         env: &Env,
     ) -> Size {
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: layout method called before receiving WidgetAdded.",
+                ctx.widget_id()
+            );
+            return Size::ZERO;
+        }
+
         self.state.needs_layout = false;
 
         let child_mouse_pos = match ctx.mouse_pos {
@@ -541,20 +564,20 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`event`]: trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.old_data.is_none() {
-            log::error!(
-                "widget {:?} is receiving an event without having first \
-                 received WidgetAdded.",
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: event method called before receiving WidgetAdded.",
                 ctx.widget_id()
             );
+            return;
         }
 
         // log if we seem not to be laid out when we should be
         if self.state.layout_rect.is_none() && !event.should_propagate_to_hidden() {
-            log::warn!(
-                "Widget '{}' received an event ({:?}) without having been laid out. \
+            debug_panic!(
+                "{:?} received an event ({:?}) without having been laid out. \
                 This likely indicates a missed call to set_layout_rect.",
-                self.inner.type_name(),
+                ctx.widget_id(),
                 event,
             );
         }
@@ -807,6 +830,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                 true
             }
+            _ if !self.is_initialized() => {
+                debug_panic!(
+                    "{:?}: received LifeCycle::{:?} before WidgetAdded.",
+                    self.id(),
+                    event
+                );
+                return;
+            }
             LifeCycle::Size(_) => {
                 // We are a descendant of a widget that received the Size event.
                 // This event was meant only for our parent, so don't recurse.
@@ -858,13 +889,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if !self.state.request_update {
             match (self.old_data.as_ref(), self.env.as_ref()) {
                 (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+                (Some(_), None) => self.env = Some(env.clone()),
                 (None, _) => {
-                    log::warn!("old_data missing in {:?}, skipping update", self.id());
-                    self.old_data = Some(data.clone());
-                    self.env = Some(env.clone());
+                    debug_panic!(
+                        "{:?} is receiving an update without having first received WidgetAdded.",
+                        self.id()
+                    );
                     return;
                 }
-                _ => (),
+                (Some(_), Some(_)) => {}
             }
         }
 

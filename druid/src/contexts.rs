@@ -391,12 +391,7 @@ impl EventCtx<'_, '_> {
                     .to(Target::Global),
             );
         } else {
-            const MSG: &str = "WindowDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::new_window: {}", MSG)
-            }
+            debug_panic!("EventCtx::new_window<T> - T must match the application data type.");
         }
     }
 
@@ -412,12 +407,9 @@ impl EventCtx<'_, '_> {
                     .to(Target::Window(self.state.window_id)),
             );
         } else {
-            const MSG: &str = "ContextMenu<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::show_context_menu: {}", MSG)
-            }
+            debug_panic!(
+                "EventCtx::show_context_menu<T> - T must match the application data type."
+            );
         }
     }
 
@@ -736,12 +728,7 @@ impl<'a> ContextState<'a> {
                     .to(Target::Window(self.window_id)),
             );
         } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("EventCtx::set_menu: {}", MSG)
-            }
+            debug_panic!("EventCtx::set_menu<T> - T must match the application data type.");
         }
     }
 

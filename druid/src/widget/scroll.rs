@@ -16,7 +16,7 @@
 
 use crate::widget::prelude::*;
 use crate::widget::ClipBox;
-use crate::{scroll_component::*, Data, Vec2};
+use crate::{scroll_component::*, Data, Rect, Vec2};
 
 /// A container that scrolls its contents.
 ///
@@ -87,6 +87,14 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Returns `true` if the scroll offset has changed.
     pub fn scroll_by(&mut self, delta: Vec2) -> bool {
         self.clip.pan_by(delta)
+    }
+
+    /// Scroll the minimal distance to show the target rect.
+    ///
+    /// If the target region is larger than the viewport, we will display the
+    /// portion that fits, prioritizing the portion closest to the origin.
+    pub fn scroll_to(&mut self, region: Rect) -> bool {
+        self.clip.pan_to_visible(region)
     }
 }
 

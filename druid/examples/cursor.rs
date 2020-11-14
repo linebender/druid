@@ -13,44 +13,27 @@
 // limitations under the License.
 
 //! An example showing how to change the mouse cursor.
+//! Clicking the button should switch your cursor, and
+//! the last cursor should be a custom image. Custom
+//! image cursors cannot be created before the window is
+//! open so we have to work around that. When we receive the
+//! `WindowConnected` command we initiate the cursor.
 
 use druid::{
-    AppLauncher, Color, Cursor, CursorDesc, Data, Env, ImageBuf, Lens, LocalizedString, Widget,
-    WidgetExt, WindowDesc,
+    AppLauncher, Color, Cursor, CursorDesc, Data, Env, ImageBuf, Lens, LocalizedString, WidgetExt,
+    WindowDesc,
 };
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Controller};
 
-use std::sync::Arc;
+use std::rc::Rc;
 
-#[derive(Clone, Data, Lens)]
-struct AppState {
-    cursor: Arc<Cursor>,
-    custom_desc: Arc<CursorDesc>,
-    custom: Option<Arc<Cursor>>,
-}
-
-fn next_cursor(c: &Cursor, custom: &Option<Arc<Cursor>>) -> Cursor {
-    match c {
-        Cursor::Arrow => Cursor::IBeam,
-        Cursor::IBeam => Cursor::Crosshair,
-        Cursor::Crosshair => Cursor::OpenHand,
-        Cursor::OpenHand => Cursor::NotAllowed,
-        Cursor::NotAllowed => Cursor::ResizeLeftRight,
-        Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
-        Cursor::ResizeUpDown => {
-            if let Some(custom) = custom {
-                Cursor::clone(&custom)
-            } else {
-                Cursor::Arrow
-            }
-        }
-        Cursor::Custom(_) => Cursor::Arrow,
-    }
-}
-
-struct CursorArea {}
+/// This Controller switches the current cursor based on the selection.
+/// The crucial part of this code is actually making and initialising
+/// the cursor. This happens here. Because we cannot make the cursor
+/// before the window is open we have to do that on `WindowConnected`.
+struct CursorArea;
 
 impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
     fn event(
@@ -61,11 +44,16 @@ impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
         data: &mut AppState,
         env: &Env,
     ) {
-        if data.custom.is_none() {
-            data.custom = ctx.window().make_cursor(&data.custom_desc).map(Arc::new);
-        }
-        if matches!(event, Event::MouseMove(_)) {
-            ctx.set_cursor(&data.cursor);
+        match event {
+            Event::WindowConnected => {
+                data.custom = ctx.window().make_cursor(&data.custom_desc).map(Rc::new);
+            }
+            Event::MouseMove(_) => {
+                // Because the cursor is reset to the default on every `MouseMove`
+                // event we have to explicitly overwrite this every event.
+                ctx.set_cursor(&data.cursor);
+            }
+            _ => {}
         }
         child.event(ctx, event, data, env);
     }
@@ -74,7 +62,9 @@ impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
 fn ui_builder() -> impl Widget<AppState> {
     Button::new("Change cursor")
         .on_click(|ctx, data: &mut AppState, _env| {
-            data.cursor = Arc::new(next_cursor(&data.cursor, &data.custom));
+            data.cursor = next_cursor(&data.cursor, data.custom.clone());
+            // After changing the cursor, we need to update the active cursor
+            // via the context in order for the change to take effect immediately.
             ctx.set_cursor(&data.cursor);
         })
         .padding(50.0)
@@ -83,16 +73,49 @@ fn ui_builder() -> impl Widget<AppState> {
         .padding(50.0)
 }
 
+#[derive(Clone, Data, Lens)]
+struct AppState {
+    cursor: Rc<Cursor>,
+    custom: Option<Rc<Cursor>>,
+    // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
+    // https://docs.rs/druid/0.6.0/druid/trait.Data.html
+    #[data(ignore)]
+    custom_desc: CursorDesc,
+}
+
+fn next_cursor(c: &Cursor, custom: Option<Rc<Cursor>>) -> Rc<Cursor> {
+    Rc::new(match c {
+        Cursor::Arrow => Cursor::IBeam,
+        Cursor::IBeam => Cursor::Crosshair,
+        Cursor::Crosshair => Cursor::OpenHand,
+        Cursor::OpenHand => Cursor::NotAllowed,
+        Cursor::NotAllowed => Cursor::ResizeLeftRight,
+        Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
+        Cursor::ResizeUpDown => {
+            if let Some(custom) = custom {
+                return custom;
+            } else {
+                Cursor::Arrow
+            }
+        }
+        Cursor::Custom(_) => Cursor::Arrow,
+    })
+}
+
 pub fn main() {
     let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
     let cursor_image = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
-    let custom_desc = CursorDesc::new(cursor_image, (50.0, 50.0));
-    let data = AppState {
-        cursor: Arc::new(Cursor::Arrow),
-        custom: None,
-        custom_desc: Arc::new(custom_desc),
-    };
+    // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
+    // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
+    let custom_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
 
-    let app = AppLauncher::with_window(main_window);
-    app.use_simple_logger().launch(data).expect("launch failed");
+    let data = AppState {
+        cursor: Rc::new(Cursor::Arrow),
+        custom: None,
+        custom_desc,
+    };
+    AppLauncher::with_window(main_window)
+        .use_simple_logger()
+        .launch(data)
+        .expect("launch failed");
 }
