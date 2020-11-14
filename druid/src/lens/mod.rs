@@ -52,3 +52,45 @@ mod lens;
 pub use lens::{Deref, Field, Id, InArc, Index, Map, Ref, Then, Unit};
 #[doc(hidden)]
 pub use lens::{Lens, LensExt};
+
+/// A lens that reverses a boolean value
+///
+/// # Examples
+///
+/// ```
+/// # use druid::*;
+/// use druid::lens;
+///
+/// #[derive(Lens)]
+/// struct MyThing {
+///     first: bool
+/// }
+///
+/// let lens = lens::not(MyThing::first);
+/// let mut val = MyThing { first: false };
+/// assert_eq!(lens.with(&val, |v| *v), true);
+/// lens.with_mut(&mut val, |v| *v = false);
+/// assert_eq!(val.first, true);
+/// ```
+pub fn not<T>(inner: impl Lens<T, bool>) -> impl Lens<T, bool> {
+    struct Not<L>(L);
+
+    impl<T, L: Lens<T, bool>> Lens<T, bool> for Not<L> {
+        fn with<V, F: FnOnce(&bool) -> V>(&self, data: &T, f: F) -> V {
+            L::with(&self.0, data, move |b| f(&!*b))
+        }
+
+        fn with_mut<V, F: FnOnce(&mut bool) -> V>(&self, data: &mut T, f: F) -> V {
+            L::with_mut(&self.0, data, move |b| {
+                // reverse the sign for the inner lens.
+                *b = !*b;
+                let out = f(b);
+                // reverse the sign back.
+                *b = !*b;
+                out
+            })
+        }
+    }
+
+    Not(inner)
+}
