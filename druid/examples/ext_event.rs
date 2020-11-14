@@ -13,120 +13,114 @@
 // limitations under the License.
 
 //! An example of sending commands from another thread.
+//! This is useful when you want to have some kind of
+//! generated content(like here), or some task that just
+//! takes a long time but don't want to block the main thread
+//! (waiting on an http request, some cpu intensive work etc.)
 
 use instant::Instant;
 use std::thread;
 use std::time::Duration;
 
-use druid::kurbo::RoundedRect;
 use druid::widget::prelude::*;
-use druid::{
-    AppLauncher, Color, Data, LocalizedString, Rect, Selector, Target, WidgetExt, WindowDesc,
-};
+use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
 
+// If you want to send commands to over event sinks you have to give it some kind
+// of ID. The selector is that, it also assures the accompanying data-type is correct.
+// look at the docs for Selector for more detail.
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
 /// A widget that displays a color.
 struct ColorWell;
 
-#[derive(Debug, Clone, Data)]
-struct MyColor(#[data(same_fn = "color_eq")] Color);
-
-fn color_eq(one: &Color, two: &Color) -> bool {
-    one.as_rgba_u32() == two.as_rgba_u32()
-}
-
-fn split_rgba(rgba: &Color) -> (u8, u8, u8, u8) {
-    let rgba = rgba.as_rgba_u32();
-    (
-        (rgba >> 24 & 255) as u8,
-        ((rgba >> 16) & 255) as u8,
-        ((rgba >> 8) & 255) as u8,
-        (rgba & 255) as u8,
-    )
-}
-
 impl ColorWell {
     pub fn new() -> Self {
-        ColorWell
+        ColorWell {}
     }
 }
 
-impl Widget<MyColor> for ColorWell {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MyColor, _env: &Env) {
+impl Widget<Color> for ColorWell {
+    fn event(&mut self, _ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
         match event {
             Event::Command(cmd) if cmd.is(SET_COLOR) => {
-                data.0 = cmd.get_unchecked(SET_COLOR).clone();
-                ctx.request_paint();
+                *data = cmd.get_unchecked(SET_COLOR).clone();
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &MyColor, _: &Env) {
-    }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &Color, _: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &MyColor, data: &MyColor, _: &Env) {
-        if !old_data.same(data) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Color, data: &Color, _: &Env) {
+        if old_data != data {
             ctx.request_paint()
         }
     }
 
-    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &MyColor, _: &Env) -> Size {
+    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &Color, _: &Env) -> Size {
         bc.max()
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &MyColor, _env: &Env) {
-        let rect = Rect::ZERO.with_size(ctx.size());
-        let rect = RoundedRect::from_rect(rect, 5.0);
-        ctx.fill(rect, &data.0);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
+        ctx.fill(ctx.size().to_rounded_rect(5.0), data);
+    }
+}
+
+fn generate_colours(event_sink: druid::ExtEventSink) {
+    // This function is called in a separate thread, and runs until the program ends.
+    // We take an `ExtEventSink` as an argument, we can use this event sink to send
+    // commands to the main thread. Every time we generate a new colour we send it
+    // to the main thread.
+    let start_time = Instant::now();
+    let mut color = Color::WHITE;
+
+    loop {
+        let time_since_start = (Instant::now() - start_time).as_nanos();
+        let (r, g, b, _) = color.as_rgba8();
+
+        // there is no logic here; it's a very silly way of mutating the color.
+        color = match (time_since_start % 2, time_since_start % 3) {
+            (0, _) => Color::rgb8(r.wrapping_add(3), g, b),
+            (_, 0) => Color::rgb8(r, g.wrapping_add(3), b),
+            (_, _) => Color::rgb8(r, g, b.wrapping_add(3)),
+        };
+
+        // We send a command to the event_sink. This command will be
+        // send to the widgets, and widgets or controllers can look for this
+        // event. We give it the data associated with the event and a target.
+        // In this case this is just `Target::Auto`, look at the identity example
+        // for more detail on how to send commands to specific widgets.
+        if event_sink
+            .submit_command(SET_COLOR, color.clone(), Target::Auto)
+            .is_err()
+        {
+            break;
+        }
+        thread::sleep(Duration::from_millis(20));
     }
 }
 
 pub fn main() {
-    let window = WindowDesc::new(make_ui).title(
-        LocalizedString::new("identity-demo-window-title").with_placeholder("External Event Demo"),
-    );
+    let window = WindowDesc::new(make_ui).title("External Event Demo");
 
     let launcher = AppLauncher::with_window(window);
 
     let event_sink = launcher.get_external_handle();
-    let start_time = Instant::now();
-
-    thread::spawn(move || {
-        let mut last_color = Color::WHITE;
-
-        loop {
-            let time_since_start = (Instant::now() - start_time).as_nanos();
-            let (r, g, b, _) = split_rgba(&last_color);
-
-            // there is no logic here; it's a very silly way of mutating the color.
-            let new_color = match (time_since_start % 2, time_since_start % 3) {
-                (0, _) => Color::rgb8(r.wrapping_add(10), g, b),
-                (_, 0) => Color::rgb8(r, g.wrapping_add(10), b),
-                (_, _) => Color::rgb8(r, g, b.wrapping_add(10)),
-            };
-
-            last_color = new_color.clone();
-
-            // if this fails we're shutting down
-            if event_sink
-                .submit_command(SET_COLOR, new_color, Target::Auto)
-                .is_err()
-            {
-                break;
-            }
-            thread::sleep(Duration::from_millis(150));
-        }
-    });
+    //We create a new thread and generate colours in it.
+    //This happens on a second thread so that we can run the UI in the
+    //main thread. Generating some colours nicely follows the pattern for what
+    //should be done like this: generating something over time
+    //(like this or reacting to external events), or something that takes a
+    //long time and shouldn't block main UI updates.
+    thread::spawn(move || generate_colours(event_sink));
 
     launcher
         .use_simple_logger()
-        .launch(MyColor(Color::BLACK))
+        .launch(Color::BLACK)
         .expect("launch failed");
 }
 
-fn make_ui() -> impl Widget<MyColor> {
+fn make_ui() -> impl Widget<Color> {
     ColorWell::new()
         .fix_width(300.0)
         .fix_height(300.0)
