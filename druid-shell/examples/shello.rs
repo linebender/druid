@@ -100,6 +100,14 @@ impl WinHandler for HelloState {
         self.size = size;
     }
 
+    fn got_focus(&mut self) {
+        println!("Got focus");
+    }
+
+    fn lost_focus(&mut self) {
+        println!("Lost focus");
+    }
+
     fn request_close(&mut self) {
         self.handle.close();
     }

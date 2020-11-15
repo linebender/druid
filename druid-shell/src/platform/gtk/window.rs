@@ -307,7 +307,8 @@ impl WindowBuilder {
                 | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
                 | EventMask::SCROLL_MASK
-                | EventMask::SMOOTH_SCROLL_MASK,
+                | EventMask::SMOOTH_SCROLL_MASK
+                | EventMask::FOCUS_CHANGE_MASK,
         );
 
         win_state.drawing_area.set_can_focus(true);
@@ -614,6 +615,24 @@ impl WindowBuilder {
                     );
                 }
 
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_focus_in_event(clone!(handle => move |_widget, _event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|h| h.got_focus());
+                }
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_focus_out_event(clone!(handle => move |_widget, _event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|h| h.lost_focus());
+                }
                 Inhibit(true)
             }));
 
