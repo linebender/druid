@@ -122,7 +122,7 @@ impl<T: Data> Widget<T> for Align<T> {
         let origin = self
             .align
             .resolve(Rect::new(0., 0., extra_width, extra_height))
-            .floor();
+            .expand();
         self.child
             .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
 
