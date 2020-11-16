@@ -14,7 +14,7 @@
 
 //! An example of sending commands from another thread.
 //! This is useful when you want to have some kind of
-//! generated content(like here), or some task that just
+//! generated content (like here), or some task that just
 //! takes a long time but don't want to block the main thread
 //! (waiting on an http request, some cpu intensive work etc.)
 
@@ -25,9 +25,9 @@ use std::time::Duration;
 use druid::widget::prelude::*;
 use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
 
-// If you want to send commands to over event sinks you have to give it some kind
+// If you want to submit commands to an event sink you have to give it some kind
 // of ID. The selector is that, it also assures the accompanying data-type is correct.
-// look at the docs for Selector for more detail.
+// look at the docs for `Selector` for more detail.
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
 pub fn main() {
@@ -99,7 +99,7 @@ impl Widget<Color> for ColorWell {
                 // All we really do is just set the data. This causes a call
                 // to `update` which requests a paint. You can also request a paint
                 // during the event, but this should be reserved for changes to self.
-                // For changes to `Data` always make `update` to the paint requesting.
+                // For changes to `Data` always make `update` do the paint requesting.
                 *data = cmd.get_unchecked(SET_COLOR).clone();
             }
             _ => (),
