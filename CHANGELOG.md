@@ -127,7 +127,6 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
-
 - Added a book chapter about resolution independence. ([#913] by [@xStrom])
 - Added documentation for the `Image` widget. ([#1018] by [@covercash2])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
