@@ -109,7 +109,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 .fix_height(50.0)
         }))
         .vertical()
-        .lens(lens::Id.map(
+        .lens(lens::Identity.map(
             // Expose shared data with children data
             |d: &AppData| (d.right.clone(), d.right.clone()),
             |d: &mut AppData, x: (Vector<u32>, Vector<u32>)| {

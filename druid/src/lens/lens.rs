@@ -113,7 +113,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// assert_eq!(lens::Id.deref().get(&Box::new(42)), 42);
+    /// assert_eq!(lens::Identity.deref().get(&Box::new(42)), 42);
     /// ```
     fn deref(self) -> Then<Self, Deref, B>
     where
@@ -174,7 +174,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// assert_eq!(lens::Id.index(2).get(&vec![0u32, 1, 2, 3]), 2);
+    /// assert_eq!(lens::Identity.index(2).get(&vec![0u32, 1, 2, 3]), 2);
     /// ```
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
     where
@@ -189,7 +189,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*; use std::sync::Arc;
-    /// let lens = lens::Id.index(2).in_arc();
+    /// let lens = lens::Identity.index(2).in_arc();
     /// let mut x = Arc::new(vec![0, 1, 2, 3]);
     /// let original = x.clone();
     /// assert_eq!(lens.get(&x), 2);
@@ -426,13 +426,15 @@ where
     }
 }
 
-/// The identity lens: the lens which does nothing, i.e. exposes exactly the original value.
+/// The identity lens: the lens which does nothing, i.e. exposes exactly
+/// the original value.
 ///
-/// Useful for starting a lens combinator chain, or passing to lens-based interfaces.
+/// Useful for starting a lens combinator chain, or passing to lens-based
+/// interfaces.
 #[derive(Debug, Copy, Clone)]
-pub struct Id;
+pub struct Identity;
 
-impl<A: ?Sized> Lens<A, A> for Id {
+impl<A: ?Sized> Lens<A, A> for Identity {
     fn with<V, F: FnOnce(&A) -> V>(&self, data: &A, f: F) -> V {
         f(data)
     }
