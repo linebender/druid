@@ -14,12 +14,12 @@
 
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Rect, Size};
+use druid_shell::kurbo::{Line, Size};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
-    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, Menu, MouseEvent, SysMods,
-    TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogOptions, FileDialogToken, FileInfo, FileSpec, HotKey, KeyEvent,
+    Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -36,11 +36,12 @@ impl WinHandler for HelloState {
         self.handle = handle.clone();
     }
 
-    fn paint(&mut self, piet: &mut piet_common::Piet, _: Rect) -> bool {
+    fn prepare_paint(&mut self) {}
+
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: &Region) {
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
-        false
     }
 
     fn command(&mut self, id: u32) {
@@ -55,11 +56,14 @@ impl WinHandler for HelloState {
                     FileSpec::TEXT,
                     FileSpec::JPG,
                 ]);
-                let filename = self.handle.open_file_sync(options);
-                println!("result: {:?}", filename);
+                self.handle.open_file(options);
             }
             _ => println!("unexpected id {}", id),
         }
+    }
+
+    fn open_file(&mut self, _token: FileDialogToken, file_info: Option<FileInfo>) {
+        println!("open file result: {:?}", file_info);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
@@ -96,6 +100,10 @@ impl WinHandler for HelloState {
         self.size = size;
     }
 
+    fn request_close(&mut self) {
+        self.handle.close();
+    }
+
     fn destroy(&mut self) {
         Application::global().quit()
     }
@@ -106,7 +114,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    simple_logger::init().expect("Failed to init simple logger");
+    simple_logger::SimpleLogger::new().init().unwrap();
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,

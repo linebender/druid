@@ -16,35 +16,43 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::convert::TryInto;
+use std::collections::BinaryHeap;
+use std::convert::{TryFrom, TryInto};
+use std::os::unix::io::RawFd;
+use std::panic::Location;
 use std::rc::{Rc, Weak};
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
-use x11rb::protocol::xfixes::{ConnectionExt as _, Region};
+use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, ExposeEvent,
-    Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap,
+    PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
-use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::common_util::IdleCallback;
+use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyState, KeyEvent, Modifiers};
+use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::piet::{Piet, RenderContext};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::piet::{Piet, PietText, RenderContext};
+use crate::region::Region;
 use crate::scale::Scale;
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::window;
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util;
+use super::util::{self, Timer};
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -119,6 +127,18 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         log::warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_position(&mut self, _position: Point) {
+        log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_level(&mut self, _level: window::WindowLevel) {
+        log::warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -246,11 +266,10 @@ impl WindowBuilder {
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
-        // Figure out the refresh rate of the current screen
-        let refresh_rate = util::refresh_rate(conn, id);
         let state = RefCell::new(WindowState {
             size: self.size,
-            invalid: Rect::ZERO,
+            invalid: Region::EMPTY,
+            destroyed: false,
         });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -273,15 +292,31 @@ impl WindowBuilder {
             screen.root_depth,
         )?);
 
+        // Initialize some properties
+        let pid = nix::unistd::Pid::this().as_raw();
+        if let Ok(pid) = u32::try_from(pid) {
+            conn.change_property32(
+                xproto::PropMode::Replace,
+                id,
+                atoms._NET_WM_PID,
+                AtomEnum::CARDINAL,
+                &[pid],
+            )?
+            .check()
+            .context("set _NET_WM_PID")?;
+        }
+
         let window = Rc::new(Window {
             id,
             gc,
             app: self.app.clone(),
             handler,
             cairo_surface,
-            refresh_rate,
             atoms,
             state,
+            timer_queue: Mutex::new(BinaryHeap::new()),
+            idle_queue: Arc::new(Mutex::new(Vec::new())),
+            idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
             buffers,
         });
@@ -326,15 +361,35 @@ impl WindowBuilder {
 }
 
 /// An X11 window.
+//
+// We use lots of RefCells here, so to avoid panics we need some rules. The basic observation is
+// that there are two ways we can end up calling the code in this file:
+//
+// 1) it either comes from the system (e.g. through some X11 event), or
+// 2) from the client (e.g. druid, calling a method on its `WindowHandle`).
+//
+// Note that 2 only ever happens as a result of 1 (i.e., the system calls us, we call the client
+// using the `WinHandler`, and it calls us back). The rules are:
+//
+// a) We never call into the system as a result of 2. As a consequence, we never get 1
+//    re-entrantly.
+// b) We *almost* never call into the `WinHandler` while holding any of the other RefCells. There's
+//    an exception for `paint`. This is enforced by the `with_handler` method.
+//    (TODO: we could try to encode this exception statically, by making the data accessible in
+//    case 2 smaller than the data accessible in case 1).
 pub(crate) struct Window {
     id: u32,
     gc: Gcontext,
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
-    refresh_rate: Option<f64>,
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
+    /// Timers, sorted by "earliest deadline first"
+    timer_queue: Mutex<BinaryHeap<Timer>>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
+    // Writing to this wakes up the event loop, so that it can run idle handlers.
+    idle_pipe: RawFd,
 
     /// When this is `Some(_)`, we use the X11 Present extension to present windows. This syncs all
     /// presentation to vblank and it appears to prevent tearing (subject to various caveats
@@ -352,10 +407,10 @@ pub(crate) struct Window {
     ///    this case, we will render the next frame immediately unless we're already waiting for a
     ///    completion notification. (If we are waiting for a completion notification, we just make
     ///    a note to schedule a new frame once we get it.)
-    /// 3) Someone calls `invalidate` or `invalidate_rect` on us. We send ourselves an expose event
-    ///    and end up in state 2. This is better than rendering straight away, because for example
-    ///    they might have called `invalidate` from their paint callback, and then we'd end up
-    ///    painting re-entrantively.
+    /// 3) Someone calls `invalidate` or `invalidate_rect` on us. We schedule ourselves to repaint
+    ///    in the idle loop. This is better than rendering straight away, because for example they
+    ///    might have called `invalidate` from their paint callback, and then we'd end up painting
+    ///    re-entrantively.
     ///
     /// This is probably not the best (or at least, not the lowest-latency) scheme we can come up
     /// with, because invalidations that happen shortly after a vblank might need to wait 2 frames
@@ -388,10 +443,29 @@ pub(crate) struct Window {
 // Registering for but ignoring this event means that the window will remain open.
 //
 // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+//
+// _NET_WM_PID
+//
+// A property containing the PID of the process that created the window.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
+//
+// _NET_WM_NAME
+//
+// A version of WM_NAME supporting UTF8 text.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
+//
+// UTF8_STRING
+//
+// The type of _NET_WM_NAME
 atom_manager! {
     WindowAtoms: WindowAtomsCookie {
         WM_PROTOCOLS,
         WM_DELETE_WINDOW,
+        _NET_WM_PID,
+        _NET_WM_NAME,
+        UTF8_STRING,
     }
 }
 
@@ -399,7 +473,9 @@ atom_manager! {
 struct WindowState {
     size: Size,
     /// The region that was invalidated since the last time we rendered.
-    invalid: Rect,
+    invalid: Region,
+    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    destroyed: bool,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -441,7 +517,7 @@ struct PresentData {
     /// A monotonically increasing present request counter.
     serial: u32,
     /// The region that we use for telling X what to present.
-    region: Region,
+    region: XRegion,
     /// Did we submit a present that hasn't completed yet? If so, this is its serial number.
     waiting_on: Option<u32>,
     /// We need to render another frame as soon as the current one is done presenting.
@@ -456,23 +532,61 @@ struct PresentData {
     last_ust: Option<u64>,
 }
 
+#[derive(Clone)]
+pub struct CustomCursor(xproto::Cursor);
+
 impl Window {
+    #[track_caller]
+    fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
+        if self.cairo_surface.try_borrow_mut().is_err()
+            || self.state.try_borrow_mut().is_err()
+            || self.present_data.try_borrow_mut().is_err()
+            || self.buffers.try_borrow_mut().is_err()
+        {
+            log::error!("other RefCells were borrowed when calling into the handler");
+            return None;
+        }
+
+        self.with_handler_and_dont_check_the_other_borrows(f)
+    }
+
+    #[track_caller]
+    fn with_handler_and_dont_check_the_other_borrows<T, F: FnOnce(&mut dyn WinHandler) -> T>(
+        &self,
+        f: F,
+    ) -> Option<T> {
+        match self.handler.try_borrow_mut() {
+            Ok(mut h) => Some(f(&mut **h)),
+            Err(_) => {
+                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                None
+            }
+        }
+    }
+
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        let mut handler = borrow_mut!(self.handler)?;
         let size = self.size()?;
-        handler.connect(&handle.into());
-        handler.scale(Scale::default());
-        handler.size(size);
+        self.with_handler(|h| {
+            h.connect(&handle.into());
+            h.scale(Scale::default());
+            h.size(size);
+        });
         Ok(())
     }
 
     /// Start the destruction of the window.
-    ///
-    /// ### Connection
-    ///
-    /// Does not flush the connection.
     pub fn destroy(&self) {
-        log_x11!(self.app.connection().destroy_window(self.id));
+        if !self.destroyed() {
+            match borrow_mut!(self.state) {
+                Ok(mut state) => state.destroyed = true,
+                Err(e) => log::error!("Failed to set destroyed flag: {}", e),
+            }
+            log_x11!(self.app.connection().destroy_window(self.id));
+        }
+    }
+
+    fn destroyed(&self) -> bool {
+        borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
     }
 
     fn size(&self) -> Result<Size, Error> {
@@ -506,8 +620,8 @@ impl Window {
                         status
                     )
                 })?;
-            self.enlarge_invalid_rect(size.to_rect())?;
-            borrow_mut!(self.handler)?.size(size);
+            self.add_invalid_rect(size.to_rect())?;
+            self.with_handler(|h| h.size(size));
         }
         Ok(())
     }
@@ -530,33 +644,48 @@ impl Window {
     }
 
     fn render(&self) -> Result<(), Error> {
-        let size = borrow!(self.state)?.size;
-        let invalid_rect = borrow!(self.state)?.invalid;
-        let mut anim = false;
+        self.with_handler(|h| h.prepare_paint());
+
+        if self.destroyed() {
+            return Ok(());
+        }
+
         self.update_cairo_surface()?;
+        let invalid = std::mem::replace(&mut borrow_mut!(self.state)?.invalid, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
-            let mut cairo_ctx = cairo::Context::new(&surface);
-            let mut piet_ctx = Piet::new(&mut cairo_ctx);
-            piet_ctx.clip(invalid_rect);
+            let cairo_ctx = cairo::Context::new(&surface);
+
+            for rect in invalid.rects() {
+                cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
+            }
+            cairo_ctx.clip();
+
+            let mut piet_ctx = Piet::new(&cairo_ctx);
 
             // We need to be careful with earlier returns here, because piet_ctx
             // can panic if it isn't finish()ed. Also, we want to reset cairo's clip
             // even on error.
-            let err;
-            match borrow_mut!(self.handler) {
-                Ok(mut handler) => {
-                    anim = handler.paint(&mut piet_ctx, invalid_rect);
-                    err = piet_ctx
+            //
+            // Note that we're borrowing the surface while calling the handler. This is ok, because
+            // we don't return control to the system or re-borrow the surface from any code that
+            // the client can call.
+            let result = self.with_handler_and_dont_check_the_other_borrows(|handler| {
+                handler.paint(&mut piet_ctx, &invalid);
+                piet_ctx
+                    .finish()
+                    .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e))
+            });
+            let err = match result {
+                None => {
+                    // The handler borrow failed, so finish didn't get called.
+                    piet_ctx
                         .finish()
-                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e));
+                        .map_err(|e| anyhow!("Window::render - piet finish failed: {}", e))
                 }
-                Err(e) => {
-                    err = Err(e);
-                    if let Err(e) = piet_ctx.finish() {
-                        // We can't return both errors, so just log this one.
-                        log::error!("Window::render - piet finish failed in error branch: {}", e);
-                    }
+                Some(e) => {
+                    // Finish might have errored, in which case we want to propagate it.
+                    e
                 }
             };
             cairo_ctx.reset_clip();
@@ -564,7 +693,6 @@ impl Window {
             err?;
         }
 
-        borrow_mut!(self.state)?.invalid = Rect::ZERO;
         self.set_needs_present(false)?;
 
         let mut buffers = borrow_mut!(self.buffers)?;
@@ -573,42 +701,28 @@ impl Window {
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
-            present.present(self.app.connection(), pixmap, self.id, invalid_rect)?;
+            present.present(self.app.connection(), pixmap, self.id, &invalid)?;
             buffers.idle_pixmaps.pop();
-            if anim {
-                self.enlarge_invalid_rect(size.to_rect())?;
-                present.needs_present = true;
-            }
         } else {
-            let (x, y) = (invalid_rect.x0 as i16, invalid_rect.y0 as i16);
-            let (w, h) = (invalid_rect.width() as u16, invalid_rect.height() as u16);
-            self.app
-                .connection()
-                .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
-            // We aren't using the present extension, so fall back to sleeping for scheduling
-            // redraws. Sleeping is a terrible way to schedule redraws, but hopefully we don't
-            // have to fall back to this very often.
-            // TODO: once we have an idle handler, we should use that. Sleeping causes lots of
-            // problems when windows are dragged to resize.
-            if anim && self.refresh_rate.is_some() {
-                let sleep_amount_ms = (1000.0 / self.refresh_rate.unwrap()) as u64;
-                std::thread::sleep(std::time::Duration::from_millis(sleep_amount_ms));
-
-                self.invalidate_rect(size.to_rect());
+            for r in invalid.rects() {
+                let (x, y) = (r.x0 as i16, r.y0 as i16);
+                let (w, h) = (r.width() as u16, r.height() as u16);
+                self.app
+                    .connection()
+                    .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
             }
         }
-        self.app.connection().flush()?;
         Ok(())
     }
 
     fn show(&self) {
-        log_x11!(self.app.connection().map_window(self.id));
-        log_x11!(self.app.connection().flush());
+        if !self.destroyed() {
+            log_x11!(self.app.connection().map_window(self.id));
+        }
     }
 
     fn close(&self) {
         self.destroy();
-        log_x11!(self.app.connection().flush());
     }
 
     /// Set whether the window should be resizable
@@ -623,6 +737,10 @@ impl Window {
 
     /// Bring this window to the front of the window stack and give it focus.
     fn bring_to_front_and_focus(&self) {
+        if self.destroyed() {
+            return;
+        }
+
         // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = self.app.connection();
         log_x11!(conn.configure_window(
@@ -634,19 +752,43 @@ impl Window {
             self.id,
             xproto::Time::CurrentTime,
         ));
-        log_x11!(conn.flush());
     }
 
-    fn enlarge_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        let invalid = &mut borrow_mut!(self.state)?.invalid;
-        // This is basically just a rectangle union, but we need to be careful because
-        // `Rect::union` doesn't do what we want when one rect is empty.
-        if invalid.area() == 0.0 {
-            *invalid = rect;
-        } else if rect.area() > 0.0 {
-            *invalid = invalid.union(rect);
+    fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
+        borrow_mut!(self.state)?.invalid.add_rect(rect.expand());
+        Ok(())
+    }
+
+    /// Redraw more-or-less now.
+    ///
+    /// "More-or-less" because if we're already waiting on a present, we defer the drawing until it
+    /// completes.
+    fn redraw_now(&self) -> Result<(), Error> {
+        if self.waiting_on_present()? {
+            self.set_needs_present(true)?;
+        } else {
+            self.render()?;
         }
         Ok(())
+    }
+
+    /// Schedule a redraw on the idle loop, or if we are waiting on present then schedule it for
+    /// when the current present finishes.
+    fn request_anim_frame(&self) {
+        if let Ok(true) = self.waiting_on_present() {
+            if let Err(e) = self.set_needs_present(true) {
+                log::error!(
+                    "Window::request_anim_frame - failed to schedule present: {}",
+                    e
+                );
+            }
+        } else {
+            let idle = IdleHandle {
+                queue: Arc::clone(&self.idle_queue),
+                pipe: self.idle_pipe,
+            };
+            idle.schedule_redraw();
+        }
     }
 
     fn invalidate(&self) {
@@ -657,31 +799,21 @@ impl Window {
     }
 
     fn invalidate_rect(&self, rect: Rect) {
-        if let Err(err) =  self.enlarge_invalid_rect(rect) {
+        if let Err(err) = self.add_invalid_rect(rect) {
             log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
         }
 
-        // See: http://rtbo.github.io/rust-xcb/xcb/ffi/xproto/struct.xcb_expose_event_t.html
-        let expose_event = ExposeEvent {
-            window: self.id,
-            x: rect.x0 as u16,
-            y: rect.y0 as u16,
-            width: rect.width() as u16,
-            height: rect.height() as u16,
-            count: 0,
-            response_type: x11rb::protocol::xproto::EXPOSE_EVENT,
-            sequence: 0,
-        };
-        log_x11!(self.app.connection().send_event(
-            false,
-            self.id,
-            EventMask::Exposure,
-            expose_event,
-        ));
-        log_x11!(self.app.connection().flush());
+        self.request_anim_frame();
     }
 
     fn set_title(&self, title: &str) {
+        if self.destroyed() {
+            return;
+        }
+
+        // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
+        // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
+        // as long as _NET_WM_NAME is also set (which uses UTF8).
         log_x11!(self.app.connection().change_property8(
             xproto::PropMode::Replace,
             self.id,
@@ -689,7 +821,13 @@ impl Window {
             AtomEnum::STRING,
             title.as_bytes(),
         ));
-        log_x11!(self.app.connection().flush());
+        log_x11!(self.app.connection().change_property8(
+            xproto::PropMode::Replace,
+            self.id,
+            self.atoms._NET_WM_NAME,
+            self.atoms.UTF8_STRING,
+            title.as_bytes(),
+        ));
     }
 
     fn set_menu(&self, _menu: Menu) {
@@ -709,16 +847,16 @@ impl Window {
             (expose.width as f64, expose.height as f64),
         );
 
-        self.enlarge_invalid_rect(rect)?;
+        self.add_invalid_rect(rect)?;
         if self.waiting_on_present()? {
             self.set_needs_present(true)?;
         } else if expose.count == 0 {
-            self.render()?;
+            self.request_anim_frame();
         }
         Ok(())
     }
 
-    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) -> Result<(), Error> {
+    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) {
         let hw_keycode = key_press.detail;
         let code = keycodes::hardware_keycode_to_code(hw_keycode);
         let mods = key_mods(key_press.state);
@@ -734,14 +872,10 @@ impl Window {
             repeat: false,
             is_composing: false,
         };
-        borrow_mut!(self.handler)?.key_down(key_event);
-        Ok(())
+        self.with_handler(|h| h.key_down(key_event));
     }
 
-    pub fn handle_button_press(
-        &self,
-        button_press: &xproto::ButtonPressEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_button_press(&self, button_press: &xproto::ButtonPressEvent) {
         let button = mouse_button(button_press.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_press.event_x as f64, button_press.event_y as f64),
@@ -755,14 +889,10 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_down(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_down(&mouse_event));
     }
 
-    pub fn handle_button_release(
-        &self,
-        button_release: &xproto::ButtonReleaseEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_button_release(&self, button_release: &xproto::ButtonReleaseEvent) {
         let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_release.event_x as f64, button_release.event_y as f64),
@@ -775,8 +905,7 @@ impl Window {
             button,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_up(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_up(&mouse_event));
     }
 
     pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
@@ -804,14 +933,11 @@ impl Window {
             wheel_delta: delta.into(),
         };
 
-        borrow_mut!(self.handler)?.wheel(&mouse_event);
+        self.with_handler(|h| h.wheel(&mouse_event));
         Ok(())
     }
 
-    pub fn handle_motion_notify(
-        &self,
-        motion_notify: &xproto::MotionNotifyEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_motion_notify(&self, motion_notify: &xproto::MotionNotifyEvent) {
         let mouse_event = MouseEvent {
             pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64),
             buttons: mouse_buttons(motion_notify.state),
@@ -821,32 +947,23 @@ impl Window {
             button: MouseButton::None,
             wheel_delta: Vec2::ZERO,
         };
-        borrow_mut!(self.handler)?.mouse_move(&mouse_event);
-        Ok(())
+        self.with_handler(|h| h.mouse_move(&mouse_event));
     }
 
-    pub fn handle_client_message(
-        &self,
-        client_message: &xproto::ClientMessageEvent,
-    ) -> Result<(), Error> {
+    pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
         if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
             if protocol == self.atoms.WM_DELETE_WINDOW {
-                self.close();
+                self.with_handler(|h| h.request_close());
             }
         }
-        Ok(())
     }
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn handle_destroy_notify(
-        &self,
-        _destroy_notify: &xproto::DestroyNotifyEvent,
-    ) -> Result<(), Error> {
-        borrow_mut!(self.handler)?.destroy();
-        Ok(())
+    pub fn handle_destroy_notify(&self, _destroy_notify: &xproto::DestroyNotifyEvent) {
+        self.with_handler(|h| h.destroy());
     }
 
     pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
@@ -869,18 +986,24 @@ impl Window {
             // Check whether we missed presenting on any frames.
             if let Some(last_msc) = present.last_msc {
                 if last_msc.wrapping_add(1) != event.msc {
-                    log::info!(
+                    log::debug!(
                         "missed a present: msc went from {} to {}",
                         last_msc,
                         event.msc
                     );
                     if let Some(last_ust) = present.last_ust {
-                        log::info!("ust went from {} to {}", last_ust, event.ust);
+                        log::debug!("ust went from {} to {}", last_ust, event.ust);
                     }
                 }
             }
 
-            present.last_msc = Some(event.msc);
+            // Only store the last MSC if we're animating (if we aren't animating, missed MSCs
+            // aren't interesting).
+            present.last_msc = if present.needs_present {
+                Some(event.msc)
+            } else {
+                None
+            };
             present.last_ust = Some(event.ust);
             present.waiting_on = None;
         }
@@ -892,6 +1015,10 @@ impl Window {
     }
 
     pub fn handle_idle_notify(&self, event: &IdleNotifyEvent) -> Result<(), Error> {
+        if self.destroyed() {
+            return Ok(());
+        }
+
         let mut buffers = borrow_mut!(self.buffers)?;
         if buffers.all_pixmaps.contains(&event.pixmap) {
             buffers.idle_pixmaps.push(event.pixmap);
@@ -922,6 +1049,53 @@ impl Window {
             .as_ref()
             .map(|p| p.needs_present)
             .unwrap_or(false))
+    }
+
+    pub(crate) fn run_idle(&self) {
+        let mut queue = Vec::new();
+        std::mem::swap(&mut *self.idle_queue.lock().unwrap(), &mut queue);
+
+        let mut needs_redraw = false;
+        self.with_handler(|handler| {
+            for callback in queue {
+                match callback {
+                    IdleKind::Callback(f) => {
+                        f.call(handler.as_any());
+                    }
+                    IdleKind::Token(tok) => {
+                        handler.idle(tok);
+                    }
+                    IdleKind::Redraw => {
+                        needs_redraw = true;
+                    }
+                }
+            }
+        });
+
+        if needs_redraw {
+            if let Err(e) = self.redraw_now() {
+                log::error!("Error redrawing: {}", e);
+            }
+        }
+    }
+
+    pub(crate) fn next_timeout(&self) -> Option<Instant> {
+        if let Some(timer) = self.timer_queue.lock().unwrap().peek() {
+            Some(timer.deadline())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn run_timers(&self, now: Instant) {
+        while let Some(deadline) = self.next_timeout() {
+            if deadline > now {
+                break;
+            }
+            // Remove the timer and get the token
+            let token = self.timer_queue.lock().unwrap().pop().unwrap().token();
+            self.with_handler(|h| h.timer(token));
+        }
     }
 }
 
@@ -1013,16 +1187,20 @@ impl PresentData {
         conn: &Rc<XCBConnection>,
         pixmap: Pixmap,
         window_id: u32,
-        rect: Rect,
+        region: &Region,
     ) -> Result<(), Error> {
-        let x_rect = Rectangle {
-            x: rect.x0 as i16,
-            y: rect.y0 as i16,
-            width: rect.width() as u16,
-            height: rect.height() as u16,
-        };
+        let x_rects: Vec<Rectangle> = region
+            .rects()
+            .iter()
+            .map(|r| Rectangle {
+                x: r.x0 as i16,
+                y: r.y0 as i16,
+                width: r.width() as u16,
+                height: r.height() as u16,
+            })
+            .collect();
 
-        conn.xfixes_set_region(self.region, &[x_rect])?;
+        conn.xfixes_set_region(self.region, &x_rects[..])?;
         conn.present_pixmap(
             window_id,
             pixmap,
@@ -1117,21 +1295,56 @@ fn key_mods(mods: u16) -> Modifiers {
     ret
 }
 
+/// A handle that can get used to schedule an idle handler. Note that
+/// this handle can be cloned and sent between threads.
 #[derive(Clone)]
-pub(crate) struct IdleHandle;
+pub struct IdleHandle {
+    queue: Arc<Mutex<Vec<IdleKind>>>,
+    pipe: RawFd,
+}
+
+pub(crate) enum IdleKind {
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
+    Redraw,
+}
 
 impl IdleHandle {
-    pub fn add_idle_callback<F>(&self, _callback: F)
+    fn wake(&self) {
+        loop {
+            match nix::unistd::write(self.pipe, &[0]) {
+                Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+                Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {}
+                Err(e) => {
+                    log::error!("Failed to write to idle pipe: {}", e);
+                    break;
+                }
+                Ok(_) => {
+                    break;
+                }
+            }
+        }
+    }
+
+    pub(crate) fn schedule_redraw(&self) {
+        self.queue.lock().unwrap().push(IdleKind::Redraw);
+        self.wake();
+    }
+
+    pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        // TODO(x11/idle_handles): implement IdleHandle::add_idle_callback
-        log::warn!("IdleHandle::add_idle_callback is currently unimplemented for X11 platforms.");
+        self.queue
+            .lock()
+            .unwrap()
+            .push(IdleKind::Callback(Box::new(callback)));
+        self.wake();
     }
 
-    pub fn add_idle_token(&self, _token: IdleToken) {
-        // TODO(x11/idle_handles): implement IdleHandle::add_idle_token
-        log::warn!("IdleHandle::add_idle_token is currently unimplemented for X11 platforms.");
+    pub fn add_idle_token(&self, token: IdleToken) {
+        self.queue.lock().unwrap().push(IdleKind::Token(token));
+        self.wake();
     }
 }
 
@@ -1178,9 +1391,52 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
+    }
+
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
+        } else {
+            log::error!("Window {} has already been dropped", self.id);
+        }
+    }
+
+    pub fn request_anim_frame(&self) {
+        if let Some(w) = self.window.upgrade() {
+            w.request_anim_frame();
         } else {
             log::error!("Window {} has already been dropped", self.id);
         }
@@ -1218,32 +1474,38 @@ impl WindowHandle {
         }
     }
 
-    pub fn text(&self) -> Text {
-        // I'm not entirely sure what this method is doing here, so here's a Text.
-        Text::new()
+    pub fn text(&self) -> PietText {
+        PietText::new()
     }
 
-    pub fn request_timer(&self, _deadline: std::time::Instant) -> TimerToken {
-        // TODO(x11/timers): implement WindowHandle::request_timer
-        //     This one might be tricky, since there's not really any timers to hook into in X11.
-        //     Might have to code up our own Timer struct, running in its own thread?
-        log::warn!("WindowHandle::resizeable is currently unimplemented for X11 platforms.");
-        TimerToken::INVALID
+    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
+        if let Some(w) = self.window.upgrade() {
+            let timer = Timer::new(deadline);
+            w.timer_queue.lock().unwrap().push(timer);
+            timer.token()
+        } else {
+            TimerToken::INVALID
+        }
     }
 
     pub fn set_cursor(&mut self, _cursor: &Cursor) {
         // TODO(x11/cursors): implement WindowHandle::set_cursor
     }
 
-    pub fn open_file_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        // TODO(x11/file_dialogs): implement WindowHandle::open_file_sync
-        log::warn!("WindowHandle::open_file_sync is currently unimplemented for X11 platforms.");
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the X11 backend");
         None
     }
 
-    pub fn save_as_sync(&mut self, _options: FileDialogOptions) -> Option<FileInfo> {
-        // TODO(x11/file_dialogs): implement WindowHandle::save_as_sync
-        log::warn!("WindowHandle::save_as_sync is currently unimplemented for X11 platforms.");
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO(x11/file_dialogs): implement WindowHandle::open_file
+        log::warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
+        None
+    }
+
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        // TODO(x11/file_dialogs): implement WindowHandle::save_as
+        log::warn!("WindowHandle::save_as is currently unimplemented for X11 platforms.");
         None
     }
 
@@ -1253,9 +1515,14 @@ impl WindowHandle {
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        // TODO(x11/idle_handles): implement WindowHandle::get_idle_handle
-        //log::warn!("WindowHandle::get_idle_handle is currently unimplemented for X11 platforms.");
-        Some(IdleHandle)
+        if let Some(w) = self.window.upgrade() {
+            Some(IdleHandle {
+                queue: Arc::clone(&w.idle_queue),
+                pipe: w.idle_pipe,
+            })
+        } else {
+            None
+        }
     }
 
     pub fn get_scale(&self) -> Result<Scale, ShellError> {

@@ -15,8 +15,8 @@
 //! This example shows how to draw an png image.
 
 use druid::{
-    widget::{FillStrat, Flex, Image, ImageData, WidgetExt},
-    AppLauncher, Color, Widget, WindowDesc,
+    widget::{FillStrat, Flex, Image, WidgetExt},
+    AppLauncher, Color, ImageBuf, Widget, WindowDesc,
 };
 
 pub fn main() {
@@ -29,7 +29,7 @@ pub fn main() {
 }
 
 fn ui_builder() -> impl Widget<u32> {
-    let png_data = ImageData::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
+    let png_data = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
 
     let mut col = Flex::column();
 

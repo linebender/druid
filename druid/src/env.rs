@@ -23,7 +23,8 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::localization::L10nManager;
-use crate::{Color, Data, Point, Rect, Size};
+use crate::text::FontDescriptor;
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -52,7 +53,7 @@ pub struct Env(Arc<EnvImpl>);
 
 #[derive(Clone)]
 struct EnvImpl {
-    map: HashMap<String, Value>,
+    map: HashMap<ArcStr, Value>,
     debug_colors: Vec<Color>,
     l10n: Arc<L10nManager>,
 }
@@ -67,7 +68,7 @@ struct EnvImpl {
 ///
 /// ```
 ///# use druid::{Key, Color, WindowDesc, AppLauncher, widget::Label};
-/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("my-app.important-label-color");
+/// const IMPORTANT_LABEL_COLOR: Key<Color> = Key::new("org.linebender.example.important-label-color");
 ///
 /// fn important_label() -> Label<()> {
 ///     Label::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR)
@@ -86,26 +87,30 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
+#[derive(Clone, Debug, PartialEq)]
 pub struct Key<T> {
     key: &'static str,
-    value_type: PhantomData<*const T>,
+    value_type: PhantomData<T>,
 }
 
 // we could do some serious deriving here: the set of types that can be stored
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone)]
+#[derive(Clone, Data, PartialEq)]
+#[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
     Point(Point),
     Size(Size),
     Rect(Rect),
+    Insets(Insets),
     Color(Color),
     Float(f64),
     Bool(bool),
     UnsignedInt(u64),
-    String(String),
+    String(ArcStr),
+    Font(FontDescriptor),
 }
 // ANCHOR_END: value_type
 
@@ -116,23 +121,52 @@ pub enum Value {
 ///
 /// [`Key<T>`]: struct.Key.html
 /// [`Env`]: struct.Env.html
+#[derive(Clone, PartialEq, Debug)]
 pub enum KeyOrValue<T> {
-    Concrete(Value),
+    /// A concrete [`Value`] of type `T`.
+    ///
+    /// [`Value`]: enum.Value.html
+    Concrete(T),
+    /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
+    ///
+    /// [`Key<T>`]: struct.Key.html
+    /// [`Env`]: struct.Env.html
     Key(Key<T>),
 }
 
-/// Values which can be stored in an environment.
+/// A trait for anything that can resolve a value of some type from the [`Env`].
 ///
-/// Note that for "expensive" types this is the reference. For example,
-/// for strings, this trait is implemented on `&'a str`. The trait is
-/// parametrized on a lifetime so that it can be used for references in
-/// this way.
-pub trait ValueType<'a>: Sized {
-    /// The corresponding owned type.
-    type Owned: Into<Value>;
+/// This is a generalization of the idea of [`KeyOrValue`], mostly motivated
+/// by wanting to improve the API used for checking if items in the [`Env`] have changed.
+///
+/// [`Env`]: struct.Env.html
+/// [`KeyOrValue`]: enum.KeyOrValue.html
+pub trait KeyLike<T> {
+    /// Returns `true` if this item has changed between the old and new [`Env`].
+    ///
+    /// [`Env`]: struct.Env.html
+    fn changed(&self, old: &Env, new: &Env) -> bool;
+}
 
+impl<T: ValueType> KeyLike<T> for Key<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        !old.get_untyped(self).same(new.get_untyped(self))
+    }
+}
+
+impl<T> KeyLike<T> for KeyOrValue<T> {
+    fn changed(&self, old: &Env, new: &Env) -> bool {
+        match self {
+            KeyOrValue::Concrete(_) => false,
+            KeyOrValue::Key(key) => !old.get_untyped(key).same(new.get_untyped(key)),
+        }
+    }
+}
+
+/// Values which can be stored in an environment.
+pub trait ValueType: Sized + Clone + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
-    fn try_from_value(v: &'a Value) -> Result<Self, ValueTypeError>;
+    fn try_from_value(v: &Value) -> Result<Self, ValueTypeError>;
 }
 
 /// The error type for environment access.
@@ -146,6 +180,16 @@ pub struct ValueTypeError {
     found: Value,
 }
 
+/// An error type for when a key is missing from the [`Env`].
+///
+/// [`Env`]: struct.Env.html
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct MissingKeyError {
+    /// The raw key.
+    key: Arc<str>,
+}
+
 impl Env {
     /// State for whether or not to paint colorful rectangles for layout
     /// debugging.
@@ -153,14 +197,15 @@ impl Env {
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("druid.built-in.debug-paint");
+    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.built-in.debug-paint");
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
     /// Set by the `debug_widget_id()` method on [`WidgetExt`].
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_WIDGET_ID: Key<bool> = Key::new("druid.built-in.debug-widget-id");
+    pub(crate) const DEBUG_WIDGET_ID: Key<bool> =
+        Key::new("org.linebender.druid.built-in.debug-widget-id");
 
     /// A key used to tell widgets to print additional debug information.
     ///
@@ -183,7 +228,7 @@ impl Env {
     /// ```
     ///
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
-    pub const DEBUG_WIDGET: Key<bool> = Key::new("druid.built-in.debug-widget");
+    pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.
     ///
@@ -194,25 +239,28 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the key is not found, or if it is present with the wrong type.
-    pub fn get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> V {
-        let key = key.borrow();
-        if let Some(value) = self.0.map.get(key.key) {
-            value.to_inner_unchecked()
-        } else {
-            panic!("key for {} not found", key.key)
+    pub fn get<V: ValueType>(&self, key: impl Borrow<Key<V>>) -> V {
+        match self.try_get(key) {
+            Ok(value) => value,
+            Err(err) => panic!("{}", err),
         }
     }
 
-    /// Gets a value from the environment.
+    /// Trys to get a value from the environment.
+    ///
+    /// If the value is not found, the raw key is returned as the error.
     ///
     /// # Panics
     ///
     /// Panics if the value for the key is found, but has the wrong type.
-    pub fn try_get<'a, V: ValueType<'a>>(&'a self, key: impl Borrow<Key<V>>) -> Option<V> {
+    pub fn try_get<V: ValueType>(&self, key: impl Borrow<Key<V>>) -> Result<V, MissingKeyError> {
         self.0
             .map
             .get(key.borrow().key)
             .map(|value| value.to_inner_unchecked())
+            .ok_or(MissingKeyError {
+                key: key.borrow().key.into(),
+            })
     }
 
     /// Gets a value from the environment, in its encapsulated [`Value`] form,
@@ -223,37 +271,40 @@ impl Env {
     ///
     /// # Panics
     ///
-    /// Panics if the key is not found
+    /// Panics if the key is not found.
+    ///
     /// [`Value`]: enum.Value.html
-    pub fn get_untyped(&self, key: impl Borrow<Key<()>>) -> &Value {
-        let key = key.borrow();
-        if let Some(value) = self.0.map.get(key.key) {
-            value
-        } else {
-            panic!("key for {} not found", key.key)
+    pub fn get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> &Value {
+        match self.try_get_untyped(key) {
+            Ok(val) => val,
+            Err(err) => panic!("{}", err),
         }
     }
 
     /// Gets a value from the environment, in its encapsulated [`Value`] form,
-    /// returning None if a value isn't found.
+    /// returning `None` if a value isn't found.
     ///
-    /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
-    /// for debugging, theme editing, and theme loading.
+    /// # Note
+    /// This is not intended for general use, but only for inspecting an `Env`
+    /// e.g. for debugging, theme editing, and theme loading.
+    ///
     /// [`Value`]: enum.Value.html
-    pub fn try_get_untyped(&self, key: impl Borrow<Key<()>>) -> Option<&Value> {
-        self.0.map.get(key.borrow().key)
+    pub fn try_get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> Result<&Value, MissingKeyError> {
+        self.0.map.get(key.borrow().key).ok_or(MissingKeyError {
+            key: key.borrow().key.into(),
+        })
     }
 
     /// Gets the entire contents of the `Env`, in key-value pairs.
     ///
     /// *WARNING:* This is not intended for general use, but only for inspecting an `Env` e.g.
     /// for debugging, theme editing, and theme loading.
-    pub fn get_all(&self) -> impl ExactSizeIterator<Item = (&String, &Value)> {
+    pub fn get_all(&self) -> impl ExactSizeIterator<Item = (&ArcStr, &Value)> {
         self.0.map.iter()
     }
 
     /// Adds a key/value, acting like a builder.
-    pub fn adding<'a, V: ValueType<'a>>(mut self, key: Key<V>, value: impl Into<V::Owned>) -> Env {
+    pub fn adding<V: ValueType>(mut self, key: Key<V>, value: impl Into<V>) -> Env {
         let env = Arc::make_mut(&mut self.0);
         env.map.insert(key.into(), value.into().into());
         self
@@ -265,7 +316,7 @@ impl Env {
     ///
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
-    pub fn set<'a, V: ValueType<'a>>(&'a mut self, key: Key<V>, value: impl Into<V::Owned>) {
+    pub fn set<V: ValueType>(&mut self, key: Key<V>, value: impl Into<V>) {
         let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
         let key = key.into();
@@ -307,8 +358,8 @@ impl<T> Key<T> {
     /// use druid::Key;
     /// use druid::piet::Color;
     ///
-    /// let float_key: Key<f64> = Key::new("a.very.good.float");
-    /// let color_key: Key<Color> = Key::new("a.very.nice.color");
+    /// let float_key: Key<f64> = Key::new("org.linebender.example.a.very.good.float");
+    /// let color_key: Key<Color> = Key::new("org.linebender.example.a.very.nice.color");
     /// ```
     pub const fn new(key: &'static str) -> Self {
         Key {
@@ -340,7 +391,7 @@ impl Value {
     /// # Panics
     ///
     /// Panics when the value variant doesn't match the provided type.
-    pub fn to_inner_unchecked<'a, V: ValueType<'a>>(&'a self) -> V {
+    pub fn to_inner_unchecked<V: ValueType>(&self) -> V {
         match ValueType::try_from_value(self) {
             Ok(v) => v,
             Err(s) => panic!("{}", s),
@@ -353,11 +404,13 @@ impl Value {
             (Point(_), Point(_)) => true,
             (Size(_), Size(_)) => true,
             (Rect(_), Rect(_)) => true,
+            (Insets(_), Insets(_)) => true,
             (Color(_), Color(_)) => true,
             (Float(_), Float(_)) => true,
             (Bool(_), Bool(_)) => true,
             (UnsignedInt(_), UnsignedInt(_)) => true,
             (String(_), String(_)) => true,
+            (Font(_), Font(_)) => true,
             _ => false,
         }
     }
@@ -369,30 +422,13 @@ impl Debug for Value {
             Value::Point(p) => write!(f, "Point {:?}", p),
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
+            Value::Insets(i) => write!(f, "Insets {:?}", i),
             Value::Color(c) => write!(f, "Color {:?}", c),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
-        }
-    }
-}
-
-impl Data for Value {
-    fn same(&self, other: &Value) -> bool {
-        use Value::*;
-        match (self, other) {
-            (Point(p1), Point(p2)) => p1.x.same(&p2.x) && p1.y.same(&p2.y),
-            (Rect(r1), Rect(r2)) => {
-                r1.x0.same(&r2.x0) && r1.y0.same(&r2.y0) && r1.x1.same(&r2.x1) && r1.y1.same(&r2.y1)
-            }
-            (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
-            (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (Float(f1), Float(f2)) => f1.same(&f2),
-            (Bool(b1), Bool(b2)) => b1 == b2,
-            (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
-            (String(s1), String(s2)) => s1 == s2,
-            _ => false,
+            Value::Font(font) => write!(f, "Font {:?}", font),
         }
     }
 }
@@ -446,16 +482,18 @@ impl Default for Env {
             debug_colors,
         };
 
-        Env(Arc::new(inner))
+        let env = Env(Arc::new(inner))
             .adding(Env::DEBUG_PAINT, false)
             .adding(Env::DEBUG_WIDGET_ID, false)
-            .adding(Env::DEBUG_WIDGET, false)
+            .adding(Env::DEBUG_WIDGET, false);
+
+        crate::theme::add_to_env(env)
     }
 }
 
-impl<T> From<Key<T>> for String {
-    fn from(src: Key<T>) -> String {
-        String::from(src.key)
+impl<T> From<Key<T>> for ArcStr {
+    fn from(src: Key<T>) -> ArcStr {
+        ArcStr::from(src.key)
     }
 }
 
@@ -474,13 +512,26 @@ impl std::fmt::Display for ValueTypeError {
     }
 }
 
+impl MissingKeyError {
+    /// The raw key that was missing.
+    pub fn raw_key(&self) -> &str {
+        &self.key
+    }
+}
+
+impl std::fmt::Display for MissingKeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Missing key: '{}'", self.key)
+    }
+}
+
 impl std::error::Error for ValueTypeError {}
+impl std::error::Error for MissingKeyError {}
 
 /// Use this macro for types which are cheap to clone (ie all `Copy` types).
-macro_rules! impl_value_type_owned {
+macro_rules! impl_value_type {
     ($ty:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for $ty {
-            type Owned = $ty;
+        impl ValueType for $ty {
             fn try_from_value(value: &Value) -> Result<Self, ValueTypeError> {
                 match value {
                     Value::$var(f) => Ok(f.to_owned()),
@@ -497,53 +548,37 @@ macro_rules! impl_value_type_owned {
     };
 }
 
-/// Use this macro for types which require allocation but are not too
-/// expensive to clone.
-macro_rules! impl_value_type_borrowed {
-    ($ty:ty, $owned:ty, $var:ident) => {
-        impl<'a> ValueType<'a> for &'a $ty {
-            type Owned = $owned;
-            fn try_from_value(value: &'a Value) -> Result<Self, ValueTypeError> {
-                match value {
-                    Value::$var(f) => Ok(f),
-                    other => Err(ValueTypeError::new(any::type_name::<$ty>(), other.clone())),
-                }
-            }
-        }
+impl_value_type!(f64, Float);
+impl_value_type!(bool, Bool);
+impl_value_type!(u64, UnsignedInt);
+impl_value_type!(Color, Color);
+impl_value_type!(Rect, Rect);
+impl_value_type!(Point, Point);
+impl_value_type!(Size, Size);
+impl_value_type!(Insets, Insets);
+impl_value_type!(ArcStr, String);
+impl_value_type!(FontDescriptor, Font);
 
-        impl Into<Value> for $owned {
-            fn into(self) -> Value {
-                Value::$var(self)
-            }
-        }
-    };
-}
-
-impl_value_type_owned!(f64, Float);
-impl_value_type_owned!(bool, Bool);
-impl_value_type_owned!(u64, UnsignedInt);
-impl_value_type_owned!(Color, Color);
-impl_value_type_owned!(Rect, Rect);
-impl_value_type_owned!(Point, Point);
-impl_value_type_owned!(Size, Size);
-impl_value_type_borrowed!(str, String, String);
-
-impl<'a, T: ValueType<'a>> KeyOrValue<T> {
-    pub fn resolve(&'a self, env: &'a Env) -> T {
+impl<T: ValueType> KeyOrValue<T> {
+    /// Resolve the concrete type `T` from this `KeyOrValue`, using the provided
+    /// [`Env`] if required.
+    ///
+    /// [`Env`]: struct.Env.html
+    pub fn resolve(&self, env: &Env) -> T {
         match self {
-            KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
+            KeyOrValue::Concrete(ref value) => value.to_owned(),
             KeyOrValue::Key(key) => env.get(key),
         }
     }
 }
 
-impl<'a, V: Into<Value>, T: ValueType<'a, Owned = V>> From<V> for KeyOrValue<T> {
-    fn from(value: V) -> KeyOrValue<T> {
-        KeyOrValue::Concrete(value.into())
+impl<T: Into<Value>> From<T> for KeyOrValue<T> {
+    fn from(value: T) -> KeyOrValue<T> {
+        KeyOrValue::Concrete(value)
     }
 }
 
-impl<'a, T: ValueType<'a>> From<Key<T>> for KeyOrValue<T> {
+impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
     fn from(key: Key<T>) -> KeyOrValue<T> {
         KeyOrValue::Key(key)
     }
@@ -555,13 +590,20 @@ mod tests {
 
     #[test]
     fn string_key_or_value() {
-        const MY_KEY: Key<&str> = Key::new("test.my-string-key");
-        let env = Env::default().adding(MY_KEY, "Owned".to_string());
-        assert_eq!(env.get(MY_KEY), "Owned");
+        const MY_KEY: Key<ArcStr> = Key::new("org.linebender.test.my-string-key");
+        let env = Env::default().adding(MY_KEY, "Owned");
+        assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 
-        let key: KeyOrValue<&str> = MY_KEY.into();
-        let value: KeyOrValue<&str> = "Owned".to_string().into();
+        let key: KeyOrValue<ArcStr> = MY_KEY.into();
+        let value: KeyOrValue<ArcStr> = ArcStr::from("Owned").into();
 
         assert_eq!(key.resolve(&env), value.resolve(&env));
+    }
+
+    #[test]
+    fn key_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Key<()>>();
     }
 }

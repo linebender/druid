@@ -13,10 +13,8 @@
 // limitations under the License.
 
 use crate::piet::{FixedGradient, LinearGradient, PaintBrush, RadialGradient};
-use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, Key, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, RenderContext, Size, UpdateCtx, Widget,
-};
+use crate::widget::prelude::*;
+use crate::{Color, Data, Key};
 
 /// A widget that only handles painting.
 ///
@@ -88,6 +86,7 @@ pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 /// [`Data`]: ../trait.Data.html
 /// [`Env`]: ../struct.Env.html
 #[non_exhaustive]
+#[allow(missing_docs)]
 pub enum BackgroundBrush<T> {
     Color(Color),
     ColorKey(Key<Color>),

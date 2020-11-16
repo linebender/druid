@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Target, WidgetId};
+use crate::{Command, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -108,6 +108,17 @@ pub enum Event {
     ///
     /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
     Timer(TimerToken),
+    /// Called at the beginning of a new animation frame.
+    ///
+    /// On the first frame when transitioning from idle to animating, `interval`
+    /// will be 0. (This logic is presently per-window but might change to
+    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
+    ///
+    /// The `paint` method will be called shortly after this event is finished.
+    /// As a result, you should try to avoid doing anything computationally
+    /// intensive in response to an `AnimFrame` event: it might make Druid miss
+    /// the monitor's refresh, causing lag or jerky animation.
+    AnimFrame(u64),
     /// Called with an arbitrary [`Command`], submitted from elsewhere in
     /// the application.
     ///
@@ -142,7 +153,7 @@ pub enum InternalEvent {
     /// but we know that we've stopped receiving the mouse events.
     MouseLeave,
     /// A command still in the process of being dispatched.
-    TargetedCommand(Target, Command),
+    TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
 }
@@ -182,12 +193,6 @@ pub enum LifeCycle {
     /// [`Rect`]: struct.Rect.html
     /// [`WidgetPod::set_layout_rect`]: struct.WidgetPod.html#method.set_layout_rect
     Size(Size),
-    /// Called at the beginning of a new animation frame.
-    ///
-    /// On the first frame when transitioning from idle to animating, `interval`
-    /// will be 0. (This logic is presently per-window but might change to
-    /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
-    AnimFrame(u64),
     /// Called when the "hot" status changes.
     ///
     /// This will always be called _before_ the event that triggered it; that is,
@@ -293,6 +298,38 @@ impl Event {
                 }
             }
             _ => Some(self.clone()),
+        }
+    }
+
+    /// Whether this event should be sent to widgets which are currently not visible
+    /// (for example the hidden tabs in a tabs widget).
+    pub fn should_propagate_to_hidden(&self) -> bool {
+        match self {
+            Event::WindowConnected
+            | Event::WindowSize(_)
+            | Event::Timer(_)
+            | Event::AnimFrame(_)
+            | Event::Command(_)
+            | Event::Internal(_) => true,
+            Event::MouseDown(_)
+            | Event::MouseUp(_)
+            | Event::MouseMove(_)
+            | Event::Wheel(_)
+            | Event::KeyDown(_)
+            | Event::KeyUp(_)
+            | Event::Paste(_)
+            | Event::Zoom(_) => false,
+        }
+    }
+}
+
+impl LifeCycle {
+    /// Whether this event should be sent to widgets which are currently not visible
+    /// (for example the hidden tabs in a tabs widget).
+    pub fn should_propagate_to_hidden(&self) -> bool {
+        match self {
+            LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
+            LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
         }
     }
 }

@@ -16,8 +16,10 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+use std::os::unix::io::RawFd;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
@@ -30,6 +32,7 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
+use super::util;
 use super::window::Window;
 
 #[derive(Clone)]
@@ -41,6 +44,11 @@ pub(crate) struct Application {
     ///
     /// A display is a collection of screens.
     connection: Rc<XCBConnection>,
+    /// An `XCBConnection` is *technically* safe to use from other threads, but there are
+    /// subtleties; see https://github.com/psychon/x11rb/blob/41ab6610f44f5041e112569684fc58cd6d690e57/src/event_loop_integration.rs.
+    /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
+    /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
+    marker: std::marker::PhantomData<*mut XCBConnection>,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -62,6 +70,12 @@ pub(crate) struct Application {
     window_id: u32,
     /// The mutable `Application` state.
     state: Rc<RefCell<State>>,
+    /// The read end of the "idle pipe", a pipe that allows the event loop to be woken up from
+    /// other threads.
+    idle_read: RawFd,
+    /// The write end of the "idle pipe", a pipe that allows the event loop to be woken up from
+    /// other threads.
+    idle_write: RawFd,
     /// The major opcode of the Present extension, if it is supported.
     present_opcode: Option<u8>,
 }
@@ -92,6 +106,8 @@ impl Application {
             windows: HashMap::new(),
         }));
 
+        let (idle_read, idle_write) = nix::unistd::pipe2(nix::fcntl::OFlag::O_NONBLOCK)?;
+
         let present_opcode = if std::env::var_os("DRUID_SHELL_DISABLE_X11_PRESENT").is_some() {
             // Allow disabling Present with an environment variable.
             None
@@ -110,7 +126,10 @@ impl Application {
             screen_num: screen_num as i32,
             window_id,
             state,
+            idle_read,
+            idle_write,
             present_opcode,
+            marker: std::marker::PhantomData,
         })
     }
 
@@ -250,8 +269,7 @@ impl Application {
                 let w = self
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(ev)
-                    .context("KEY_PRESS - failed to handle")?;
+                w.handle_key_press(ev);
             }
             Event::ButtonPress(ev) => {
                 let w = self
@@ -264,8 +282,7 @@ impl Application {
                     w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(ev)
-                        .context("BUTTON_PRESS - failed to handle")?;
+                    w.handle_button_press(ev);
                 }
             }
             Event::ButtonRelease(ev) => {
@@ -276,23 +293,20 @@ impl Application {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(ev)
-                        .context("BUTTON_RELEASE - failed to handle")?;
+                    w.handle_button_release(ev);
                 }
             }
             Event::MotionNotify(ev) => {
                 let w = self
                     .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(ev)
-                    .context("MOTION_NOTIFY - failed to handle")?;
+                w.handle_motion_notify(ev);
             }
             Event::ClientMessage(ev) => {
                 let w = self
                     .window(ev.window)
                     .context("CLIENT_MESSAGE - failed to get window")?;
-                w.handle_client_message(ev)
-                    .context("CLIENT_MESSAGE - failed to handle")?;
+                w.handle_client_message(ev);
             }
             Event::DestroyNotify(ev) => {
                 if ev.window == self.window_id {
@@ -304,8 +318,7 @@ impl Application {
                 let w = self
                     .window(ev.window)
                     .context("DESTROY_NOTIFY - failed to get window")?;
-                w.handle_destroy_notify(ev)
-                    .context("DESTROY_NOTIFY - failed to handle")?;
+                w.handle_destroy_notify(ev);
 
                 // Remove our reference to the Window and allow it to be dropped
                 let windows_left = self
@@ -350,20 +363,92 @@ impl Application {
         Ok(false)
     }
 
-    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+    fn run_inner(self) -> Result<(), Error> {
+        // Try to figure out the refresh rate of the current screen. We run the idle loop at that
+        // rate. The rate-limiting of the idle loop has two purposes:
+        //  - When the present extension is disabled, we paint in the idle loop. By limiting the
+        //    idle loop to the monitor's refresh rate, we aren't painting unnecessarily.
+        //  - By running idle commands at a limited rate, we limit spurious wake-ups: if the X11
+        //    connection is otherwise idle, we'll wake up at most once per frame, run *all* the
+        //    pending idle commands, and then go back to sleep.
+        let refresh_rate = util::refresh_rate(self.connection(), self.window_id).unwrap_or(60.0);
+        let timeout = Duration::from_millis((1000.0 / refresh_rate) as u64);
+        let mut last_idle_time = Instant::now();
         loop {
-            if let Ok(ev) = self.connection.wait_for_event() {
+            // Figure out when the next wakeup needs to happen
+            let next_timeout = if let Ok(state) = self.state.try_borrow() {
+                state
+                    .windows
+                    .values()
+                    .filter_map(|w| w.next_timeout())
+                    .min()
+            } else {
+                log::error!("Getting next timeout, application state already borrowed");
+                None
+            };
+            let next_idle_time = last_idle_time + timeout;
+
+            self.connection.flush()?;
+
+            // Before we poll on the connection's file descriptor, check whether there are any
+            // events ready. It could be that XCB has some events in its internal buffers because
+            // of something that happened during the idle loop.
+            let mut event = self.connection.poll_for_event()?;
+
+            if event.is_none() {
+                poll_with_timeout(
+                    &self.connection,
+                    self.idle_read,
+                    next_timeout,
+                    next_idle_time,
+                )
+                .context("Error while waiting for X11 connection")?;
+            }
+
+            while let Some(ev) = event {
                 match self.handle_event(&ev) {
                     Ok(quit) => {
                         if quit {
-                            break;
+                            return Ok(());
                         }
                     }
                     Err(e) => {
                         log::error!("Error handling event: {:#}", e);
                     }
                 }
+                event = self.connection.poll_for_event()?;
             }
+
+            let now = Instant::now();
+            if let Some(timeout) = next_timeout {
+                if timeout <= now {
+                    if let Ok(state) = self.state.try_borrow() {
+                        for w in state.windows.values() {
+                            w.run_timers(now);
+                        }
+                    } else {
+                        log::error!("In timer loop, application state already borrowed");
+                    }
+                }
+            }
+            if now >= next_idle_time {
+                last_idle_time = now;
+                drain_idle_pipe(self.idle_read)?;
+
+                if let Ok(state) = self.state.try_borrow() {
+                    for w in state.windows.values() {
+                        w.run_idle();
+                    }
+                } else {
+                    log::error!("In idle loop, application state already borrowed");
+                }
+            }
+        }
+    }
+
+    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+        if let Err(e) = self.run_inner() {
+            log::error!("{}", e);
         }
     }
 
@@ -380,7 +465,6 @@ impl Application {
                     for window in state.windows.values() {
                         window.destroy();
                     }
-                    log_x11!(self.connection.flush());
                 }
             }
         } else {
@@ -390,7 +474,12 @@ impl Application {
 
     fn finalize_quit(&self) {
         log_x11!(self.connection.destroy_window(self.window_id));
-        log_x11!(self.connection.flush());
+        if let Err(e) = nix::unistd::close(self.idle_read) {
+            log::error!("Error closing idle_read: {}", e);
+        }
+        if let Err(e) = nix::unistd::close(self.idle_write) {
+            log::error!("Error closing idle_write: {}", e);
+        }
     }
 
     pub fn clipboard(&self) -> Clipboard {
@@ -404,4 +493,124 @@ impl Application {
         log::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
         "en-US".into()
     }
+
+    pub(crate) fn idle_pipe(&self) -> RawFd {
+        self.idle_write
+    }
+}
+
+/// Clears out our idle pipe; `idle_read` should be the reading end of a pipe that was opened with
+/// O_NONBLOCK.
+fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
+    // Each write to the idle pipe adds one byte; it's unlikely that there will be much in it, but
+    // read it 16 bytes at a time just in case.
+    let mut read_buf = [0u8; 16];
+    loop {
+        match nix::unistd::read(idle_read, &mut read_buf[..]) {
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
+            // pipe.
+            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+                break;
+            }
+            Err(e) => {
+                return Err(e).context("Failed to read from idle pipe");
+            }
+            // According to write(2), this is the outcome of reading an O_NONBLOCK pipe
+            // when the other end has been closed. This shouldn't happen to us because we
+            // own both ends, but just in case.
+            Ok(0) => {
+                break;
+            }
+            Ok(_) => {}
+        }
+    }
+    Ok(())
+}
+
+/// Returns when there is an event ready to read from `conn`, or we got signalled by another thread
+/// writing into our idle pipe and the `timeout` has passed.
+// This was taken, with minor modifications, from the xclock_utc example in the x11rb crate.
+// https://github.com/psychon/x11rb/blob/a6bd1453fd8e931394b9b1f2185fad48b7cca5fe/examples/xclock_utc.rs
+fn poll_with_timeout(
+    conn: &Rc<XCBConnection>,
+    idle: RawFd,
+    timer_timeout: Option<Instant>,
+    idle_timeout: Instant,
+) -> Result<(), Error> {
+    use nix::poll::{poll, PollFd, PollFlags};
+    use std::os::raw::c_int;
+    use std::os::unix::io::AsRawFd;
+
+    let mut now = Instant::now();
+    let earliest_timeout = idle_timeout.min(timer_timeout.unwrap_or(idle_timeout));
+    let fd = conn.as_raw_fd();
+    let mut both_poll_fds = [
+        PollFd::new(fd, PollFlags::POLLIN),
+        PollFd::new(idle, PollFlags::POLLIN),
+    ];
+    let mut just_connection = [PollFd::new(fd, PollFlags::POLLIN)];
+    let mut poll_fds = &mut both_poll_fds[..];
+
+    // We start with no timeout in the poll call. If we get something from the idle handler, we'll
+    // start setting one.
+    let mut honor_idle_timeout = false;
+    loop {
+        fn readable(p: PollFd) -> bool {
+            p.revents()
+                .unwrap_or_else(PollFlags::empty)
+                .contains(PollFlags::POLLIN)
+        };
+
+        // Compute the deadline for when poll() has to wakeup
+        let deadline = if honor_idle_timeout {
+            Some(earliest_timeout)
+        } else {
+            timer_timeout
+        };
+        // ...and convert the deadline into an argument for poll()
+        let poll_timeout = if let Some(deadline) = deadline {
+            if deadline <= now {
+                break;
+            } else {
+                let millis = c_int::try_from(deadline.duration_since(now).as_millis())
+                    .unwrap_or(c_int::max_value() - 1);
+                // The above .as_millis() rounds down. This means we would wake up before the
+                // deadline is reached. Add one to 'simulate' rounding up instead.
+                millis + 1
+            }
+        } else {
+            // No timeout
+            -1
+        };
+
+        match poll(poll_fds, poll_timeout) {
+            Ok(_) => {
+                if readable(poll_fds[0]) {
+                    // There is an X11 event ready to be handled.
+                    break;
+                }
+                now = Instant::now();
+                if timer_timeout.is_some() && now >= timer_timeout.unwrap() {
+                    break;
+                }
+                if poll_fds.len() == 1 || readable(poll_fds[1]) {
+                    // Now that we got signalled, stop polling from the idle pipe and use a timeout
+                    // instead.
+                    poll_fds = &mut just_connection;
+                    honor_idle_timeout = true;
+                    if now >= idle_timeout {
+                        break;
+                    }
+                }
+            }
+
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {
+                now = Instant::now();
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
+
+    Ok(())
 }

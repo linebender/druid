@@ -22,14 +22,14 @@ use std::rc::Rc;
 
 use winapi::shared::minwindef::{FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
-use winapi::shared::windef::{HCURSOR, HWND};
+use winapi::shared::windef::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, HCURSOR, HWND};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::shellscalingapi::PROCESS_SYSTEM_DPI_AWARE;
+use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
 use winapi::um::winuser::{
-    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
-    RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT, IDI_APPLICATION, MSG,
-    WNDCLASSW,
+    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PeekMessageW, PostMessageW,
+    PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
+    IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
 use crate::application::AppHandler;
@@ -64,10 +64,14 @@ impl Application {
     fn init() -> Result<(), Error> {
         // TODO: Report back an error instead of panicking
         util::attach_console();
-        if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+        if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwarenessContext {
             // This function is only supported on windows 10
             unsafe {
-                func(PROCESS_SYSTEM_DPI_AWARE); // TODO: per monitor (much harder)
+                func(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            }
+        } else if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwareness {
+            unsafe {
+                func(PROCESS_PER_MONITOR_DPI_AWARE);
             }
         }
         unsafe {
@@ -103,9 +107,24 @@ impl Application {
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         unsafe {
-            // Handle windows messages
+            // Handle windows messages.
+            //
+            // NOTE: Code here will not run when we aren't in charge of the message loop. That
+            // will include when moving or resizing the window, and when showing modal dialogs.
             loop {
                 let mut msg = mem::MaybeUninit::uninit();
+
+                // Timer messages have a low priority and tend to get delayed. Peeking for them
+                // helps for some reason; see
+                // https://devblogs.microsoft.com/oldnewthing/20191108-00/?p=103080
+                PeekMessageW(
+                    msg.as_mut_ptr(),
+                    ptr::null_mut(),
+                    WM_TIMER,
+                    WM_TIMER,
+                    PM_NOREMOVE,
+                );
+
                 let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
                 if res <= 0 {
                     if res == -1 {

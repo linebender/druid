@@ -15,13 +15,9 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use crate::kurbo::common::FloatExt;
-use crate::kurbo::{Point, Rect, Size};
-
+use crate::widget::prelude::*;
 use crate::widget::SizedBox;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, UpdateCtx, Widget, WidgetPod,
-};
+use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
 
 /// A container with either horizontal or vertical layout.
 ///
@@ -112,7 +108,7 @@ use crate::{
 ///     .cross_axis_alignment(CrossAxisAlignment::Center)
 ///     .must_fill_main_axis(true)
 ///     .with_child(Label::new("hello"))
-///     .with_spacer(8.0)
+///     .with_default_spacer()
 ///     .with_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -125,7 +121,7 @@ use crate::{
 /// my_row.set_must_fill_main_axis(true);
 /// my_row.set_cross_axis_alignment(CrossAxisAlignment::Center);
 /// my_row.add_child(Label::new("hello"));
-/// my_row.add_spacer(8.0);
+/// my_row.add_default_spacer();
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
@@ -195,10 +191,94 @@ pub struct FlexParams {
     alignment: Option<CrossAxisAlignment>,
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum Axis {
+/// An axis in visual space.
+///
+/// Most often used by widgets to describe
+/// the direction in which they grow as their number of children increases.
+/// Has some methods for manipulating geometry with respect to the axis.
+#[derive(Data, Debug, Clone, Copy, PartialEq)]
+pub enum Axis {
+    /// The x axis
     Horizontal,
+    /// The y axis
     Vertical,
+}
+
+impl Axis {
+    /// Get the axis perpendicular to this one.
+    pub fn cross(self) -> Axis {
+        match self {
+            Axis::Horizontal => Axis::Vertical,
+            Axis::Vertical => Axis::Horizontal,
+        }
+    }
+
+    /// Extract from the argument the magnitude along this axis
+    pub fn major(self, coords: Size) -> f64 {
+        match self {
+            Axis::Horizontal => coords.width,
+            Axis::Vertical => coords.height,
+        }
+    }
+
+    /// Extract from the argument the magnitude along the perpendicular axis
+    pub fn minor(self, coords: Size) -> f64 {
+        self.cross().major(coords)
+    }
+
+    /// Extract the extent of the argument in this axis as a pair.
+    pub fn major_span(self, rect: Rect) -> (f64, f64) {
+        match self {
+            Axis::Horizontal => (rect.x0, rect.x1),
+            Axis::Vertical => (rect.y0, rect.y1),
+        }
+    }
+
+    /// Extract the extent of the argument in the minor axis as a pair.
+    pub fn minor_span(self, rect: Rect) -> (f64, f64) {
+        self.cross().major_span(rect)
+    }
+
+    /// Extract the coordinate locating the argument with respect to this axis.
+    pub fn major_pos(self, pos: Point) -> f64 {
+        match self {
+            Axis::Horizontal => pos.x,
+            Axis::Vertical => pos.y,
+        }
+    }
+
+    /// Extract the coordinate locating the argument with respect to the perpendicular axis.
+    pub fn minor_pos(self, pos: Point) -> f64 {
+        self.cross().major_pos(pos)
+    }
+
+    /// Arrange the major and minor measurements with respect to this axis such that it forms
+    /// an (x, y) pair.
+    pub fn pack(self, major: f64, minor: f64) -> (f64, f64) {
+        match self {
+            Axis::Horizontal => (major, minor),
+            Axis::Vertical => (minor, major),
+        }
+    }
+
+    /// Generate constraints with new values on the major axis.
+    pub(crate) fn constraints(
+        self,
+        bc: &BoxConstraints,
+        min_major: f64,
+        major: f64,
+    ) -> BoxConstraints {
+        match self {
+            Axis::Horizontal => BoxConstraints::new(
+                Size::new(min_major, bc.min().height),
+                Size::new(major, bc.max().height),
+            ),
+            Axis::Vertical => BoxConstraints::new(
+                Size::new(bc.min().width, min_major),
+                Size::new(bc.max().width, major),
+            ),
+        }
+    }
 }
 
 /// The alignment of the widgets on the container's cross (or minor) axis.
@@ -219,6 +299,13 @@ pub enum CrossAxisAlignment {
     /// In a vertical container, widgets are bottom aligned. In a horiziontal
     /// container, their trailing edges are aligned.
     End,
+    /// Align on the baseline.
+    ///
+    /// In a horizontal container, widgets are aligned along the calculated
+    /// baseline. In a vertical container, this is equivalent to `End`.
+    ///
+    /// The calculated baseline is the maximum baseline offset of the children.
+    Baseline,
 }
 
 /// Arrangement of children on the main axis.
@@ -278,68 +365,31 @@ impl<T> ChildWidget<T> {
     }
 }
 
-impl Axis {
-    pub(crate) fn major(self, coords: Size) -> f64 {
-        match self {
-            Axis::Horizontal => coords.width,
-            Axis::Vertical => coords.height,
-        }
-    }
-
-    pub(crate) fn minor(self, coords: Size) -> f64 {
-        match self {
-            Axis::Horizontal => coords.height,
-            Axis::Vertical => coords.width,
-        }
-    }
-
-    pub(crate) fn pack(self, major: f64, minor: f64) -> (f64, f64) {
-        match self {
-            Axis::Horizontal => (major, minor),
-            Axis::Vertical => (minor, major),
-        }
-    }
-
-    /// Generate constraints with new values on the major axis.
-    fn constraints(self, bc: &BoxConstraints, min_major: f64, major: f64) -> BoxConstraints {
-        match self {
-            Axis::Horizontal => BoxConstraints::new(
-                Size::new(min_major, bc.min().height),
-                Size::new(major, bc.max().height),
-            ),
-            Axis::Vertical => BoxConstraints::new(
-                Size::new(bc.min().width, min_major),
-                Size::new(bc.max().width, major),
-            ),
-        }
-    }
-}
-
 impl<T: Data> Flex<T> {
-    /// Create a new horizontal stack.
-    ///
-    /// The child widgets are laid out horizontally, from left to right.
-    pub fn row() -> Self {
+    /// Create a new Flex oriented along the provided axis.
+    pub fn for_axis(axis: Axis) -> Self {
         Flex {
-            direction: Axis::Horizontal,
+            direction: axis,
             children: Vec::new(),
             cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
             fill_major_axis: false,
         }
+    }
+
+    /// Create a new horizontal stack.
+    ///
+    /// The child widgets are laid out horizontally, from left to right.
+    ///
+    pub fn row() -> Self {
+        Self::for_axis(Axis::Horizontal)
     }
 
     /// Create a new vertical stack.
     ///
     /// The child widgets are laid out vertically, from top to bottom.
     pub fn column() -> Self {
-        Flex {
-            direction: Axis::Vertical,
-            children: Vec::new(),
-            cross_alignment: CrossAxisAlignment::Center,
-            main_alignment: MainAxisAlignment::Start,
-            fill_major_axis: false,
-        }
+        Self::for_axis(Axis::Vertical)
     }
 
     /// Builder-style method for specifying the childrens' [`CrossAxisAlignment`].
@@ -420,7 +470,21 @@ impl<T: Data> Flex<T> {
         self
     }
 
+    /// Builder-style method to add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn with_default_spacer(mut self) -> Self {
+        self.add_default_spacer();
+        self
+    }
+
     /// Builder-style method for adding a fixed-size spacer to the container.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn with_spacer(mut self, len: impl Into<KeyOrValue<f64>>) -> Self {
         self.add_spacer(len);
         self
@@ -495,7 +559,24 @@ impl<T: Data> Flex<T> {
         self.children.push(child);
     }
 
-    /// Add an empty spacer widget with the given length.
+    /// Add a spacer widget with a standard size.
+    ///
+    /// The actual value of this spacer depends on whether this container is
+    /// a row or column, as well as theme settings.
+    pub fn add_default_spacer(&mut self) {
+        let key = match self.direction {
+            Axis::Vertical => crate::theme::WIDGET_PADDING_VERTICAL,
+            Axis::Horizontal => crate::theme::WIDGET_PADDING_HORIZONTAL,
+        };
+        self.add_spacer(key);
+    }
+
+    /// Add an empty spacer widget with the given size.
+    ///
+    /// If you are laying out standard controls in this container, you should
+    /// generally prefer to use [`add_default_spacer`].
+    ///
+    /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
         let spacer = Spacer {
             axis: self.direction,
@@ -538,15 +619,24 @@ impl<T: Data> Widget<T> for Flex<T> {
         // we loosen our constraints when passing to children.
         let loosened_bc = bc.loosen();
 
+        // minor-axis values for all children
+        let mut minor = self.direction.minor(bc.min());
+        // these two are calculated but only used if we're baseline aligned
+        let mut max_above_baseline = 0f64;
+        let mut max_below_baseline = 0f64;
+        let mut any_use_baseline = self.cross_alignment == CrossAxisAlignment::Baseline;
+
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
-        let mut minor = self.direction.minor(bc.min());
         for child in &mut self.children {
+            any_use_baseline &= child.params.alignment == Some(CrossAxisAlignment::Baseline);
+
             if child.params.flex == 0.0 {
                 let child_bc = self
                     .direction
                     .constraints(&loosened_bc, 0., std::f64::INFINITY);
                 let child_size = child.widget.layout(ctx, &child_bc, data, env);
+                let baseline_offset = child.widget.baseline_offset();
 
                 if child_size.width.is_infinite() {
                     log::warn!("A non-Flex child has an infinite width.");
@@ -558,8 +648,10 @@ impl<T: Data> Widget<T> for Flex<T> {
 
                 major_non_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
+                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
+                max_below_baseline = max_below_baseline.max(baseline_offset);
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
@@ -582,11 +674,14 @@ impl<T: Data> Widget<T> for Flex<T> {
                     .direction
                     .constraints(&loosened_bc, min_major, actual_major);
                 let child_size = child.widget.layout(ctx, &child_bc, data, env);
+                let baseline_offset = child.widget.baseline_offset();
 
                 major_flex += self.direction.major(child_size).expand();
                 minor = minor.max(self.direction.minor(child_size).expand());
+                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
+                max_below_baseline = max_below_baseline.max(baseline_offset);
                 // Stash size.
-                let rect = Rect::from_origin_size(Point::ORIGIN, child_size);
+                let rect = child_size.to_rect();
                 child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
@@ -601,21 +696,39 @@ impl<T: Data> Widget<T> for Flex<T> {
         };
 
         let mut spacing = Spacing::new(self.main_alignment, extra, self.children.len());
-        // Finalize layout, assigning positions to each child.
+
+        // the actual size needed to tightly fit the children on the minor axis.
+        // Unlike the 'minor' var, this ignores the incoming constraints.
+        let minor_dim = match self.direction {
+            Axis::Horizontal if any_use_baseline => max_below_baseline + max_above_baseline,
+            _ => minor,
+        };
+
         let mut major = spacing.next().unwrap_or(0.);
         let mut child_paint_rect = Rect::ZERO;
         for child in &mut self.children {
-            let rect = child.widget.layout_rect();
-            let extra_minor = minor - self.direction.minor(rect.size());
+            let child_size = child.widget.layout_rect().size();
             let alignment = child.params.alignment.unwrap_or(self.cross_alignment);
-            let align_minor = alignment.align(extra_minor);
-            let pos: Point = self.direction.pack(major, align_minor).into();
+            let child_minor_offset = match alignment {
+                // This will ignore baseline alignment if it is overridden on children,
+                // but is not the default for the container. Is this okay?
+                CrossAxisAlignment::Baseline if matches!(self.direction, Axis::Horizontal) => {
+                    let extra_height = minor - minor_dim.min(minor);
+                    let child_baseline = child.widget.baseline_offset();
+                    let child_above_baseline = child_size.height - child_baseline;
+                    extra_height + (max_above_baseline - child_above_baseline)
+                }
+                _ => {
+                    let extra_minor = minor_dim - self.direction.minor(child_size);
+                    alignment.align(extra_minor)
+                }
+            };
 
-            child
-                .widget
-                .set_layout_rect(ctx, data, env, rect.with_origin(pos));
+            let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
+            let child_frame = Rect::from_origin_size(child_pos, child_size);
+            child.widget.set_layout_rect(ctx, data, env, child_frame);
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
-            major += self.direction.major(rect.size()).expand();
+            major += self.direction.major(child_size).expand();
             major += spacing.next().unwrap_or(0.);
         }
 
@@ -627,7 +740,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             major = total_major;
         }
 
-        let my_size: Size = self.direction.pack(major, minor).into();
+        let my_size: Size = self.direction.pack(major, minor_dim).into();
 
         // if we don't have to fill the main axis, we loosen that axis before constraining
         let my_size = if !self.fill_major_axis {
@@ -642,12 +755,37 @@ impl<T: Data> Widget<T> for Flex<T> {
         let my_bounds = Rect::ZERO.with_size(my_size);
         let insets = child_paint_rect - my_bounds;
         ctx.set_paint_insets(insets);
+
+        let baseline_offset = match self.direction {
+            Axis::Horizontal => max_below_baseline,
+            Axis::Vertical => self
+                .children
+                .last()
+                .map(|last| {
+                    let child_bl = last.widget.baseline_offset();
+                    let child_max_y = last.widget.layout_rect().max_y();
+                    let extra_bottom_padding = my_size.height - child_max_y;
+                    child_bl + extra_bottom_padding
+                })
+                .unwrap_or(0.0),
+        };
+
+        ctx.set_baseline_offset(baseline_offset);
         my_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint(ctx, data, env);
+        }
+
+        // paint the baseline if we're debugging layout
+        if env.get(Env::DEBUG_PAINT) && ctx.widget_state.baseline_offset != 0.0 {
+            let color = env.get_debug_color(ctx.widget_id().to_raw());
+            let my_baseline = ctx.size().height - ctx.widget_state.baseline_offset;
+            let line = crate::kurbo::Line::new((0.0, my_baseline), (ctx.size().width, my_baseline));
+            let stroke_style = crate::piet::StrokeStyle::new().dash(vec![4.0, 4.0], 0.0);
+            ctx.stroke_styled(line, &color, 1.0, &stroke_style);
         }
     }
 }
@@ -659,7 +797,8 @@ impl CrossAxisAlignment {
     fn align(self, val: f64) -> f64 {
         match self {
             CrossAxisAlignment::Start => 0.0,
-            CrossAxisAlignment::Center => (val / 2.0).round(),
+            // in vertical layout, baseline is equivalent to center
+            CrossAxisAlignment::Center | CrossAxisAlignment::Baseline => (val / 2.0).round(),
             CrossAxisAlignment::End => val,
         }
     }

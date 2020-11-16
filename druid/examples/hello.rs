@@ -13,7 +13,10 @@
 // limitations under the License.
 
 use druid::widget::{Align, Flex, Label, TextBox};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
+use druid::{
+    AppLauncher, Data, Env, FontDescriptor, FontFamily, Lens, LocalizedString, Widget, WidgetExt,
+    WindowDesc,
+};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
@@ -43,10 +46,19 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<HelloState> {
     // a label that will determine its text based on the current app data.
-    let label = Label::new(|data: &HelloState, _env: &Env| format!("Hello {}!", data.name));
+    let label = Label::new(|data: &HelloState, _env: &Env| {
+        if data.name.is_empty() {
+            "Hello anybody!?".to_string()
+        } else {
+            format!("Hello {}!", data.name)
+        }
+    })
+    .with_font(FontDescriptor::new(FontFamily::SERIF).with_size(32.0));
+
     // a textbox that modifies `name`.
     let textbox = TextBox::new()
         .with_placeholder("Who are we greeting?")
+        .with_text_size(18.0)
         .fix_width(TEXT_BOX_WIDTH)
         .lens(HelloState::name);
 

@@ -22,7 +22,7 @@ On Fedora
 sudo dnf install gtk3-devel glib2-devel
 ```
 
-See [gtk-rs dependencies] for more installation instructions.
+See [GTK installation page] for more installation instructions.
 
 ## Starting a project
 Starting a project is as easy as creating an empty application with
@@ -37,4 +37,4 @@ druid = "0.6.0"
 druid = { git = "https://github.com/linebender/druid.git" }
 ```
 
-[gtk-rs dependencies]: http://gtk-rs.org/docs/requirements.html
+[GTK installation page]: https://www.gtk.org/docs/installations/linux/

@@ -14,12 +14,16 @@
 
 //! Miscellaneous utility functions for working with X11.
 
+use std::cmp::Ordering;
 use std::rc::Rc;
+use std::time::Instant;
 
 use anyhow::{anyhow, Error};
 use x11rb::protocol::randr::{ConnectionExt, ModeFlag};
 use x11rb::protocol::xproto::{Screen, Visualtype, Window};
 use x11rb::xcb_ffi::XCBConnection;
+
+use crate::window::TimerToken;
 
 // See: https://github.com/rtbo/rust-xcb/blob/master/examples/randr_screen_modes.rs
 pub fn refresh_rate(conn: &Rc<XCBConnection>, window_id: Window) -> Option<f64> {
@@ -86,4 +90,41 @@ macro_rules! log_x11 {
             log::error!("X11 error: {}", e);
         }
     };
+}
+
+/// A timer is a deadline (`std::Time::Instant`) and a `TimerToken`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Timer {
+    deadline: Instant,
+    token: TimerToken,
+}
+
+impl Timer {
+    pub(crate) fn new(deadline: Instant) -> Self {
+        let token = TimerToken::next();
+        Self { deadline, token }
+    }
+
+    pub(crate) fn deadline(&self) -> Instant {
+        self.deadline
+    }
+
+    pub(crate) fn token(&self) -> TimerToken {
+        self.token
+    }
+}
+
+impl Ord for Timer {
+    /// Ordering is so that earliest deadline sorts first
+    // "Earliest deadline first" that a std::collections::BinaryHeap will have the earliest timer
+    // at its head, which is just what is needed for timer management.
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.deadline.cmp(&other.deadline).reverse()
+    }
+}
+
+impl PartialOrd for Timer {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }

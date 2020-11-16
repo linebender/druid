@@ -27,20 +27,22 @@ use wasm_bindgen::JsCast;
 
 use crate::kurbo::{Point, Rect, Size, Vec2};
 
-use crate::piet::RenderContext;
+use crate::piet::{PietText, RenderContext};
 
 use super::application::Application;
 use super::error::Error;
 use super::keycodes::convert_keyboard_event;
 use super::menu::Menu;
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
 use crate::keyboard::{KbKey, KeyState, Modifiers};
-use crate::mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
-use crate::window::{IdleToken, Text, TimerToken, WinHandler};
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
+use crate::window;
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -94,16 +96,22 @@ struct WindowState {
     window: web_sys::Window,
     canvas: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
-    invalid_rect: Cell<Rect>,
+    invalid: RefCell<Region>,
 }
 
+// TODO: support custom cursors
+#[derive(Clone)]
+pub struct CustomCursor;
+
 impl WindowState {
-    fn render(&self, invalid_rect: Rect) -> bool {
+    fn render(&self) {
+        self.handler.borrow_mut().prepare_paint();
+
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        let mut want_anim_frame = false;
         if let Err(e) = piet_ctx.with_save(|mut ctx| {
-            ctx.clip(invalid_rect);
-            want_anim_frame = self.handler.borrow_mut().paint(&mut ctx, invalid_rect);
+            let invalid = self.invalid.borrow();
+            ctx.clip(invalid.to_bez_path());
+            self.handler.borrow_mut().paint(&mut ctx, &invalid);
             Ok(())
         }) {
             log::error!("piet error on render: {:?}", e);
@@ -111,7 +119,7 @@ impl WindowState {
         if let Err(e) = piet_ctx.finish() {
             log::error!("piet error finishing render: {:?}", e);
         }
-        want_anim_frame
+        self.invalid.borrow_mut().clear();
     }
 
     fn process_idle_queue(&self) {
@@ -345,6 +353,18 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_position(&mut self, _position: Point) {
+        // Ignored
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        // Ignored
+    }
+
+    pub fn set_level(&mut self, _level: WindowLevel) {
+        // ignored
+    }
+
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
         self.title = title.into();
     }
@@ -395,7 +415,7 @@ impl WindowBuilder {
             window,
             canvas,
             context,
-            invalid_rect: Cell::new(Rect::ZERO),
+            invalid: RefCell::new(Region::EMPTY),
         });
 
         setup_web_callbacks(&window);
@@ -430,6 +450,41 @@ impl WindowHandle {
         log::warn!("show_titlebar unimplemented for web");
     }
 
+    pub fn set_position(&self, _position: Point) {
+        log::warn!("WindowHandle::set_position unimplemented for web");
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("WindowHandle::set_level  is currently unimplemented for web.");
+    }
+
+    pub fn get_position(&self) -> Point {
+        log::warn!("WindowHandle::get_position unimplemented for web.");
+        Point::new(0.0, 0.0)
+    }
+
+    pub fn set_size(&self, _size: Size) {
+        log::warn!("WindowHandle::set_size unimplemented for web.");
+    }
+
+    pub fn get_size(&self) -> Size {
+        log::warn!("WindowHandle::get_size unimplemented for web.");
+        Size::new(0.0, 0.0)
+    }
+
+    pub fn set_window_state(&self, _state: window::WindowState) {
+        log::warn!("WindowHandle::set_window_state unimplemented for web.");
+    }
+
+    pub fn get_window_state(&self) -> window::WindowState {
+        log::warn!("WindowHandle::get_window_state unimplemented for web.");
+        window::WindowState::RESTORED
+    }
+
+    pub fn handle_titlebar(&self, _val: bool) {
+        log::warn!("WindowHandle::handle_titlebar unimplemented for web.");
+    }
+
     pub fn close(&self) {
         // TODO
     }
@@ -438,32 +493,33 @@ impl WindowHandle {
         log::warn!("bring_to_frontand_focus unimplemented for web");
     }
 
+    pub fn request_anim_frame(&self) {
+        self.render_soon();
+    }
+
     pub fn invalidate_rect(&self, rect: Rect) {
         if let Some(s) = self.0.upgrade() {
-            let cur_rect = s.invalid_rect.get();
-            if cur_rect.width() == 0.0 || cur_rect.height() == 0.0 {
-                s.invalid_rect.set(rect);
-            } else if rect.width() != 0.0 && rect.height() != 0.0 {
-                s.invalid_rect.set(cur_rect.union(rect));
-            }
+            s.invalid.borrow_mut().add_rect(rect);
         }
         self.render_soon();
     }
 
     pub fn invalidate(&self) {
         if let Some(s) = self.0.upgrade() {
-            s.invalid_rect.set(s.area.get().size_dp().to_rect());
+            s.invalid
+                .borrow_mut()
+                .add_rect(s.area.get().size_dp().to_rect());
         }
         self.render_soon();
     }
 
-    pub fn text(&self) -> Text {
+    pub fn text(&self) -> PietText {
         let s = self
             .0
             .upgrade()
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
-        Text::new(s.context.clone(), s.window.clone())
+        PietText::new(s.context.clone())
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -503,31 +559,26 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("open_file_sync is currently unimplemented for web.");
-        self.file_dialog(FileDialogType::Open, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        log::warn!("Custom cursors are not yet supported in the web backend");
+        None
     }
 
-    pub fn save_as_sync(&mut self, options: FileDialogOptions) -> Option<FileInfo> {
-        log::warn!("save_as_sync is currently unimplemented for web.");
-        self.file_dialog(FileDialogType::Save, options)
-            .ok()
-            .map(|s| FileInfo { path: s.into() })
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        log::warn!("open_file is currently unimplemented for web.");
+        None
+    }
+
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        log::warn!("save_as is currently unimplemented for web.");
+        None
     }
 
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
-            let handle = self.clone();
-            let rect = s.invalid_rect.get();
-            s.invalid_rect.set(Rect::ZERO);
             let state = s.clone();
             s.request_animation_frame(move || {
-                let want_anim_frame = state.render(rect);
-                if want_anim_frame {
-                    handle.render_soon();
-                }
+                state.render();
             })
             .expect("Failed to request animation frame");
         }
@@ -658,6 +709,8 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
                 Cursor::NotAllowed => "not-allowed",
                 Cursor::ResizeLeftRight => "ew-resize",
                 Cursor::ResizeUpDown => "ns-resize",
+                // TODO: support custom cursors
+                Cursor::Custom(_) => "default",
             },
         )
         .unwrap_or_else(|_| log::warn!("Failed to set cursor"));
