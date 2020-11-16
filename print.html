@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div id="sidebar-scrollbox" class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">8.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">9.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">10.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">11.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="expanded "><a href="resolution_independence.html"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -780,6 +780,62 @@ the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#method.env_s
 calling its <a href="https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
 <p>In general, you should not need to worry about localization directly. See the
 <a href="./localization.html">localization</a> chapter for an overview of localization in Druid.</p>
+<h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
+<h2><a class="header" href="#what-is-a-pixel-anyway" id="what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
+<p>Pixel is short for <em>picture element</em> and although due to its popularity
+it has many meanings depending on context, when talking about pixels in the context of druid
+a pixel means always only one thing. It is <strong>the smallest configurable area of color
+that the underlying platform allows <code>druid-shell</code> to manipulate</strong>.</p>
+<p>The actual physical display might have a different resolution from what the platform knows or uses.
+Even if the display pixel resolution matches the platform resolution,
+the display itself can control even smaller elements than pixels - the sub-pixels.</p>
+<p>The shape of the physical pixel could be complex and definitely varies from display model to model.
+However for simplicity you can think of a pixel as a square which you can choose a color for.</p>
+<h2><a class="header" href="#display-pixel-density" id="display-pixel-density">Display pixel density</a></h2>
+<p>As technology advances the physical size of pixels is getting smaller and smaller.
+This allows display manufacturers to put more and more pixels into the same sized screen.
+The <strong>pixel densities of displays are increasing</strong>.</p>
+<p>There is also an <strong>increasing variety in the pixel density</strong> of the displays used by people.
+Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
+while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
+It might even be the same person on the same computer with a multi-display setup.</p>
+<h2><a class="header" href="#the-naive-old-school-approach-to-ui" id="the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
+<p>For a very long time UIs have been designed without thinking about pixel density at all.
+People tended to have displays with roughly similar pixel densities, so it all kind of
+worked most of the time. However <strong>it breaks down horribly</strong> in a modern world.
+The <em>200px * 200px</em> UI that looks decent on that <em>HD ready</em> display is barely visible
+on the <em>8K UHD</em> display. If you redesign it according to the <em>8K UHD</em> display then
+it won't even fit on the <em>HD ready</em> screen.</p>
+<h2><a class="header" href="#platform-specific-band-aids" id="platform-specific-band-aids">Platform specific band-aids</a></h2>
+<p>Some platforms have mitigations in place where that small <em>200px * 200px</em> UI
+will get scaled up by essentially <strong>taking a screenshot of it and enlarging the image.</strong>
+This will result in a blurry UI with diagonal and curved lines suffering the most.
+There is more hope with fonts where the vector information is still available to the platform,
+and instead of scaling up the image the text can be immediately drawn at the larger size.</p>
+<h2><a class="header" href="#a-better-solution" id="a-better-solution">A better solution</a></h2>
+<p>The application should draw everything it can with <strong>vector graphics</strong>,
+and have <strong>very large resolution image</strong> assets available where vectors aren't viable.
+Then at runtime the application should identify the display pixel density
+and resize everything accordingly. The vector graphics are easy to resize and
+the large image assets would be scaled down to the size that makes sense for the specific display.</p>
+<h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
+<p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
+Druid has expressive vector drawing capabilities that you should use whenever possible.
+Vector drawing is also used by the widgets that come included with druid.
+Handling different pixel densities is done at the <code>druid-shell</code> level already.
+In fact pixels mostly don't even enter the conversation at the <code>druid</code> level.
+The <code>druid</code> coordinate system is instead measured in <strong>display points</strong> (<strong>dp</strong>),
+e.g. you might say a widget has a width of <strong>100dp</strong>.
+<em>Display points</em> are conceptually similar to Microsoft's <em>device-independent pixels</em>,
+Google's <em>density-independent pixels</em>, Apple's <em>points</em>, and CSS's <em>pixel units</em>.</p>
+<p>You <strong>describe the UI using display points and then druid will automatically
+translate that into pixels</strong> based on the pixel density of the platform.
+Remember there might be multiple displays connected with different pixel densities,
+and your application might have multiple windows - with each window on a different display.
+It will all just work, because druid will adjust the actual pixel dimensions
+based on the display that the window is currently located on.</p>
+<h2><a class="header" href="#high-pixel-density-images-with-druid" id="high-pixel-density-images-with-druid">High pixel density images with druid</a></h2>
+<p><em>TODO: Write this section after it's more clear how this works and if its even solved.</em></p>
 <h1><a class="header" href="#localization-todo" id="localization-todo">Localization (TODO)</a></h1>
 <h1><a class="header" href="#command-todo" id="command-todo">Command (TODO)</a></h1>
 <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
