@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 //! [`Controller`]: struct.Controller.html
 
 use crate::widget::Controller;
-use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Widget};
+use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
 
 /// A clickable [`Controller`] widget. Pass this and a child widget to a
 /// [`ControllerHost`] to make the child interactive. More conveniently, this is
@@ -52,12 +52,14 @@ impl<T: Data> Click<T> {
 impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.request_paint();
+            Event::MouseDown(mouse_event) => {
+                if mouse_event.button == MouseButton::Left {
+                    ctx.set_active(true);
+                    ctx.request_paint();
+                }
             }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
+            Event::MouseUp(mouse_event) => {
+                if ctx.is_active() && mouse_event.button == MouseButton::Left {
                     ctx.set_active(false);
                     if ctx.is_hot() {
                         (self.action)(ctx, data, env);

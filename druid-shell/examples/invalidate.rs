@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 
 use std::any::Any;
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use druid_shell::kurbo::{Point, Rect, Size};
 use druid_shell::piet::{Color, Piet, RenderContext};
 
-use druid_shell::{Application, TimerToken, WinHandler, WindowBuilder, WindowHandle};
+use druid_shell::{Application, Region, WinHandler, WindowBuilder, WindowHandle};
 
 struct InvalidateTest {
     handle: WindowHandle,
@@ -27,6 +27,7 @@ struct InvalidateTest {
     start_time: Instant,
     color: Color,
     rect: Rect,
+    cursor: Rect,
 }
 
 impl InvalidateTest {
@@ -43,24 +44,37 @@ impl InvalidateTest {
         self.rect.x1 = (self.rect.x1 + 5.5) % self.size.width;
         self.rect.y0 = (self.rect.y0 + 3.0) % self.size.height;
         self.rect.y1 = (self.rect.y1 + 3.5) % self.size.height;
+
+        // Invalidate the old and new cursor positions.
+        self.handle.invalidate_rect(self.cursor);
+        self.cursor.x0 += 4.0;
+        self.cursor.x1 += 4.0;
+        if self.cursor.x0 > self.size.width {
+            self.cursor.x1 = self.cursor.width();
+            self.cursor.x0 = 0.0;
+        }
+        self.handle.invalidate_rect(self.cursor);
     }
 }
 
 impl WinHandler for InvalidateTest {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
-        self.handle.request_timer(Duration::from_millis(60));
     }
 
-    fn timer(&mut self, _id: TimerToken) {
+    fn prepare_paint(&mut self) {
         self.update_color_and_rect();
         self.handle.invalidate_rect(self.rect);
-        self.handle.request_timer(Duration::from_millis(60));
     }
 
-    fn paint(&mut self, piet: &mut Piet, rect: Rect) -> bool {
-        piet.fill(rect, &self.color);
-        false
+    fn paint(&mut self, piet: &mut Piet, region: &Region) {
+        // We can ask to draw something bigger than our rect, but things outside
+        // the invalidation region won't draw. (So they'll draw if and only if
+        // they intersect the cursor's invalidated region or the rect that we
+        // invalidated.)
+        piet.fill(region.bounding_box(), &self.color);
+        piet.fill(self.cursor, &Color::WHITE);
+        self.handle.request_anim_frame();
     }
 
     fn size(&mut self, size: Size) {
@@ -74,6 +88,10 @@ impl WinHandler for InvalidateTest {
         }
     }
 
+    fn request_close(&mut self) {
+        self.handle.close();
+    }
+
     fn destroy(&mut self) {
         Application::global().quit()
     }
@@ -84,6 +102,7 @@ impl WinHandler for InvalidateTest {
 }
 
 fn main() {
+    simple_logger::SimpleLogger::new().init().unwrap();
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let inv_test = InvalidateTest {
@@ -91,6 +110,7 @@ fn main() {
         handle: Default::default(),
         start_time: Instant::now(),
         rect: Rect::from_origin_size(Point::ZERO, (10.0, 20.0)),
+        cursor: Rect::from_origin_size(Point::ZERO, (2.0, 100.0)),
         color: Color::WHITE,
     };
     builder.set_handler(Box::new(inv_test));

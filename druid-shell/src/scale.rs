@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 
-const SCALE_TARGET_DPI: f64 = 96.0;
-
 /// Coordinate scaling between pixels and display points.
 ///
-/// This holds the platform DPI and the equivalent scale factors.
+/// This holds the platform scale factors.
 ///
 /// ## Pixels and Display Points
 ///
@@ -35,26 +33,22 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 /// ## Converting with `Scale`
 ///
 /// To translate coordinates between pixels and display points you should use one of the
-/// helper conversion methods of `Scale` or for manual conversion [`scale_x`] / [`scale_y`].
+/// helper conversion methods of `Scale` or for manual conversion [`x`] / [`y`].
 ///
-/// `Scale` is designed for responsive applications, including responding to platform DPI changes.
-/// The platform DPI can change quickly, e.g. when moving a window from one monitor to another.
+/// `Scale` is designed for responsive applications, including responding to platform scale changes.
+/// The platform scale can change quickly, e.g. when moving a window from one monitor to another.
 ///
-/// A copy of `Scale` will be stale as soon as the platform DPI changes.
+/// A copy of `Scale` will be stale as soon as the platform scale changes.
 ///
-/// [`scale_x`]: #method.scale_x
-/// [`scale_y`]: #method.scale_y
-/// [in the druid book]: https://xi-editor.io/druid/resolution_independence.html
+/// [`x`]: #method.x
+/// [`y`]: #method.y
+/// [in the druid book]: https://linebender.org/druid/resolution_independence.html
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
-    /// The platform reported DPI on the x axis.
-    dpi_x: f64,
-    /// The platform reported DPI on the y axis.
-    dpi_y: f64,
     /// The scale factor on the x axis.
-    scale_x: f64,
+    x: f64,
     /// The scale factor on the y axis.
-    scale_y: f64,
+    y: f64,
 }
 
 /// A specific area scaling state.
@@ -90,107 +84,55 @@ pub trait Scalable {
     /// Converts the scalable item from display points into pixels,
     /// using the x axis scale factor for coordinates on the x axis
     /// and the y axis scale factor for coordinates on the y axis.
-    fn to_px(&self, scale: &Scale) -> Self;
+    fn to_px(&self, scale: Scale) -> Self;
 
     /// Converts the scalable item from pixels into display points,
     /// using the x axis scale factor for coordinates on the x axis
     /// and the y axis scale factor for coordinates on the y axis.
-    fn to_dp(&self, scale: &Scale) -> Self;
+    fn to_dp(&self, scale: Scale) -> Self;
 }
 
 impl Default for Scale {
     fn default() -> Scale {
-        Scale {
-            dpi_x: SCALE_TARGET_DPI,
-            dpi_y: SCALE_TARGET_DPI,
-            scale_x: 1.0,
-            scale_y: 1.0,
-        }
+        Scale { x: 1.0, y: 1.0 }
     }
 }
 
 impl Scale {
-    /// Create a new `Scale` state based on the specified DPIs.
-    ///
-    /// Use this constructor if the platform provided DPI is the most accurate number.
-    pub fn from_dpi(dpi_x: f64, dpi_y: f64) -> Scale {
-        Scale {
-            dpi_x,
-            dpi_y,
-            scale_x: dpi_x / SCALE_TARGET_DPI,
-            scale_y: dpi_y / SCALE_TARGET_DPI,
-        }
-    }
-
-    /// Create a new `Scale` state based on the specified scale factors.
-    ///
-    /// Use this constructor if the platform provided scale factor is the most accurate number.
-    pub fn from_scale(scale_x: f64, scale_y: f64) -> Scale {
-        Scale {
-            dpi_x: SCALE_TARGET_DPI * scale_x,
-            dpi_y: SCALE_TARGET_DPI * scale_y,
-            scale_x,
-            scale_y,
-        }
-    }
-
-    /// Returns the x axis platform DPI associated with this `Scale`.
-    #[inline]
-    pub fn dpi_x(&self) -> f64 {
-        self.dpi_x
-    }
-
-    /// Returns the y axis platform DPI associated with this `Scale`.
-    #[inline]
-    pub fn dpi_y(&self) -> f64 {
-        self.dpi_y
+    /// Create a new `Scale` based on the specified axis factors.
+    pub fn new(x: f64, y: f64) -> Scale {
+        Scale { x, y }
     }
 
     /// Returns the x axis scale factor.
     #[inline]
-    pub fn scale_x(&self) -> f64 {
-        self.scale_x
+    pub fn x(self) -> f64 {
+        self.x
     }
 
     /// Returns the y axis scale factor.
     #[inline]
-    pub fn scale_y(&self) -> f64 {
-        self.scale_y
-    }
-
-    /// Converts the `item` from display points into pixels,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_px<T: Scalable>(&self, item: &T) -> T {
-        item.to_px(self)
+    pub fn y(self) -> f64 {
+        self.y
     }
 
     /// Converts from pixels into display points, using the x axis scale factor.
     #[inline]
-    pub fn px_to_dp_x<T: Into<f64>>(&self, x: T) -> f64 {
-        x.into() / self.scale_x
+    pub fn px_to_dp_x<T: Into<f64>>(self, x: T) -> f64 {
+        x.into() / self.x
     }
 
     /// Converts from pixels into display points, using the y axis scale factor.
     #[inline]
-    pub fn px_to_dp_y<T: Into<f64>>(&self, y: T) -> f64 {
-        y.into() / self.scale_y
+    pub fn px_to_dp_y<T: Into<f64>>(self, y: T) -> f64 {
+        y.into() / self.y
     }
 
     /// Converts from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    pub fn px_to_dp_xy<T: Into<f64>>(&self, x: T, y: T) -> (f64, f64) {
-        (x.into() / self.scale_x, y.into() / self.scale_y)
-    }
-
-    /// Converts the `item` from pixels into display points,
-    /// using the x axis scale factor for coordinates on the x axis
-    /// and the y axis scale factor for coordinates on the y axis.
-    #[inline]
-    pub fn to_dp<T: Scalable>(&self, item: &T) -> T {
-        item.to_dp(self)
+    pub fn px_to_dp_xy<T: Into<f64>>(self, x: T, y: T) -> (f64, f64) {
+        (x.into() / self.x, y.into() / self.y)
     }
 }
 
@@ -198,15 +140,15 @@ impl Scalable for Vec2 {
     /// Converts a `Vec2` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Vec2 {
-        Vec2::new(self.x * scale.scale_x, self.y * scale.scale_y)
+    fn to_px(&self, scale: Scale) -> Vec2 {
+        Vec2::new(self.x * scale.x, self.y * scale.y)
     }
 
     /// Converts a `Vec2` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Vec2 {
-        Vec2::new(self.x / scale.scale_x, self.y / scale.scale_y)
+    fn to_dp(&self, scale: Scale) -> Vec2 {
+        Vec2::new(self.x / scale.x, self.y / scale.y)
     }
 }
 
@@ -214,15 +156,15 @@ impl Scalable for Point {
     /// Converts a `Point` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Point {
-        Point::new(self.x * scale.scale_x, self.y * scale.scale_y)
+    fn to_px(&self, scale: Scale) -> Point {
+        Point::new(self.x * scale.x, self.y * scale.y)
     }
 
     /// Converts a `Point` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Point {
-        Point::new(self.x / scale.scale_x, self.y / scale.scale_y)
+    fn to_dp(&self, scale: Scale) -> Point {
+        Point::new(self.x / scale.x, self.y / scale.y)
     }
 }
 
@@ -230,14 +172,14 @@ impl Scalable for Line {
     /// Converts a `Line` from display points into pixels,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Line {
+    fn to_px(&self, scale: Scale) -> Line {
         Line::new(self.p0.to_px(scale), self.p1.to_px(scale))
     }
 
     /// Converts a `Line` from pixels into display points,
     /// using the x axis scale factor for `x` and the y axis scale factor for `y`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Line {
+    fn to_dp(&self, scale: Scale) -> Line {
         Line::new(self.p0.to_dp(scale), self.p1.to_dp(scale))
     }
 }
@@ -247,16 +189,16 @@ impl Scalable for Size {
     /// using the x axis scale factor for `width`
     /// and the y axis scale factor for `height`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Size {
-        Size::new(self.width * scale.scale_x, self.height * scale.scale_y)
+    fn to_px(&self, scale: Scale) -> Size {
+        Size::new(self.width * scale.x, self.height * scale.y)
     }
 
     /// Converts a `Size` from pixels into points,
     /// using the x axis scale factor for `width`
     /// and the y axis scale factor for `height`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Size {
-        Size::new(self.width / scale.scale_x, self.height / scale.scale_y)
+    fn to_dp(&self, scale: Scale) -> Size {
+        Size::new(self.width / scale.x, self.height / scale.y)
     }
 }
 
@@ -265,12 +207,12 @@ impl Scalable for Rect {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Rect {
+    fn to_px(&self, scale: Scale) -> Rect {
         Rect::new(
-            self.x0 * scale.scale_x,
-            self.y0 * scale.scale_y,
-            self.x1 * scale.scale_x,
-            self.y1 * scale.scale_y,
+            self.x0 * scale.x,
+            self.y0 * scale.y,
+            self.x1 * scale.x,
+            self.y1 * scale.y,
         )
     }
 
@@ -278,12 +220,12 @@ impl Scalable for Rect {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Rect {
+    fn to_dp(&self, scale: Scale) -> Rect {
         Rect::new(
-            self.x0 / scale.scale_x,
-            self.y0 / scale.scale_y,
-            self.x1 / scale.scale_x,
-            self.y1 / scale.scale_y,
+            self.x0 / scale.x,
+            self.y0 / scale.y,
+            self.x1 / scale.x,
+            self.y1 / scale.y,
         )
     }
 }
@@ -293,12 +235,12 @@ impl Scalable for Insets {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_px(&self, scale: &Scale) -> Insets {
+    fn to_px(&self, scale: Scale) -> Insets {
         Insets::new(
-            self.x0 * scale.scale_x,
-            self.y0 * scale.scale_y,
-            self.x1 * scale.scale_x,
-            self.y1 * scale.scale_y,
+            self.x0 * scale.x,
+            self.y0 * scale.y,
+            self.x1 * scale.x,
+            self.y1 * scale.y,
         )
     }
 
@@ -306,12 +248,12 @@ impl Scalable for Insets {
     /// using the x axis scale factor for `x0` and `x1`
     /// and the y axis scale factor for `y0` and `y1`.
     #[inline]
-    fn to_dp(&self, scale: &Scale) -> Insets {
+    fn to_dp(&self, scale: Scale) -> Insets {
         Insets::new(
-            self.x0 / scale.scale_x,
-            self.y0 / scale.scale_y,
-            self.x1 / scale.scale_x,
-            self.y1 / scale.scale_y,
+            self.x0 / scale.x,
+            self.y0 / scale.y,
+            self.x1 / scale.x,
+            self.y1 / scale.y,
         )
     }
 }
@@ -327,7 +269,7 @@ impl Default for ScaledArea {
 
 impl ScaledArea {
     /// Create a new scaled area from pixels.
-    pub fn from_px<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
+    pub fn from_px<T: Into<Size>>(size: T, scale: Scale) -> ScaledArea {
         let size_px = size.into();
         let size_dp = size_px.to_dp(scale);
         ScaledArea { size_dp, size_px }
@@ -340,7 +282,7 @@ impl ScaledArea {
     /// as the `size` given to this function. To find out the new size in points use [`size_dp`].
     ///
     /// [`size_dp`]: #method.size_dp
-    pub fn from_dp<T: Into<Size>>(size: T, scale: &Scale) -> ScaledArea {
+    pub fn from_dp<T: Into<Size>>(size: T, scale: Scale) -> ScaledArea {
         let size_px = size.into().to_px(scale).expand();
         let size_dp = size_px.to_dp(scale);
         ScaledArea { size_dp, size_px }

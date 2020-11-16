@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,9 +21,7 @@ use std::sync::Arc;
 use log::error;
 
 use crate::{
-    kurbo::BezPath, widget::common::FillStrat, Affine, BoxConstraints, Color, Data, Env, Event,
-    EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Rect, RenderContext, Size, UpdateCtx,
-    Widget,
+    kurbo::BezPath, widget::common::FillStrat, widget::prelude::*, Affine, Color, Data, Rect,
 };
 
 /// A widget that renders a SVG

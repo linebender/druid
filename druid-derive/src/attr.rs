@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,9 +30,9 @@ const LENS_NAME_OVERRIDE_ATTR_PATH: &str = "name";
 
 /// The fields for a struct or an enum variant.
 #[derive(Debug)]
-pub struct Fields {
+pub struct Fields<Attrs> {
     pub kind: FieldKind,
-    fields: Vec<Field>,
+    fields: Vec<Field<Attrs>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,18 +60,28 @@ impl FieldIdent {
 }
 
 #[derive(Debug)]
-pub struct Field {
+pub struct Field<Attrs> {
     pub ident: FieldIdent,
     pub ty: syn::Type,
 
+    pub attrs: Attrs,
+}
+
+#[derive(Debug)]
+pub struct DataAttrs {
     /// `true` if this field should be ignored.
     pub ignore: bool,
     pub same_fn: Option<ExprPath>,
-    pub lens_name_override: Option<Ident>,
-    //TODO: more attrs here
 }
 
-impl Fields {
+#[derive(Debug)]
+pub struct LensAttrs {
+    /// `true` if this field should be ignored.
+    pub ignore: bool,
+    pub lens_name_override: Option<Ident>,
+}
+
+impl Fields<DataAttrs> {
     pub fn parse_ast(fields: &syn::Fields) -> Result<Self, Error> {
         let kind = match fields {
             syn::Fields::Named(_) => FieldKind::Named,
@@ -81,22 +91,41 @@ impl Fields {
         let fields = fields
             .iter()
             .enumerate()
-            .map(|(i, field)| Field::parse_ast(field, i))
+            .map(|(i, field)| Field::<DataAttrs>::parse_ast(field, i))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Fields { kind, fields })
     }
+}
 
+impl Fields<LensAttrs> {
+    pub fn parse_ast(fields: &syn::Fields) -> Result<Self, Error> {
+        let kind = match fields {
+            syn::Fields::Named(_) => FieldKind::Named,
+            syn::Fields::Unnamed(_) | syn::Fields::Unit => FieldKind::Unnamed,
+        };
+
+        let fields = fields
+            .iter()
+            .enumerate()
+            .map(|(i, field)| Field::<LensAttrs>::parse_ast(field, i))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Fields { kind, fields })
+    }
+}
+
+impl<Attrs> Fields<Attrs> {
     pub fn len(&self) -> usize {
         self.fields.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Field> {
+    pub fn iter(&self) -> impl Iterator<Item = &Field<Attrs>> {
         self.fields.iter()
     }
 }
 
-impl Field {
+impl Field<DataAttrs> {
     pub fn parse_ast(field: &syn::Field, index: usize) -> Result<Self, Error> {
         let ident = match field.ident.as_ref() {
             Some(ident) => FieldIdent::Named(ident.to_string().trim_start_matches("r#").to_owned()),
@@ -107,7 +136,6 @@ impl Field {
 
         let mut ignore = false;
         let mut same_fn = None;
-        let mut lens_name_override = None;
 
         for attr in field.attrs.iter() {
             if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
@@ -152,11 +180,61 @@ impl Field {
                         ));
                     }
                 }
+            }
+        }
+        Ok(Field {
+            ident,
+            ty,
+            attrs: DataAttrs { ignore, same_fn },
+        })
+    }
+
+    /// The tokens to be used as the function for 'same'.
+    pub fn same_fn_path_tokens(&self) -> TokenStream {
+        match self.attrs.same_fn {
+            Some(ref f) => quote!(#f),
+            None => {
+                let span = Span::call_site();
+                quote_spanned!(span=> druid::Data::same)
+            }
+        }
+    }
+}
+
+impl Field<LensAttrs> {
+    pub fn parse_ast(field: &syn::Field, index: usize) -> Result<Self, Error> {
+        let ident = match field.ident.as_ref() {
+            Some(ident) => FieldIdent::Named(ident.to_string().trim_start_matches("r#").to_owned()),
+            None => FieldIdent::Unnamed(index),
+        };
+
+        let ty = field.ty.clone();
+
+        let mut ignore = false;
+        let mut lens_name_override = None;
+
+        for attr in field.attrs.iter() {
+            if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
+                panic!(
+                    "The 'druid' attribute has been replaced with separate \
+                    'lens' and 'data' attributes.",
+                );
             } else if attr.path.is_ident(BASE_LENS_ATTR_PATH) {
                 match attr.parse_meta()? {
                     Meta::List(meta) => {
                         for nested in meta.nested.iter() {
                             match nested {
+                                NestedMeta::Meta(Meta::Path(path))
+                                    if path.is_ident(IGNORE_ATTR_PATH) =>
+                                {
+                                    if ignore {
+                                        return Err(Error::new(
+                                            nested.span(),
+                                            "Duplicate attribute",
+                                        ));
+                                    }
+                                    ignore = true;
+                                }
                                 NestedMeta::Meta(Meta::NameValue(meta))
                                     if meta.path.is_ident(LENS_NAME_OVERRIDE_ATTR_PATH) =>
                                 {
@@ -174,7 +252,7 @@ impl Field {
                     other => {
                         return Err(Error::new(
                             other.span(),
-                            "Expected attribute list (the form #[data(one, two)])",
+                            "Expected attribute list (the form #[lens(one, two)])",
                         ));
                     }
                 }
@@ -183,12 +261,15 @@ impl Field {
         Ok(Field {
             ident,
             ty,
-            ignore,
-            same_fn,
-            lens_name_override,
+            attrs: LensAttrs {
+                ignore,
+                lens_name_override,
+            },
         })
     }
+}
 
+impl<Attrs> Field<Attrs> {
     pub fn ident_tokens(&self) -> TokenTree {
         match self.ident {
             FieldIdent::Named(ref s) => Ident::new(&s, Span::call_site()).into(),
@@ -200,17 +281,6 @@ impl Field {
         match self.ident {
             FieldIdent::Named(ref s) => s.clone(),
             FieldIdent::Unnamed(num) => num.to_string(),
-        }
-    }
-
-    /// The tokens to be used as the function for 'same'.
-    pub fn same_fn_path_tokens(&self) -> TokenStream {
-        match self.same_fn {
-            Some(ref f) => quote!(#f),
-            None => {
-                let span = Span::call_site();
-                quote_spanned!(span=> druid::Data::same)
-            }
         }
     }
 }

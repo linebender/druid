@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,264 +12,211 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Keyboard event types and helpers
+//! Keyboard types.
 
-use std::fmt;
+// This is a reasonable lint, but we keep signatures in sync with the
+// bitflags implementation of the inner Modifiers type.
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
-use super::keycodes::KeyCode;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
-/// A keyboard event, generated on every key press and key release.
-#[derive(Debug, Clone, Copy)]
+pub use keyboard_types::{Code, KeyState, Location};
+
+/// The meaning (mapped value) of a keypress.
+pub type KbKey = keyboard_types::Key;
+
+/// Information about a keyboard event.
+///
+/// Note that this type is similar to [`KeyboardEvent`] in keyboard-types,
+/// but has a few small differences for convenience. It is missing the `state`
+/// field because that is already implicit in the event.
+///
+/// [`KeyboardEvent`]: keyboard_types::KeyboardEvent
+#[non_exhaustive]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct KeyEvent {
-    /// The platform independent keycode.
-    pub key_code: KeyCode,
-    /// Whether or not this event is a repeat (the key was held down)
-    pub is_repeat: bool,
-    /// The modifiers for this event.
-    pub mods: KeyModifiers,
-    // these are exposed via methods, below. The rationale for this approach is
-    // that a key might produce more than a single 'char' of input, but we don't
-    // want to need a heap allocation in the trivial case. This gives us 15 bytes
-    // of string storage, which... might be enough?
-    text: TinyStr,
-    /// The 'unmodified text' is the text that would be produced by this keystroke
-    /// in the absence of ctrl+alt modifiers or preceding dead keys.
-    unmodified_text: TinyStr,
-    //TODO: add time
+    /// Whether the key is pressed or released.
+    pub state: KeyState,
+    /// Logical key value.
+    pub key: KbKey,
+    /// Physical key position.
+    pub code: Code,
+    /// Location for keys with multiple instances on common keyboards.
+    pub location: Location,
+    /// Flags for pressed modifier keys.
+    pub mods: Modifiers,
+    /// True if the key is currently auto-repeated.
+    pub repeat: bool,
+    /// Events with this flag should be ignored in a text editor
+    /// and instead composition events should be used.
+    pub is_composing: bool,
+}
+
+/// The modifiers.
+///
+/// This type is a thin wrappers around [`keyboard_types::Modifiers`],
+/// mostly for the convenience methods. If those get upstreamed, it
+/// will simply become that type.
+///
+/// [`keyboard_types::Modifiers`]: keyboard_types::Modifiers
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct Modifiers(keyboard_types::Modifiers);
+
+/// A convenience trait for creating Key objects.
+///
+/// This trait is implemented by [`KbKey`] itself and also strings, which are
+/// converted into the `Character` variant. It is defined this way and not
+/// using the standard `Into` mechanism because `KbKey` is a type in an external
+/// crate.
+///
+/// [`KbKey`]: KbKey
+pub trait IntoKey {
+    fn into_key(self) -> KbKey;
 }
 
 impl KeyEvent {
-    /// Create a new `KeyEvent` struct. This accepts either &str or char for the last
-    /// two arguments.
-    pub(crate) fn new<'a>(
-        key_code: impl Into<KeyCode>,
-        is_repeat: bool,
-        mods: KeyModifiers,
-        text: impl Into<StrOrChar<'a>>,
-        unmodified_text: impl Into<StrOrChar<'a>>,
-    ) -> Self {
-        let text = match text.into() {
-            StrOrChar::Char(c) => c.into(),
-            StrOrChar::Str(s) => TinyStr::new(s),
-        };
-        let unmodified_text = match unmodified_text.into() {
-            StrOrChar::Char(c) => c.into(),
-            StrOrChar::Str(s) => TinyStr::new(s),
-        };
-
-        KeyEvent {
-            key_code: key_code.into(),
-            is_repeat,
-            mods,
-            text,
-            unmodified_text,
-        }
-    }
-
-    /// The resolved input text for this event. This takes into account modifiers,
-    /// e.g. the `chars` on macOS for opt+s is 'ß'.
-    pub fn text(&self) -> Option<&str> {
-        if self.text.len == 0 {
-            None
-        } else {
-            Some(self.text.as_str())
-        }
-    }
-
-    /// The unmodified input text for this event. On macOS, for opt+s, this is 's'.
-    pub fn unmod_text(&self) -> Option<&str> {
-        if self.unmodified_text.len == 0 {
-            None
-        } else {
-            Some(self.unmodified_text.as_str())
-        }
-    }
-
-    /// For creating `KeyEvent`s during testing.
     #[doc(hidden)]
-    pub fn for_test(mods: impl Into<KeyModifiers>, text: &'static str, code: KeyCode) -> Self {
-        KeyEvent::new(code, false, mods.into(), text, text)
-    }
-}
-
-/// Keyboard modifier state, provided for events.
-#[derive(Clone, Copy, Default, PartialEq)]
-pub struct KeyModifiers {
-    /// Shift.
-    pub shift: bool,
-    /// Option on macOS.
-    pub alt: bool,
-    /// Control.
-    pub ctrl: bool,
-    /// Meta / Windows / Command
-    pub meta: bool,
-}
-
-/// Should realistically be (8 * N) - 1; we need one byte for the length.
-const TINY_STR_CAPACITY: usize = 15;
-
-/// A stack allocated string with a fixed capacity.
-#[derive(Clone, Copy)]
-struct TinyStr {
-    len: u8,
-    buf: [u8; TINY_STR_CAPACITY],
-}
-
-impl TinyStr {
-    fn new<S: AsRef<str>>(s: S) -> Self {
-        let s = s.as_ref();
-        let len = match s.len() {
-            l @ 0..=15 => l,
-            more => {
-                // If some user has weird unicode bound to a key, it's better to
-                // mishandle that input then to crash the client application?
-                debug_assert!(
-                    false,
-                    "Err 101, Invalid Assumptions: TinyStr::new \
-                     called with {} (len {}).",
-                    s, more
-                );
-                #[cfg(test)]
-                {
-                    // we still want to fail when testing a release build
-                    assert!(
-                        false,
-                        "Err 101, Invalid Assumptions: TinyStr::new \
-                         called with {} (len {}).",
-                        s, more
-                    );
-                }
-
-                // rups. find last valid codepoint offset
-                let mut len = 15;
-                while !s.is_char_boundary(len) {
-                    len -= 1;
-                }
-                len
-            }
-        };
-        let mut buf = [0; 15];
-        buf[..len].copy_from_slice(&s.as_bytes()[..len]);
-        TinyStr {
-            len: len as u8,
-            buf,
-        }
-    }
-
-    fn as_str(&self) -> &str {
-        unsafe { std::str::from_utf8_unchecked(&self.buf[..self.len as usize]) }
-    }
-}
-
-impl From<char> for TinyStr {
-    fn from(src: char) -> TinyStr {
-        let len = src.len_utf8();
-        let mut buf = [0; 15];
-        src.encode_utf8(&mut buf);
-
-        TinyStr {
-            len: len as u8,
-            buf,
+    /// Create a key event for testing purposes.
+    pub fn for_test(mods: impl Into<Modifiers>, key: impl IntoKey) -> KeyEvent {
+        let mods = mods.into();
+        let key = key.into_key();
+        KeyEvent {
+            key,
+            code: Code::Unidentified,
+            location: Location::Standard,
+            state: KeyState::Down,
+            mods,
+            is_composing: false,
+            repeat: false,
         }
     }
 }
 
-/// A type we use in the constructor of `KeyEvent`, specifically to avoid exposing
-/// internals.
-pub enum StrOrChar<'a> {
-    Char(char),
-    Str(&'a str),
-}
+impl Modifiers {
+    pub const ALT: Modifiers = Modifiers(keyboard_types::Modifiers::ALT);
+    pub const ALT_GRAPH: Modifiers = Modifiers(keyboard_types::Modifiers::ALT_GRAPH);
+    pub const CAPS_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::CAPS_LOCK);
+    pub const CONTROL: Modifiers = Modifiers(keyboard_types::Modifiers::CONTROL);
+    pub const FN: Modifiers = Modifiers(keyboard_types::Modifiers::FN);
+    pub const FN_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::FN_LOCK);
+    pub const META: Modifiers = Modifiers(keyboard_types::Modifiers::META);
+    pub const NUM_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::NUM_LOCK);
+    pub const SCROLL_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::SCROLL_LOCK);
+    pub const SHIFT: Modifiers = Modifiers(keyboard_types::Modifiers::SHIFT);
+    pub const SYMBOL: Modifiers = Modifiers(keyboard_types::Modifiers::SYMBOL);
+    pub const SYMBOL_LOCK: Modifiers = Modifiers(keyboard_types::Modifiers::SYMBOL_LOCK);
+    pub const HYPER: Modifiers = Modifiers(keyboard_types::Modifiers::HYPER);
+    pub const SUPER: Modifiers = Modifiers(keyboard_types::Modifiers::SUPER);
 
-impl<'a> From<&'a str> for StrOrChar<'a> {
-    fn from(src: &'a str) -> Self {
-        StrOrChar::Str(src)
+    /// Get the inner value.
+    ///
+    /// Note that this function might go away if our changes are upstreamed.
+    pub fn raw(&self) -> keyboard_types::Modifiers {
+        self.0
+    }
+
+    /// Determine whether Shift is set.
+    pub fn shift(&self) -> bool {
+        self.contains(Modifiers::SHIFT)
+    }
+
+    /// Determine whether Ctrl is set.
+    pub fn ctrl(&self) -> bool {
+        self.contains(Modifiers::CONTROL)
+    }
+
+    /// Determine whether Alt is set.
+    pub fn alt(&self) -> bool {
+        self.contains(Modifiers::ALT)
+    }
+
+    /// Determine whether Meta is set.
+    pub fn meta(&self) -> bool {
+        self.contains(Modifiers::META)
+    }
+
+    /// Returns an empty set of modifiers.
+    pub fn empty() -> Modifiers {
+        Default::default()
+    }
+
+    /// Returns `true` if no modifiers are set.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Returns `true` if all the modifiers in `other` are set.
+    pub fn contains(&self, other: Modifiers) -> bool {
+        self.0.contains(other.0)
+    }
+
+    /// Inserts or removes the specified modifiers depending on the passed value.
+    pub fn set(&mut self, other: Modifiers, value: bool) {
+        self.0.set(other.0, value)
     }
 }
 
-impl From<char> for StrOrChar<'static> {
-    fn from(src: char) -> StrOrChar<'static> {
-        StrOrChar::Char(src)
+impl BitAnd for Modifiers {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self {
+        Modifiers(self.0 & rhs.0)
     }
 }
 
-impl From<Option<char>> for StrOrChar<'static> {
-    fn from(src: Option<char>) -> StrOrChar<'static> {
-        match src {
-            Some(c) => StrOrChar::Char(c),
-            None => StrOrChar::Str(""),
-        }
+impl BitAndAssign for Modifiers {
+    // rhs is the "right-hand side" of the expression `a &= b`
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Modifiers(self.0 & rhs.0)
     }
 }
 
-impl fmt::Display for TinyStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.as_str())
+impl BitOr for Modifiers {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        Modifiers(self.0 | rhs.0)
     }
 }
 
-impl fmt::Debug for TinyStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TinyStr(\"{}\")", self.as_str())
+impl BitOrAssign for Modifiers {
+    // rhs is the "right-hand side" of the expression `a &= b`
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Modifiers(self.0 | rhs.0)
     }
 }
 
-impl Default for TinyStr {
-    fn default() -> Self {
-        TinyStr::new("")
+impl BitXor for Modifiers {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self {
+        Modifiers(self.0 ^ rhs.0)
     }
 }
 
-#[allow(clippy::useless_let_if_seq)]
-impl fmt::Debug for KeyModifiers {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Mods(")?;
-        let mut has_prev = false;
-        if self.meta {
-            write!(f, "meta")?;
-            has_prev = true;
-        }
-        if self.ctrl {
-            if has_prev {
-                write!(f, "+")?;
-            }
-            write!(f, "ctrl")?;
-            has_prev = true;
-        }
-        if self.alt {
-            if has_prev {
-                write!(f, "+")?;
-            }
-            write!(f, "alt")?;
-            has_prev = true;
-        }
-        if self.shift {
-            if has_prev {
-                write!(f, "+")?;
-            }
-            write!(f, "shift")?;
-            has_prev = true;
-        }
-        if !has_prev {
-            write!(f, "None")?;
-        }
-        write!(f, ")")
+impl BitXorAssign for Modifiers {
+    // rhs is the "right-hand side" of the expression `a &= b`
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Modifiers(self.0 ^ rhs.0)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    #[should_panic(expected = "Invalid Assumptions")]
-    fn smallstr() {
-        let smol = TinyStr::new("hello");
-        assert_eq!(smol.as_str(), "hello");
-        let smol = TinyStr::new("");
-        assert_eq!(smol.as_str(), "");
-        let s_16 = "😍🥰😘😗";
-        assert_eq!(s_16.len(), 16);
-        assert!(!s_16.is_char_boundary(15));
-        let _too_big = TinyStr::new("😍🥰😘😗");
+impl Not for Modifiers {
+    type Output = Self;
+
+    fn not(self) -> Self {
+        Modifiers(!self.0)
+    }
+}
+
+impl IntoKey for KbKey {
+    fn into_key(self) -> KbKey {
+        self
+    }
+}
+
+impl IntoKey for &str {
+    fn into_key(self) -> KbKey {
+        KbKey::Character(self.into())
     }
 }

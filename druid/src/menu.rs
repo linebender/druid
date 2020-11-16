@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@
 //! Creating the default Application menu for macOS:
 //!
 //! ```
-//! use druid::{Data, LocalizedString, MenuDesc, MenuItem, RawMods};
+//! use druid::{Data, LocalizedString, MenuDesc, MenuItem, SysMods};
 //! use druid::commands;
 //!
 //! fn macos_application_menu<T: Data>() -> MenuDesc<T> {
@@ -62,7 +62,7 @@
 //!                 LocalizedString::new("macos-menu-preferences"),
 //!                 commands::SHOW_PREFERENCES,
 //!             )
-//!             .hotkey(RawMods::Meta, ",")
+//!             .hotkey(SysMods::Cmd, ",")
 //!             .disabled(),
 //!         )
 //!         .append_separator()
@@ -72,14 +72,14 @@
 //!                 LocalizedString::new("macos-menu-hide-app"),
 //!                 commands::HIDE_APPLICATION,
 //!             )
-//!             .hotkey(RawMods::Meta, "h"),
+//!             .hotkey(SysMods::Cmd, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
 //!                 LocalizedString::new("macos-menu-hide-others"),
 //!                 commands::HIDE_OTHERS,
 //!             )
-//!             .hotkey(RawMods::AltMeta, "h"),
+//!             .hotkey(SysMods::AltCmd, "h"),
 //!         )
 //!         .append(
 //!             MenuItem::new(
@@ -94,7 +94,7 @@
 //!                 LocalizedString::new("macos-menu-quit-app"),
 //!                 commands::QUIT_APP,
 //!             )
-//!             .hotkey(RawMods::Meta, "q"),
+//!             .hotkey(SysMods::Cmd, "q"),
 //!         )
 //! }
 //! ```
@@ -108,8 +108,8 @@
 use std::num::NonZeroU32;
 
 use crate::kurbo::Point;
-use crate::shell::{HotKey, KeyCompare, Menu as PlatformMenu, RawMods, SysMods};
-use crate::{commands, Command, Data, Env, KeyCode, LocalizedString, Selector};
+use crate::shell::{HotKey, IntoKey, Menu as PlatformMenu, RawMods, SysMods};
+use crate::{commands, Command, Data, Env, LocalizedString, Selector};
 
 /// A platform-agnostic description of an application, window, or context
 /// menu.
@@ -195,7 +195,7 @@ impl<T> MenuItem<T> {
     /// # // hide the type param in or example code by letting it be inferred here
     /// # MenuDesc::<u32>::empty().append(item);
     /// ```
-    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl Into<KeyCompare>) -> Self {
+    pub fn hotkey(mut self, mods: impl Into<Option<RawMods>>, key: impl IntoKey) -> Self {
         self.hotkey = Some(HotKey::new(mods, key));
         self
     }
@@ -265,7 +265,7 @@ impl<T: Data> MenuDesc<T> {
     /// # Examples
     ///
     /// ```
-    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector};
+    /// use druid::{Command, LocalizedString, MenuDesc, MenuItem, Selector, Target};
     ///
     /// let num_items: usize = 4;
     /// const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
@@ -274,7 +274,7 @@ impl<T: Data> MenuDesc<T> {
     ///     .append_iter(|| (0..num_items).map(|i| {
     ///         MenuItem::new(
     ///             LocalizedString::new("hello-counter").with_arg("count", move |_, _| i.into()),
-    ///             Command::new(MENU_COUNT_ACTION, i),
+    ///             Command::new(MENU_COUNT_ACTION, i, Target::Auto),
     ///        )
     ///     })
     /// );
@@ -346,7 +346,7 @@ impl<T: Data> MenuDesc<T> {
                     item.platform_id = MenuItemId::next();
                     menu.add_item(
                         item.platform_id.as_u32(),
-                        item.title.localized_str(),
+                        &item.title.localized_str(),
                         item.hotkey.as_ref(),
                         item.enabled,
                         item.selected,
@@ -388,6 +388,7 @@ impl<T: Data> MenuDesc<T> {
 }
 
 impl<T> ContextMenu<T> {
+    /// Create a new `ContextMenu`.
     pub fn new(menu: MenuDesc<T>, location: Point) -> Self {
         ContextMenu { menu, location }
     }
@@ -488,11 +489,11 @@ pub mod sys {
 
             #[cfg(target_os = "windows")]
             {
-                item.hotkey(RawMods::Ctrl, "y")
+                item.hotkey(SysMods::Cmd, "y")
             }
             #[cfg(not(target_os = "windows"))]
             {
-                item.hotkey(SysMods::CmdShift, "z")
+                item.hotkey(SysMods::CmdShift, "Z")
             }
         }
     }
@@ -535,7 +536,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-new"),
                     commands::NEW_FILE,
                 )
-                .hotkey(RawMods::Ctrl, "n")
+                .hotkey(SysMods::Cmd, "n")
             }
 
             /// The 'Open...' menu item.
@@ -544,7 +545,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-open"),
                     commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::Ctrl, "o")
+                .hotkey(SysMods::Cmd, "o")
             }
 
             /// The 'Close' menu item.
@@ -561,7 +562,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save"),
                     commands::SAVE_FILE.with(None),
                 )
-                .hotkey(RawMods::Ctrl, "s")
+                .hotkey(SysMods::Cmd, "s")
             }
 
             /// The 'Save...' menu item.
@@ -572,7 +573,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-ellipsis"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::Ctrl, "s")
+                .hotkey(SysMods::Cmd, "s")
             }
 
             /// The 'Save as...' menu item.
@@ -581,7 +582,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::CtrlShift, "s")
+                .hotkey(SysMods::CmdShift, "S")
             }
 
             /// The 'Print...' menu item.
@@ -590,7 +591,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-print"),
                     commands::PRINT,
                 )
-                .hotkey(RawMods::Ctrl, "p")
+                .hotkey(SysMods::Cmd, "p")
             }
 
             /// The 'Print Preview' menu item.
@@ -615,7 +616,6 @@ pub mod sys {
                     LocalizedString::new("win-menu-file-exit"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Alt, KeyCode::F4)
             }
         }
     }
@@ -664,7 +664,7 @@ pub mod sys {
                     LocalizedString::new("macos-menu-preferences"),
                     commands::SHOW_PREFERENCES,
                 )
-                .hotkey(RawMods::Meta, ",")
+                .hotkey(SysMods::Cmd, ",")
             }
 
             /// The 'Hide' builtin menu item.
@@ -673,7 +673,7 @@ pub mod sys {
                     LocalizedString::new("macos-menu-hide-app"),
                     commands::HIDE_APPLICATION,
                 )
-                .hotkey(RawMods::Meta, "h")
+                .hotkey(SysMods::Cmd, "h")
             }
 
             /// The 'Hide Others' builtin menu item.
@@ -682,7 +682,7 @@ pub mod sys {
                     LocalizedString::new("macos-menu-hide-others"),
                     commands::HIDE_OTHERS,
                 )
-                .hotkey(RawMods::AltMeta, "h")
+                .hotkey(SysMods::AltCmd, "h")
             }
 
             /// The 'show all' builtin menu item
@@ -700,7 +700,7 @@ pub mod sys {
                     LocalizedString::new("macos-menu-quit-app"),
                     commands::QUIT_APP,
                 )
-                .hotkey(RawMods::Meta, "q")
+                .hotkey(SysMods::Cmd, "q")
             }
         }
         /// The file menu.
@@ -739,7 +739,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-new"),
                     commands::NEW_FILE,
                 )
-                .hotkey(RawMods::Meta, "n")
+                .hotkey(SysMods::Cmd, "n")
             }
 
             /// The 'Open...' menu item. Will display the system file-chooser.
@@ -748,7 +748,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-open"),
                     commands::SHOW_OPEN_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::Meta, "o")
+                .hotkey(SysMods::Cmd, "o")
             }
 
             /// The 'Close' menu item.
@@ -757,7 +757,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-close"),
                     commands::CLOSE_WINDOW,
                 )
-                .hotkey(RawMods::Meta, "w")
+                .hotkey(SysMods::Cmd, "w")
             }
 
             /// The 'Save' menu item.
@@ -766,7 +766,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save"),
                     commands::SAVE_FILE.with(None),
                 )
-                .hotkey(RawMods::Meta, "s")
+                .hotkey(SysMods::Cmd, "s")
             }
 
             /// The 'Save...' menu item.
@@ -777,7 +777,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-ellipsis"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::Meta, "s")
+                .hotkey(SysMods::Cmd, "s")
             }
 
             /// The 'Save as...'
@@ -786,7 +786,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-save-as"),
                     commands::SHOW_SAVE_PANEL.with(FileDialogOptions::default()),
                 )
-                .hotkey(RawMods::MetaShift, "s")
+                .hotkey(SysMods::CmdShift, "S")
             }
 
             /// The 'Page Setup...' menu item.
@@ -795,7 +795,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-page-setup"),
                     commands::PRINT_SETUP,
                 )
-                .hotkey(RawMods::MetaShift, "p")
+                .hotkey(SysMods::CmdShift, "P")
             }
 
             /// The 'Print...' menu item.
@@ -804,7 +804,7 @@ pub mod sys {
                     LocalizedString::new("common-menu-file-print"),
                     commands::PRINT,
                 )
-                .hotkey(RawMods::Meta, "p")
+                .hotkey(SysMods::Cmd, "p")
             }
         }
     }

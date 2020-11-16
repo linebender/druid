@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,21 +14,19 @@
 
 //! A widget which splits an area in two, with a settable ratio, and optional draggable resizing.
 
-use crate::kurbo::{Line, Point, Rect, Size};
+use crate::kurbo::Line;
 use crate::widget::flex::Axis;
-use crate::{
-    theme, BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{theme, Color, Cursor, Data, Point, Rect, WidgetPod};
 
 /// A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {
     split_axis: Axis,
     split_point_chosen: f64,
     split_point_effective: f64,
-    min_size: f64,     // Integers only
-    bar_size: f64,     // Integers only
-    min_bar_area: f64, // Integers only
+    min_size: (f64, f64), // Integers only
+    bar_size: f64,        // Integers only
+    min_bar_area: f64,    // Integers only
     solid: bool,
     draggable: bool,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -49,7 +47,7 @@ impl<T> Split<T> {
             split_axis,
             split_point_chosen: 0.5,
             split_point_effective: 0.5,
-            min_size: 0.0,
+            min_size: (0.0, 0.0),
             bar_size: 6.0,
             min_bar_area: 6.0,
             solid: false,
@@ -88,9 +86,10 @@ impl<T> Split<T> {
     ///
     /// The value must be greater than or equal to `0.0`.
     /// The value will be rounded up to the nearest integer.
-    pub fn min_size(mut self, min_size: f64) -> Self {
-        assert!(min_size >= 0.0);
-        self.min_size = min_size.ceil();
+    pub fn min_size(mut self, first: f64, second: f64) -> Self {
+        assert!(first >= 0.0);
+        assert!(second >= 0.0);
+        self.min_size = (first.ceil(), second.ceil());
         self
     }
 
@@ -182,8 +181,8 @@ impl<T> Split<T> {
     fn split_side_limits(&self, size: Size) -> (f64, f64) {
         let split_axis_size = self.split_axis.major(size);
 
-        let mut min_limit = self.min_size;
-        let mut max_limit = (split_axis_size - min_limit).max(0.0);
+        let (mut min_limit, min_second) = self.min_size;
+        let mut max_limit = (split_axis_size - min_second).max(0.0);
 
         if min_limit > max_limit {
             min_limit = 0.5 * (min_limit + max_limit);

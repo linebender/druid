@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ fn build_app() -> impl Widget<u32> {
             .split_point(0.5)
             .draggable(true)
             .solid_bar(true)
-            .min_size(60.0),
+            .min_size(60.0, 60.0),
         )
         .border(Color::WHITE, 1.0),
     );

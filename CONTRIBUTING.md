@@ -3,11 +3,7 @@
 We'd love to accept your patches and contributions to this project. There are
 just a few small guidelines you need to follow.
 
-## Code reviews
-
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult [GitHub Help] for more
-information on using pull requests.
+## Changelog
 
 Every pull request should document all changes made in the [changelog].
 - The format is always `- [what changed]. ([#pr-number] by [@username])`.
@@ -18,11 +14,53 @@ Every pull request should document all changes made in the [changelog].
 If your name does not already appear in the [AUTHORS] file, please feel free to
 add it as part of your patch.
 
+## Code reviews
+
+All submissions, including submissions by project members, require review. We
+use GitHub pull requests for this purpose. Consult [GitHub Help] for more
+information on using pull requests.
+
+
+## Before opening a PR
+
+Testing a patch on github can take 15+ minutes, and you can save a lot of time by
+testing locally. We recommend using the following [git `pre-push` hook], by
+copying it to `druid/.git/hooks/pre-push`:
+
+```sh
+#!/bin/sh
+
+set -e
+
+echo "cargo fmt"
+cargo fmt --all -- --check
+echo "cargo clippy druid-shell"
+cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+echo "cargo clippy druid"
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+echo "cargo clippy druid (wasm)"
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
+echo "cargo clippy druid-derive"
+cargo clippy --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+echo "cargo clippy book examples"
+cargo clippy --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+echo "cargo test druid-shell"
+cargo test --manifest-path=druid-shell/Cargo.toml
+echo "cargo test druid"
+cargo test --manifest-path=druid/Cargo.toml --features=svg,image,im
+echo "cargo test druid-derive"
+cargo test --manifest-path=druid-derive/Cargo.toml
+echo "cargo test book examples"
+cargo test --manifest-path=docs/book_examples/Cargo.toml
+```
+
+# How to maintain
+
 ## Preparing for a new release
 
 If you're already contributing to this project and want to do more,
 then there might be a chance to help out with the preparation of new releases.
-Whether you're new or have prepared druid releases many times already,
+Whether you're new or have prepared Druid releases many times already,
 it helps to follow a checklist of what needs to be done. This is that list.
 
 ### Increasing the versions
@@ -49,7 +87,7 @@ to specific version documentation that will need updating.
 
 **We only test and specify the newest versions of dependencies.** Read on for more details.
 
-Rust dependencies like druid specify their own sub-dependencies in `Cargo.toml`.
+Rust dependencies like Druid specify their own sub-dependencies in `Cargo.toml`.
 These specifications are usually version ranges according to [semver],
 stating that the dependency requires a sub-dependency of the specified version
 or any newer version that is still compatible. It is up to the final application
@@ -57,12 +95,12 @@ to choose which actual versions get used via the `Cargo.lock` file of that appli
 
 Because the final application chooses the sub-dependency versions and they are most likely
 going to be higher than the minimum that is specified in our `Cargo.toml` file,
-we need to make sure that druid works properly with these newer versions.
+we need to make sure that Druid works properly with these newer versions.
 Yes according to [semver] rules they should work, but library authors make mistakes
-and it won't be a good experience or a sign of druid quality if a new developer
-adds druid as a dependency and it won't even compile.
+and it won't be a good experience or a sign of Druid's quality if a new developer
+adds Druid as a dependency and it won't even compile.
 For that reason our CI testing always uses the highest version that is still compatible.
-This mimics what a new developer would experience when they start using druid.
+This mimics what a new developer would experience when they start using Druid.
 
 What about the the minimum supported version or all the versions between the minimum and maximum?
 It is not practical for us to test all the combinations of possible sub-dependency versions.
@@ -79,7 +117,7 @@ Just because `1.1.1` used to work back in the day doesn't mean that it will alwa
 One partial solution to this problem is to be more precise in what we are actually promising.
 So whenever we release a new version we also update all our dependencies in `Cargo.toml`
 to match the versions that we are actually testing with. This will be much more accurate
-to the spirit of the version specification - druid will work with the specified version
+to the spirit of the version specification - Druid will work with the specified version
 and any newer one if it's [semver] compatible. We're not testing the extremely big matrix of
 old versions of our sub-dependencies and so we shouldn't claim that the old versions will work.
 
@@ -131,3 +169,4 @@ plus how and if it makes sense to update to the newer version.
 [changelog]: CHANGELOG.md
 [cargo-edit]: https://github.com/killercup/cargo-edit
 [semver]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+[git `pre-push` hook]: https://githooks.com

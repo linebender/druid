@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,19 +67,21 @@ impl Default for Spinner {
 }
 
 impl<T: Data> Widget<T> for Spinner {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
-        if let LifeCycle::WidgetAdded = event {
-            ctx.request_anim_frame();
-        }
-
-        if let LifeCycle::AnimFrame(interval) = event {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
+        if let Event::AnimFrame(interval) = event {
             self.t += (*interval as f64) * 1e-9;
             if self.t >= 1.0 {
                 self.t = 0.0;
             }
             ctx.request_anim_frame();
+            ctx.request_paint();
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
+        if let LifeCycle::WidgetAdded = event {
+            ctx.request_anim_frame();
+            ctx.request_paint();
         }
     }
 

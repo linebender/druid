@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ fn ui_builder() -> impl Widget<Option<u32>> {
 
     let mut col = Flex::column();
     col.add_child(label);
-    col.add_spacer(8.0);
+    col.add_default_spacer();
     col.add_child(input);
     Align::centered(col)
 }

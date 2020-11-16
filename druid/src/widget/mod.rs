@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ mod align;
 mod button;
 mod checkbox;
 mod click;
+mod clip_box;
 mod common;
 mod container;
 mod controller;
@@ -28,12 +29,14 @@ mod identity_wrapper;
 mod image;
 mod invalidation;
 mod label;
+mod lens_wrap;
 mod list;
 mod padding;
 mod painter;
 mod parse;
 mod progress_bar;
 mod radio;
+mod scope;
 mod scroll;
 mod sized_box;
 mod slider;
@@ -44,31 +47,35 @@ mod stepper;
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
 mod switch;
+mod tabs;
 mod textbox;
 mod view_switcher;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
 
-pub use self::image::{Image, ImageData};
+pub use self::image::Image;
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use click::Click;
+pub use clip_box::{ClipBox, Viewport};
 pub use common::FillStrat;
 pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
-pub use label::{Label, LabelText};
+pub use label::{Label, LabelText, LineBreaking, RawLabel};
+pub use lens_wrap::LensWrap;
 pub use list::{List, ListIter};
 pub use padding::Padding;
 pub use painter::{BackgroundBrush, Painter};
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
+pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
 pub use slider::Slider;
@@ -78,6 +85,7 @@ pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
+pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]

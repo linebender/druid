@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,8 @@
 
 //! A widget that aligns its child (for example, centering it).
 
-use crate::kurbo::{Rect, Size};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
-};
-
-use crate::piet::UnitPoint;
+use crate::widget::prelude::*;
+use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 
 /// A widget that aligns its child.
 pub struct Align<T> {

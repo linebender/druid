@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
 //! Map input to `EditAction`s
 
 use super::Movement;
-use crate::{HotKey, KeyCode, SysMods};
-use druid_shell::{KeyEvent, KeyModifiers};
+use crate::{HotKey, KbKey, KeyEvent, Modifiers, SysMods};
 
 // This following enumerations are heavily inspired by xi-editors enumerations found at
 // https://github.com/xi-editor/xi-editor/blob/e2589974fc4050beb33af82481aa71b258358e48/rust/core-lib/src/edit_types.rs
@@ -25,6 +24,7 @@ use druid_shell::{KeyEvent, KeyModifiers};
 
 /// An enum that represents actions in a text buffer.
 #[derive(Debug, PartialEq, Clone)]
+#[allow(missing_docs)]
 pub enum EditAction {
     Move(Movement),
     ModifySelection(Movement),
@@ -33,18 +33,22 @@ pub enum EditAction {
     Drag(MouseAction),
     Delete,
     Backspace,
+    JumpDelete(Movement),
+    JumpBackspace(Movement),
     Insert(String),
     Paste(String),
 }
 
 /// Extra information related to mouse actions
 #[derive(PartialEq, Debug, Clone)]
+#[allow(missing_docs)]
 pub struct MouseAction {
     pub row: usize,
     pub column: usize,
-    pub mods: KeyModifiers,
+    pub mods: Modifiers,
 }
 
+/// A trait for types that map keyboard events to possible edit actions.
 pub trait TextInput {
     /// Handle a key event and return an edit action to be executed
     /// for the key event
@@ -53,63 +57,113 @@ pub trait TextInput {
 
 /// Handles key events and returns actions that are applicable to
 /// single line textboxes
-#[derive(Default)]
-pub struct BasicTextInput {}
+#[derive(Default, Debug, Clone)]
+pub struct BasicTextInput;
 
 impl BasicTextInput {
+    /// Create a new `BasicTextInput`.
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 }
 
 impl TextInput for BasicTextInput {
     fn handle_event(&self, event: &KeyEvent) -> Option<EditAction> {
         let action = match event {
-            // Select all (Ctrl+A || Cmd+A)
-            k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
-            // Jump left (Ctrl+ArrowLeft || Cmd+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowLeft)).matches(k_e)
-                || HotKey::new(None, KeyCode::Home).matches(k_e) =>
-            {
-                EditAction::Move(Movement::LeftOfLine)
+            // Select left word (Shift+Ctrl+ArrowLeft || Shift+Cmd+ArrowLeft)
+            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowLeft)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::LeftWord)
             }
-            // Jump right (Ctrl+ArrowRight || Cmd+ArrowRight)
-            k_e if (HotKey::new(SysMods::Cmd, KeyCode::ArrowRight)).matches(k_e)
-                || HotKey::new(None, KeyCode::End).matches(k_e) =>
-            {
-                EditAction::Move(Movement::RightOfLine)
+            // Select right word (Shift+Ctrl+ArrowRight || Shift+Cmd+ArrowRight)
+            k_e if (HotKey::new(SysMods::CmdShift, KbKey::ArrowRight)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::RightWord)
+            }
+            // Select to home (Shift+Home)
+            k_e if (HotKey::new(SysMods::Shift, KbKey::Home)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::PrecedingLineBreak)
+            }
+            // Select to end (Shift+End)
+            k_e if (HotKey::new(SysMods::Shift, KbKey::End)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::NextLineBreak)
             }
             // Select left (Shift+ArrowLeft)
-            k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Left)
             }
             // Select right (Shift+ArrowRight)
-            k_e if (HotKey::new(SysMods::Shift, KeyCode::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::ModifySelection(Movement::Right)
             }
+            // Select all (Ctrl+A || Cmd+A)
+            k_e if (HotKey::new(SysMods::Cmd, "a")).matches(k_e) => EditAction::SelectAll,
+            // Left word (Ctrl+ArrowLeft || Cmd+ArrowLeft)
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowLeft)).matches(k_e) => {
+                EditAction::Move(Movement::LeftWord)
+            }
+            // Right word (Ctrl+ArrowRight || Cmd+ArrowRight)
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::ArrowRight)).matches(k_e) => {
+                EditAction::Move(Movement::RightWord)
+            }
             // Move left (ArrowLeft)
-            k_e if (HotKey::new(None, KeyCode::ArrowLeft)).matches(k_e) => {
+            k_e if (HotKey::new(None, KbKey::ArrowLeft)).matches(k_e) => {
                 EditAction::Move(Movement::Left)
             }
             // Move right (ArrowRight)
-            k_e if (HotKey::new(None, KeyCode::ArrowRight)).matches(k_e) => {
+            k_e if (HotKey::new(None, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
-            // Backspace
-            k_e if (HotKey::new(None, KeyCode::Backspace)).matches(k_e) => EditAction::Backspace,
-            // Delete
-            k_e if (HotKey::new(None, KeyCode::Delete)).matches(k_e) => EditAction::Delete,
-            // Actual typing
-            k_e if k_e.key_code.is_printable() => {
-                if let Some(chars) = k_e.text() {
-                    EditAction::Insert(chars.to_owned())
-                } else {
-                    return None;
-                }
+            k_e if (HotKey::new(None, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::Move(Movement::Up)
             }
-            _ => return None,
+            k_e if (HotKey::new(None, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::Move(Movement::Down)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Up)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Down)
+            }
+            // Delete left word
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::Backspace)).matches(k_e) => {
+                EditAction::JumpBackspace(Movement::LeftWord)
+            }
+            // Delete right word
+            k_e if (HotKey::new(SysMods::Cmd, KbKey::Delete)).matches(k_e) => {
+                EditAction::JumpDelete(Movement::RightWord)
+            }
+            // Backspace
+            k_e if (HotKey::new(None, KbKey::Backspace)).matches(k_e) => EditAction::Backspace,
+            // Delete
+            k_e if (HotKey::new(None, KbKey::Delete)).matches(k_e) => EditAction::Delete,
+            // Home
+            k_e if (HotKey::new(None, KbKey::Home)).matches(k_e) => {
+                EditAction::Move(Movement::PrecedingLineBreak)
+            }
+            // End
+            k_e if (HotKey::new(None, KbKey::End)).matches(k_e) => {
+                EditAction::Move(Movement::NextLineBreak)
+            }
+            // Actual typing
+            k_e => match string_from_key(k_e) {
+                Some(txt) => EditAction::Insert(txt),
+                None => return None,
+            },
         };
 
         Some(action)
+    }
+}
+
+/// Determine whether a keyboard event contains insertable text.
+fn string_from_key(event: &KeyEvent) -> Option<String> {
+    match &event.key {
+        KbKey::Character(_) if event.mods.ctrl() || event.mods.meta() => None,
+        #[cfg(not(target_os = "macos"))]
+        KbKey::Character(_) if event.mods.alt() => None,
+        KbKey::Character(chars) => Some(chars.to_owned()),
+        KbKey::Enter => Some("\n".into()),
+        KbKey::Tab => Some("\t".into()),
+        _ => None,
     }
 }

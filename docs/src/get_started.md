@@ -2,7 +2,7 @@
 *this is outdated, and should be replaced with a walkthrough of getting a simple
 app built and running*.
 
-This chapter will walk you through setting up a simple druid application from start to finish.
+This chapter will walk you through setting up a simple Druid application from start to finish.
 
 ## Set up a Druid project
 Setting up a project is a simple as creating a new Rust project;
@@ -10,7 +10,7 @@ Setting up a project is a simple as creating a new Rust project;
 > cargo new druid-example
 ```
 
-And then adding druid as a dependency to Cargo.toml
+And then adding Druid as a dependency to Cargo.toml
 ```toml
 [dependencies]
 druid = "0.6.0"

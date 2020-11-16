@@ -3,7 +3,7 @@ name = "druid-web-examples"
 version = "0.1.0"
 license = "Apache-2.0"
 description = "Scaffolding for druid web examples"
-repository = "https://github.com/xi-editor/druid"
+repository = "https://github.com/linebender/druid"
 edition = "2018"
 publish = false
 
@@ -11,12 +11,12 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-druid = { path="../.." }
+druid = { path="../..", features = ["im", "image"] }
 
-wasm-bindgen = "0.2.63"
+wasm-bindgen = "0.2.67"
 console_error_panic_hook = "0.1.6"
-log = "0.4.8"
-instant = { version = "0.1.4", features = ["wasm-bindgen"] }
+log = "0.4.11"
+instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
-simple_logger = { version = "1.6.0", default-features = false }
+simple_logger = { version = "1.9.0", default-features = false }

@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::attr::{FieldKind, Fields};
+use super::attr::{FieldKind, Fields, LensAttrs};
+use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{spanned::Spanned, Data};
+use std::collections::HashSet;
+use syn::{spanned::Spanned, Data, GenericParam, TypeParam};
 
 pub(crate) fn derive_lens_impl(
     input: syn::DeriveInput,
@@ -36,7 +38,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     let ty = &input.ident;
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
-        Fields::parse_ast(fields)?
+        Fields::<LensAttrs>::parse_ast(fields)?
     } else {
         return Err(syn::Error::new(
             input.span(),
@@ -62,7 +64,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     };
 
     // Define lens types for each field
-    let defs = fields.iter().map(|f| {
+    let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
 
         quote! {
@@ -72,35 +74,57 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             pub struct #field_name;
         }
     });
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let impls = fields.iter().map(|f| {
+    let used_params: HashSet<String> = input
+        .generics
+        .params
+        .iter()
+        .flat_map(|gp: &GenericParam| match gp {
+            GenericParam::Type(TypeParam { ident, .. }) => Some(ident.to_string()),
+            _ => None,
+        })
+        .collect();
+
+    let gen_new_param = |name: &str| {
+        let mut candidate: String = name.into();
+        let mut count = 1usize;
+        while used_params.contains(&candidate) {
+            candidate = format!("{}_{}", name, count);
+            count += 1;
+        }
+        Ident::new(&candidate, Span::call_site())
+    };
+
+    let func_ty_par = gen_new_param("F");
+    let val_ty_par = gen_new_param("V");
+
+    let impls = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
         let field_ty = &f.ty;
 
         quote! {
-            impl druid::Lens<#ty, #field_ty> for #twizzled_name::#field_name {
-                fn with<V, F: FnOnce(&#field_ty) -> V>(&self, data: &#ty, f: F) -> V {
+            impl #impl_generics druid::Lens<#ty#ty_generics, #field_ty> for #twizzled_name::#field_name #where_clause {
+                fn with<#val_ty_par, #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par>(&self, data: &#ty#ty_generics, f: #func_ty_par) -> #val_ty_par {
                     f(&data.#field_name)
                 }
 
-                fn with_mut<V, F: FnOnce(&mut #field_ty) -> V>(&self, data: &mut #ty, f: F) -> V {
+                fn with_mut<#val_ty_par, #func_ty_par: FnOnce(&mut #field_ty) -> #val_ty_par>(&self, data: &mut #ty#ty_generics, f: #func_ty_par) -> #val_ty_par {
                     f(&mut data.#field_name)
                 }
             }
         }
     });
 
-    let associated_items = fields.iter().map(|f| {
+    let associated_items = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
-        let lens_field_name = f.lens_name_override.as_ref().unwrap_or(&field_name);
+        let lens_field_name = f.attrs.lens_name_override.as_ref().unwrap_or(&field_name);
 
         quote! {
             /// Lens for the corresponding field
             pub const #lens_field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
         }
     });
-
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote! {
         pub mod #twizzled_name {

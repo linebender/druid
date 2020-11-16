@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,17 +21,6 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 
 use crate::*;
-
-// taken from the matches crate; useful for the Recorder widget.
-#[macro_export]
-macro_rules! assert_matches {
-     ($expression:expr, $($pattern:tt)+) => {
-         match $expression {
-             $($pattern)+ => (),
-             ref e => panic!("assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+)),
-         }
-     }
- }
 
 pub type EventFn<S, T> = dyn FnMut(&mut S, &mut EventCtx, &Event, &mut T, &Env);
 pub type LifeCycleFn<S, T> = dyn FnMut(&mut S, &mut LifeCycleCtx, &LifeCycle, &T, &Env);
@@ -91,7 +80,7 @@ pub enum Record {
     /// A `LifeCycle` event.
     L(LifeCycle),
     Layout(Size),
-    Update(Rect),
+    Update(Region),
     Paint,
     // instead of always returning an Option<Record>, we have a none variant;
     // this would be code smell elsewhere but here I think it makes the tests
@@ -299,7 +288,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
         self.recording
-            .push(Record::Update(ctx.widget_state.invalid.to_rect()));
+            .push(Record::Update(ctx.widget_state.invalid.clone()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {

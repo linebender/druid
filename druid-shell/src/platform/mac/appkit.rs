@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,11 @@ use bitflags::bitflags;
 use cocoa::base::id;
 use cocoa::foundation::NSRect;
 use objc::{class, msg_send, sel, sel_impl};
+
+#[link(name = "AppKit", kind = "framework")]
+extern "C" {
+    pub static NSRunLoopCommonModes: id;
+}
 
 bitflags! {
     pub struct NSTrackingAreaOptions: i32 {

@@ -1,4 +1,4 @@
-// Copyright 2017 The xi-editor Authors.
+// Copyright 2017 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,48 +19,25 @@
 //! dxgi render targets so we can use present options for minimal
 //! invalidation and low-latency frame timing.
 
-use std::mem;
 use std::ptr::null_mut;
 
 use winapi::ctypes::c_void;
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
 use winapi::shared::dxgiformat::*;
-use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1::*;
 use winapi::um::dcommon::*;
-use winapi::um::winuser::*;
 use winapi::Interface;
 
 use piet_common::d2d::D2DFactory;
 
-use crate::platform::windows::{DeviceContext, DxgiSurfaceRenderTarget, HwndRenderTarget};
+use crate::platform::windows::DxgiSurfaceRenderTarget;
 use crate::scale::Scale;
 
 use super::error::Error;
 use super::util::as_result;
-
-pub(crate) unsafe fn create_render_target(
-    d2d_factory: &D2DFactory,
-    hwnd: HWND,
-) -> Result<DeviceContext, Error> {
-    let mut rect: RECT = mem::zeroed();
-    if GetClientRect(hwnd, &mut rect) == 0 {
-        log::warn!("GetClientRect failed.");
-        Err(Error::D2Error)
-    } else {
-        let width = (rect.right - rect.left) as u32;
-        let height = (rect.bottom - rect.top) as u32;
-        let res = HwndRenderTarget::create(d2d_factory, hwnd, width, height);
-
-        if let Err(ref e) = res {
-            log::error!("Creating hwnd render target failed: {:?}", e);
-        }
-        res.map(|hrt| cast_to_device_context(&hrt).expect("removethis"))
-            .map_err(|_| Error::D2Error)
-    }
-}
+use super::window::SCALE_TARGET_DPI;
 
 /// Create a render target from a DXGI swapchain.
 ///
@@ -68,7 +45,7 @@ pub(crate) unsafe fn create_render_target(
 pub(crate) unsafe fn create_render_target_dxgi(
     d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
-    scale: &Scale,
+    scale: Scale,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
     let mut buffer: *mut IDXGISurface = null_mut();
     as_result((*swap_chain).GetBuffer(
@@ -82,8 +59,8 @@ pub(crate) unsafe fn create_render_target_dxgi(
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_IGNORE,
         },
-        dpiX: scale.dpi_x() as f32,
-        dpiY: scale.dpi_y() as f32,
+        dpiX: (scale.x() * SCALE_TARGET_DPI) as f32,
+        dpiY: (scale.y() * SCALE_TARGET_DPI) as f32,
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };
@@ -98,12 +75,4 @@ pub(crate) unsafe fn create_render_target_dxgi(
     } else {
         Err(res.into())
     }
-}
-
-/// Casts hwnd variant to DeviceTarget
-unsafe fn cast_to_device_context(hrt: &HwndRenderTarget) -> Option<DeviceContext> {
-    hrt.get_comptr()
-        .cast()
-        .ok()
-        .map(|com_ptr| DeviceContext::new(com_ptr))
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,8 @@
 
 //! A widget that can dynamically switch between one of many views.
 
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    Point, Rect, Size, UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{Data, WidgetPod};
 
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
@@ -25,6 +23,7 @@ use crate::{
 type ChildPicker<T, U> = dyn Fn(&T, &Env) -> U;
 type ChildBuilder<T, U> = dyn Fn(&U, &T, &Env) -> Box<dyn Widget<T>>;
 
+/// A widget that dynamically switches between two children.
 pub struct ViewSwitcher<T, U> {
     child_picker: Box<ChildPicker<T, U>>,
     child_builder: Box<ChildBuilder<T, U>>,
@@ -32,7 +31,7 @@ pub struct ViewSwitcher<T, U> {
     active_child_id: Option<U>,
 }
 
-impl<T: Data, U: PartialEq> ViewSwitcher<T, U> {
+impl<T: Data, U: Data> ViewSwitcher<T, U> {
     /// Create a new view switcher.
     ///
     /// The `child_picker` closure is called every time the application data changes.
@@ -55,7 +54,7 @@ impl<T: Data, U: PartialEq> ViewSwitcher<T, U> {
     }
 }
 
-impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
+impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(child) = self.active_child.as_mut() {
             child.event(ctx, event, data, env);
@@ -75,13 +74,13 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let child_id = (self.child_picker)(data, env);
-        if Some(&child_id) != self.active_child_id.as_ref() {
+        // Safe to unwrap because self.active_child_id should not be empty
+        if !child_id.same(self.active_child_id.as_ref().unwrap()) {
             self.active_child = Some(WidgetPod::new((self.child_builder)(&child_id, data, env)));
             self.active_child_id = Some(child_id);
             ctx.children_changed();
-        }
-
-        if let Some(child) = self.active_child.as_mut() {
+        // Because the new child has not yet been initialized, we have to skip the update after switching.
+        } else if let Some(child) = self.active_child.as_mut() {
             child.update(ctx, data, env);
         }
     }
@@ -90,7 +89,7 @@ impl<T: Data, U: PartialEq> Widget<T> for ViewSwitcher<T, U> {
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(ctx, bc, data, env);
-                child.set_layout_rect(ctx, data, env, Rect::from_origin_size(Point::ORIGIN, size));
+                child.set_layout_rect(ctx, data, env, size.to_rect());
                 size
             }
             None => bc.max(),

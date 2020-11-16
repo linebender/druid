@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,9 +32,9 @@ impl Application {
     pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
         let gtk_app = match GtkApplication::new(
-            Some("com.github.xi-editor.druid"),
+            Some("com.github.linebender.druid"),
             // TODO we set this to avoid connecting to an existing running instance
-            // of "com.github.xi-editor.druid" after which we would never receive
+            // of "com.github.linebender.druid" after which we would never receive
             // the "Activate application" below. See pull request druid#384
             // Which shows another way once we have in place a mechanism for
             // communication with remote instances.

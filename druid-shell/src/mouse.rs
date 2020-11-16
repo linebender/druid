@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
 //! Common types for representing mouse events and state
 
 use crate::kurbo::{Point, Vec2};
+use crate::platform;
 
-use crate::keyboard::KeyModifiers;
+use crate::{ImageBuf, Modifiers};
 
 /// Information about the mouse event.
 ///
@@ -33,7 +34,7 @@ pub struct MouseEvent {
     /// and it will not contain the `button` that triggered a mouse-up event.
     pub buttons: MouseButtons,
     /// Keyboard modifiers at the time of the event.
-    pub mods: KeyModifiers,
+    pub mods: Modifiers,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,
@@ -253,4 +254,27 @@ pub enum Cursor {
     NotAllowed,
     ResizeLeftRight,
     ResizeUpDown,
+    Custom(platform::window::CustomCursor),
+}
+
+/// A platform-independent description of a custom cursor.
+#[derive(Clone)]
+pub struct CursorDesc {
+    pub(crate) image: ImageBuf,
+    pub(crate) hot: Point,
+}
+
+impl CursorDesc {
+    /// Creates a new `CursorDesc`.
+    ///
+    /// `hot` is the "hot spot" of the cursor, measured in terms of the pixels in `image` with
+    /// `(0, 0)` at the top left. The hot spot is the logical position of the mouse cursor within
+    /// the image. For example, if the image is a picture of a arrow, the hot spot might be the
+    /// coordinates of the arrow's tip.
+    pub fn new(image: ImageBuf, hot: impl Into<Point>) -> CursorDesc {
+        CursorDesc {
+            image,
+            hot: hot.into(),
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// Copyright 2017 The xi-editor Authors.
+// Copyright 2017 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,23 +24,22 @@ use std::ptr;
 use std::slice;
 
 use lazy_static::lazy_static;
-use winapi::ctypes::c_void;
-use winapi::shared::guiddef::REFIID;
-use winapi::shared::minwindef::{HMODULE, UINT};
+use winapi::shared::minwindef::{BOOL, HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
-use winapi::shared::windef::{HMONITOR, RECT};
+use winapi::shared::windef::{HMONITOR, HWND, RECT};
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::fileapi::{CreateFileA, GetFileType, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
 use winapi::um::processenv::{GetStdHandle, SetStdHandle};
 use winapi::um::shellscalingapi::{MONITOR_DPI_TYPE, PROCESS_DPI_AWARENESS};
-use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winbase::{FILE_TYPE_UNKNOWN, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE};
 
 use crate::kurbo::Rect;
+use crate::region::Region;
+use crate::scale::{Scalable, Scale};
 
 use super::error::Error;
 
@@ -127,27 +126,36 @@ pub(crate) fn recti_to_rect(rect: RECT) -> Rect {
     )
 }
 
+/// Converts a `Region` into a vec of winapi `RECT`, with a scaling applied.
+/// If necessary, the rectangles are rounded to the nearest pixel border.
+pub(crate) fn region_to_rectis(region: &Region, scale: Scale) -> Vec<RECT> {
+    region
+        .rects()
+        .iter()
+        .map(|r| rect_to_recti(r.to_px(scale).round()))
+        .collect()
+}
+
 // Types for functions we want to load, which are only supported on newer windows versions
-// from shcore.dll
-type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
-type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 // from user32.dll
+type GetDpiForSystem = unsafe extern "system" fn() -> UINT;
+type GetDpiForWindow = unsafe extern "system" fn(HWND) -> UINT;
+type SetProcessDpiAwarenessContext =
+    unsafe extern "system" fn(winapi::shared::windef::DPI_AWARENESS_CONTEXT) -> BOOL;
+type GetSystemMetricsForDpi =
+    unsafe extern "system" fn(winapi::ctypes::c_int, UINT) -> winapi::ctypes::c_int;
+// from shcore.dll
+type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
-type DCompositionCreateDevice2 = unsafe extern "system" fn(
-    renderingDevice: *const IUnknown,
-    iid: REFIID,
-    dcompositionDevice: *mut *mut c_void,
-) -> HRESULT;
-type CreateDXGIFactory2 =
-    unsafe extern "system" fn(Flags: UINT, riid: REFIID, ppFactory: *mut *mut c_void) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
     pub GetDpiForSystem: Option<GetDpiForSystem>,
+    pub GetDpiForWindow: Option<GetDpiForWindow>,
+    pub SetProcessDpiAwarenessContext: Option<SetProcessDpiAwarenessContext>,
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
-    pub DCompositionCreateDevice2: Option<DCompositionCreateDevice2>,
-    pub CreateDXGIFactory2: Option<CreateDXGIFactory2>,
+    pub GetSystemMetricsForDpi: Option<GetSystemMetricsForDpi>,
 }
 
 #[allow(non_snake_case)] // For local variables
@@ -193,14 +201,13 @@ fn load_optional_functions() -> OptionalFunctions {
 
     let shcore = load_library("shcore.dll");
     let user32 = load_library("user32.dll");
-    let dcomp = load_library("dcomp.dll");
-    let dxgi = load_library("dxgi.dll");
 
     let mut GetDpiForSystem = None;
     let mut GetDpiForMonitor = None;
+    let mut GetDpiForWindow = None;
+    let mut SetProcessDpiAwarenessContext = None;
     let mut SetProcessDpiAwareness = None;
-    let mut DCompositionCreateDevice2 = None;
-    let mut CreateDXGIFactory2 = None;
+    let mut GetSystemMetricsForDpi = None;
 
     if shcore.is_null() {
         log::info!("No shcore.dll");
@@ -213,22 +220,18 @@ fn load_optional_functions() -> OptionalFunctions {
         log::info!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
-    }
-
-    if !dcomp.is_null() {
-        load_function!(dcomp, DCompositionCreateDevice2, "8.1");
-    }
-
-    if !dxgi.is_null() {
-        load_function!(dxgi, CreateDXGIFactory2, "8.1");
+        load_function!(user32, GetDpiForWindow, "10");
+        load_function!(user32, SetProcessDpiAwarenessContext, "10");
+        load_function!(user32, GetSystemMetricsForDpi, "10");
     }
 
     OptionalFunctions {
         GetDpiForSystem,
+        GetDpiForWindow,
+        SetProcessDpiAwarenessContext,
         GetDpiForMonitor,
         SetProcessDpiAwareness,
-        DCompositionCreateDevice2,
-        CreateDXGIFactory2,
+        GetSystemMetricsForDpi,
     }
 }
 

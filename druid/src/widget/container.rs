@@ -1,4 +1,4 @@
-// Copyright 2019 The xi-editor Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
-use crate::shell::kurbo::{Point, Rect, Size};
-use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::kurbo::Point;
+use crate::widget::prelude::*;
+use crate::{Color, Data, KeyOrValue, Rect, WidgetPod};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -30,7 +28,7 @@ struct BorderStyle {
 pub struct Container<T> {
     background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
-    corner_radius: f64,
+    corner_radius: KeyOrValue<f64>,
 
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -41,9 +39,25 @@ impl<T: Data> Container<T> {
         Self {
             background: None,
             border: None,
-            corner_radius: 0.0,
+            corner_radius: 0.0.into(),
             inner: WidgetPod::new(inner).boxed(),
         }
+    }
+
+    /// Builder-style method for setting the background for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`Env`]: ../struct.Env.html
+    /// [`Painter`]: struct.Painter.html
+    pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
+        self.set_background(brush);
+        self
     }
 
     /// Set the background for this widget.
@@ -53,16 +67,15 @@ impl<T: Data> Container<T> {
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../struct.Color.thml
-    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
-    pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
+    pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
         self.background = Some(brush.into());
-        self
     }
 
-    /// Paint a border around the widget with a color and width.
+    /// Builder-style method for painting a border around the widget with a color and width.
     ///
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
@@ -73,17 +86,36 @@ impl<T: Data> Container<T> {
         color: impl Into<KeyOrValue<Color>>,
         width: impl Into<KeyOrValue<f64>>,
     ) -> Self {
+        self.set_border(color, width);
+        self
+    }
+
+    /// Paint a border around the widget with a color and width.
+    ///
+    /// Arguments can be either concrete values, or a [`Key`] of the respective
+    /// type.
+    ///
+    /// [`Key`]: struct.Key.html
+    pub fn set_border(
+        &mut self,
+        color: impl Into<KeyOrValue<Color>>,
+        width: impl Into<KeyOrValue<f64>>,
+    ) {
         self.border = Some(BorderStyle {
             color: color.into(),
             width: width.into(),
         });
+    }
+
+    /// Builder style method for rounding off corners of this container by setting a corner radius
+    pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
+        self.set_rounded(radius);
         self
     }
 
     /// Round off corners of this container by setting a corner radius
-    pub fn rounded(mut self, radius: f64) -> Self {
-        self.corner_radius = radius;
-        self
+    pub fn set_rounded(&mut self, radius: impl Into<KeyOrValue<f64>>) {
+        self.corner_radius = radius.into();
     }
 
     #[cfg(test)]
@@ -138,8 +170,10 @@ impl<T: Data> Widget<T> for Container<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let corner_radius = self.corner_radius.resolve(env);
+
         if let Some(background) = self.background.as_mut() {
-            let panel = ctx.size().to_rounded_rect(self.corner_radius);
+            let panel = ctx.size().to_rounded_rect(corner_radius);
 
             ctx.with_save(|ctx| {
                 ctx.clip(panel);
@@ -153,7 +187,7 @@ impl<T: Data> Widget<T> for Container<T> {
                 .size()
                 .to_rect()
                 .inset(border_width / -2.0)
-                .to_rounded_rect(self.corner_radius);
+                .to_rounded_rect(corner_radius);
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 

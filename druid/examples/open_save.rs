@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,
-    LocalizedString, Target, Widget, WindowDesc,
+    Handled, LocalizedString, Target, Widget, WindowDesc,
 };
 
 struct Delegate;
@@ -35,29 +35,37 @@ fn ui_builder() -> impl Widget<String> {
     let rs = FileSpec::new("Rust source", &["rs"]);
     let txt = FileSpec::new("Text file", &["txt"]);
     let other = FileSpec::new("Bogus file", &["foo", "bar", "baz"]);
+    // The options can also be generated at runtime,
+    // so to show that off we create a String for the default save name.
+    let default_save_name = String::from("MyFile.txt");
     let save_dialog_options = FileDialogOptions::new()
         .allowed_types(vec![rs, txt, other])
-        .default_type(txt);
-    let open_dialog_options = save_dialog_options.clone();
+        .default_type(txt)
+        .default_name(default_save_name)
+        .name_label("Target")
+        .title("Choose a target for this lovely file")
+        .button_text("Export");
+    let open_dialog_options = save_dialog_options
+        .clone()
+        .default_name("MySavedFile.txt")
+        .name_label("Source")
+        .title("Where did you put that file?")
+        .button_text("Import");
 
     let input = TextBox::new();
     let save = Button::new("Save").on_click(move |ctx, _, _| {
-        ctx.submit_command(
-            Command::new(
-                druid::commands::SHOW_SAVE_PANEL,
-                save_dialog_options.clone(),
-            ),
-            None,
-        )
+        ctx.submit_command(Command::new(
+            druid::commands::SHOW_SAVE_PANEL,
+            save_dialog_options.clone(),
+            Target::Auto,
+        ))
     });
     let open = Button::new("Open").on_click(move |ctx, _, _| {
-        ctx.submit_command(
-            Command::new(
-                druid::commands::SHOW_OPEN_PANEL,
-                open_dialog_options.clone(),
-            ),
-            None,
-        )
+        ctx.submit_command(Command::new(
+            druid::commands::SHOW_OPEN_PANEL,
+            open_dialog_options.clone(),
+            Target::Auto,
+        ))
     });
 
     let mut col = Flex::column();
@@ -76,12 +84,12 @@ impl AppDelegate<String> for Delegate {
         cmd: &Command,
         data: &mut String,
         _env: &Env,
-    ) -> bool {
+    ) -> Handled {
         if let Some(Some(file_info)) = cmd.get(commands::SAVE_FILE) {
             if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
                 println!("Error writing file: {}", e);
             }
-            return true;
+            return Handled::Yes;
         }
         if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
             match std::fs::read_to_string(file_info.path()) {
@@ -93,8 +101,8 @@ impl AppDelegate<String> for Delegate {
                     println!("Error opening file: {}", e);
                 }
             }
-            return true;
+            return Handled::Yes;
         }
-        false
+        Handled::No
     }
 }

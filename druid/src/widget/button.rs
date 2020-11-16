@@ -1,4 +1,4 @@
-// Copyright 2018 The xi-editor Authors.
+// Copyright 2018 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,10 @@
 // limitations under the License.
 
 //! A button widget.
-use crate::theme;
+
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
-
-use crate::{Affine, Data, Insets, LinearGradient, Point, Rect, RenderContext, UnitPoint, Widget};
+use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -33,7 +32,7 @@ pub struct Button<T> {
 impl<T: Data> Button<T> {
     /// Create a new button with a text label.
     ///
-    /// Use the `.on_click` method to provide a closure to be called when the
+    /// Use the [`.on_click`] method to provide a closure to be called when the
     /// button is clicked.
     ///
     /// # Examples
@@ -45,9 +44,33 @@ impl<T: Data> Button<T> {
     ///     *data += 1;
     /// });
     /// ```
+    ///
+    /// [`.on_click`]: #method.on_click
     pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
+        Button::from_label(Label::new(text))
+    }
+
+    /// Create a new button with the provided [`Label`].
+    ///
+    /// Use the [`.on_click`] method to provide a closure to be called when the
+    /// button is clicked.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::Color;
+    /// use druid::widget::{Button, Label};
+    ///
+    /// let button = Button::from_label(Label::new("Increment").with_text_color(Color::grey(0.5))).on_click(|_ctx, data: &mut u32, _env| {
+    ///     *data += 1;
+    /// });
+    /// ```
+    ///
+    /// [`Label`]: struct.Label.html
+    /// [`.on_click`]: #method.on_click
+    pub fn from_label(label: Label<T>) -> Button<T> {
         Button {
-            label: Label::new(text),
+            label,
             label_size: Size::ZERO,
         }
     }
@@ -114,20 +137,16 @@ impl<T: Data> Widget<T> for Button<T> {
         self.label.update(ctx, old_data, data, env)
     }
 
-    fn layout(
-        &mut self,
-        layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Button");
         let padding = Size::new(LABEL_INSETS.x_value(), LABEL_INSETS.y_value());
         let label_bc = bc.shrink(padding).loosen();
-        self.label_size = self.label.layout(layout_ctx, &label_bc, data, env);
+        self.label_size = self.label.layout(ctx, &label_bc, data, env);
         // HACK: to make sure we look okay at default sizes when beside a textbox,
         // we make sure we will have at least the same height as the default textbox.
         let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
+        let baseline = self.label.baseline_offset();
+        ctx.set_baseline_offset(baseline + LABEL_INSETS.y1);
 
         bc.constrain(Size::new(
             self.label_size.width + padding.width,
@@ -141,7 +160,8 @@ impl<T: Data> Widget<T> for Button<T> {
         let size = ctx.size();
         let stroke_width = env.get(theme::BUTTON_BORDER_WIDTH);
 
-        let rounded_rect = Rect::from_origin_size(Point::ORIGIN, size)
+        let rounded_rect = size
+            .to_rect()
             .inset(-stroke_width / 2.0)
             .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
 

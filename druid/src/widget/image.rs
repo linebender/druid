@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,32 +13,92 @@
 // limitations under the License.
 
 //! An Image widget.
-//! Please consider using SVG and the SVG wideget as it scales much better.
+//! Please consider using SVG and the SVG widget as it scales much better.
 
-#[cfg(feature = "image")]
-use std::{convert::AsRef, error::Error, path::Path};
+use druid_shell::ImageBuf;
 
 use crate::{
-    piet::{ImageFormat, InterpolationMode},
+    piet::{Image as PietImage, InterpolationMode},
     widget::common::FillStrat,
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Rect, RenderContext, Size, UpdateCtx, Widget,
+    widget::prelude::*,
+    Data,
 };
 
-/// A widget that renders an Image
+/// A widget that renders a bitmap Image.
+///
+/// Contains data about how to fill the given space and interpolate pixels.
+/// Configuration options are provided via the builder pattern.
+///
+/// Note: when [scaling a bitmap image], such as supporting multiple
+/// screen sizes and resolutions, interpolation can lead to blurry
+/// or pixelated images and so is not recommended for things like icons.
+/// Instead consider using [SVG files] and enabling the `svg` feature with `cargo`.
+///
+/// (See also:
+/// [`ImageBuf`],
+/// [`FillStrat`],
+/// [`InterpolationMode`]
+/// )
+///
+/// # Example
+///
+/// Create an image widget and configure it using builder methods
+/// ```
+/// use druid::{
+///     widget::{Image, FillStrat},
+///     piet::InterpolationMode,
+/// };
+/// use druid_shell::ImageBuf;
+///
+/// let image_data = ImageBuf::empty();
+/// let image_widget = Image::new(image_data)
+///     // set the fill strategy
+///     .fill_mode(FillStrat::Fill)
+///     // set the interpolation mode
+///     .interpolation_mode(InterpolationMode::Bilinear);
+/// ```
+/// Create an image widget and configure it using setters
+/// ```
+/// use druid::{
+///     widget::{Image, FillStrat},
+///     piet::InterpolationMode,
+/// };
+/// use druid_shell::ImageBuf;
+///
+/// let image_data = ImageBuf::empty();
+/// let mut image_widget = Image::new(image_data);
+/// // set the fill strategy
+/// image_widget.set_fill_mode(FillStrat::FitWidth);
+/// // set the interpolation mode
+/// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
+/// ```
+///
+/// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
+/// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
+/// [`ImageBuf`]: ../druid_shell/struct.ImageBuf.html
+/// [`FillStrat`]: ../widget/enum.FillStrat.html
+/// [`InterpolationMode`]: ../piet/enum.InterpolationMode.html
 pub struct Image {
-    image_data: ImageData,
+    image_data: ImageBuf,
+    paint_data: Option<PietImage>,
     fill: FillStrat,
     interpolation: InterpolationMode,
 }
 
 impl Image {
-    /// Create an image drawing widget from `ImageData`.
+    /// Create an image drawing widget from an image buffer.
     ///
-    /// The Image will scale to fit its box constraints.
-    pub fn new(image_data: ImageData) -> Self {
+    /// By default, the Image will scale to fit its box constraints
+    /// ([`FillStrat::Fill`])
+    /// and will be scaled bilinearly
+    /// ([`InterpolationMode::Bilinear`])
+    ///
+    /// [`FillStrat::Fill`]: ../widget/enum.FillStrat.html#variant.Fill
+    /// [`InterpolationMode::Bilinear`]: ../piet/enum.InterpolationMode.html#variant.Bilinear
+    pub fn new(image_data: ImageBuf) -> Self {
         Image {
             image_data,
+            paint_data: None,
             fill: FillStrat::default(),
             interpolation: InterpolationMode::Bilinear,
         }
@@ -50,9 +110,10 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `FillStrat`.
+    /// Modify the widget's fill strategy.
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
+        self.paint_data = None;
     }
 
     /// A builder-style method for specifying the interpolation strategy.
@@ -61,9 +122,16 @@ impl Image {
         self
     }
 
-    /// Modify the widget's `InterpolationMode`.
+    /// Modify the widget's interpolation mode.
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
+        self.paint_data = None;
+    }
+
+    /// Set new `ImageBuf`.
+    pub fn set_image_data(&mut self, image_data: ImageBuf) {
+        self.image_data = image_data;
+        self.paint_data = None;
     }
 }
 
@@ -83,138 +151,53 @@ impl<T: Data> Widget<T> for Image {
     ) -> Size {
         bc.debug_check("Image");
 
-        if bc.is_width_bounded() {
-            bc.max()
+        // If either the width or height is constrained calculate a value so that the image fits
+        // in the size exactly. If it is unconstrained by both width and height take the size of
+        // the image.
+        let max = bc.max();
+        let image_size = self.image_data.size();
+        if bc.is_width_bounded() && !bc.is_height_bounded() {
+            let ratio = max.width / image_size.width;
+            Size::new(max.width, ratio * image_size.height)
+        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
+            let ratio = max.height / image_size.height;
+            Size::new(ratio * image_size.width, max.height)
         } else {
-            bc.constrain(self.image_data.get_size())
+            bc.constrain(self.image_data.size())
         }
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self
-            .fill
-            .affine_to_fill(ctx.size(), self.image_data.get_size());
+        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.image_data.size());
 
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         if self.fill != FillStrat::Contain {
-            let clip_rect = Rect::ZERO.with_size(ctx.size());
+            let clip_rect = ctx.size().to_rect();
             ctx.clip(clip_rect);
         }
-        self.image_data
-            .to_piet(offset_matrix, ctx, self.interpolation);
-    }
-}
 
-/// Stored Image data.
-#[derive(Clone)]
-pub struct ImageData {
-    pixels: Vec<u8>,
-    x_pixels: u32,
-    y_pixels: u32,
-    format: ImageFormat,
-}
-
-impl ImageData {
-    /// Create an empty Image
-    pub fn empty() -> Self {
-        ImageData {
-            pixels: [].to_vec(),
-            x_pixels: 0,
-            y_pixels: 0,
-            format: ImageFormat::RgbaSeparate,
-        }
-    }
-
-    /// Get the size in pixels of the contained image.
-    fn get_size(&self) -> Size {
-        Size::new(self.x_pixels as f64, self.y_pixels as f64)
-    }
-
-    /// Convert ImageData into Piet draw instructions.
-    fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, interpolation: InterpolationMode) {
         ctx.with_save(|ctx| {
+            let piet_image = {
+                let image_data = &self.image_data;
+                self.paint_data
+                    .get_or_insert_with(|| image_data.to_piet_image(ctx.render_ctx))
+            };
             ctx.transform(offset_matrix);
-            let size = self.get_size();
-            let im = ctx
-                .make_image(
-                    size.width as usize,
-                    size.height as usize,
-                    &self.pixels,
-                    self.format,
-                )
-                .unwrap();
-            ctx.draw_image(&im, size.to_rect(), interpolation);
-        })
-    }
-}
-
-#[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
-impl ImageData {
-    /// Load an image from a DynamicImage from the image crate
-    pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageData {
-        use image::ColorType::*;
-        let has_alpha_channel = match image_data.color() {
-            La8 | Rgba8 | La16 | Rgba16 | Bgra8 => true,
-            _ => false,
-        };
-
-        if has_alpha_channel {
-            Self::from_dynamic_image_with_alpha(image_data)
-        } else {
-            Self::from_dynamic_image_without_alpha(image_data)
-        }
-    }
-
-    /// Load an image from a DynamicImage with alpha
-    pub fn from_dynamic_image_with_alpha(image_data: image::DynamicImage) -> ImageData {
-        let rgba_image = image_data.to_rgba();
-        let sizeofimage = rgba_image.dimensions();
-        ImageData {
-            pixels: rgba_image.to_vec(),
-            x_pixels: sizeofimage.0,
-            y_pixels: sizeofimage.1,
-            format: ImageFormat::RgbaSeparate,
-        }
-    }
-
-    /// Load an image from a DynamicImage without alpha
-    pub fn from_dynamic_image_without_alpha(image_data: image::DynamicImage) -> ImageData {
-        let rgb_image = image_data.to_rgb();
-        let sizeofimage = rgb_image.dimensions();
-        ImageData {
-            pixels: rgb_image.to_vec(),
-            x_pixels: sizeofimage.0,
-            y_pixels: sizeofimage.1,
-            format: ImageFormat::Rgb,
-        }
-    }
-
-    /// Attempt to load an image from raw bytes.
-    ///
-    /// If the image crate can't decode an image from the data an error will be returned.
-    pub fn from_data(raw_image: &[u8]) -> Result<Self, Box<dyn Error>> {
-        let image_data = image::load_from_memory(raw_image).map_err(|e| e)?;
-        Ok(ImageData::from_dynamic_image(image_data))
-    }
-
-    /// Attempt to load an image from the file at the provided path.
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let image_data = image::open(path).map_err(|e| e)?;
-        Ok(ImageData::from_dynamic_image(image_data))
-    }
-}
-
-impl Default for ImageData {
-    fn default() -> Self {
-        ImageData::empty()
+            ctx.draw_image(
+                piet_image,
+                self.image_data.size().to_rect(),
+                self.interpolation,
+            );
+        });
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
+    use crate::piet::ImageFormat;
+
     use super::*;
 
     #[test]
@@ -222,12 +205,12 @@ mod tests {
         use crate::{tests::harness::Harness, WidgetId};
 
         let _id_1 = WidgetId::next();
-        let image_data = ImageData {
-            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
-            x_pixels: 2,
-            y_pixels: 2,
-            format: ImageFormat::Rgb,
-        };
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
 
         let image_widget =
             Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
@@ -269,12 +252,12 @@ mod tests {
     fn wide_paint() {
         use crate::{tests::harness::Harness, WidgetId};
         let _id_1 = WidgetId::next();
-        let image_data = ImageData {
-            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
-            x_pixels: 2,
-            y_pixels: 2,
-            format: ImageFormat::Rgb,
-        };
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
 
         let image_widget =
             Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
@@ -324,12 +307,12 @@ mod tests {
             WidgetId,
         };
         let _id_1 = WidgetId::next();
-        let image_data = ImageData {
-            pixels: vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
-            x_pixels: 2,
-            y_pixels: 2,
-            format: ImageFormat::Rgb,
-        };
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
 
         let image_widget =
             Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
@@ -348,5 +331,61 @@ mod tests {
                 target.into_png(tmp_dir.join("image.png")).unwrap();
             },
         );
+    }
+
+    #[test]
+    fn width_bound_layout() {
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
+
+        let image_widget =
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).vertical();
+
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
+    }
+
+    #[test]
+    fn height_bound_layout() {
+        use crate::{
+            tests::harness::Harness,
+            widget::{Container, Scroll},
+            WidgetExt, WidgetId,
+        };
+        use float_cmp::approx_eq;
+
+        let id_1 = WidgetId::next();
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
+
+        let image_widget =
+            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
+
+        Harness::create_simple(true, image_widget, |harness| {
+            harness.send_initial_events();
+            harness.just_layout();
+            let state = harness.get_state(id_1);
+            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+        })
     }
 }

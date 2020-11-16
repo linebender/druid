@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,321 +14,188 @@
 
 //! X11 keycode handling.
 
-use gdk::enums::key::*;
+use super::super::shared;
+pub use super::super::shared::code_to_location;
+use crate::keyboard::{Code, KbKey, Modifiers};
+use x11rb::protocol::xproto::Keycode;
 
-use crate::keyboard::StrOrChar;
-use crate::keycodes::KeyCode;
-
-pub type RawKeyCode = u32;
-
-impl From<RawKeyCode> for KeyCode {
-    #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
-    fn from(raw: u32) -> KeyCode {
-        match raw {
-            9 => KeyCode::Escape,
-            67 => KeyCode::F1,
-            68 => KeyCode::F2,
-            69 => KeyCode::F3,
-            70 => KeyCode::F4,
-            71 => KeyCode::F5,
-            72 => KeyCode::F6,
-            73 => KeyCode::F7,
-            74 => KeyCode::F8,
-            75 => KeyCode::F9,
-            76 => KeyCode::F10,
-            95 => KeyCode::F11,
-            96 => KeyCode::F12,
-
-            107 => KeyCode::PrintScreen,
-            118 => KeyCode::Insert,
-            119 => KeyCode::Delete,
-            49 => KeyCode::Quote,
-
-            10 => KeyCode::Numpad1,
-            11 => KeyCode::Numpad2,
-            12 => KeyCode::Numpad3,
-            13 => KeyCode::Numpad4,
-            14 => KeyCode::Numpad5,
-            15 => KeyCode::Numpad6,
-            16 => KeyCode::Numpad7,
-            17 => KeyCode::Numpad8,
-            18 => KeyCode::Numpad9,
-            19 => KeyCode::Numpad0,
-
-            20 => KeyCode::LeftBracket,
-            21 => KeyCode::RightBracket,
-            22 => KeyCode::Backspace,
-
-            23 => KeyCode::Tab,
-
-            24 => KeyCode::KeyQ,
-            25 => KeyCode::KeyW,
-            26 => KeyCode::KeyE,
-            27 => KeyCode::KeyR,
-            28 => KeyCode::KeyT,
-            29 => KeyCode::KeyY,
-            30 => KeyCode::KeyU,
-            31 => KeyCode::KeyI,
-            32 => KeyCode::KeyO,
-            33 => KeyCode::KeyP,
-
-            34 => KeyCode::Slash,
-            35 => KeyCode::Equals,
-            36 => KeyCode::Return,
-
-            66 => KeyCode::CapsLock,
-
-            38 => KeyCode::KeyA,
-            39 => KeyCode::KeyS,
-            40 => KeyCode::KeyD,
-            41 => KeyCode::KeyF,
-            42 => KeyCode::KeyG,
-            43 => KeyCode::KeyH,
-            44 => KeyCode::KeyJ,
-            45 => KeyCode::KeyK,
-            46 => KeyCode::KeyL,
-
-            47 => KeyCode::Semicolon,
-            48 => KeyCode::Comma,
-            // 49 => KeyCode::Hash,
-            50 => KeyCode::LeftShift,
-            94 => KeyCode::Backslash,
-
-            52 => KeyCode::KeyZ,
-            53 => KeyCode::KeyX,
-            54 => KeyCode::KeyC,
-            55 => KeyCode::KeyV,
-            56 => KeyCode::KeyB,
-            57 => KeyCode::KeyN,
-            58 => KeyCode::KeyM,
-
-            59 => KeyCode::Comma,
-            60 => KeyCode::Period,
-            61 => KeyCode::NumpadMultiply,
-            64 => KeyCode::RightShift,
-
-            37 => KeyCode::LeftControl,
-            133 => KeyCode::LeftMeta,
-            // TODO(x11/keycodes): case 64 is duplicated; which one is correct?
-            //     What should the other be?
-            // 64 => KeyCode::LeftAlt,
-            65 => KeyCode::Space,
-            108 => KeyCode::RightAlt,
-            105 => KeyCode::RightControl,
-
-            111 => KeyCode::ArrowUp,
-            113 => KeyCode::ArrowLeft,
-            114 => KeyCode::ArrowRight,
-            116 => KeyCode::ArrowDown,
-
-            _ => {
-                log::warn!("Warning: unknown keyval {}", raw);
-                KeyCode::Unknown(raw)
-            }
+/// Convert a hardware scan code to a key.
+///
+/// Note: this is a hardcoded layout. We need to detect the user's
+/// layout from the system and apply it.
+pub fn code_to_key(code: Code, m: Modifiers) -> KbKey {
+    fn a(s: &str) -> KbKey {
+        KbKey::Character(s.into())
+    }
+    fn s(mods: Modifiers, base: &str, shifted: &str) -> KbKey {
+        if mods.shift() {
+            KbKey::Character(shifted.into())
+        } else {
+            KbKey::Character(base.into())
         }
+    }
+    fn n(mods: Modifiers, base: KbKey, num: &str) -> KbKey {
+        if mods.contains(Modifiers::NUM_LOCK) != mods.shift() {
+            KbKey::Character(num.into())
+        } else {
+            base
+        }
+    }
+    match code {
+        Code::KeyA => s(m, "a", "A"),
+        Code::KeyB => s(m, "b", "B"),
+        Code::KeyC => s(m, "c", "C"),
+        Code::KeyD => s(m, "d", "D"),
+        Code::KeyE => s(m, "e", "E"),
+        Code::KeyF => s(m, "f", "F"),
+        Code::KeyG => s(m, "g", "G"),
+        Code::KeyH => s(m, "h", "H"),
+        Code::KeyI => s(m, "i", "I"),
+        Code::KeyJ => s(m, "j", "J"),
+        Code::KeyK => s(m, "k", "K"),
+        Code::KeyL => s(m, "l", "L"),
+        Code::KeyM => s(m, "m", "M"),
+        Code::KeyN => s(m, "n", "N"),
+        Code::KeyO => s(m, "o", "O"),
+        Code::KeyP => s(m, "p", "P"),
+        Code::KeyQ => s(m, "q", "Q"),
+        Code::KeyR => s(m, "r", "R"),
+        Code::KeyS => s(m, "s", "S"),
+        Code::KeyT => s(m, "t", "T"),
+        Code::KeyU => s(m, "u", "U"),
+        Code::KeyV => s(m, "v", "V"),
+        Code::KeyW => s(m, "w", "W"),
+        Code::KeyX => s(m, "x", "X"),
+        Code::KeyY => s(m, "y", "Y"),
+        Code::KeyZ => s(m, "z", "Z"),
+
+        Code::Digit0 => s(m, "0", ")"),
+        Code::Digit1 => s(m, "1", "!"),
+        Code::Digit2 => s(m, "2", "@"),
+        Code::Digit3 => s(m, "3", "#"),
+        Code::Digit4 => s(m, "4", "$"),
+        Code::Digit5 => s(m, "5", "%"),
+        Code::Digit6 => s(m, "6", "^"),
+        Code::Digit7 => s(m, "7", "&"),
+        Code::Digit8 => s(m, "8", "*"),
+        Code::Digit9 => s(m, "9", "("),
+
+        Code::Backquote => s(m, "`", "~"),
+        Code::Minus => s(m, "-", "_"),
+        Code::Equal => s(m, "=", "+"),
+        Code::BracketLeft => s(m, "[", "{"),
+        Code::BracketRight => s(m, "]", "}"),
+        Code::Backslash => s(m, "\\", "|"),
+        Code::Semicolon => s(m, ";", ":"),
+        Code::Quote => s(m, "'", "\""),
+        Code::Comma => s(m, ",", "<"),
+        Code::Period => s(m, ".", ">"),
+        Code::Slash => s(m, "/", "?"),
+
+        Code::Space => a(" "),
+
+        Code::Escape => KbKey::Escape,
+        Code::Backspace => KbKey::Backspace,
+        Code::Tab => KbKey::Tab,
+        Code::Enter => KbKey::Enter,
+        Code::ControlLeft => KbKey::Control,
+        Code::ShiftLeft => KbKey::Shift,
+        Code::ShiftRight => KbKey::Shift,
+        Code::NumpadMultiply => a("*"),
+        Code::AltLeft => KbKey::Alt,
+        Code::CapsLock => KbKey::CapsLock,
+        Code::F1 => KbKey::F1,
+        Code::F2 => KbKey::F2,
+        Code::F3 => KbKey::F3,
+        Code::F4 => KbKey::F4,
+        Code::F5 => KbKey::F5,
+        Code::F6 => KbKey::F6,
+        Code::F7 => KbKey::F7,
+        Code::F8 => KbKey::F8,
+        Code::F9 => KbKey::F9,
+        Code::F10 => KbKey::F10,
+        Code::NumLock => KbKey::NumLock,
+        Code::ScrollLock => KbKey::ScrollLock,
+        Code::Numpad0 => n(m, KbKey::Insert, "0"),
+        Code::Numpad1 => n(m, KbKey::End, "1"),
+        Code::Numpad2 => n(m, KbKey::ArrowDown, "2"),
+        Code::Numpad3 => n(m, KbKey::PageDown, "3"),
+        Code::Numpad4 => n(m, KbKey::ArrowLeft, "4"),
+        Code::Numpad5 => n(m, KbKey::Clear, "5"),
+        Code::Numpad6 => n(m, KbKey::ArrowRight, "6"),
+        Code::Numpad7 => n(m, KbKey::Home, "7"),
+        Code::Numpad8 => n(m, KbKey::ArrowUp, "8"),
+        Code::Numpad9 => n(m, KbKey::PageUp, "9"),
+        Code::NumpadSubtract => a("-"),
+        Code::NumpadAdd => a("+"),
+        Code::NumpadDecimal => n(m, KbKey::Delete, "."),
+        Code::IntlBackslash => s(m, "\\", "|"),
+        Code::F11 => KbKey::F11,
+        Code::F12 => KbKey::F12,
+        // This mapping is based on the picture in the w3c spec.
+        Code::IntlRo => a("\\"),
+        Code::Convert => KbKey::Convert,
+        Code::KanaMode => KbKey::KanaMode,
+        Code::NonConvert => KbKey::NonConvert,
+        Code::NumpadEnter => KbKey::Enter,
+        Code::ControlRight => KbKey::Control,
+        Code::NumpadDivide => a("/"),
+        Code::PrintScreen => KbKey::PrintScreen,
+        Code::AltRight => KbKey::Alt,
+        Code::Home => KbKey::Home,
+        Code::ArrowUp => KbKey::ArrowUp,
+        Code::PageUp => KbKey::PageUp,
+        Code::ArrowLeft => KbKey::ArrowLeft,
+        Code::ArrowRight => KbKey::ArrowRight,
+        Code::End => KbKey::End,
+        Code::ArrowDown => KbKey::ArrowDown,
+        Code::PageDown => KbKey::PageDown,
+        Code::Insert => KbKey::Insert,
+        Code::Delete => KbKey::Delete,
+        Code::AudioVolumeMute => KbKey::AudioVolumeMute,
+        Code::AudioVolumeDown => KbKey::AudioVolumeDown,
+        Code::AudioVolumeUp => KbKey::AudioVolumeUp,
+        Code::NumpadEqual => a("="),
+        Code::Pause => KbKey::Pause,
+        Code::NumpadComma => a(","),
+        Code::Lang1 => KbKey::HangulMode,
+        Code::Lang2 => KbKey::HanjaMode,
+        Code::IntlYen => a("¥"),
+        Code::MetaLeft => KbKey::Meta,
+        Code::MetaRight => KbKey::Meta,
+        Code::ContextMenu => KbKey::ContextMenu,
+        Code::BrowserStop => KbKey::BrowserStop,
+        Code::Again => KbKey::Again,
+        Code::Props => KbKey::Props,
+        Code::Undo => KbKey::Undo,
+        Code::Select => KbKey::Select,
+        Code::Copy => KbKey::Copy,
+        Code::Open => KbKey::Open,
+        Code::Paste => KbKey::Paste,
+        Code::Find => KbKey::Find,
+        Code::Cut => KbKey::Cut,
+        Code::Help => KbKey::Help,
+        Code::LaunchApp2 => KbKey::LaunchApplication2,
+        Code::WakeUp => KbKey::WakeUp,
+        Code::LaunchApp1 => KbKey::LaunchApplication1,
+        Code::LaunchMail => KbKey::LaunchMail,
+        Code::BrowserFavorites => KbKey::BrowserFavorites,
+        Code::BrowserBack => KbKey::BrowserBack,
+        Code::BrowserForward => KbKey::BrowserForward,
+        Code::Eject => KbKey::Eject,
+        Code::MediaTrackNext => KbKey::MediaTrackNext,
+        Code::MediaPlayPause => KbKey::MediaPlayPause,
+        Code::MediaTrackPrevious => KbKey::MediaTrackPrevious,
+        Code::MediaStop => KbKey::MediaStop,
+        Code::MediaSelect => KbKey::LaunchMediaPlayer,
+        Code::BrowserHome => KbKey::BrowserHome,
+        Code::BrowserRefresh => KbKey::BrowserRefresh,
+        Code::BrowserSearch => KbKey::BrowserSearch,
+
+        _ => KbKey::Unidentified,
     }
 }
 
-impl Into<StrOrChar<'static>> for KeyCode {
-    #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
-    fn into(self) -> StrOrChar<'static> {
-        match self {
-            KeyCode::Numpad1 => StrOrChar::Char('1'),
-            KeyCode::Numpad2 => StrOrChar::Char('2'),
-            KeyCode::Numpad3 => StrOrChar::Char('3'),
-            KeyCode::Numpad4 => StrOrChar::Char('4'),
-            KeyCode::Numpad5 => StrOrChar::Char('5'),
-            KeyCode::Numpad6 => StrOrChar::Char('6'),
-            KeyCode::Numpad7 => StrOrChar::Char('7'),
-            KeyCode::Numpad8 => StrOrChar::Char('8'),
-            KeyCode::Numpad9 => StrOrChar::Char('9'),
-            KeyCode::Numpad0 => StrOrChar::Char('0'),
-
-            KeyCode::LeftBracket => StrOrChar::Char('['),
-            KeyCode::RightBracket => StrOrChar::Char(']'),
-            // KeyCode::Backspace => StrOrChar::Char('0'),
-            // KeyCode::Tab => StrOrChar::Char('0'),
-            KeyCode::KeyQ => StrOrChar::Char('q'),
-            KeyCode::KeyW => StrOrChar::Char('w'),
-            KeyCode::KeyE => StrOrChar::Char('e'),
-            KeyCode::KeyR => StrOrChar::Char('r'),
-            KeyCode::KeyT => StrOrChar::Char('t'),
-            KeyCode::KeyY => StrOrChar::Char('y'),
-            KeyCode::KeyU => StrOrChar::Char('u'),
-            KeyCode::KeyI => StrOrChar::Char('i'),
-            KeyCode::KeyO => StrOrChar::Char('o'),
-            KeyCode::KeyP => StrOrChar::Char('p'),
-            KeyCode::Slash => StrOrChar::Char('/'),
-            KeyCode::Equals => StrOrChar::Char('='),
-            // KeyCode::Return => StrOrChar::Char('0'),
-            // KeyCode::CapsLock => StrOrChar::Char('0'),
-            KeyCode::KeyA => StrOrChar::Char('a'),
-            KeyCode::KeyS => StrOrChar::Char('s'),
-            KeyCode::KeyD => StrOrChar::Char('d'),
-            KeyCode::KeyF => StrOrChar::Char('f'),
-            KeyCode::KeyG => StrOrChar::Char('g'),
-            KeyCode::KeyH => StrOrChar::Char('h'),
-            KeyCode::KeyJ => StrOrChar::Char('j'),
-            KeyCode::KeyK => StrOrChar::Char('k'),
-            KeyCode::KeyL => StrOrChar::Char('l'),
-            KeyCode::Semicolon => StrOrChar::Char(';'),
-            // KeyCode::Hash => StrOrChar::Char('#'),
-            // KeyCode::LeftShift => StrOrChar::Char('0'),
-            KeyCode::Backslash => StrOrChar::Char('/'),
-
-            KeyCode::KeyZ => StrOrChar::Char('z'),
-            KeyCode::KeyX => StrOrChar::Char('x'),
-            KeyCode::KeyC => StrOrChar::Char('c'),
-            KeyCode::KeyV => StrOrChar::Char('v'),
-            KeyCode::KeyB => StrOrChar::Char('b'),
-            KeyCode::KeyN => StrOrChar::Char('n'),
-            KeyCode::KeyM => StrOrChar::Char('m'),
-            KeyCode::Comma => StrOrChar::Char(','),
-            KeyCode::Period => StrOrChar::Char('.'),
-            KeyCode::NumpadMultiply => StrOrChar::Char('*'),
-            // KeyCode::RightShift => StrOrChar::Char('0'),
-            // KeyCode::LeftControl => StrOrChar::Char('0'),
-            // KeyCode::LeftMeta => StrOrChar::Char('0'),
-            // KeyCode::LeftAlt => StrOrChar::Char('0'),
-            KeyCode::Space => StrOrChar::Char(' '),
-            // KeyCode::RightAlt => StrOrChar::Char('0'),
-            // KeyCode::RightControl => StrOrChar::Char('0'),
-            /*
-               KeyCode::ArrowUp
-               KeyCode::ArrowLeft
-               KeyCode::ArrowRight
-               KeyCode::ArrowDown
-            */
-            _ => {
-                log::warn!("Warning: unknown keycode str representation {:?}", self);
-                StrOrChar::Char('?')
-            }
-        }
-    }
-}
-
-impl From<KeyCode> for u32 {
-    #[allow(non_upper_case_globals)]
-    fn from(src: KeyCode) -> u32 {
-        match src {
-            KeyCode::Escape => Escape,
-            KeyCode::Backtick => grave,
-            KeyCode::Key0 => _0,
-            KeyCode::Key1 => _1,
-            KeyCode::Key2 => _2,
-            KeyCode::Key3 => _3,
-            KeyCode::Key4 => _4,
-            KeyCode::Key5 => _5,
-            KeyCode::Key6 => _6,
-            KeyCode::Key7 => _7,
-            KeyCode::Key8 => _8,
-            KeyCode::Key9 => _9,
-            KeyCode::Minus => minus,
-            KeyCode::Equals => equal,
-            KeyCode::Backspace => BackSpace,
-
-            KeyCode::Tab => Tab,
-            KeyCode::KeyQ => q | Q,
-            KeyCode::KeyW => w | W,
-            KeyCode::KeyE => e | E,
-            KeyCode::KeyR => r | R,
-            KeyCode::KeyT => t | T,
-            KeyCode::KeyY => y | Y,
-            KeyCode::KeyU => u | U,
-            KeyCode::KeyI => i | I,
-            KeyCode::KeyO => o | O,
-            KeyCode::KeyP => p | P,
-            KeyCode::LeftBracket => bracketleft,
-            KeyCode::RightBracket => bracketright,
-            KeyCode::Return => Return,
-
-            KeyCode::KeyA => a | A,
-            KeyCode::KeyS => s | S,
-            KeyCode::KeyD => d | D,
-            KeyCode::KeyF => f | F,
-            KeyCode::KeyG => g | G,
-            KeyCode::KeyH => h | H,
-            KeyCode::KeyJ => j | J,
-            KeyCode::KeyK => k | K,
-            KeyCode::KeyL => l | L,
-            KeyCode::Semicolon => semicolon,
-            KeyCode::Quote => quoteright,
-            KeyCode::Backslash => backslash,
-
-            KeyCode::KeyZ => z | Z,
-            KeyCode::KeyX => x | X,
-            KeyCode::KeyC => c | C,
-            KeyCode::KeyV => v | V,
-            KeyCode::KeyB => b | B,
-            KeyCode::KeyN => n | N,
-            KeyCode::KeyM => m | M,
-            KeyCode::Comma => comma,
-            KeyCode::Period => period,
-            KeyCode::Slash => slash,
-
-            KeyCode::LeftControl => Control_L,
-            KeyCode::RightControl => Control_R,
-            KeyCode::LeftAlt => Alt_L,
-            KeyCode::RightAlt => Alt_R,
-            KeyCode::LeftShift => Shift_L,
-            KeyCode::RightShift => Shift_R,
-            KeyCode::LeftMeta => Super_L,
-            KeyCode::RightMeta => Super_R,
-
-            KeyCode::Space => space,
-            KeyCode::CapsLock => Caps_Lock,
-            KeyCode::F1 => F1,
-            KeyCode::F2 => F2,
-            KeyCode::F3 => F3,
-            KeyCode::F4 => F4,
-            KeyCode::F5 => F5,
-            KeyCode::F6 => F6,
-            KeyCode::F7 => F7,
-            KeyCode::F8 => F8,
-            KeyCode::F9 => F9,
-            KeyCode::F10 => F10,
-            KeyCode::F11 => F11,
-            KeyCode::F12 => F12,
-
-            KeyCode::PrintScreen => Print,
-            KeyCode::ScrollLock => Scroll_Lock,
-            // Pause/Break not audio.
-            KeyCode::Pause => Pause,
-
-            KeyCode::Insert => Insert,
-            KeyCode::Delete => Delete,
-            KeyCode::Home => Home,
-            KeyCode::End => End,
-            KeyCode::PageUp => Page_Up,
-            KeyCode::PageDown => Page_Down,
-
-            KeyCode::Numpad0 => KP_0,
-            KeyCode::Numpad1 => KP_1,
-            KeyCode::Numpad2 => KP_2,
-            KeyCode::Numpad3 => KP_3,
-            KeyCode::Numpad4 => KP_4,
-            KeyCode::Numpad5 => KP_5,
-            KeyCode::Numpad6 => KP_6,
-            KeyCode::Numpad7 => KP_7,
-            KeyCode::Numpad8 => KP_8,
-            KeyCode::Numpad9 => KP_9,
-
-            KeyCode::NumpadEquals => KP_Equal,
-            KeyCode::NumpadSubtract => KP_Subtract,
-            KeyCode::NumpadAdd => KP_Add,
-            KeyCode::NumpadDecimal => KP_Decimal,
-            KeyCode::NumpadMultiply => KP_Multiply,
-            KeyCode::NumpadDivide => KP_Divide,
-            KeyCode::NumLock => Num_Lock,
-            KeyCode::NumpadEnter => KP_Enter,
-
-            KeyCode::ArrowUp => Up,
-            KeyCode::ArrowDown => Down,
-            KeyCode::ArrowLeft => Left,
-            KeyCode::ArrowRight => Right,
-
-            // We don't know what this keycode is, so just return it directly.
-            KeyCode::Unknown(unknown_keycode) => unknown_keycode,
-        }
-    }
+pub fn hardware_keycode_to_code(hw_keycode: Keycode) -> Code {
+    shared::hardware_keycode_to_code(hw_keycode as u16)
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,30 @@
 //! Errors at the application shell level.
 
 use std::fmt;
+use std::sync::Arc;
 
-/// The X11 backend doesn't currently define any platform-specific errors;
-/// it uses the `crate::error::Other` variant instead.
 #[derive(Debug, Clone)]
-pub enum Error {}
+pub enum Error {
+    XError(Arc<x11rb::errors::ReplyError>),
+}
 
 impl fmt::Display for Error {
-    fn fmt(&self, _: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        Ok(())
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let Error::XError(e) = self;
+        e.fmt(f)
     }
 }
 
 impl std::error::Error for Error {}
+
+impl From<x11rb::protocol::Error> for Error {
+    fn from(err: x11rb::protocol::Error) -> Error {
+        Error::XError(Arc::new(x11rb::errors::ReplyError::X11Error(err)))
+    }
+}
+
+impl From<x11rb::errors::ReplyError> for Error {
+    fn from(err: x11rb::errors::ReplyError) -> Error {
+        Error::XError(Arc::new(err))
+    }
+}

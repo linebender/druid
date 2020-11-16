@@ -1,4 +1,4 @@
-// Copyright 2020 The xi-editor Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ macro_rules! impl_example {
 // Please add the examples that cannot be built to the EXCEPTIONS list in build.rs.
 impl_example!(anim);
 impl_example!(calc);
+impl_example!(cursor);
 impl_example!(custom_widget);
 impl_example!(either);
 impl_example!(flex.unwrap());
@@ -77,4 +78,7 @@ impl_example!(split_demo);
 impl_example!(styled_text.unwrap());
 impl_example!(switches);
 impl_example!(timer);
+impl_example!(tabs);
 impl_example!(view_switcher);
+impl_example!(widget_gallery);
+impl_example!(text);
