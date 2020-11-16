@@ -97,6 +97,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
+- Floor the origin for the Align widget to avoid blurry borders. ([#1091] by [@sysint64])
 - X11: Set some more common window properties. ([#1097] by [@psychon])
 - X11: Support timers. ([#1096] by [@psychon])
 - `EnvScope` now also updates the `Env` during `Widget::lifecycle`. ([#1100] by [@finnerale])
@@ -468,6 +469,7 @@ Last release without a changelog :(
 [#1075]: https://github.com/linebender/druid/pull/1075
 [#1076]: https://github.com/linebender/druid/pull/1076
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1091]: https://github.com/linebender/druid/pull/1091
 [#1096]: https://github.com/linebender/druid/pull/1096
 [#1097]: https://github.com/linebender/druid/pull/1097
 [#1093]: https://github.com/linebender/druid/pull/1093
