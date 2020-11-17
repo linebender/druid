@@ -45,7 +45,7 @@ pub fn main() {
     // should be done like this: generating something over time
     // (like this or reacting to external events), or something that takes a
     // long time and shouldn't block main UI updates.
-    thread::spawn(move || generate_colours(event_sink));
+    thread::spawn(move || generate_colors(event_sink));
 
     launcher
         .use_simple_logger()
@@ -53,7 +53,7 @@ pub fn main() {
         .expect("launch failed");
 }
 
-fn generate_colours(event_sink: druid::ExtEventSink) {
+fn generate_colors(event_sink: druid::ExtEventSink) {
     // This function is called in a separate thread, and runs until the program ends.
     // We take an `ExtEventSink` as an argument, we can use this event sink to send
     // commands to the main thread. Every time we generate a new colour we send it
