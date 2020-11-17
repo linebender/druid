@@ -538,6 +538,9 @@ impl<T> Lens<T, ()> for Unit<T> {
     }
 }
 
+/// A lens that negates a boolean.
+///
+/// It should usually be created using the `LensExt::not` method.
 #[derive(Debug, Copy, Clone)]
 pub struct Not;
 
