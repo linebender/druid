@@ -125,7 +125,7 @@ impl Widget<Color> for ColorWell {
 }
 
 fn make_ui() -> impl Widget<Color> {
-    ColorWell {}
+    ColorWell
         .fix_width(300.0)
         .fix_height(300.0)
         .padding(10.0)
