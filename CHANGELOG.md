@@ -122,6 +122,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
 - Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
+- Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
 
 ### Visual
 
@@ -536,6 +537,7 @@ Last release without a changelog :(
 [#1259]: https://github.com/linebender/druid/pull/1259
 [#1361]: https://github.com/linebender/druid/pull/1361
 [#1371]: https://github.com/linebender/druid/pull/1371
+[#1410]: https://github.com/linebender/druid/pull/1410
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
