@@ -80,14 +80,16 @@ impl Clipboard {
                 return None;
             }
             let handle = GetClipboardData(CF_UNICODETEXT);
-            if handle.is_null() {
+            let string = if handle.is_null() {
                 None
             } else {
                 let unic_str = GlobalLock(handle) as LPWSTR;
                 let result = unic_str.from_wide();
                 GlobalUnlock(handle);
                 result
-            }
+            };
+            CloseClipboard();
+            string
         }
     }
 
