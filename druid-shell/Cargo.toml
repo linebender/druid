@@ -50,7 +50,7 @@ anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
 
 # Optional dependencies
-image = { version = "0.23.10", optional = true, default_features = false }
+image = { version = "0.23.12", optional = true, default_features = false }
 
 [target.'cfg(target_os="windows")'.dependencies]
 scopeguard = "1.1.0"
