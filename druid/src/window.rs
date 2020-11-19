@@ -371,9 +371,9 @@ impl<T: Data> Window<T> {
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
-        let size = self.root.layout(&mut layout_ctx, &bc, data, env);
+        self.root.layout(&mut layout_ctx, &bc, data, env);
         self.root
-            .set_layout_rect(&mut layout_ctx, data, env, size.to_rect());
+            .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 

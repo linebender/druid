@@ -15,7 +15,7 @@
 //! A widget that switches dynamically between two child views.
 
 use crate::widget::prelude::*;
-use crate::{Data, WidgetPod};
+use crate::{Data, Point, WidgetPod};
 
 /// A widget that switches between two possible child views.
 pub struct Either<T> {
@@ -79,7 +79,7 @@ impl<T: Data> Widget<T> for Either<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let current_widget = self.current_widget();
         let size = current_widget.layout(ctx, bc, data, env);
-        current_widget.set_layout_rect(ctx, data, env, size.to_rect());
+        current_widget.set_origin(ctx, data, env, Point::ORIGIN);
         ctx.set_paint_insets(current_widget.paint_insets());
         size
     }

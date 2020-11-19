@@ -273,8 +273,8 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 }
             };
             let child_size = child.layout(ctx, &child_bc, child_data, env);
-            let rect = Rect::from_origin_size(Point::from(axis.pack(major_pos, 0.)), child_size);
-            child.set_layout_rect(ctx, child_data, env, rect);
+            let child_pos: Point = axis.pack(major_pos, 0.).into();
+            child.set_origin(ctx, child_data, env, child_pos);
             paint_rect = paint_rect.union(child.paint_rect());
             minor = minor.max(axis.minor(child_size));
             major_pos += axis.major(child_size) + spacing;
@@ -284,7 +284,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         major_pos -= spacing;
 
         let my_size = bc.constrain(Size::from(axis.pack(major_pos, minor)));
-        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
         my_size
     }
