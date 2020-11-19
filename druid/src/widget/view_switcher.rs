@@ -15,7 +15,7 @@
 //! A widget that can dynamically switch between one of many views.
 
 use crate::widget::prelude::*;
-use crate::{Data, WidgetPod};
+use crate::{Data, Point, WidgetPod};
 
 /// A widget that can switch dynamically between one of many views depending
 /// on application state.
@@ -89,7 +89,7 @@ impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(ctx, bc, data, env);
-                child.set_layout_rect(ctx, data, env, size.to_rect());
+                child.set_origin(ctx, data, env, Point::ORIGIN);
                 size
             }
             None => bc.max(),

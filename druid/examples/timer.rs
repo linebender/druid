@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use druid::widget::prelude::*;
 use druid::widget::BackgroundBrush;
-use druid::{AppLauncher, Color, LocalizedString, Point, Rect, TimerToken, WidgetPod, WindowDesc};
+use druid::{AppLauncher, Color, LocalizedString, Point, TimerToken, WidgetPod, WindowDesc};
 
 static TIMER_INTERVAL: Duration = Duration::from_millis(10);
 
@@ -72,9 +72,8 @@ impl Widget<u32> for TimerWidget {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &u32, env: &Env) -> Size {
-        let size = self.simple_box.layout(ctx, &bc.loosen(), data, env);
-        let rect = Rect::from_origin_size(self.pos, size);
-        self.simple_box.set_layout_rect(ctx, data, env, rect);
+        self.simple_box.layout(ctx, &bc.loosen(), data, env);
+        self.simple_box.set_origin(ctx, data, env, self.pos);
         bc.constrain((500.0, 500.0))
     }
 

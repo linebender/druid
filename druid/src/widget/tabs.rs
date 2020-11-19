@@ -24,7 +24,7 @@ use std::rc::Rc;
 use crate::kurbo::Line;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Scope, ScopePolicy};
-use crate::{theme, Affine, Data, Insets, Lens, Point, Rect, SingleUse, WidgetExt, WidgetPod};
+use crate::{theme, Affine, Data, Insets, Lens, Point, SingleUse, WidgetExt, WidgetPod};
 
 type TabsScope<TP> = Scope<TabsScopePolicy<TP>, Box<dyn Widget<TabsState<TP>>>>;
 type TabBodyPod<TP> = WidgetPod<<TP as TabsPolicy>::Input, <TP as TabsPolicy>::BodyWidget>;
@@ -373,28 +373,15 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         data: &TabsState<TP>,
         env: &Env,
     ) -> Size {
-        let (mut major, mut minor) = (0., 0.);
+        let mut major: f64 = 0.;
+        let mut minor: f64 = 0.;
         for (_, tab) in self.tabs.iter_mut() {
             let size = tab.layout(ctx, bc, data, env);
-            tab.set_layout_rect(
-                ctx,
-                data,
-                env,
-                Rect::from_origin_size(self.axis.pack(major, 0.), size),
-            );
+            tab.set_origin(ctx, data, env, self.axis.pack(major, 0.).into());
             major += self.axis.major(size);
-            minor = f64::max(minor, self.axis.minor(size));
+            minor = minor.max(self.axis.minor(size));
         }
-        // Now go back through to reset the minors
-        for (_, tab) in self.tabs.iter_mut() {
-            let rect = tab.layout_rect();
-            let rect = rect.with_size(self.axis.pack(self.axis.major(rect.size()), minor));
-            tab.set_layout_rect(ctx, data, env, rect);
-        }
-
-        let wanted = self
-            .axis
-            .pack(f64::max(major, self.axis.major(bc.max())), minor);
+        let wanted = self.axis.pack(major.max(self.axis.major(bc.max())), minor);
         bc.constrain(wanted)
     }
 
@@ -402,8 +389,12 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         let hl_thickness = 2.;
         let highlight = env.get(theme::PRIMARY_LIGHT);
         for (idx, (_, tab)) in self.tabs.iter_mut().enumerate() {
-            let rect = tab.layout_rect();
-            let rect = Rect::from_origin_size(rect.origin(), rect.size());
+            let layout_rect = tab.layout_rect();
+            let expanded_size = self.axis.pack(
+                self.axis.major(layout_rect.size()),
+                self.axis.minor(ctx.size()),
+            );
+            let rect = layout_rect.with_size(expanded_size);
             let bg = match (idx == data.selected, Some(idx) == self.hot) {
                 (_, true) => env.get(theme::BUTTON_DARK),
                 (true, false) => env.get(theme::BACKGROUND_LIGHT),
@@ -640,8 +631,8 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         let inner = &data.inner;
         // Laying out all children so events can be delivered to them.
         for child in self.child_pods() {
-            let size = child.layout(ctx, bc, inner, env);
-            child.set_layout_rect(ctx, inner, env, size.to_rect());
+            child.layout(ctx, bc, inner, env);
+            child.set_origin(ctx, inner, env, Point::ORIGIN);
         }
 
         bc.max()
@@ -968,7 +959,7 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
     ) -> Size {
         if let TabsContent::Running { scope } = &mut self.content {
             let size = scope.layout(ctx, bc, data, env);
-            scope.set_layout_rect(ctx, data, env, Rect::from_origin_size(Point::ORIGIN, size));
+            scope.set_origin(ctx, data, env, Point::ORIGIN);
             size
         } else {
             bc.min()

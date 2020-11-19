@@ -650,9 +650,6 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size).expand());
                 max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
                 max_below_baseline = max_below_baseline.max(baseline_offset);
-                // Stash size.
-                let rect = child_size.to_rect();
-                child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
 
@@ -680,9 +677,6 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size).expand());
                 max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
                 max_below_baseline = max_below_baseline.max(baseline_offset);
-                // Stash size.
-                let rect = child_size.to_rect();
-                child.widget.set_layout_rect(ctx, data, env, rect);
             }
         }
 
@@ -725,8 +719,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             };
 
             let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
-            let child_frame = Rect::from_origin_size(child_pos, child_size);
-            child.widget.set_layout_rect(ctx, data, env, child_frame);
+            child.widget.set_origin(ctx, data, env, child_pos);
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(child_size).expand();
             major += spacing.next().unwrap_or(0.);
