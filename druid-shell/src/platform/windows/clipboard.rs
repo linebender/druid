@@ -45,10 +45,7 @@ impl Clipboard {
 
     /// Put multi-format data on the system clipboard.
     pub fn put_formats(&mut self, formats: &[ClipboardFormat]) {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return;
-            }
+        with_clipboard(|| unsafe {
             EmptyClipboard();
 
             for format in formats {
@@ -69,16 +66,12 @@ impl Clipboard {
                     );
                 }
             }
-            CloseClipboard();
-        }
+        });
     }
 
     /// Get a string from the system clipboard, if one is available.
     pub fn get_string(&self) -> Option<String> {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return None;
-            }
+        with_clipboard(|| unsafe {
             let handle = GetClipboardData(CF_UNICODETEXT);
             if handle.is_null() {
                 None
@@ -88,16 +81,14 @@ impl Clipboard {
                 GlobalUnlock(handle);
                 result
             }
-        }
+        })
+        .flatten()
     }
 
     /// Given a list of supported clipboard types, returns the supported type which has
     /// highest priority on the system clipboard, or `None` if no types are supported.
     pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return None;
-            }
+        with_clipboard(|| {
             let format_ids = formats
                 .iter()
                 .map(|id| get_format_id(id))
@@ -107,10 +98,9 @@ impl Clipboard {
                 iter_clipboard_types().find(|available| format_ids.contains(&Some(*available)));
             let format_idx =
                 first_match.and_then(|id| format_ids.iter().position(|i| i == &Some(id)));
-            let result = format_idx.map(|idx| formats[idx]);
-            CloseClipboard();
-            result
-        }
+            format_idx.map(|idx| formats[idx])
+        })
+        .flatten()
     }
 
     /// Return data in a given format, if available.
@@ -122,11 +112,7 @@ impl Clipboard {
             return self.get_string().map(String::into_bytes);
         }
 
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return None;
-            }
-
+        with_clipboard(|| {
             let format_id = match get_format_id(&format) {
                 Some(id) => id,
                 None => {
@@ -135,35 +121,45 @@ impl Clipboard {
                 }
             };
 
-            if IsClipboardFormatAvailable(format_id) != 0 {
-                let handle = GetClipboardData(format_id);
-                let size = GlobalSize(handle);
-                let locked = GlobalLock(handle) as *const u8;
-                let mut dest = Vec::<u8>::with_capacity(size);
-                ptr::copy_nonoverlapping(locked, dest.as_mut_ptr(), size);
-                dest.set_len(size);
-                GlobalUnlock(handle);
-                CloseClipboard();
-                Some(dest)
-            } else {
-                None
+            unsafe {
+                if IsClipboardFormatAvailable(format_id) != 0 {
+                    let handle = GetClipboardData(format_id);
+                    let size = GlobalSize(handle);
+                    let locked = GlobalLock(handle) as *const u8;
+                    let mut dest = Vec::<u8>::with_capacity(size);
+                    ptr::copy_nonoverlapping(locked, dest.as_mut_ptr(), size);
+                    dest.set_len(size);
+                    GlobalUnlock(handle);
+                    Some(dest)
+                } else {
+                    None
+                }
             }
-        }
+        })
+        .flatten()
     }
 
     pub fn available_type_names(&self) -> Vec<String> {
-        unsafe {
-            if OpenClipboard(ptr::null_mut()) == FALSE {
-                return vec![];
-            }
+        with_clipboard(|| {
+            iter_clipboard_types()
+                .map(|id| format!("{}: {}", get_format_name(id), id))
+                .collect()
+        })
+        .unwrap_or_default()
+    }
+}
+
+fn with_clipboard<V>(f: impl FnOnce() -> V) -> Option<V> {
+    unsafe {
+        if OpenClipboard(ptr::null_mut()) == FALSE {
+            return None;
         }
-        let res = iter_clipboard_types()
-            .map(|id| format!("{}: {}", get_format_name(id), id))
-            .collect();
-        unsafe {
-            CloseClipboard();
-        }
-        res
+
+        let result = f();
+
+        CloseClipboard();
+
+        Some(result)
     }
 }
 
