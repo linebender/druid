@@ -211,10 +211,6 @@ pub use window::{Window, WindowId};
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
 
-#[deprecated(since = "0.7.0", note = "use druid::widget::LensWrap instead")]
-#[allow(missing_docs)]
-pub type LensWrap<A, B, C> = widget::LensWrap<A, B, C>;
-
 /// The meaning (mapped value) of a keypress.
 ///
 /// Note that in previous versions, the `KeyCode` field referred to the

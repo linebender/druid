@@ -215,7 +215,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`LensWrap`]: struct.LensWrap.html
     /// [`Lens`]: trait.Lens.html
-    fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
+    fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<S, T, L, Self> {
         LensWrap::new(self, lens)
     }
 
@@ -316,5 +316,25 @@ mod tests {
         // this should be SizedBox<Slider>
         let widget = Slider::new().fix_height(10.0).fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), Some(10.0)));
+    }
+
+    /// we only care that this will compile; see
+    /// https://github.com/linebender/druid/pull/1414/
+    #[test]
+    fn lens_with_generic_param() {
+        use crate::widget::{Checkbox, Flex, Slider};
+
+        #[derive(Debug, Clone, Data, Lens)]
+        struct MyData<T> {
+            data: T,
+            floatl: f64,
+        }
+
+        #[allow(dead_code)]
+        fn make_widget() -> impl Widget<MyData<bool>> {
+            Flex::row()
+                .with_child(Slider::new().lens(MyData::<bool>::floatl))
+                .with_child(Checkbox::new("checkbox").lens(MyData::<bool>::data))
+        }
     }
 }

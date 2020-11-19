@@ -43,28 +43,32 @@ use crate::{Data, Lens};
 /// of a struct field, or some other way of narrowing the scope.
 ///
 /// [`Lens`]: trait.Lens.html
-pub struct LensWrap<U, L, W> {
+pub struct LensWrap<T, U, L, W> {
     inner: W,
     lens: L,
     // The following is a workaround for otherwise getting E0207.
-    phantom: PhantomData<U>,
+    // the 'in' data type of the lens
+    phantom_u: PhantomData<U>,
+    // the 'out' data type of the lens
+    phantom_t: PhantomData<T>,
 }
 
-impl<U, L, W> LensWrap<U, L, W> {
+impl<T, U, L, W> LensWrap<T, U, L, W> {
     /// Wrap a widget with a lens.
     ///
     /// When the lens has type `Lens<T, U>`, the inner widget has data
     /// of type `U`, and the wrapped widget has data of type `T`.
-    pub fn new(inner: W, lens: L) -> LensWrap<U, L, W> {
+    pub fn new(inner: W, lens: L) -> LensWrap<T, U, L, W> {
         LensWrap {
             inner,
             lens,
-            phantom: Default::default(),
+            phantom_u: Default::default(),
+            phantom_t: Default::default(),
         }
     }
 }
 
-impl<T, U, L, W> Widget<T> for LensWrap<U, L, W>
+impl<T, U, L, W> Widget<T> for LensWrap<T, U, L, W>
 where
     T: Data,
     U: Data,
