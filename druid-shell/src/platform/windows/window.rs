@@ -67,7 +67,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 /// The platform target DPI.
 ///
@@ -116,6 +116,38 @@ pub enum PresentStrategy {
     /// but with a redirection surface for GDI compatibility. Resize is
     /// very laggy and artifacty.
     FlipRedirect,
+}
+
+/// An enumeration of operations that might need to be deferred until the `WinHandler` is dropped.
+///
+/// We work hard to avoid calling into `WinHandler` re-entrantly. Since we use
+/// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
+/// that none of the `WindowHandle`'s methods can return control to the system's event loop
+/// (because if it did, the system could call back into druid-shell with some mouse event, and then
+/// we'd try to call the `WinHandler` again).
+///
+/// The solution is that for every `WindowHandle` method that *wants* to return control to the
+/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// immediately. The deferred operations will run whenever the currently running `WinHandler`
+/// method returns.
+///
+/// An example call trace might look like:
+/// 1. the system hands a mouse click event to druid-shell
+/// 2. druid-shell calls `WinHandler::mouse_up`
+/// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
+///   deferred op and returns immediately
+/// 4. after some more processing, `WinHandler::mouse_up` returns
+/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
+enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+    ContextMenu(Menu, Point),
+    ShowTitlebar(bool),
+    SetPosition(Point),
+    SetSize(Size),
+    SetResizable(bool),
+    SetWindowState(window::WindowState),
+    ReleaseMouseCapture,
 }
 
 #[derive(Clone)]
@@ -514,6 +546,32 @@ impl MyWndProc {
                     };
                     self.with_wnd_state(|s| s.handler.open_file(token, info));
                 }
+                DeferredOp::ContextMenu(menu, pos) => {
+                    let hmenu = menu.into_hmenu();
+                    let pos = pos.to_px(self.scale()).round();
+                    unsafe {
+                        let mut point = POINT {
+                            x: pos.x as i32,
+                            y: pos.y as i32,
+                        };
+                        ClientToScreen(hwnd, &mut point);
+                        if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null())
+                            == FALSE
+                        {
+                            warn!("failed to track popup menu");
+                        }
+                    }
+                }
+                DeferredOp::ReleaseMouseCapture => unsafe {
+                    if ReleaseCapture() == FALSE {
+                        let result = HRESULT_FROM_WIN32(GetLastError());
+                        // When result is zero, it appears to just mean that the capture was already released
+                        // (which can easily happen since this is deferred).
+                        if result != 0 {
+                            warn!("failed to release mouse capture: {}", Error::Hr(result));
+                        }
+                    }
+                },
             }
         } else {
             warn!("Could not get HWND");
@@ -935,7 +993,6 @@ impl WndProc for MyWndProc {
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
-                let mut should_release_capture = false;
                 if let Some(button) = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(MouseButton::Left),
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(MouseButton::Right),
@@ -1003,23 +1060,11 @@ impl WndProc for MyWndProc {
                             s.handler.mouse_down(&event);
                         } else {
                             s.handler.mouse_up(&event);
-                            should_release_capture = s.exit_mouse_capture(button);
+                            if s.exit_mouse_capture(button) {
+                                self.handle.borrow().defer(DeferredOp::ReleaseMouseCapture);
+                            }
                         }
                     });
-                }
-
-                // ReleaseCapture() is deferred: it needs to be called without having a mutable
-                // reference to the window state, because it will generate a reentrant
-                // WM_CAPTURECHANGED event.
-                if should_release_capture {
-                    unsafe {
-                        if ReleaseCapture() == FALSE {
-                            warn!(
-                                "failed to release mouse capture: {}",
-                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                            );
-                        }
-                    }
                 }
 
                 Some(0)
@@ -1667,22 +1712,7 @@ impl WindowHandle {
     }
 
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
-        let hmenu = menu.into_hmenu();
-        if let Some(w) = self.state.upgrade() {
-            let hwnd = w.hwnd.get();
-            let pos = pos.to_px(w.scale.get()).round();
-            unsafe {
-                let mut point = POINT {
-                    x: pos.x as i32,
-                    y: pos.y as i32,
-                };
-                ClientToScreen(hwnd, &mut point);
-                if TrackPopupMenu(hmenu, TPM_LEFTALIGN, point.x, point.y, 0, hwnd, null()) == FALSE
-                {
-                    warn!("failed to track popup menu");
-                }
-            }
-        }
+        self.defer(DeferredOp::ContextMenu(menu, pos));
     }
 
     pub fn text(&self) -> PietText {
