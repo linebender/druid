@@ -37,6 +37,7 @@ const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
 const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
 const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
+#[allow(clippy::clippy::rc_buffer)]
 #[derive(Clone, Data)]
 struct Grid {
     storage: Arc<Vec<bool>>,
