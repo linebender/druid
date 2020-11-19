@@ -188,12 +188,14 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in pixels, relative to the origin of the virtual screen.
+    /// Sets the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn set_position(&self, position: impl Into<Point>) {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position of the window in pixels, relative to the origin of the virtual screen.
+    /// Returns the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
@@ -210,7 +212,7 @@ impl WindowHandle {
         self.0.set_size(size.into())
     }
 
-    /// Gets the window size, in pixels.
+    /// Gets the window size, in [pixels](crate::Scale).
     pub fn get_size(&self) -> Size {
         self.0.get_size()
     }
@@ -229,11 +231,14 @@ impl WindowHandle {
         self.0.bring_to_front_and_focus()
     }
 
-    /// Request that [`prepare_paint`](WinHandler::prepare_paint) and [`paint`](WinHandler::paint)
-    /// be called next time there's the opportunity to render another frame. This differs from
-    /// [`invalidate`](WindowHandle::invalidate) and
-    /// [`invalidate_rect`](WindowHandle::invalidate_rect) in that it doesn't invalidate any part
-    /// of the window.
+    /// Request that [`prepare_paint`] and [`paint`] be called next time there's the opportunity to
+    /// render another frame. This differs from [`invalidate`] and [`invalidate_rect`] in that it
+    /// doesn't invalidate any part of the window.
+    ///
+    /// [`invalidate`]: WindowHandle::invalidate
+    /// [`invalidate_rect`]: WindowHandle::invalidate_rect
+    /// [`paint`]: WinHandler::paint
+    /// [`prepare_paint`]: WinHandler::prepare_paint
     pub fn request_anim_frame(&self) {
         self.0.request_anim_frame();
     }
@@ -337,7 +342,9 @@ impl WindowBuilder {
         WindowBuilder(platform::WindowBuilder::new(app.platform_app))
     }
 
-    /// Set the [`WinHandler`]. This is the object that will receive callbacks from this window.
+    /// Set the [`WinHandler`] for this window.
+    ///
+    /// This is the object that will receive callbacks from this window.
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.0.set_handler(handler)
     }
@@ -374,7 +381,8 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the initial window position in pixels, relative to the origin of the virtual screen.
+    /// Sets the initial window position in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
