@@ -1,3 +1,5 @@
+#![allow(clippy::clippy::rc_buffer)]
+
 #[derive(Clone, PartialEq)]
 struct DateTime(std::time::Instant);
 

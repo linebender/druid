@@ -121,14 +121,12 @@ pub trait TabsPolicy: Data {
 pub struct StaticTabs<T> {
     // This needs be able to avoid cloning the widgets we are given -
     // as such it is Rc
-    tabs: Rc<Vec<InitialTab<T>>>,
+    tabs: Rc<[InitialTab<T>]>,
 }
 
 impl<T> Default for StaticTabs<T> {
     fn default() -> Self {
-        StaticTabs {
-            tabs: Rc::new(Vec::new()),
-        }
+        StaticTabs { tabs: Rc::new([]) }
     }
 }
 
@@ -187,9 +185,7 @@ impl<T: Data> TabsPolicy for StaticTabs<T> {
     }
 
     fn build(build: Self::Build) -> Self {
-        StaticTabs {
-            tabs: Rc::new(build),
-        }
+        StaticTabs { tabs: build.into() }
     }
 }
 
