@@ -568,6 +568,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut ctx = EventCtx {
             state: parent_ctx.state,
             widget_state: &mut self.state,
+            notifications: parent_ctx.notifications,
             cursor: parent_ctx.cursor,
             is_handled: false,
             is_root: false,
