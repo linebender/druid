@@ -179,31 +179,30 @@ jobs:
           override: true
 
       # Clippy wasm32 relevant packages in deeper-to-higher dependency order
-      # FIXME: reenable clippy when rustc >= 1.47.1
-      #- name: cargo clippy druid-shell (wasm)
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          #args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy druid-shell (wasm)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
-      #- name: cargo clippy druid (wasm)
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          ## TODO: Add svg feature when it's no longer broken with wasm
-          #args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy druid (wasm)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          # TODO: Add svg feature when it's no longer broken with wasm
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 
-      #- name: cargo clippy druid-derive (wasm)
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          #args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy druid-derive (wasm)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-derive/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
-      #- name: cargo clippy book examples (wasm)
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          #args: --manifest-path=docs/book_examples/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy book examples (wasm)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
@@ -233,21 +232,21 @@ jobs:
           args: --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
 
       ## Clippy and build the special druid-web-examples package.
-      #- name: cargo clippy druid-web-examples
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          #args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy druid-web-examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/examples/web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build examples
         run: wasm-pack build --dev --target web druid/examples/web
 
       ## Clippy and build the hello_web example
-      #- name: cargo clippy hello_web example
-        #uses: actions-rs/cargo@v1
-        #with:
-          #command: clippy
-          #args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy hello_web example
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid/examples/hello_web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: wasm-pack build hello_web example
         run: wasm-pack build --dev --target web druid/examples/hello_web

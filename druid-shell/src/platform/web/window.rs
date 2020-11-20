@@ -374,7 +374,7 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
-        let window = web_sys::window().ok_or_else(|| Error::NoWindow)?;
+        let window = web_sys::window().ok_or(Error::NoWindow)?;
         let canvas = window
             .document()
             .ok_or(Error::NoDocument)?
