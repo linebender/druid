@@ -673,6 +673,10 @@ impl WndProc for MyWndProc {
                 self.with_wnd_state(|s| s.handler.got_focus());
                 Some(0)
             }
+            WM_KILLFOCUS => {
+                self.with_wnd_state(|s| s.handler.lost_focus());
+                Some(0)
+            }
             WM_PAINT => unsafe {
                 self.with_wnd_state(|s| {
                     // We call prepare_paint before GetUpdateRect, so that anything invalidated during
