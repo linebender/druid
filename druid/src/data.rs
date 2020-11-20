@@ -14,6 +14,7 @@
 
 //! Traits for handling value types.
 
+use std::ptr;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -161,6 +162,12 @@ impl_data_simple!(std::num::NonZeroU128);
 impl_data_simple!(std::num::NonZeroUsize);
 //TODO: remove me!?
 impl_data_simple!(String);
+
+impl Data for &'static str {
+    fn same(&self, other: &Self) -> bool {
+        ptr::eq(*self, *other)
+    }
+}
 
 impl Data for f32 {
     fn same(&self, other: &Self) -> bool {
@@ -511,5 +518,17 @@ mod test {
         let one = std::iter::repeat(0_u8).take(9).collect::<im::Vector<_>>();
         let two = std::iter::repeat(0_u8).take(10).collect::<im::Vector<_>>();
         assert!(!one.same(&two));
+    }
+
+    #[test]
+    fn static_strings() {
+        let first = "test";
+        let same = "test";
+        let second = "test2";
+        assert!(!Data::same(&first, &second));
+        assert!(Data::same(&first, &first));
+        // although these are different, the compiler will notice that the string "test" is common,
+        // intern it, and reuse it for all "text" `&'static str`s.
+        assert!(Data::same(&first, &same));
     }
 }
