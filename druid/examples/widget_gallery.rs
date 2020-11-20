@@ -20,7 +20,7 @@ use druid::{
         prelude::*, Button, Checkbox, FillStrat, Flex, Image, Label, List, Painter, ProgressBar,
         RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, ImageBuf, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
+    AppLauncher, Color, Data, ImageBuf, Lens, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
 #[cfg(not(target_arch = "wasm32"))]

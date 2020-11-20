@@ -59,6 +59,7 @@ impl_example!(calc);
 impl_example!(cursor);
 impl_example!(custom_widget);
 impl_example!(either);
+impl_example!(event_viewer);
 impl_example!(flex.unwrap());
 impl_example!(game_of_life);
 impl_example!(hello);

@@ -187,7 +187,7 @@ mod examples {
         }
     }
 
-    examples_in.push_str("}");
+    examples_in.push('}');
 
     index_html.push_str("</ul></body></html>");
 
