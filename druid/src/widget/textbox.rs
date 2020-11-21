@@ -149,6 +149,11 @@ impl<T> TextBox<T> {
         self
     }
 
+    /// Set the `TextBox`'s placeholder text.
+    pub fn set_placeholder(&mut self, placeholder: impl Into<String>) {
+        self.placeholder.set_text(placeholder.into());
+    }
+
     /// Set the text size.
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
