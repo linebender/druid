@@ -125,10 +125,7 @@ impl<W: Widget<Color>> Controller<Color, W> for ColorWellController {
 /// it is one of the freezable widgets, which can synchronise witht the main one, or pin itself.
 /// The implementation of this is not really relevant, the example is about the ids not this
 /// widget.
-struct ColorWell {
-    color: Option<Color>,
-}
-
+struct ColorWell(Option<Color>);
 impl ColorWell {
     pub fn new(randomize: bool) -> Self {
         let color = if randomize {
@@ -136,7 +133,7 @@ impl ColorWell {
         } else {
             Some(Color::rgba(0., 0., 0., 0.2))
         };
-        ColorWell { color }
+        ColorWell(color)
     }
 }
 
@@ -144,10 +141,10 @@ impl Widget<Color> for ColorWell {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
         match event {
             Event::Command(cmd) if cmd.is(PIN_COLOR) => {
-                self.color = Some(data.clone());
+                self.0 = Some(data.clone());
                 ctx.request_paint();
             }
-            Event::Command(cmd) if cmd.is(SYNC_COLOR) => self.color = None,
+            Event::Command(cmd) if cmd.is(SYNC_COLOR) => self.0 = None,
             _ => (),
         }
     }
@@ -155,7 +152,7 @@ impl Widget<Color> for ColorWell {
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &Color, _: &Env) {}
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Color, data: &Color, _: &Env) {
-        if old_data != data && self.color.is_none() {
+        if old_data != data && self.0.is_none() {
             ctx.request_paint()
         }
     }
@@ -167,7 +164,7 @@ impl Widget<Color> for ColorWell {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
         let rect = Rect::ZERO.with_size(ctx.size());
         let rect = RoundedRect::from_rect(rect, 5.0);
-        let color = self.color.as_ref().unwrap_or(data);
+        let color = self.0.as_ref().unwrap_or(data);
         ctx.fill(rect, color);
     }
 }
