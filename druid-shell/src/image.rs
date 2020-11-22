@@ -171,7 +171,7 @@ impl ImageBuf {
 
     /// Load an image from a DynamicImage with alpha
     pub fn from_dynamic_image_with_alpha(image_data: image::DynamicImage) -> ImageBuf {
-        let rgba_image = image_data.to_rgba();
+        let rgba_image = image_data.to_rgba8();
         let sizeofimage = rgba_image.dimensions();
         ImageBuf::from_raw(
             rgba_image.to_vec(),
@@ -183,7 +183,7 @@ impl ImageBuf {
 
     /// Load an image from a DynamicImage without alpha
     pub fn from_dynamic_image_without_alpha(image_data: image::DynamicImage) -> ImageBuf {
-        let rgb_image = image_data.to_rgb();
+        let rgb_image = image_data.to_rgb8();
         let sizeofimage = rgb_image.dimensions();
         ImageBuf::from_raw(
             rgb_image.to_vec(),

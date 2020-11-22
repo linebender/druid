@@ -117,38 +117,6 @@ impl FileDialogToken {
     }
 }
 
-/// An enumeration of operations that might need to be deferred until the `WinHandler` is dropped.
-///
-/// We work hard to avoid calling into `WinHandler` re-entrantly. Since most of our backends use
-/// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
-/// that none of the `WindowHandle`'s methods can return control to the system's event loop
-/// (because if it did, the system could call back into druid-shell with some mouse event, and then
-/// we'd try to call the `WinHandler` again).
-///
-/// The solution is that for every `WindowHandle` method that *wants* to return control to the
-/// system's event loop, instead of doing that we queue up a deferrred operation and return
-/// immediately. The deferred operations will run whenever the currently running `WinHandler`
-/// method returns.
-///
-/// An example call trace might look like:
-/// 1. the system hands a mouse click event to druid-shell
-/// 2. druid-shell calls `WinHandler::mouse_up`
-/// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
-///   deferred op and returns immediately
-/// 4. after some more processing, `WinHandler::mouse_up` returns
-/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
-#[allow(dead_code)]
-#[derive(Debug)]
-pub(crate) enum DeferredOp {
-    SaveAs(FileDialogOptions, FileDialogToken),
-    Open(FileDialogOptions, FileDialogToken),
-    ShowTitlebar(bool),
-    SetPosition(Point),
-    SetSize(Size),
-    SetResizable(bool),
-    SetWindowState(WindowState),
-}
-
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
@@ -196,32 +164,21 @@ impl WindowHandle {
     }
 
     /// Sets the state of the window.
-    ///
-    /// [`state`]: enum.WindowState.html
     pub fn set_window_state(&mut self, state: WindowState) {
         self.0.set_window_state(state);
     }
 
     /// Gets the state of the window.
-    ///
-    /// [`state`]: enum.WindowState.html
     pub fn get_window_state(&self) -> WindowState {
         self.0.get_window_state()
     }
 
-    /// Allows the operating system to handle a custom titlebar
-    /// like the default one.
+    /// Informs the system that the current location of the mouse should be treated as part of the
+    /// window's titlebar. This can be used to implement a custom titlebar widget. Note that
+    /// because this refers to the current location of the mouse, you should probably call this
+    /// function in response to every relevant [`WinHandler::mouse_move`].
     ///
-    /// It should be used on Event::MouseMove in a widget:
-    /// `Event::MouseMove(_) => {
-    ///    if ctx.is_hot() {
-    ///        ctx.window().handle_titlebar(true);
-    ///    } else {
-    ///        ctx.window().handle_titlebar(false);
-    ///    }
-    ///}`
-    ///
-    /// This might not work or behave the same across all platforms.
+    /// This is currently only implemented on Windows.
     pub fn handle_titlebar(&self, val: bool) {
         self.0.handle_titlebar(val);
     }
@@ -231,51 +188,40 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in virtual screen coordinates.
-    /// [`position`] The position in pixels.
-    ///
-    /// [`position`]: struct.Point.html
+    /// Sets the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn set_position(&self, position: impl Into<Point>) {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position in virtual screen coordinates.
-    /// [`Point`] The position in pixels.
-    ///
-    /// [`Point`]: struct.Point.html
+    /// Returns the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
 
-    /// Set the window's size in [display points].
+    /// Set the window's size in [display points](crate::Scale).
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
-    /// This should be considered a request to the platform to set the size of the window.
-    /// The platform might increase the size a tiny bit due to DPI.
-    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
-    ///
-    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
-    /// [display points]: struct.Scale.html
+    /// This should be considered a request to the platform to set the size of the window.  The
+    /// platform might choose a different size depending on its DPI or other platform-dependent
+    /// configuration.  To know the actual size of the window you should handle the
+    /// [`WinHandler::size`] method.
     pub fn set_size(&self, size: impl Into<Size>) {
         self.0.set_size(size.into())
     }
 
-    /// Gets the window size.
-    /// [`Size`] Window size in pixels.
-    ///
-    /// [`Size`]: struct.Size.html
+    /// Gets the window size, in [pixels](crate::Scale).
     pub fn get_size(&self) -> Size {
         self.0.get_size()
     }
 
-    /// Sets the [`WindowLevel`] - ie Z order in the Window system / compositor
+    /// Sets the [`WindowLevel`](crate::WindowLevel), the z-order in the Window system / compositor
     ///
-    /// We do not currently have a getter method - because it may imply keeping extra state in the WindowHandle if
-    /// multiple Druid levels map to one underlying system level.
-    /// If there is a use case it can be added.
-    ///
-    /// [`WindowLevel`]: enum.WindowLevel.html
+    /// We do not currently have a getter method, mostly because the system's levels aren't a
+    /// perfect one-to-one map to `druid_shell`'s levels. A getter method may be added in the
+    /// future.
     pub fn set_level(&self, level: WindowLevel) {
         self.0.set_level(level)
     }
@@ -285,14 +231,14 @@ impl WindowHandle {
         self.0.bring_to_front_and_focus()
     }
 
-    /// Request that [`prepare_paint`] and [`paint`] next time there's the opportunity
-    /// to render another frame. This differs from [`invalidate`] and [`invalidate_rect`]
-    /// in that it doesn't invalidate any part of the window.
+    /// Request that [`prepare_paint`] and [`paint`] be called next time there's the opportunity to
+    /// render another frame. This differs from [`invalidate`] and [`invalidate_rect`] in that it
+    /// doesn't invalidate any part of the window.
     ///
-    /// [`prepare_paint`]: trait.WinHandler.html#tymethod.prepare_paint
-    /// [`paint`]: trait.WinHandler.html#tymethod.paint
-    /// [`invalidate`]: struct.WindowHandle.html#tymethod.invalidate
-    /// [`invalidate_rect`]: struct.WindowHandle.html#tymethod.invalidate_rect
+    /// [`invalidate`]: WindowHandle::invalidate
+    /// [`invalidate_rect`]: WindowHandle::invalidate_rect
+    /// [`paint`]: WinHandler::paint
+    /// [`prepare_paint`]: WinHandler::prepare_paint
     pub fn request_anim_frame(&self) {
         self.0.request_anim_frame();
     }
@@ -324,7 +270,7 @@ impl WindowHandle {
 
     /// Schedule a timer.
     ///
-    /// This causes a [`WinHandler::timer()`] call at the deadline. The
+    /// This causes a [`WinHandler::timer`] call at the deadline. The
     /// return value is a token that can be used to associate the request
     /// with the handler call.
     ///
@@ -332,8 +278,6 @@ impl WindowHandle {
     /// resolution is around 10ms. Therefore, it's best used for things
     /// like blinking a cursor or triggering tooltips, not for anything
     /// requiring precision.
-    ///
-    /// [`WinHandler::timer()`]: trait.WinHandler.html#tymethod.timer
     pub fn request_timer(&self, deadline: Duration) -> TimerToken {
         self.0.request_timer(instant::Instant::now() + deadline)
     }
@@ -350,10 +294,8 @@ impl WindowHandle {
     /// Prompt the user to choose a file to open.
     ///
     /// This won't block immediately; the file dialog will be shown whenever control returns to
-    /// `druid-shell`, and the [`WinHandler::open`] method will be called when the dialog is
+    /// `druid-shell`, and the [`WinHandler::open_file`] method will be called when the dialog is
     /// closed.
-    ///
-    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         self.0.open_file(options)
     }
@@ -363,15 +305,13 @@ impl WindowHandle {
     /// This won't block immediately; the file dialog will be shown whenever control returns to
     /// `druid-shell`, and the [`WinHandler::save_as`] method will be called when the dialog is
     /// closed.
-    ///
-    /// [`WinHandler::open()`]: trait.WinHandler.html#tymethod.open
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         self.0.save_as(options)
     }
 
     /// Display a pop-up menu at the given position.
     ///
-    /// `Point` is in the coordinate space of the window.
+    /// `pos` is in the coordinate space of the window.
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
         self.0.show_context_menu(menu.into_inner(), pos)
     }
@@ -381,13 +321,11 @@ impl WindowHandle {
         self.0.get_idle_handle().map(IdleHandle)
     }
 
-    /// Get the [`Scale`] information of the window.
+    /// Get the DPI scale of the window.
     ///
-    /// The returned [`Scale`] is a copy and thus its information will be stale after
-    /// the platform DPI changes. A correctly behaving application should consider
-    /// the lifetime of this [`Scale`] brief, limited to approximately a single event cycle.
-    ///
-    /// [`Scale`]: struct.Scale.html
+    /// The returned [`Scale`](crate::Scale) is a copy and thus its information will be stale after
+    /// the platform DPI changes. This means you should not stash it and rely on it later; it is
+    /// only guaranteed to be valid for the current pass of the runloop.
     pub fn get_scale(&self) -> Result<Scale, Error> {
         self.0.get_scale().map_err(Into::into)
     }
@@ -399,43 +337,36 @@ pub struct WindowBuilder(platform::WindowBuilder);
 impl WindowBuilder {
     /// Create a new `WindowBuilder`.
     ///
-    /// Takes the [`Application`] that this window is for.
-    ///
-    /// [`Application`]: struct.Application.html
+    /// Takes the [`Application`](crate::Application) that this window is for.
     pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder(platform::WindowBuilder::new(app.platform_app))
     }
 
-    /// Set the [`WinHandler`]. This is the object that will receive
-    /// callbacks from this window.
+    /// Set the [`WinHandler`] for this window.
     ///
-    /// [`WinHandler`]: trait.WinHandler.html
+    /// This is the object that will receive callbacks from this window.
     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial drawing area size in [display points].
+    /// Set the window's initial drawing area size in [display points](crate::Scale).
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
-    /// This should be considered a request to the platform to set the size of the window.
-    /// The platform might increase the size a tiny bit due to DPI.
-    /// To know the actual size of the window you should handle the [`WinHandler::size`] method.
-    ///
-    /// [`WinHandler::size`]: trait.WinHandler.html#method.size
-    /// [display points]: struct.Scale.html
+    /// This should be considered a request to the platform to set the size of the window.  The
+    /// platform might choose a different size depending on its DPI or other platform-dependent
+    /// configuration.  To know the actual size of the window you should handle the
+    /// [`WinHandler::size`] method.
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's minimum drawing area size in [display points].
+    /// Set the window's minimum drawing area size in [display points](crate::Scale).
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
     /// This should be considered a request to the platform to set the minimum size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
-    ///
-    /// [display points]: struct.Scale.html
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -450,17 +381,13 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the initial window position in virtual screen coordinates.
-    /// [`position`] Position in pixels.
-    ///
-    /// [`position`]: struct.Point.html
+    /// Sets the initial window position in [pixels](crate::Scale), relative to the origin of the
+    /// virtual screen.
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
 
-    /// Sets the initial [`WindowLevel`]
-    ///
-    /// [`WindowLevel`]: enum.WindowLevel.html
+    /// Sets the initial [`WindowLevel`].
     pub fn set_level(&mut self, level: WindowLevel) {
         self.0.set_level(level);
     }
@@ -476,8 +403,6 @@ impl WindowBuilder {
     }
 
     /// Sets the initial state of the window.
-    ///
-    /// [`state`]: enum.WindowState.html
     pub fn set_window_state(&mut self, state: WindowState) {
         self.0.set_window_state(state);
     }
@@ -506,35 +431,25 @@ pub trait WinHandler {
 
     /// Called when the size of the window has changed.
     ///
-    /// The `size` parameter is the new size in [display points].
-    ///
-    /// [display points]: struct.Scale.html
+    /// The `size` parameter is the new size in [display points](crate::Scale).
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
-    /// Called when the [`Scale`] of the window has changed.
+    /// Called when the [scale](crate::Scale) of the window has changed.
     ///
-    /// This is always called before the accompanying [`size`].
-    ///
-    /// [`Scale`]: struct.Scale.html
-    /// [`size`]: #method.size
+    /// This is always called before the accompanying [`size`](WinHandler::size).
     #[allow(unused_variables)]
     fn scale(&mut self, scale: Scale) {}
 
-    /// Request the handler to prepare to paint the window contents.
-    /// In particular, if there are any regions that need to be repainted
-    /// on the next call to `paint`, the handler should invalidate those regions
-    /// by calling [`WindowHandle::invalidate_rect`] or [`WindowHandle::invalidate`].
-    ///
-    /// [`WindowHandle::invalidate_rect`]: trait.WindowHandle:#tymethod.invalidate_rect
-    /// [`WindowHandle::invalidate`]: trait.WindowHandle:#tymethod.invalidate
+    /// Request the handler to prepare to paint the window contents.  In particular, if there are
+    /// any regions that need to be repainted on the next call to `paint`, the handler should
+    /// invalidate those regions by calling [`WindowHandle::invalidate_rect`] or
+    /// [`WindowHandle::invalidate`].
     fn prepare_paint(&mut self);
 
-    /// Request the handler to paint the window contents.
-    /// `invalid` is the region in [display points] that needs to be repainted;
-    /// painting outside the invalid region will have no effect.
-    ///
-    /// [display points]: struct.Scale.html
+    /// Request the handler to paint the window contents.  `invalid` is the region in [display
+    /// points](crate::Scale) that needs to be repainted; painting outside the invalid region will
+    /// have no effect.
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid: &Region);
 
     /// Called when the resources need to be rebuilt.
@@ -553,8 +468,6 @@ pub trait WinHandler {
     ///
     /// `token` is the value returned by [`WindowHandle::save_as`]. `file` contains the information
     /// of the chosen path, or `None` if the save dialog was cancelled.
-    ///
-    /// [`WindowHandle::save_as`]: trait.WindowHandle:#tymethod.save_as
     #[allow(unused_variables)]
     fn save_as(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
 
@@ -562,8 +475,6 @@ pub trait WinHandler {
     ///
     /// `token` is the value returned by [`WindowHandle::open_file`]. `file` contains the information
     /// of the chosen path, or `None` if the save dialog was cancelled.
-    ///
-    /// [`WindowHandle::open_file`]: trait.WindowHandle:#tymethod.open_file
     #[allow(unused_variables)]
     fn open_file(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
 
@@ -616,8 +527,6 @@ pub trait WinHandler {
     /// This is called at (approximately) the requested deadline by a
     /// [`WindowHandle::request_timer()`] call. The token argument here is the same
     /// as the return value of that call.
-    ///
-    /// [`WindowHandle::request_timer()`]: struct.WindowHandle.html#tymethod.request_timer
     #[allow(unused_variables)]
     fn timer(&mut self, token: TimerToken) {}
 
@@ -625,14 +534,16 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn got_focus(&mut self) {}
 
+    /// Called when this window stops being the focused window.
+    #[allow(unused_variables)]
+    fn lost_focus(&mut self) {}
+
     /// Called when the shell requests to close the window, for example because the user clicked
     /// the little "X" in the titlebar.
     ///
     /// If you want to actually close the window in response to this request, call
     /// [`WindowHandle::close`]. If you don't implement this method, clicking the titlebar "X" will
     /// have no effect.
-    ///
-    /// [`WindowHandle::close`]: struct.WindowHandle.html#tymethod.close
     fn request_close(&mut self) {}
 
     /// Called when the window is being destroyed. Note that this happens

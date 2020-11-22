@@ -116,9 +116,9 @@ impl<T: Data> Widget<T> for Align<T> {
         let extra_height = (my_size.height - size.height).max(0.);
         let origin = self
             .align
-            .resolve(Rect::new(0., 0., extra_width, extra_height));
-        self.child
-            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
+            .resolve(Rect::new(0., 0., extra_width, extra_height))
+            .expand();
+        self.child.set_origin(ctx, data, env, origin);
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);

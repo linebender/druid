@@ -54,6 +54,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Event::should_propagate_to_hidden` and `Lifecycle::should_propagate_to_hidden` to determine whether an event should be sent to hidden widgets (e.g. in `Tabs` or `Either`). ([#1351] by [@andrewhickman])
 - `set_cursor` can be called in the `update` method. ([#1361] by [@jneem])
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
+- `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 
 ### Changed
 
@@ -97,6 +98,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Ensure that `update` is called after all commands. ([#1062] by [@jneem])
 - X11: Support idle callbacks. ([#1072] by [@jneem])
 - GTK: Don't interrupt `KeyEvent.repeat` when releasing another key. ([#1081] by [@raphlinus])
+- Floor the origin for the Align widget to avoid blurry borders. ([#1091] by [@sysint64])
 - X11: Set some more common window properties. ([#1097] by [@psychon])
 - X11: Support timers. ([#1096] by [@psychon])
 - `EnvScope` now also updates the `Env` during `Widget::lifecycle`. ([#1100] by [@finnerale])
@@ -120,6 +122,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Fixed `Either` not passing events to its hidden child correctly. ([#1351] by [@andrewhickman])
 - Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
+- Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
 
 ### Visual
 
@@ -127,6 +130,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Docs
 
+- Added a book chapter about resolution independence. ([#913] by [@xStrom])
 - Added documentation for the `Image` widget. ([#1018] by [@covercash2])
 - Fixed a link in `druid::command` documentation. ([#1008] by [@covercash2])
 - Fixed broken links in `druid::widget::Container` documentation. ([#1357] by [@StarfightLP])
@@ -135,6 +139,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 - Specify feature requirements in a standard way. ([#1050] by [@xStrom])
 - Added `event_viewer` example ([#1326] by [@cmyr])
+- Rename `ext_event` to `async_event`. ([#1401] by [@JAicewizard])
 
 ### Maintenance
 
@@ -405,6 +410,7 @@ Last release without a changelog :(
 [#905]: https://github.com/linebender/druid/pull/905
 [#907]: https://github.com/linebender/druid/pull/907
 [#909]: https://github.com/linebender/druid/pull/909
+[#913]: https://github.com/linebender/druid/pull/913
 [#915]: https://github.com/linebender/druid/pull/915
 [#916]: https://github.com/linebender/druid/pull/916
 [#917]: https://github.com/linebender/druid/pull/917
@@ -466,6 +472,7 @@ Last release without a changelog :(
 [#1075]: https://github.com/linebender/druid/pull/1075
 [#1076]: https://github.com/linebender/druid/pull/1076
 [#1081]: https://github.com/linebender/druid/pull/1081
+[#1091]: https://github.com/linebender/druid/pull/1091
 [#1096]: https://github.com/linebender/druid/pull/1096
 [#1097]: https://github.com/linebender/druid/pull/1097
 [#1093]: https://github.com/linebender/druid/pull/1093
@@ -529,6 +536,8 @@ Last release without a changelog :(
 [#1351]: https://github.com/linebender/druid/pull/1351
 [#1259]: https://github.com/linebender/druid/pull/1259
 [#1361]: https://github.com/linebender/druid/pull/1361
+[#1371]: https://github.com/linebender/druid/pull/1371
+[#1410]: https://github.com/linebender/druid/pull/1410
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

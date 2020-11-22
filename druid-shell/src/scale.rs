@@ -100,6 +100,8 @@ impl Default for Scale {
 
 impl Scale {
     /// Create a new `Scale` based on the specified axis factors.
+    ///
+    /// Units: none (scale relative to "standard" scale)
     pub fn new(x: f64, y: f64) -> Scale {
         Scale { x, y }
     }

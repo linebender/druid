@@ -44,7 +44,7 @@ use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::window;
-use crate::window::{DeferredOp, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
 use super::application::Application;
 use super::dialog;
@@ -92,6 +92,14 @@ pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
     // Ensure that we don't implement Send, because it isn't actually safe to send the WindowState.
     marker: std::marker::PhantomData<*const ()>,
+}
+
+/// Operations that we defer in order to avoid re-entrancy. See the documentation in the windows
+/// backend for more details.
+enum DeferredOp {
+    SaveAs(FileDialogOptions, FileDialogToken),
+    Open(FileDialogOptions, FileDialogToken),
+    ContextMenu(Menu, WindowHandle),
 }
 
 /// Builder abstraction for creating new windows
@@ -299,7 +307,8 @@ impl WindowBuilder {
                 | EventMask::ENTER_NOTIFY_MASK
                 | EventMask::KEY_RELEASE_MASK
                 | EventMask::SCROLL_MASK
-                | EventMask::SMOOTH_SCROLL_MASK,
+                | EventMask::SMOOTH_SCROLL_MASK
+                | EventMask::FOCUS_CHANGE_MASK,
         );
 
         win_state.drawing_area.set_can_focus(true);
@@ -375,6 +384,7 @@ impl WindowBuilder {
                         // Clip to the invalid region, in order that our surface doesn't get
                         // messed up if there's any painting outside them.
                         for rect in invalid.rects() {
+                            let rect = rect.to_px(scale);
                             surface_context.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
                         }
                         surface_context.clip();
@@ -609,6 +619,24 @@ impl WindowBuilder {
             }));
 
         win_state
+            .drawing_area
+            .connect_focus_in_event(clone!(handle => move |_widget, _event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|h| h.got_focus());
+                }
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_focus_out_event(clone!(handle => move |_widget, _event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|h| h.lost_focus());
+                }
+                Inhibit(true)
+            }));
+
+        win_state
             .window
             .connect_delete_event(clone!(handle => move |_widget, _ev| {
                 if let Some(state) = handle.state.upgrade() {
@@ -754,9 +782,14 @@ impl WindowState {
                     .map(|s| FileInfo { path: s.into() });
                     self.with_handler(|h| h.save_as(token, file_info));
                 }
-                e => {
-                    // The other deferred ops shouldn't appear, because we don't defer them in GTK.
-                    log::error!("unexpected deferred op {:?}", e);
+                DeferredOp::ContextMenu(menu, handle) => {
+                    let accel_group = AccelGroup::new();
+                    self.window.add_accel_group(&accel_group);
+
+                    let menu = menu.into_gtk_menu(&handle, &accel_group);
+                    menu.set_property_attach_widget(Some(&self.window));
+                    menu.show_all();
+                    menu.popup_easy(3, gtk::get_current_event_time());
                 }
             }
         }
@@ -1032,15 +1065,7 @@ impl WindowHandle {
 
     pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
         if let Some(state) = self.state.upgrade() {
-            let window = &state.window;
-
-            let accel_group = AccelGroup::new();
-            window.add_accel_group(&accel_group);
-
-            let menu = menu.into_gtk_menu(&self, &accel_group);
-            menu.set_property_attach_widget(Some(window));
-            menu.show_all();
-            menu.popup_easy(3, gtk::get_current_event_time());
+            state.defer(DeferredOp::ContextMenu(menu, self.clone()));
         }
     }
 

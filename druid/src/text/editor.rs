@@ -161,9 +161,9 @@ impl<T: TextStorage + EditableText> Editor<T> {
         if self.data_is_stale(new_data) {
             self.layout.set_text(new_data.clone());
             self.selection = self.selection.constrained(new_data);
-            ctx.request_paint();
+            ctx.request_layout();
         } else if self.layout.needs_rebuild_after_update(ctx) {
-            ctx.request_paint();
+            ctx.request_layout();
         }
         self.rebuild_if_needed(ctx.text(), env);
     }

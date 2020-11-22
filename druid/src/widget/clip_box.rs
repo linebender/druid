@@ -299,8 +299,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
 
         let content_size = self.child.layout(ctx, &child_bc, data, env);
         self.port.content_size = content_size;
-        self.child
-            .set_layout_rect(ctx, data, env, content_size.to_rect());
+        self.child.set_origin(ctx, data, env, Point::ORIGIN);
 
         self.port.rect = self.port.rect.with_size(bc.constrain(content_size));
         let new_offset = self.port.clamp_view_origin(self.viewport_origin());

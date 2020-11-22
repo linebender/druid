@@ -191,7 +191,7 @@ pub use crate::core::WidgetPod;
 pub use app::{AppLauncher, WindowConfig, WindowDesc};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
-pub use command::{sys as commands, Command, Selector, SingleUse, Target};
+pub use command::{sys as commands, Command, Notification, Selector, SingleUse, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
@@ -210,10 +210,6 @@ pub use window::{Window, WindowId};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
-
-#[deprecated(since = "0.7.0", note = "use druid::widget::LensWrap instead")]
-#[allow(missing_docs)]
-pub type LensWrap<A, B, C> = widget::LensWrap<A, B, C>;
 
 /// The meaning (mapped value) of a keypress.
 ///
