@@ -94,6 +94,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 
 ### Examples
+- Add readme ([#1423] by [@JAicewizard])
 
 ### Maintenance
 
@@ -671,7 +672,9 @@ Last release without a changelog :(
 [#1259]: https://github.com/linebender/druid/pull/1259
 [#1361]: https://github.com/linebender/druid/pull/1361
 [#1371]: https://github.com/linebender/druid/pull/1371
+[#1401]: https://github.com/linebender/druid/pull/1401
 [#1410]: https://github.com/linebender/druid/pull/1410
+[#1423]: https://github.com/linebender/druid/pull/1423
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
