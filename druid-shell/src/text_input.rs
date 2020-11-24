@@ -384,7 +384,7 @@ pub enum WritingDirection {
     Natural,
 }
 
-/// Indicates a vertial movement in a text document.
+/// Indicates a vertical movement in a text document.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VerticalMovement {
