@@ -352,12 +352,17 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
 }
 
 impl WndState {
-    fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) {
+    fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) -> Result<(), Error> {
         unsafe {
             let swap_chain = self.dxgi_state.as_ref().unwrap().swap_chain;
-            let rt = paint::create_render_target_dxgi(d2d, swap_chain, scale)
-                .map(|rt| rt.as_device_context().expect("TODO remove this expect"));
-            self.render_target = rt.ok();
+            match paint::create_render_target_dxgi(d2d, swap_chain, scale) {
+                Ok(rt) => {
+                    self.render_target =
+                        Some(rt.as_device_context().expect("TODO remove this expect"));
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
         }
     }
 
@@ -834,7 +839,9 @@ impl WndProc for MyWndProc {
                         );
                     }
                     if SUCCEEDED(res) {
-                        s.rebuild_render_target(&self.d2d_factory, scale);
+                        if let Err(e) = s.rebuild_render_target(&self.d2d_factory, scale) {
+                            log::error!("error building render target: {}", e);
+                        }
                         s.render(
                             &self.d2d_factory,
                             &self.dwrite_factory,
