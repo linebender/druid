@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,205 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Demonstrates how to use value formatters to constrain the contents
-//! of a text box.
+//! Implementations of the [`druid::text::Formatter`] trait.
 
 use druid::text::format::{Formatter, Validation, ValidationError};
-use druid::text::{Selection, TextLayout};
-use druid::widget::{prelude::*, Flex, Label, TextBox};
-use druid::{AppLauncher, Data, Lens, Point, Selector, WidgetExt, WidgetPod, WindowDesc};
-
-/// Various values that we are going to use with formatters.
-#[derive(Debug, Clone, Data, Lens)]
-struct AppData {
-    dollars: f64,
-    euros: f64,
-    pounds: f64,
-    postal_code: PostalCode,
-    dont_type_cat: String,
-}
-
-pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Formatting and Validation");
-
-    let data = AppData {
-        dollars: 12.2,
-        euros: -20.0,
-        pounds: 1337.,
-        postal_code: PostalCode::new("H0H0H0").unwrap(),
-        dont_type_cat: String::new(),
-    };
-
-    AppLauncher::with_window(main_window)
-        .use_simple_logger()
-        .launch(data)
-        .expect("launch failed");
-}
-
-fn ui_builder() -> impl Widget<AppData> {
-    Flex::column()
-        .cross_axis_alignment(druid::widget::CrossAxisAlignment::End)
-        .with_child(
-            error_displaying_value_textbox("Dollars:", NaiveCurrencyFormatter::DOLLARS, None, None)
-                .lens(AppData::dollars),
-        )
-        .with_default_spacer()
-        .with_child(
-            error_displaying_value_textbox(
-                "Euros, often:",
-                NaiveCurrencyFormatter::EUROS,
-                None,
-                None,
-            )
-            .lens(AppData::euros),
-        )
-        .with_default_spacer()
-        .with_child(
-            error_displaying_value_textbox(
-                "Sterling Quidpence:",
-                NaiveCurrencyFormatter::GBP,
-                None,
-                None,
-            )
-            .lens(AppData::pounds),
-        )
-        .with_default_spacer()
-        .with_child(
-            error_displaying_value_textbox(
-                "Postal Code:",
-                CanadianPostalCodeFormatter,
-                Some("H1M 0M0"),
-                None,
-            )
-            .lens(AppData::postal_code),
-        )
-        .with_default_spacer()
-        .with_child(
-            error_displaying_value_textbox(
-                "Cat selector:",
-                CatSelectingFormatter,
-                Some("Don't type 'cat'"),
-                Some(140.0),
-            )
-            .lens(AppData::dont_type_cat),
-        )
-        .center()
-        //.debug_paint_layout()
-        .debug_widget_id()
-}
-
-fn error_displaying_value_textbox<T: Data>(
-    label: &str,
-    formatter: impl Formatter<T> + 'static,
-    placeholder: Option<&str>,
-    textbox_width: Option<f64>,
-) -> impl Widget<T> {
-    const DEFAULT_WIDTH: f64 = 100.0;
-    let label = Label::new(label);
-    let textbox = TextBox::new()
-        .with_placeholder(placeholder.unwrap_or(""))
-        .with_formatter(formatter)
-        .fix_width(textbox_width.unwrap_or(DEFAULT_WIDTH));
-
-    ErrorDisplayTextbox::new(
-        Flex::row()
-            .cross_axis_alignment(druid::widget::CrossAxisAlignment::Baseline)
-            .with_child(label)
-            .with_default_spacer()
-            .with_child(textbox),
-    )
-}
-
-struct ErrorDisplayTextbox<T, W> {
-    textbox: WidgetPod<T, W>,
-    error: Option<TextLayout<String>>,
-}
-
-impl<T: Data, W: Widget<T>> ErrorDisplayTextbox<T, W> {
-    fn new(textbox: W) -> Self {
-        ErrorDisplayTextbox {
-            textbox: WidgetPod::new(textbox),
-            error: None,
-        }
-    }
-}
-
-impl<T: Data, W: Widget<T>> Widget<T> for ErrorDisplayTextbox<T, W> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        match event {
-            Event::Notification(n) if n.is(TextBox::VALIDATION_FAILED) => {
-                let text = n.get(TextBox::VALIDATION_FAILED).unwrap().to_string();
-                let mut layout = TextLayout::from_text(text);
-                layout.set_text_size(12.0);
-                layout.set_text_alignment(druid::TextAlignment::End);
-                self.error = Some(layout);
-                ctx.set_handled();
-            }
-            Event::Notification(n) if n.is(TextBox::EDITING_FINISHED) => {
-                self.error = None;
-                ctx.request_layout();
-                ctx.set_handled();
-            }
-            _ => self.textbox.event(ctx, event, data, env),
-        }
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.textbox.lifecycle(ctx, event, data, env);
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.textbox.update(ctx, data, env);
-        if !old_data.same(data) {
-            self.error = None;
-        } else if let Some(error) = &mut self.error {
-            if error.needs_rebuild_after_update(ctx) {
-                ctx.request_layout();
-            }
-        }
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let textbox_size = self.textbox.layout(ctx, bc, data, env);
-        self.textbox.set_origin(ctx, data, env, Point::ZERO);
-        match &mut self.error {
-            Some(error) => {
-                error.set_wrap_width(textbox_size.width);
-                error.rebuild_if_needed(ctx.text(), env);
-                let error_size = error.size();
-                let total_width = textbox_size.width.max(error_size.width);
-                let v_padding = env.get(druid::theme::WIDGET_CONTROL_COMPONENT_PADDING);
-                let total_height = textbox_size.height + error_size.height + v_padding;
-                // set our baseline; we want to use the baseline of the TextBox.
-                let textbox_baseline = self.textbox.baseline_offset();
-                let our_baseline = textbox_baseline + v_padding + error_size.height;
-                ctx.set_baseline_offset(our_baseline);
-                Size::new(total_width, total_height)
-            }
-            None => {
-                // if we aren't drawing the label, our baseline is identical to textbox's
-                ctx.set_baseline_offset(self.textbox.baseline_offset());
-                textbox_size
-            }
-        }
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let v_padding = env.get(druid::theme::WIDGET_CONTROL_COMPONENT_PADDING);
-        self.textbox.paint(ctx, data, env);
-        let textbox_size = self.textbox.layout_rect().size();
-        if let Some(error) = &mut self.error {
-            // we align the error to the right edge of the textbox, if allowed
-            let h_padding = (textbox_size.width - error.size().width).max(0.0);
-
-            let error_pos = Point::new(h_padding, self.textbox.layout_rect().height() + v_padding);
-            error.draw(ctx, error_pos);
-        }
-    }
-}
+use druid::text::Selection;
+use druid::Data;
 
 /// A formatter that can display currency values.
-struct NaiveCurrencyFormatter {
+pub struct NaiveCurrencyFormatter {
     currency_symbol: char,
     thousands_separator: char,
     decimal_separator: char,
@@ -218,7 +27,7 @@ struct NaiveCurrencyFormatter {
 
 /// Errors returned by [`NaiveCurrencyFormatter`].
 #[derive(Debug, Clone)]
-enum CurrencyValidationError {
+pub enum CurrencyValidationError {
     Parse(std::num::ParseFloatError),
     InvalidChar(char),
     TooManyCharsAfterDecimal,
@@ -229,39 +38,42 @@ enum CurrencyValidationError {
 ///
 /// This formatter will accept lowercase characters as input, but will replace
 /// them with uppercase characters.
-struct CanadianPostalCodeFormatter;
+pub struct CanadianPostalCodeFormatter;
 
 /// A Canadian postal code, in the format 'A0A0A0'.
 #[derive(Debug, Clone, Copy, Data)]
-struct PostalCode {
+pub struct PostalCode {
     chars: [u8; 6],
 }
 
 /// Error returned by [`CanadianPostalCodeFormatter`].
 #[derive(Debug, Clone)]
-enum PostalCodeValidationError {
+pub enum PostalCodeValidationError {
     WrongNumberOfCharacters,
     IncorrectFormat,
 }
 
 /// A formatter that sets the selection to the first occurance of the word 'cat'
 /// in an input string, if it is found.
-struct CatSelectingFormatter;
+pub struct CatSelectingFormatter;
 
 impl NaiveCurrencyFormatter {
-    const DOLLARS: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
+    /// A formatter for USD.
+    pub const DOLLARS: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
         currency_symbol: '$',
         thousands_separator: ',',
         decimal_separator: '.',
     };
 
-    const EUROS: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
+    /// A formatter for euros.
+    pub const EUROS: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
         currency_symbol: '€',
         thousands_separator: '.',
         decimal_separator: ',',
     };
 
-    const GBP: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
+    /// A formatter for british pounds.
+    pub const GBP: NaiveCurrencyFormatter = NaiveCurrencyFormatter {
         currency_symbol: '£',
         thousands_separator: '.',
         decimal_separator: ',',
@@ -336,7 +148,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
         let mut char_iter = input.chars();
         if let Some(c) = char_iter.next() {
             if !(c.is_ascii_digit() || c == '-') {
-                return Validation::failure();
+                return Validation::failure(CurrencyValidationError::InvalidChar(c));
             }
         }
         let mut char_iter =
@@ -355,15 +167,11 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
             }
             (Some(c), None, _) if c.is_ascii_digit() => Validation::success(),
             (None, None, _) => Validation::success(),
-            (Some(c1), Some(c2), None) if c1.is_ascii_digit() && c2.is_ascii_digit() => {
+            (Some(c1), Some(c2), _) if c1.is_ascii_digit() && c2.is_ascii_digit() => {
                 Validation::success()
             }
-            (Some(c1), other, _) => {
-                let bad_char = if c1.is_ascii_digit() {
-                    c1
-                } else {
-                    other.unwrap()
-                };
+            (Some(c1), Some(other), _) => {
+                let bad_char = if c1.is_ascii_digit() { other } else { c1 };
                 Validation::failure(CurrencyValidationError::InvalidChar(bad_char))
             }
             _ => unreachable!(),
@@ -467,7 +275,7 @@ impl Formatter<PostalCode> for CanadianPostalCodeFormatter {
 }
 
 impl PostalCode {
-    fn new(s: &str) -> Result<Self, PostalCodeValidationError> {
+    pub fn new(s: &str) -> Result<Self, PostalCodeValidationError> {
         if s.as_bytes().len() != 6 {
             Err(PostalCodeValidationError::WrongNumberOfCharacters)
         } else {
