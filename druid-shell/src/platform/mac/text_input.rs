@@ -601,11 +601,13 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
         "insertContainerBreak:" => {} // textedit and pages don't seem to support, so neither will we
         "quickLookPreviewItems:" => {} // don't seem to apply to text editing?? hopefully
         // TODO(lord): reply to cmyr comment
-        "complete:" => {} // intercepted by the IME; if it gets to us, noop
+        "complete:" => {
+            // these are normally intercepted by the IME; if it gets to us, log
+            eprintln!("got an unexpected 'complete' text input command from macOS");
+        }
         "noop:" => {}
         e => {
-            eprintln!("unknown text editing command from macos: {}", e);
-            {};
+            eprintln!("unknown text editing command from macOS: {}", e);
         }
     };
 }
