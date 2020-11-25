@@ -36,6 +36,13 @@ const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete
 const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
 
 /// A widget that allows user text input.
+///
+/// # Editing values
+///
+/// If the text you are editing represents a value of some other type, such
+/// as a number, you should use a [`ValueTextBox`] and an appropriate
+/// [`Formatter`]. You can create a [`ValueTextBox`] by passing the appropriate
+/// [`Formatter`] to [`TextBox::with_formatter`].
 #[derive(Debug, Clone)]
 pub struct TextBox<T> {
     placeholder: TextLayout<String>,
@@ -62,7 +69,20 @@ pub struct TextBox<T> {
 /// A `TextBox` that uses a [`Formatter`] to handle formatting and validation
 /// of its data.
 ///
-/// [`Formatter`]: crate::text::Formatter;
+/// There are a number of ways to customize the behaviour of the text box
+/// in relation to the provided [`Formatter`]:
+///
+/// - [`ValueTextBox::validate_while_editing`] takes a flag that determines whether
+/// or not the textbox can display text that is not valid, while editing is
+/// in progress. (Text will still be validated when the user attempts to complete
+/// editing.)
+///
+/// - [`ValueTextBox::update_data_while_editing`] takes a flag that determines
+/// whether the output value is updated during editing, when possible.
+///
+/// - [`ValueTextBox::delegate`] allows you to provide some implementation of
+/// the [`ValidationDelegate`] trait, which receives a callback during editing;
+/// this can be used to report errors further back up the tree.
 pub struct ValueTextBox<T> {
     inner: TextBox<String>,
     formatter: Box<dyn Formatter<T>>,
@@ -288,14 +308,6 @@ impl<T> TextBox<T> {
     pub fn text_position(&self) -> Point {
         self.text_pos
     }
-
-    /// Return a mutable reference to the [`Editor`] used by this `TextBox`.
-    ///
-    /// [`Editor`]: crate::text::Editor
-    //TODO: document the ways you should and shouldn't use this
-    pub fn editor_mut(&mut self) -> &mut Editor<T> {
-        &mut self.editor
-    }
 }
 
 impl TextBox<String> {
@@ -313,8 +325,16 @@ impl TextBox<String> {
 }
 
 impl<T: TextStorage + EditableText> TextBox<T> {
+    /// Set the textbox's selection.
+    pub fn set_selection(&mut self, selection: Selection) {
+        self.editor.set_selection(selection);
+    }
+
     /// Set the text and force the editor to update.
-    //FIXME: do we need this? can we not just rely on `update`?
+    ///
+    /// This should be rarely needed; the main use-case would be if you need
+    /// to manually set the text and then immediately do hit-testing or other
+    /// tasks that rely on having an up-to-date text layout.
     pub fn force_rebuild(&mut self, text: T, factory: &mut PietText, env: &Env) {
         self.editor.set_text(text);
         self.editor.rebuild_if_needed(factory, env);
@@ -651,14 +671,13 @@ impl<T: Data> ValueTextBox<T> {
         self
     }
 
-    fn complete(&mut self, ctx: &mut EventCtx, data: &mut T, env: &Env) {
+    fn complete(&mut self, ctx: &mut EventCtx, data: &mut T) {
         match self.formatter.value(&self.buffer) {
             Ok(new_data) => {
                 *data = new_data;
-                self.inner
-                    .force_rebuild(self.formatter.format(data), ctx.text(), env);
+                self.buffer = self.formatter.format(data);
                 self.is_editing = false;
-                ctx.request_layout();
+                ctx.request_update();
                 if ctx.has_focus() {
                     ctx.resign_focus();
                 }
@@ -682,24 +701,19 @@ impl<T: Data> ValueTextBox<T> {
         }
     }
 
-    fn cancel(&mut self, ctx: &mut EventCtx, data: &T, env: &Env) {
+    fn cancel(&mut self, ctx: &mut EventCtx, data: &T) {
         self.is_editing = false;
         self.buffer = self.formatter.format(data);
-        ctx.request_layout();
+        ctx.request_update();
         ctx.resign_focus();
-        self.inner
-            .force_rebuild(self.buffer.clone(), ctx.text(), env);
         self.send_event(ctx, TextBoxEvent::Cancel);
     }
 
-    fn begin(&mut self, ctx: &mut EventCtx, data: &T, env: &Env) {
+    fn begin(&mut self, ctx: &mut EventCtx, data: &T) {
         self.is_editing = true;
         self.buffer = self.formatter.format_for_editing(data);
         self.last_known_data = Some(data.clone());
-        self.inner
-            .force_rebuild(self.buffer.clone(), ctx.text(), env);
-        self.old_buffer = self.buffer.clone();
-        ctx.request_layout();
+        ctx.request_update();
         self.send_event(ctx, TextBoxEvent::Began);
     }
 
@@ -713,32 +727,27 @@ impl<T: Data> ValueTextBox<T> {
 impl<T: Data> Widget<T> for ValueTextBox<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if matches!(event, Event::Command(cmd) if cmd.is(BEGIN_EDITING)) {
-            return self.begin(ctx, data, env);
+            return self.begin(ctx, data);
         }
 
         if self.is_editing {
             // if we reject an edit we want to reset the selection
             let pre_sel = *self.inner.editor().selection();
             match event {
-                Event::Command(cmd) if cmd.is(COMPLETE_EDITING) => {
-                    return self.complete(ctx, data, env)
-                }
-                Event::Command(cmd) if cmd.is(CANCEL_EDITING) => {
-                    return self.cancel(ctx, data, env)
-                }
+                Event::Command(cmd) if cmd.is(COMPLETE_EDITING) => return self.complete(ctx, data),
+                Event::Command(cmd) if cmd.is(CANCEL_EDITING) => return self.cancel(ctx, data),
                 Event::KeyDown(k_e) if HotKey::new(None, KbKey::Enter).matches(k_e) => {
                     ctx.set_handled();
-                    self.complete(ctx, data, env);
+                    self.complete(ctx, data);
                     return;
                 }
                 Event::KeyDown(k_e) if HotKey::new(None, KbKey::Escape).matches(k_e) => {
                     ctx.set_handled();
-                    self.cancel(ctx, data, env);
+                    self.cancel(ctx, data);
                     return;
                 }
                 event => {
                     self.inner.event(ctx, event, &mut self.buffer, env);
-                    ctx.request_paint();
                 }
             }
             // if an edit occured, validate it with the formatter
@@ -776,10 +785,8 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
                     };
 
                     if let Some(new_buf) = new_buf {
-                        self.buffer = new_buf.clone();
-                        self.inner.editor_mut().set_text(new_buf);
+                        self.buffer = new_buf;
                     }
-                    //FIXME we stash this and set it in update; can we do the same with `new_buf`?
                     self.force_selection = new_sel;
 
                     if self.update_data_while_editing && !validation.is_err() {
@@ -796,10 +803,14 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
                     }
                     None => self.send_event(ctx, TextBoxEvent::Changed),
                 };
+                ctx.request_update();
             }
-            ctx.request_update();
         } else if let Event::MouseDown(_) = event {
-            self.begin(ctx, data, env);
+            self.begin(ctx, data);
+            // we need to rebuild immediately here in order for the click
+            // to be handled with the most recent text.
+            self.inner
+                .force_rebuild(self.buffer.clone(), ctx.text(), env);
             self.inner.event(ctx, event, &mut self.buffer, env);
         }
     }
@@ -832,22 +843,33 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
                 self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
                 self.old_buffer = self.buffer.clone();
             } else {
+                // textbox is not well equipped to deal with the fact that, in
+                // druid, data can change anywhere in the tree. If we are actively
+                // editing, and new data arrives, we ignore the new data and keep
+                // editing; the alternative would be to cancel editing, which
+                // could also make sense.
                 log::warn!(
                     "ValueTextBox data changed externally, idk: '{}'",
                     self.formatter.format(data)
                 );
             }
-        } else if !old_data.same(data) {
-            // we aren't editing and data changed
-            let new_text = self.formatter.format(data);
-            self.old_buffer = std::mem::replace(&mut self.buffer, new_text);
-            self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
-        } else if ctx.env_changed() {
-            self.inner.update(ctx, &self.buffer, &self.buffer, env);
-            ctx.request_layout();
+        } else {
+            if !old_data.same(data) {
+                // we aren't editing and data changed
+                let new_text = self.formatter.format(data);
+                self.old_buffer = std::mem::replace(&mut self.buffer, new_text);
+            }
+
+            if !self.old_buffer.same(&self.buffer) {
+                // inner widget handles calling request_layout, as needed
+                self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
+                self.old_buffer = self.buffer.clone();
+            } else if ctx.env_changed() {
+                self.inner.update(ctx, &self.buffer, &self.buffer, env);
+            }
         }
         if let Some(sel) = self.force_selection.take() {
-            self.inner.editor_mut().set_selection(sel);
+            self.inner.set_selection(sel);
         }
     }
 
