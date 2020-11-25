@@ -61,8 +61,10 @@ use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::text_input::{TextInputHandler, TextInputToken, TextInputUpdate};
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel, WindowState};
+use crate::text::{Event, InputHandler};
+use crate::window::{
+    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel, WindowState,
+};
 use crate::Error;
 
 #[allow(non_upper_case_globals)]
@@ -498,7 +500,7 @@ lazy_static! {
 pub(super) fn get_edit_lock_from_window(
     this: &mut Object,
     mutable: bool,
-) -> Option<Box<dyn TextInputHandler>> {
+) -> Option<Box<dyn InputHandler>> {
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -1105,22 +1107,22 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
         let mut state = unsafe {
             let view = self.nsview.load().as_ref().unwrap();
             let state: *mut c_void = *view.get_ivar("viewState");
             &mut (*(state as *mut ViewState))
         };
         if let Some(old_field) = state.active_text_input {
-            self.update_text_input(old_field, TextInputUpdate::Reset);
+            self.update_text_input(old_field, Event::Reset);
         }
         state.active_text_input = active_field;
         if let Some(new_field) = active_field {
-            self.update_text_input(new_field, TextInputUpdate::Reset);
+            self.update_text_input(new_field, Event::Reset);
         }
     }
 
-    pub fn update_text_input(&self, token: TextInputToken, update: TextInputUpdate) {
+    pub fn update_text_input(&self, token: TextInputToken, update: Event) {
         let state = unsafe {
             let view = self.nsview.load().as_ref().unwrap();
             let state: *mut c_void = *view.get_ivar("viewState");
@@ -1130,11 +1132,11 @@ impl WindowHandle {
             return;
         }
         match update {
-            TextInputUpdate::LayoutChanged => unsafe {
+            Event::LayoutChanged => unsafe {
                 let input_context: id = msg_send![*self.nsview.load(), inputContext];
                 let _: () = msg_send![input_context, invalidateCharacterCoordinates];
             },
-            TextInputUpdate::Reset | TextInputUpdate::SelectionChanged => unsafe {
+            Event::Reset | Event::SelectionChanged => unsafe {
                 let input_context: id = msg_send![*self.nsview.load(), inputContext];
                 let _: () = msg_send![input_context, discardMarkedText];
                 let mut edit_lock = state.handler.text_input(token, true);

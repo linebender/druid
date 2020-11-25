@@ -47,9 +47,11 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    DeferredOp, FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+};
 
 use super::application::Application;
 use super::dialog;
@@ -627,7 +629,7 @@ impl WindowBuilder {
                     state.current_keycode.set(Some(hw_keycode));
 
                     state.with_handler(|h|
-                        simulate_text_input(h, state.active_text_input.get(), make_key_event(key, repeat, KeyState::Down))
+                        simulate_input(h, state.active_text_input.get(), make_key_event(key, repeat, KeyState::Down))
                     );
                 }
 
@@ -993,13 +995,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
         if let Some(state) = self.state.upgrade() {
             state.active_text_input.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 

@@ -28,7 +28,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
-use crate::text_input::{TextInputHandler, TextInputToken, TextInputUpdate};
+use crate::text::{Event, InputHandler};
 use piet_common::PietText;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -50,6 +50,31 @@ impl TimerToken {
     /// Create a new token from a raw value.
     pub const fn from_raw(id: u64) -> TimerToken {
         TimerToken(id)
+    }
+
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
+        self.0
+    }
+}
+
+/// Uniquely identifies a text input field inside a window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct TextInputToken(u64);
+
+impl TextInputToken {
+    /// A token that does not correspond to any text input.
+    pub const INVALID: TextInputToken = TextInputToken(0);
+
+    /// Create a new token; this should for the most part be called only by platform code.
+    pub fn next() -> TextInputToken {
+        static TEXT_FIELD_COUNTER: Counter = Counter::new();
+        TextInputToken(TEXT_FIELD_COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> TextInputToken {
+        TextInputToken(id)
     }
 
     /// Get the raw value for a token.
@@ -278,28 +303,39 @@ impl WindowHandle {
         self.0.text()
     }
 
-    /// Indicates there's a new editable text input in the window.
+    /// Indicates to the platform that there's a new editable text input in the window.
+    ///
+    /// This method should be called any time a new editable text field is created inside a window.
+    /// Any text field with a `TextInputToken` that has not yet been destroyed with `remove_text_input`
+    /// *must* be ready to accept input from the platform via `WinHandler::text_input` at any time, even if
+    /// it is not currently focused.
+    ///
     /// Returns the `TextInputToken` associated with this new text input.
-    /// `WinHandler::text_input` should be able to serve edit locks for the returned token
-    /// at any point in time until the application passes the token to `remove_text_input`.
+    // TODO(lord): would `add_text_field` be more clear?
     pub fn add_text_input(&self) -> TextInputToken {
         self.0.add_text_input()
     }
 
-    /// Indicates a text input has been removed from the window.
+    /// Indicates to the platform that a text input field has been destroyed.
+    ///
+    /// If `token` is the text field currently focused, the platform automatically
+    /// sets the focused field to `None`.
     pub fn remove_text_input(&self, token: TextInputToken) {
         self.0.remove_text_input(token)
     }
 
-    /// Sets the currently focused text input.
-    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
-        self.0.set_active_text_input(active_field)
+    /// Indicates to the platform that the focused text input has changed.
+    ///
+    /// This must be called any time focus changes to a different text input, or
+    /// when focus switches away from a text input.
+    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
+        self.0.set_focused_text_input(active_field)
     }
 
     /// Indicates some aspect of the text input has updated; the selection, contents, etc.
-    /// This method should *never* be called in response to edits from a `TextInputHandler`;
+    /// This method should *never* be called in response to edits from a `InputHandler`;
     /// only in response to changes from the application: scrolling, remote edits, etc.
-    pub fn update_text_input(&self, token: TextInputToken, update: TextInputUpdate) {
+    pub fn update_text_input(&self, token: TextInputToken, update: Event) {
         self.0.update_text_input(token, update)
     }
 
@@ -540,18 +576,11 @@ pub trait WinHandler {
 
     /// Grabs a lock for the text document specified by `token`.
     ///
-    /// If `mutable` is true, the lock should be a write lock, and allow calling mutating methods on TextInputHandler.
-    /// This method is called from the top level of the event loop and expects to acquire a lock successfully.
-    ///
-    /// Why does text input acquire a lock, instead of sending text input events? It turns out many input methods need
-    /// to know the context around the selection in order to make edits — think about how autocomplete works on most phones,
-    /// for example. If the input method is on a different process, as is the case on many platforms, not using a lock
-    /// will cause race conditions. As an example, imagine an input method detects that the caret is at the end of the
-    /// word "helo", and wants to autocorrect it to "hello", so it issues commands to delete backwards one grapheme and
-    /// insert "lo". If we allow concurrent edits without locks, the user might have simultaneously moved the caret to a
-    /// different part of the document, and we'll get "lo" inserted in some random place!
+    /// If `mutable` is true, the lock should be a write lock, and allow calling mutating methods on InputHandler.
+    /// This method is called from the top level of the event loop and expects to acquire a lock successfully. For
+    /// more information, see [the text input documentation](crate::text).
     #[allow(unused_variables)]
-    fn text_input(&mut self, token: TextInputToken, mutable: bool) -> Box<dyn TextInputHandler> {
+    fn text_input(&mut self, token: TextInputToken, mutable: bool) -> Box<dyn InputHandler> {
         panic!("text_input was called on a WinHandler that did not expect text input.")
     }
 

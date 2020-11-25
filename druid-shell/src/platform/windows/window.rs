@@ -76,9 +76,11 @@ use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+};
 
 /// The platform target DPI.
 ///
@@ -987,7 +989,7 @@ impl WndProc for MyWndProc {
                                 KeyState::Down => {
                                     let keydown_handled = s.handler.key_down(event.clone())
                                         || self.with_window_state(|window_state| {
-                                            simulate_text_input(
+                                            simulate_input(
                                                 &mut *s.handler,
                                                 window_state.active_text_input.get(),
                                                 event,
@@ -1975,13 +1977,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
         if let Some(state) = self.state.upgrade() {
             state.active_text_input.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 
