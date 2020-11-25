@@ -31,9 +31,9 @@ use druid_shell::piet::{
 };
 
 use druid_shell::{
-    keyboard_types::Key, Affinity, Application, KeyEvent, Region, TextDirection, TextInputAction,
-    TextInputHandler, TextInputToken, TextInputUpdate, TextMovement, TextSelection,
-    VerticalMovement, WinHandler, WindowBuilder, WindowHandle,
+    keyboard_types::Key, text, text::Action, text::Event, text::InputHandler, text::Selection,
+    text::VerticalMovement, Application, KeyEvent, Region, TextInputToken, WinHandler,
+    WindowBuilder, WindowHandle,
 };
 
 use druid_shell::kurbo::{Point, Rect};
@@ -56,7 +56,7 @@ struct AppState {
 #[derive(Default)]
 struct DocumentState {
     text: String,
-    selection: TextSelection,
+    selection: Selection,
     composition: Option<Range<usize>>,
     text_engine: Option<PietText>,
     layout: Option<PietTextLayout>,
@@ -79,7 +79,7 @@ impl WinHandler for AppState {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
         let token = self.handle.add_text_input();
-        self.handle.set_active_text_input(Some(token));
+        self.handle.set_focused_text_input(Some(token));
         self.text_input_token = Some(token);
         let mut doc = self.document.borrow_mut();
         doc.text_engine = Some(handle.text());
@@ -95,6 +95,7 @@ impl WinHandler for AppState {
         piet.fill(rect, &BG_COLOR);
         let doc = self.document.borrow();
         let layout = doc.layout.as_ref().unwrap();
+        // TODO(lord): rects for range on layout
         if let Some(composition_range) = doc.composition.as_ref() {
             let left_x = layout
                 .hit_test_text_position(composition_range.start)
@@ -107,14 +108,8 @@ impl WinHandler for AppState {
             );
         }
         if !doc.selection.is_caret() {
-            let left_x = layout
-                .hit_test_text_position(doc.selection.upstream_index())
-                .point
-                .x;
-            let right_x = layout
-                .hit_test_text_position(doc.selection.downstream_index())
-                .point
-                .x;
+            let left_x = layout.hit_test_text_position(doc.selection.min()).point.x;
+            let right_x = layout.hit_test_text_position(doc.selection.max()).point.x;
             piet.fill(
                 Rect::new(left_x, 0.0, right_x, FONT_SIZE),
                 &SELECTION_BG_COLOR,
@@ -146,13 +141,11 @@ impl WinHandler for AppState {
             println!("user pressed c! wow! setting selection to 0");
 
             // update internal selection state
-            self.document.borrow_mut().selection = TextSelection::new_caret(0);
+            self.document.borrow_mut().selection = Selection::new_caret(0);
 
             // notify the OS that we've updated the selection
-            self.handle.update_text_input(
-                self.text_input_token.unwrap(),
-                TextInputUpdate::SelectionChanged,
-            );
+            self.handle
+                .update_text_input(self.text_input_token.unwrap(), Event::SelectionChanged);
 
             // repaint window
             self.handle.request_anim_frame();
@@ -163,8 +156,8 @@ impl WinHandler for AppState {
         false
     }
 
-    fn text_input(&mut self, _token: TextInputToken, _mutable: bool) -> Box<dyn TextInputHandler> {
-        Box::new(AppTextInputHandler {
+    fn text_input(&mut self, _token: TextInputToken, _mutable: bool) -> Box<dyn InputHandler> {
+        Box::new(AppInputHandler {
             state: self.document.clone(),
             window_size: self.size,
             window_handle: self.handle.clone(),
@@ -188,20 +181,20 @@ impl WinHandler for AppState {
     }
 }
 
-struct AppTextInputHandler {
+struct AppInputHandler {
     state: Rc<RefCell<DocumentState>>,
     window_size: Size,
     window_handle: WindowHandle,
 }
 
-impl TextInputHandler for AppTextInputHandler {
-    fn selection(&mut self) -> TextSelection {
+impl InputHandler for AppInputHandler {
+    fn selection(&mut self) -> Selection {
         self.state.borrow().selection.clone()
     }
     fn composition_range(&mut self) -> Option<Range<usize>> {
         self.state.borrow().composition.clone()
     }
-    fn set_selection(&mut self, range: TextSelection) {
+    fn set_selection(&mut self, range: Selection) {
         self.state.borrow_mut().selection = range;
         self.window_handle.request_anim_frame();
     }
@@ -259,28 +252,28 @@ impl TextInputHandler for AppTextInputHandler {
         let range_end_x = layout.hit_test_text_position(range.end).point.x;
         Some(Rect::new(range_start_x, 0.0, range_end_x, FONT_SIZE))
     }
-    fn line_range(&mut self, _char_index: usize, _affinity: Affinity) -> Range<usize> {
+    fn line_range(&mut self, _char_index: usize, _affinity: text::Affinity) -> Range<usize> {
         // we don't have multiple lines, so no matter the input, output is the whole document
         0..self.state.borrow().text.len()
     }
 
-    fn handle_action(&mut self, action: TextInputAction) {
+    fn handle_action(&mut self, action: Action) {
         let handled = apply_default_behavior(self, action);
         println!("action: {:?} handled: {:?}", action, handled);
     }
 }
 
-fn apply_default_behavior(handler: &mut AppTextInputHandler, action: TextInputAction) -> bool {
+fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool {
     let is_caret = handler.selection().is_caret();
     match action {
-        TextInputAction::Move(movement) => {
+        Action::Move(movement) => {
             let selection = handler.selection();
             let index = if movement_goes_downstream(movement) {
-                selection.downstream_index()
+                selection.max()
             } else {
-                selection.upstream_index()
+                selection.min()
             };
-            let updated_index = if let (false, TextMovement::Grapheme(_)) = (is_caret, movement) {
+            let updated_index = if let (false, text::Movement::Grapheme(_)) = (is_caret, movement) {
                 // handle special cases of pressing left/right when the selection is not a caret
                 index
             } else {
@@ -289,9 +282,9 @@ fn apply_default_behavior(handler: &mut AppTextInputHandler, action: TextInputAc
                     None => return false,
                 }
             };
-            handler.set_selection(TextSelection::new_caret(updated_index));
+            handler.set_selection(Selection::new_caret(updated_index));
         }
-        TextInputAction::MoveExtent(movement) => {
+        Action::MoveExtent(movement) => {
             let mut selection = handler.selection();
             selection.extent = match apply_movement(handler, movement, selection.extent) {
                 Some(v) => v,
@@ -299,20 +292,20 @@ fn apply_default_behavior(handler: &mut AppTextInputHandler, action: TextInputAc
             };
             handler.set_selection(selection);
         }
-        TextInputAction::SelectAll => {
+        Action::SelectAll => {
             let len = handler.len();
-            let selection = TextSelection {
+            let selection = Selection {
                 anchor: 0,
                 extent: len,
             };
             handler.set_selection(selection);
         }
-        TextInputAction::Delete(_) if !is_caret => {
+        Action::Delete(_) if !is_caret => {
             // movement is ignored for non-caret selections
             let selection = handler.selection();
             handler.replace_range(selection.to_range(), "");
         }
-        TextInputAction::Delete(movement) => {
+        Action::Delete(movement) => {
             let mut selection = handler.selection();
             selection.extent = match apply_movement(handler, movement, selection.extent) {
                 Some(v) => v,
@@ -325,35 +318,35 @@ fn apply_default_behavior(handler: &mut AppTextInputHandler, action: TextInputAc
     true
 }
 
-fn movement_goes_downstream(movement: TextMovement) -> bool {
+fn movement_goes_downstream(movement: text::Movement) -> bool {
     match movement {
-        TextMovement::Grapheme(dir) => direction_goes_downstream(dir),
-        TextMovement::Word(dir) => direction_goes_downstream(dir),
-        TextMovement::Line(dir) => direction_goes_downstream(dir),
-        TextMovement::ParagraphEnd => true,
-        TextMovement::Vertical(VerticalMovement::LineDown) => true,
-        TextMovement::Vertical(VerticalMovement::PageDown) => true,
-        TextMovement::Vertical(VerticalMovement::DocumentEnd) => true,
+        text::Movement::Grapheme(dir) => direction_goes_downstream(dir),
+        text::Movement::Word(dir) => direction_goes_downstream(dir),
+        text::Movement::Line(dir) => direction_goes_downstream(dir),
+        text::Movement::ParagraphEnd => true,
+        text::Movement::Vertical(VerticalMovement::LineDown) => true,
+        text::Movement::Vertical(VerticalMovement::PageDown) => true,
+        text::Movement::Vertical(VerticalMovement::DocumentEnd) => true,
         _ => false,
     }
 }
 
-fn direction_goes_downstream(direction: TextDirection) -> bool {
+fn direction_goes_downstream(direction: text::Direction) -> bool {
     match direction {
-        TextDirection::Left => false,
-        TextDirection::Right => true,
-        TextDirection::Upstream => false,
-        TextDirection::Downstream => true,
+        text::Direction::Left => false,
+        text::Direction::Right => true,
+        text::Direction::Upstream => false,
+        text::Direction::Downstream => true,
     }
 }
 
 fn apply_movement(
-    edit_lock: &mut AppTextInputHandler,
-    movement: TextMovement,
+    edit_lock: &mut AppInputHandler,
+    movement: text::Movement,
     index: usize,
 ) -> Option<usize> {
     match movement {
-        TextMovement::Grapheme(dir) => {
+        text::Movement::Grapheme(dir) => {
             let doc_len = edit_lock.len();
             let mut cursor = GraphemeCursor::new(index, doc_len, true);
             let doc = edit_lock.slice(0..doc_len);

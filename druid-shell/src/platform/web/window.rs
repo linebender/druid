@@ -44,9 +44,11 @@ use crate::scale::{Scale, ScaledArea};
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
-use crate::text_input::{simulate_text_input, TextInputToken, TextInputUpdate};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -299,7 +301,7 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
         }
         let mut handler = state.handler.borrow_mut();
         if !handler.key_down(kb_event.clone()) {
-            simulate_text_input(&mut **handler, state.active_text_input.get(), kb_event);
+            simulate_input(&mut **handler, state.active_text_input.get(), kb_event);
         }
     });
 }
@@ -565,13 +567,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_active_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
         if let Some(state) = self.0.upgrade() {
             state.active_text_input.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: TextInputUpdate) {
+    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
         // no-op for now, until we get a properly implemented text input
     }
 

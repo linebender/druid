@@ -31,7 +31,7 @@ use super::util::from_nsstring;
 /// be the authoritative source of truth for Unicode string values of keys.
 ///
 /// Most of the logic in this module is adapted from Mozilla, and in particular
-/// TextInputHandler.mm.
+/// InputHandler.mm.
 pub(crate) struct KeyboardState {
     last_mods: NSEventModifierFlags,
 }
