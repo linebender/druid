@@ -43,6 +43,7 @@ mod slider;
 mod spinner;
 mod split;
 mod stepper;
+pub mod styled_button;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
