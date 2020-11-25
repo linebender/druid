@@ -107,6 +107,8 @@ pub struct ValidationError {
 ///
 /// [`Formatter`]: Formatter
 /// [`FromStr`]: std::str::FromStr
+#[non_exhaustive]
+//TODO: take a fmt string (like `{:.2}` to allow user to customize output
 pub struct ParseFormatter;
 
 impl Validation {
@@ -159,6 +161,13 @@ impl ValidationError {
     }
 }
 
+impl ParseFormatter {
+    /// Create a new `ParseFormatter`.
+    pub fn new() -> Self {
+        ParseFormatter
+    }
+}
+
 impl<T> Formatter<T> for ParseFormatter
 where
     T: FromStr + std::fmt::Display,
@@ -189,5 +198,11 @@ impl std::fmt::Display for ValidationError {
 impl std::error::Error for ValidationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&*self.inner)
+    }
+}
+
+impl Default for ParseFormatter {
+    fn default() -> Self {
+        ParseFormatter
     }
 }

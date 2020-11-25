@@ -220,6 +220,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 
     /// Parse a `Widget<String>`'s contents
+    #[deprecated(since = "0.7.0", note = "Use TextBox::with_formatter instead")]
     fn parse(self) -> Parse<Self>
     where
         Self: Widget<String>,
