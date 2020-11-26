@@ -552,3 +552,17 @@ where
         out
     }
 }
+
+/// A lens that always gives the same value and discards changes.
+#[derive(Debug, Copy, Clone)]
+pub struct Constant<T>(pub T);
+
+impl<A, B: Clone> Lens<A, B> for Constant<B> {
+    fn with<V, F: FnOnce(&B) -> V>(&self, _: &A, f: F) -> V {
+        f(&self.0)
+    }
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, _: &mut A, f: F) -> V {
+        let mut tmp = self.0.clone();
+        f(&mut tmp)
+    }
+}
