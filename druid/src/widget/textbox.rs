@@ -227,7 +227,10 @@ impl<T: TextStorage + EditableText> TextBox<T> {
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, self_width: f64, env: &Env) {
         let cursor_x = self.editor.cursor_line().p0.x;
-        let overall_text_width = self.editor.layout().size().width;
+        // if the text ends in trailing whitespace, that space is not included
+        // in its reported width, but we need to include it for these calculations.
+        // see https://github.com/linebender/druid/issues/1430
+        let overall_text_width = self.editor.layout().size().width.max(cursor_x);
         let text_insets = env.get(theme::TEXTBOX_INSETS);
 
         //// when advancing the cursor, we want some additional padding
