@@ -45,6 +45,7 @@ pub struct TextBox<T> {
     multiline: bool,
     alignment: TextAlignment,
     alignment_offset: f64,
+    text_pos: Point,
     /// true if a click event caused us to gain focus.
     ///
     /// On macOS, if focus happens via click then we set the selection based
@@ -75,6 +76,7 @@ impl<T> TextBox<T> {
             multiline: false,
             alignment: TextAlignment::Start,
             alignment_offset: 0.0,
+            text_pos: Point::ZERO,
             was_focused_from_click: false,
         }
     }
@@ -220,6 +222,17 @@ impl<T> TextBox<T> {
     /// the drawing of the text.
     pub fn editor(&self) -> &Editor<T> {
         &self.editor
+    }
+
+    /// The point, relative to the origin, where this text box draws its
+    /// [`TextLayout`].
+    ///
+    /// This is exposed in case the user wants to do additional drawing based
+    /// on properties of the text.
+    ///
+    /// This is not valid until `layout` has been called.
+    pub fn text_position(&self) -> Point {
+        self.text_pos
     }
 }
 
@@ -421,6 +434,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let size = bc.constrain((width, height));
         // if we have a non-left text-alignment, we need to manually adjust our position.
         self.update_alignment_adjustment(size.width - text_insets.x_value(), &text_metrics);
+        self.text_pos = Point::new(text_insets.x0 + self.alignment_offset, text_insets.y0);
 
         let bottom_padding = (size.height - text_metrics.size.height) / 2.0;
         let baseline_off =
@@ -461,7 +475,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             // Shift everything inside the clip by the hscroll_offset
             rc.transform(Affine::translate((-self.hscroll_offset, 0.)));
 
-            let text_pos = Point::new(text_insets.x0 + self.alignment_offset, text_insets.y0);
+            let text_pos = self.text_position();
             // Draw selection rect
             if !data.is_empty() {
                 if is_focused {
