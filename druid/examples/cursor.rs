@@ -44,28 +44,31 @@ impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
         data: &mut AppState,
         env: &Env,
     ) {
-        match event {
-            Event::WindowConnected => {
-                data.custom = ctx.window().make_cursor(&data.custom_desc).map(Rc::new);
-            }
-            Event::MouseMove(_) => {
-                // Because the cursor is reset to the default on every `MouseMove`
-                // event we have to explicitly overwrite this every event.
-                ctx.set_cursor(&data.cursor);
-            }
-            _ => {}
+        if let Event::WindowConnected = event {
+            data.custom = ctx.window().make_cursor(&data.custom_desc).map(Rc::new);
         }
         child.event(ctx, event, data, env);
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &AppState,
+        data: &AppState,
+        env: &Env,
+    ) {
+        if !Rc::ptr_eq(&data.cursor, &old_data.cursor) {
+            ctx.set_cursor(&data.cursor);
+        }
+        child.update(ctx, old_data, data, env);
     }
 }
 
 fn ui_builder() -> impl Widget<AppState> {
     Button::new("Change cursor")
-        .on_click(|ctx, data: &mut AppState, _env| {
+        .on_click(|_ctx, data: &mut AppState, _env| {
             data.cursor = next_cursor(&data.cursor, data.custom.clone());
-            // After changing the cursor, we need to update the active cursor
-            // via the context in order for the change to take effect immediately.
-            ctx.set_cursor(&data.cursor);
         })
         .padding(50.0)
         .controller(CursorArea {})

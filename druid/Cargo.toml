@@ -76,11 +76,11 @@ piet-common = { version = "=0.2.0-pre6", features = ["png"] }
 
 [[example]]
 name = "cursor"
-required-features = ["image"]
+required-features = ["image", "png"]
 
 [[example]]
 name = "image"
-required-features = ["image"]
+required-features = ["image", "png"]
 
 [[example]]
 name = "invalidation"
