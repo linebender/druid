@@ -50,7 +50,7 @@ use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
 use crate::window;
 use crate::window::{
-    DeferredOp, FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
 };
 
 use super::application::Application;
