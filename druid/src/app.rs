@@ -24,6 +24,8 @@ use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
 
 use druid_shell::WindowState;
 
+const WINDOW_MIN_SIZE: Size = Size::new(400., 400.);
+
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 
@@ -187,7 +189,7 @@ impl Default for WindowConfig {
     fn default() -> Self {
         WindowConfig {
             size: None,
-            min_size: None,
+            min_size: Some(WINDOW_MIN_SIZE),
             position: None,
             resizable: None,
             show_titlebar: None,
