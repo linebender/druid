@@ -15,10 +15,8 @@
 //! An Image widget.
 //! Please consider using SVG and the SVG widget as it scales much better.
 
-use druid_shell::ImageBuf;
-
 use crate::{
-    piet::{InterpolationMode, PietImage},
+    piet::{ImageBuf, InterpolationMode, PietImage},
     widget::common::FillStrat,
     widget::prelude::*,
     Data,
@@ -181,7 +179,7 @@ impl<T: Data> Widget<T> for Image {
             let piet_image = {
                 let image_data = &self.image_data;
                 self.paint_data
-                    .get_or_insert_with(|| image_data.to_piet_image(ctx.render_ctx))
+                    .get_or_insert_with(|| image_data.to_image(ctx.render_ctx))
             };
             ctx.transform(offset_matrix);
             ctx.draw_image(
