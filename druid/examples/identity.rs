@@ -16,7 +16,7 @@
 //!
 //! This example is fairly contrived; the basic idea is that there are 2 counters,
 //! and 2 buttons. If you press button one, counter one goes up. If you press button
-//! two counter 2 goes up. 
+//! two counter 2 goes up.
 //!
 //! The key insight is that each button is linked to a specific counter, and
 //! can send messages that are only handled by that widget/controler.
