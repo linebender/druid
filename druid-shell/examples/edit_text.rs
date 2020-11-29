@@ -32,7 +32,7 @@ use druid_shell::piet::{
 
 use druid_shell::{
     keyboard_types::Key, text, text::Action, text::Event, text::InputHandler, text::Selection,
-    text::VerticalMovement, Application, KeyEvent, Region, TextInputToken, WinHandler,
+    text::VerticalMovement, Application, KeyEvent, Region, TextFieldToken, WinHandler,
     WindowBuilder, WindowHandle,
 };
 
@@ -50,7 +50,7 @@ struct AppState {
     size: Size,
     handle: WindowHandle,
     document: Rc<RefCell<DocumentState>>,
-    text_input_token: Option<TextInputToken>,
+    text_input_token: Option<TextFieldToken>,
 }
 
 #[derive(Default)]
@@ -78,8 +78,8 @@ impl DocumentState {
 impl WinHandler for AppState {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
-        let token = self.handle.add_text_input();
-        self.handle.set_focused_text_input(Some(token));
+        let token = self.handle.add_text_field();
+        self.handle.set_focused_text_field(Some(token));
         self.text_input_token = Some(token);
         let mut doc = self.document.borrow_mut();
         doc.text_engine = Some(handle.text());
@@ -145,7 +145,7 @@ impl WinHandler for AppState {
 
             // notify the OS that we've updated the selection
             self.handle
-                .update_text_input(self.text_input_token.unwrap(), Event::SelectionChanged);
+                .update_text_field(self.text_input_token.unwrap(), Event::SelectionChanged);
 
             // repaint window
             self.handle.request_anim_frame();
@@ -156,7 +156,7 @@ impl WinHandler for AppState {
         false
     }
 
-    fn text_input(&mut self, _token: TextInputToken, _mutable: bool) -> Box<dyn InputHandler> {
+    fn text_input(&mut self, _token: TextFieldToken, _mutable: bool) -> Box<dyn InputHandler> {
         Box::new(AppInputHandler {
             state: self.document.clone(),
             window_size: self.size,
