@@ -53,7 +53,7 @@ use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
 use crate::window;
 use crate::window::{
-    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
 use super::application::Application;
@@ -333,7 +333,7 @@ impl WindowBuilder {
             idle_pipe: self.app.idle_pipe(),
             present_data: RefCell::new(present_data),
             buffers,
-            active_text_input: Cell::new(None),
+            active_text_field: Cell::new(None),
         });
         window.set_title(&self.title);
 
@@ -441,7 +441,7 @@ pub(crate) struct Window {
     /// actually been presented.
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
-    active_text_input: Cell<Option<TextInputToken>>,
+    active_text_field: Cell<Option<TextFieldToken>>,
 }
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
@@ -895,7 +895,7 @@ impl Window {
         };
         self.with_handler(|h| {
             if !h.key_down(key_event.clone()) {
-                simulate_input(h, self.active_text_input.get(), key_event);
+                simulate_input(h, self.active_text_field.get(), key_event);
             }
         });
     }
@@ -1507,25 +1507,25 @@ impl WindowHandle {
         PietText::new()
     }
 
-    pub fn add_text_input(&self) -> TextInputToken {
-        TextInputToken::next()
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
     }
 
-    pub fn remove_text_input(&self, token: TextInputToken) {
+    pub fn remove_text_field(&self, token: TextFieldToken) {
         if let Some(window) = self.window.upgrade() {
-            if window.active_text_input.get() == Some(token) {
-                window.active_text_input.set(None)
+            if window.active_text_field.get() == Some(token) {
+                window.active_text_field.set(None)
             }
         }
     }
 
-    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
         if let Some(window) = self.window.upgrade() {
-            window.active_text_input.set(active_field);
+            window.active_text_field.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 

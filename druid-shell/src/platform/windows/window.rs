@@ -79,7 +79,7 @@ use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
 use crate::window;
 use crate::window::{
-    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
 /// The platform target DPI.
@@ -224,7 +224,7 @@ struct WindowState {
     // For resizable borders, window can still be resized with code.
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
-    active_text_input: Cell<Option<TextInputToken>>,
+    active_text_input: Cell<Option<TextFieldToken>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -1965,11 +1965,11 @@ impl WindowHandle {
         PietText::new(self.dwrite_factory.clone())
     }
 
-    pub fn add_text_input(&self) -> TextInputToken {
-        TextInputToken::next()
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
     }
 
-    pub fn remove_text_input(&self, token: TextInputToken) {
+    pub fn remove_text_field(&self, token: TextFieldToken) {
         if let Some(state) = self.state.upgrade() {
             if state.active_text_input.get() == Some(token) {
                 state.active_text_input.set(None);
@@ -1977,13 +1977,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
         if let Some(state) = self.state.upgrade() {
             state.active_text_input.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 

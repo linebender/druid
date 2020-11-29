@@ -63,7 +63,7 @@ use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 use crate::window::{
-    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel, WindowState,
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel, WindowState,
 };
 use crate::Error;
 
@@ -159,7 +159,7 @@ struct ViewState {
     mouse_left: bool,
     keyboard_state: KeyboardState,
     text: PietText,
-    active_text_input: Option<TextInputToken>,
+    active_text_input: Option<TextFieldToken>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -1092,11 +1092,11 @@ impl WindowHandle {
         }
     }
 
-    pub fn add_text_input(&self) -> TextInputToken {
-        TextInputToken::next()
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
     }
 
-    pub fn remove_text_input(&self, token: TextInputToken) {
+    pub fn remove_text_field(&self, token: TextFieldToken) {
         let mut state = unsafe {
             let view = self.nsview.load().as_ref().unwrap();
             let state: *mut c_void = *view.get_ivar("viewState");
@@ -1107,22 +1107,22 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
         let mut state = unsafe {
             let view = self.nsview.load().as_ref().unwrap();
             let state: *mut c_void = *view.get_ivar("viewState");
             &mut (*(state as *mut ViewState))
         };
         if let Some(old_field) = state.active_text_input {
-            self.update_text_input(old_field, Event::Reset);
+            self.update_text_field(old_field, Event::Reset);
         }
         state.active_text_input = active_field;
         if let Some(new_field) = active_field {
-            self.update_text_input(new_field, Event::Reset);
+            self.update_text_field(new_field, Event::Reset);
         }
     }
 
-    pub fn update_text_input(&self, token: TextInputToken, update: Event) {
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
         let state = unsafe {
             let view = self.nsview.load().as_ref().unwrap();
             let state: *mut c_void = *view.get_ivar("viewState");
