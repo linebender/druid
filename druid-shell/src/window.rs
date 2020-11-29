@@ -60,21 +60,21 @@ impl TimerToken {
 
 /// Uniquely identifies a text input field inside a window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
-pub struct TextInputToken(u64);
+pub struct TextFieldToken(u64);
 
-impl TextInputToken {
+impl TextFieldToken {
     /// A token that does not correspond to any text input.
-    pub const INVALID: TextInputToken = TextInputToken(0);
+    pub const INVALID: TextFieldToken = TextFieldToken(0);
 
     /// Create a new token; this should for the most part be called only by platform code.
-    pub fn next() -> TextInputToken {
+    pub fn next() -> TextFieldToken {
         static TEXT_FIELD_COUNTER: Counter = Counter::new();
-        TextInputToken(TEXT_FIELD_COUNTER.next())
+        TextFieldToken(TEXT_FIELD_COUNTER.next())
     }
 
     /// Create a new token from a raw value.
-    pub const fn from_raw(id: u64) -> TextInputToken {
-        TextInputToken(id)
+    pub const fn from_raw(id: u64) -> TextFieldToken {
+        TextFieldToken(id)
     }
 
     /// Get the raw value for a token.
@@ -306,37 +306,37 @@ impl WindowHandle {
     /// Indicates to the platform that there's a new editable text input in the window.
     ///
     /// This method should be called any time a new editable text field is created inside a window.
-    /// Any text field with a `TextInputToken` that has not yet been destroyed with `remove_text_input`
+    /// Any text field with a `TextFieldToken` that has not yet been destroyed with `remove_text_field`
     /// *must* be ready to accept input from the platform via `WinHandler::text_input` at any time, even if
     /// it is not currently focused.
     ///
-    /// Returns the `TextInputToken` associated with this new text input.
+    /// Returns the `TextFieldToken` associated with this new text input.
     // TODO(lord): would `add_text_field` be more clear?
-    pub fn add_text_input(&self) -> TextInputToken {
-        self.0.add_text_input()
+    pub fn add_text_field(&self) -> TextFieldToken {
+        self.0.add_text_field()
     }
 
     /// Indicates to the platform that a text input field has been destroyed.
     ///
     /// If `token` is the text field currently focused, the platform automatically
     /// sets the focused field to `None`.
-    pub fn remove_text_input(&self, token: TextInputToken) {
-        self.0.remove_text_input(token)
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        self.0.remove_text_field(token)
     }
 
     /// Indicates to the platform that the focused text input has changed.
     ///
     /// This must be called any time focus changes to a different text input, or
     /// when focus switches away from a text input.
-    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
-        self.0.set_focused_text_input(active_field)
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.0.set_focused_text_field(active_field)
     }
 
     /// Indicates some aspect of the text input has updated; the selection, contents, etc.
     /// This method should *never* be called in response to edits from a `InputHandler`;
     /// only in response to changes from the application: scrolling, remote edits, etc.
-    pub fn update_text_input(&self, token: TextInputToken, update: Event) {
-        self.0.update_text_input(token, update)
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.0.update_text_field(token, update)
     }
 
     /// Schedule a timer.
@@ -580,7 +580,7 @@ pub trait WinHandler {
     /// This method is called from the top level of the event loop and expects to acquire a lock successfully. For
     /// more information, see [the text input documentation](crate::text).
     #[allow(unused_variables)]
-    fn text_input(&mut self, token: TextInputToken, mutable: bool) -> Box<dyn InputHandler> {
+    fn text_input(&mut self, token: TextFieldToken, mutable: bool) -> Box<dyn InputHandler> {
         panic!("text_input was called on a WinHandler that did not expect text input.")
     }
 

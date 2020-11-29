@@ -47,7 +47,7 @@ use crate::region::Region;
 use crate::text::{simulate_input, Event};
 use crate::window;
 use crate::window::{
-    FileDialogToken, IdleToken, TextInputToken, TimerToken, WinHandler, WindowLevel,
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
@@ -112,7 +112,7 @@ struct WindowState {
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
-    active_text_input: Cell<Option<TextInputToken>>,
+    active_text_input: Cell<Option<TextFieldToken>>,
 }
 
 // TODO: support custom cursors
@@ -555,11 +555,11 @@ impl WindowHandle {
         PietText::new(s.context.clone())
     }
 
-    pub fn add_text_input(&self) -> TextInputToken {
-        TextInputToken::next()
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
     }
 
-    pub fn remove_text_input(&self, token: TextInputToken) {
+    pub fn remove_text_field(&self, token: TextFieldToken) {
         if let Some(state) = self.0.upgrade() {
             if state.active_text_input.get() == Some(token) {
                 state.active_text_input.set(None);
@@ -567,13 +567,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_focused_text_input(&self, active_field: Option<TextInputToken>) {
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
         if let Some(state) = self.0.upgrade() {
             state.active_text_input.set(active_field);
         }
     }
 
-    pub fn update_text_input(&self, _token: TextInputToken, _update: Event) {
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
         // no-op for now, until we get a properly implemented text input
     }
 

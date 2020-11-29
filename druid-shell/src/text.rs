@@ -38,10 +38,10 @@
 //! ## Lifecycle of a Text Input
 //!
 //! 1. The user clicks a link or switches tabs, and the window content now contains a new text field.
-//!    The application registers this new field by calling `WindowHandle::add_text_input`, and gets a
+//!    The application registers this new field by calling `WindowHandle::add_text_field`, and gets a
 //!    `TextFieldToken` that represents this new field.
 //! 2. The user clicks on that text field, focusing it. The application lets the platform know by calling
-//!    `WindowHandle::set_focused_text_input` with that field's `TextFieldToken`.
+//!    `WindowHandle::set_focused_text_field` with that field's `TextFieldToken`.
 //! 3. The user presses a key on the keyboard. The platform first calls `WinHandler::key_down`. If this
 //!    method returns `true`, the application has indicated the keypress was captured, and we skip the
 //!    remaining steps.
@@ -58,11 +58,11 @@
 //!    user tapping on their virtual keyboard, or "move the caret one word left" for a user pressing the left
 //!    arrow key while holding control.
 //! 7. Eventually, after many keypresses cause steps 3–6 to repeat, the user unfocuses the text field. The
-//!    application indicates this to the platform by calling `set_focused_text_input`. Note that
+//!    application indicates this to the platform by calling `set_focused_text_field`. Note that
 //!    even though focus has shifted away from our text field, the platform may still send edits to it by calling
 //!    `WinHandler::text_input`.
 //! 8. At some point, the user clicks a link or switches a tab, and the text field is no longer present in the window.
-//!    The application calls `WindowHandle::remove_text_input`, and the platform may no longer call `WinHandler::text_input`
+//!    The application calls `WindowHandle::remove_text_field`, and the platform may no longer call `WinHandler::text_input`
 //!    to make changes to it.
 //!
 //! The application also has a series of steps it follows if it wants to make its own changes to the text field's state:
@@ -73,7 +73,7 @@
 //! 2. The application first checks to see if there's an outstanding `InputHandler` lock for this text field; if so, it waits
 //!    until the last `InputHandler` is dropped before continuing.
 //! 3. The application then makes the change to the text input. If the change would affect state visible from an `InputHandler`,
-//!    the application must notify the platform via `WinHandler::update_text_input`.
+//!    the application must notify the platform via `WinHandler::update_text_field`.
 //!
 //! ## Supported Platforms
 //!
@@ -84,7 +84,7 @@
 use crate::keyboard::{KbKey, KeyEvent};
 use crate::kurbo::{Point, Rect};
 use crate::piet::HitTestPoint;
-use crate::window::{TextInputToken, WinHandler};
+use crate::window::{TextFieldToken, WinHandler};
 use std::borrow::Cow;
 use std::ops::Range;
 
@@ -303,7 +303,7 @@ pub trait InputHandler {
 /// interface immediately, with a hopefully seamless upgrade process as we implement IME input on more platforms.
 pub fn simulate_input<H: WinHandler + ?Sized>(
     handler: &mut H,
-    token: Option<TextInputToken>,
+    token: Option<TextFieldToken>,
     event: KeyEvent,
 ) -> bool {
     if handler.key_down(event.clone()) {
