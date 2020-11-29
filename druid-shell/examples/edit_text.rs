@@ -97,23 +97,14 @@ impl WinHandler for AppState {
         let layout = doc.layout.as_ref().unwrap();
         // TODO(lord): rects for range on layout
         if let Some(composition_range) = doc.composition.as_ref() {
-            let left_x = layout
-                .hit_test_text_position(composition_range.start)
-                .point
-                .x;
-            let right_x = layout.hit_test_text_position(composition_range.end).point.x;
-            piet.fill(
-                Rect::new(left_x, 0.0, right_x, FONT_SIZE),
-                &COMPOSITION_BG_COLOR,
-            );
+            for rect in layout.rects_for_range(composition_range.clone()) {
+                piet.fill(rect, &COMPOSITION_BG_COLOR);
+            }
         }
         if !doc.selection.is_caret() {
-            let left_x = layout.hit_test_text_position(doc.selection.min()).point.x;
-            let right_x = layout.hit_test_text_position(doc.selection.max()).point.x;
-            piet.fill(
-                Rect::new(left_x, 0.0, right_x, FONT_SIZE),
-                &SELECTION_BG_COLOR,
-            );
+            for rect in layout.rects_for_range(doc.selection.to_range()) {
+                piet.fill(rect, &SELECTION_BG_COLOR);
+            }
         }
         piet.draw_text(layout, (0.0, 0.0));
 
