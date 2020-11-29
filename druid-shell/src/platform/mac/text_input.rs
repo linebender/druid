@@ -141,16 +141,16 @@ pub extern "C" fn set_marked_text(
     if let Some(selection_range) =
         decode_nsrange(&mut edit_lock, &selected_range, replace_range.start)
     {
-        // preserve ordering of anchor and extent
+        // preserve ordering of anchor and active
         let existing_selection = edit_lock.selection();
-        let new_selection = if existing_selection.anchor < existing_selection.extent {
+        let new_selection = if existing_selection.anchor < existing_selection.active {
             Selection {
                 anchor: selection_range.start,
-                extent: selection_range.end,
+                active: selection_range.end,
             }
         } else {
             Selection {
-                extent: selection_range.start,
+                active: selection_range.start,
                 anchor: selection_range.end,
             }
         };
@@ -363,66 +363,68 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
         "moveBackward:" => {
             edit_lock.handle_action(Action::Move(Movement::Grapheme(Direction::Upstream)))
         }
-        "moveBackwardAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Upstream)))
-        }
+        "moveBackwardAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
+            Movement::Grapheme(Direction::Upstream),
+        )),
         "moveDown:" => {
             edit_lock.handle_action(Action::Move(Movement::Vertical(VerticalMovement::LineDown)))
         }
-        "moveDownAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "moveDownAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Vertical(VerticalMovement::LineDown),
         )),
         "moveForward:" => {
             edit_lock.handle_action(Action::Move(Movement::Grapheme(Direction::Downstream)))
         }
-        "moveForwardAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "moveForwardAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Grapheme(Direction::Downstream),
         )),
         "moveLeft:" => edit_lock.handle_action(Action::Move(Movement::Grapheme(Direction::Left))),
         "moveLeftAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Left)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(Direction::Left)))
         }
         "moveParagraphBackwardAndModifySelection:" => {
             let selection = edit_lock.selection();
-            let is_extent_after_anchor = selection.extent > selection.anchor;
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Upstream)));
-            edit_lock.handle_action(Action::MoveExtent(Movement::ParagraphStart));
-            if is_extent_after_anchor && selection.extent <= selection.anchor {
+            let is_active_after_anchor = selection.active > selection.anchor;
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
+                Direction::Upstream,
+            )));
+            edit_lock.handle_action(Action::MoveSelecting(Movement::ParagraphStart));
+            if is_active_after_anchor && selection.active <= selection.anchor {
                 // textedit testing showed that this operation never fully inverts a selection; if this action
-                // would cause a selection's extent and anchor to swap order, it makes a caret instead. applying
+                // would cause a selection's active and anchor to swap order, it makes a caret instead. applying
                 // the operation a second time (on the selection that is now a caret) is required to invert.
                 edit_lock.set_selection(Selection::new_caret(selection.anchor));
             }
         }
         "moveParagraphForwardAndModifySelection:" => {
             let selection = edit_lock.selection();
-            let is_anchor_after_extent = selection.extent < selection.anchor;
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(
+            let is_anchor_after_active = selection.active < selection.anchor;
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
                 Direction::Downstream,
             )));
-            edit_lock.handle_action(Action::MoveExtent(Movement::ParagraphEnd));
-            if is_anchor_after_extent && selection.extent >= selection.anchor {
+            edit_lock.handle_action(Action::MoveSelecting(Movement::ParagraphEnd));
+            if is_anchor_after_active && selection.active >= selection.anchor {
                 // textedit testing showed that this operation never fully inverts a selection; if this action
-                // would cause a selection's extent and anchor to swap order, it makes a caret instead. applying
+                // would cause a selection's active and anchor to swap order, it makes a caret instead. applying
                 // the operation a second time (on the selection that is now a caret) is required to invert.
                 edit_lock.set_selection(Selection::new_caret(selection.anchor));
             }
         }
         "moveRight:" => edit_lock.handle_action(Action::Move(Movement::Grapheme(Direction::Right))),
         "moveRightAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Right)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(Direction::Right)))
         }
         "moveToBeginningOfDocument:" => edit_lock.handle_action(Action::Move(Movement::Vertical(
             VerticalMovement::DocumentStart,
         ))),
         "moveToBeginningOfDocumentAndModifySelection:" => edit_lock.handle_action(
-            Action::MoveExtent(Movement::Vertical(VerticalMovement::DocumentStart)),
+            Action::MoveSelecting(Movement::Vertical(VerticalMovement::DocumentStart)),
         ),
         "moveToBeginningOfLine:" => {
             edit_lock.handle_action(Action::Move(Movement::Line(Direction::Upstream)))
         }
         "moveToBeginningOfLineAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Line(Direction::Upstream)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Line(Direction::Upstream)))
         }
         "moveToBeginningOfParagraph:" => {
             // initially, it may seem like this and moveToEndOfParagraph shouldn't be idempotent. after all,
@@ -433,72 +435,72 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
             edit_lock.handle_action(Action::Move(Movement::ParagraphStart))
         }
         "moveToBeginningOfParagraphAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::ParagraphStart))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::ParagraphStart))
         }
         "moveToEndOfDocument:" => edit_lock.handle_action(Action::Move(Movement::Vertical(
             VerticalMovement::DocumentEnd,
         ))),
-        "moveToEndOfDocumentAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "moveToEndOfDocumentAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Vertical(VerticalMovement::DocumentEnd),
         )),
         "moveToEndOfLine:" => {
             edit_lock.handle_action(Action::Move(Movement::Line(Direction::Downstream)))
         }
         "moveToEndOfLineAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Line(Direction::Downstream)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Line(Direction::Downstream)))
         }
         "moveToEndOfParagraph:" => edit_lock.handle_action(Action::Move(Movement::ParagraphEnd)),
         "moveToEndOfParagraphAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::ParagraphEnd))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::ParagraphEnd))
         }
         "moveToLeftEndOfLine:" => {
             edit_lock.handle_action(Action::Move(Movement::Line(Direction::Left)))
         }
         "moveToLeftEndOfLineAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Line(Direction::Left)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Line(Direction::Left)))
         }
         "moveToRightEndOfLine:" => {
             edit_lock.handle_action(Action::Move(Movement::Line(Direction::Right)))
         }
         "moveToRightEndOfLineAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Line(Direction::Right)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Line(Direction::Right)))
         }
         "moveUp:" => {
             edit_lock.handle_action(Action::Move(Movement::Vertical(VerticalMovement::LineUp)))
         }
-        "moveUpAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "moveUpAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Vertical(VerticalMovement::LineUp),
         )),
         "moveWordBackward:" => {
             edit_lock.handle_action(Action::Move(Movement::Word(Direction::Upstream)))
         }
         "moveWordBackwardAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Word(Direction::Upstream)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Word(Direction::Upstream)))
         }
         "moveWordForward:" => {
             edit_lock.handle_action(Action::Move(Movement::Word(Direction::Downstream)))
         }
         "moveWordForwardAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Word(Direction::Downstream)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Word(Direction::Downstream)))
         }
         "moveWordLeft:" => edit_lock.handle_action(Action::Move(Movement::Word(Direction::Left))),
         "moveWordLeftAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Word(Direction::Left)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Word(Direction::Left)))
         }
         "moveWordRight:" => edit_lock.handle_action(Action::Move(Movement::Word(Direction::Right))),
         "moveWordRightAndModifySelection:" => {
-            edit_lock.handle_action(Action::MoveExtent(Movement::Word(Direction::Right)))
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Word(Direction::Right)))
         }
         "pageDown:" => {
             edit_lock.handle_action(Action::Move(Movement::Vertical(VerticalMovement::PageDown)))
         }
-        "pageDownAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "pageDownAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Vertical(VerticalMovement::PageDown),
         )),
         "pageUp:" => {
             edit_lock.handle_action(Action::Move(Movement::Vertical(VerticalMovement::PageUp)))
         }
-        "pageUpAndModifySelection:" => edit_lock.handle_action(Action::MoveExtent(
+        "pageUpAndModifySelection:" => edit_lock.handle_action(Action::MoveSelecting(
             Movement::Vertical(VerticalMovement::PageUp),
         )),
         "scrollLineDown:" => edit_lock.handle_action(Action::Scroll(VerticalMovement::LineDown)),
@@ -522,7 +524,7 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
 
             // Swaps the graphemes before and after the caret, and then moves the caret downstream one grapheme. If the caret is at the
             // end of a hard-wrapped line or document, act as though the caret was one grapheme upstream instead. If the caret is at the
-            // beginning of the document, this is a no-op. This is a no-op on non-caret selections (when `anchor != extent`).
+            // beginning of the document, this is a no-op. This is a no-op on non-caret selections (when `anchor != active`).
 
             {
                 let selection = edit_lock.selection();
@@ -534,7 +536,7 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
             // move caret to the end of the transpose region
             {
                 let old_selection = edit_lock.selection();
-                edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(
+                edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
                     Direction::Downstream,
                 )));
                 let new_selection = edit_lock.selection().to_range();
@@ -556,9 +558,13 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
             }
 
             // now find the previous two graphemes
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Upstream)));
-            let middle_idx = edit_lock.selection().extent;
-            edit_lock.handle_action(Action::MoveExtent(Movement::Grapheme(Direction::Upstream)));
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
+                Direction::Upstream,
+            )));
+            let middle_idx = edit_lock.selection().active;
+            edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
+                Direction::Upstream,
+            )));
             let selection = edit_lock.selection();
             let first_grapheme = edit_lock.slice(selection.min()..middle_idx).into_owned();
             let second_grapheme = edit_lock.slice(middle_idx..selection.max());

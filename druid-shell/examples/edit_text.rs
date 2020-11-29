@@ -118,7 +118,7 @@ impl WinHandler for AppState {
         piet.draw_text(layout, (0.0, 0.0));
 
         // draw caret
-        let caret_x = layout.hit_test_text_position(doc.selection.extent).point.x;
+        let caret_x = layout.hit_test_text_position(doc.selection.active).point.x;
         piet.fill(
             Rect::new(caret_x - 1.0, 0.0, caret_x + 1.0, FONT_SIZE),
             &CARET_COLOR,
@@ -205,16 +205,16 @@ impl InputHandler for AppInputHandler {
     fn replace_range(&mut self, range: Range<usize>, text: &str) {
         let mut doc = self.state.borrow_mut();
         doc.text.replace_range(range.clone(), text);
-        if doc.selection.anchor < range.start && doc.selection.extent < range.start {
+        if doc.selection.anchor < range.start && doc.selection.active < range.start {
             // no need to update selection
-        } else if doc.selection.anchor > range.end && doc.selection.extent > range.end {
+        } else if doc.selection.anchor > range.end && doc.selection.active > range.end {
             doc.selection.anchor -= range.len();
-            doc.selection.extent -= range.len();
+            doc.selection.active -= range.len();
             doc.selection.anchor += text.len();
-            doc.selection.extent += text.len();
+            doc.selection.active += text.len();
         } else {
             doc.selection.anchor = range.start + text.len();
-            doc.selection.extent = range.start + text.len();
+            doc.selection.active = range.start + text.len();
         }
         doc.refresh_layout();
         doc.composition = None;
@@ -284,9 +284,9 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
             };
             handler.set_selection(Selection::new_caret(updated_index));
         }
-        Action::MoveExtent(movement) => {
+        Action::MoveSelecting(movement) => {
             let mut selection = handler.selection();
-            selection.extent = match apply_movement(handler, movement, selection.extent) {
+            selection.active = match apply_movement(handler, movement, selection.active) {
                 Some(v) => v,
                 None => return false,
             };
@@ -296,7 +296,7 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
             let len = handler.len();
             let selection = Selection {
                 anchor: 0,
-                extent: len,
+                active: len,
             };
             handler.set_selection(selection);
         }
@@ -307,7 +307,7 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
         }
         Action::Delete(movement) => {
             let mut selection = handler.selection();
-            selection.extent = match apply_movement(handler, movement, selection.extent) {
+            selection.active = match apply_movement(handler, movement, selection.active) {
                 Some(v) => v,
                 None => return false,
             };

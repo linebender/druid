@@ -46,7 +46,7 @@
 //!    method returns `true`, the application has indicated the keypress was captured, and we skip the
 //!    remaining steps.
 //! 4. If `key_down` returned `false`, druid-shell forwards the key event to the platform's text input
-//!    system.
+//!    system
 //! 5. The platform, in response to either this key event or some other user action, determines it's time
 //!    for some text input. It calls `WinHandler::text_input` to acquire a lock on the text field's state.
 //!    The application returns an `InputHandler` object corresponding to the requested text field. To prevent
@@ -110,19 +110,18 @@ pub enum Event {
 /// A range of selected text, or a caret.
 ///
 /// A caret is the blinking vertical bar where text is to be inserted. We represent it as a selection with zero length,
-/// where `anchor == extent`.
+/// where `anchor == active`.
 /// Indices are always expressed in UTF-8 bytes, and must be between 0 and the document length, inclusive.
 ///
 /// As an example, if the input caret is at the start of the document `hello world`, we would expect both `anchor`
-/// and `extent` to be `0`. If the user holds shift and presses the right arrow key five times, we would expect the
-/// word `hello` to be selected, the `anchor` to still be `0`, and the `extent` to now be `5`.
+/// and `active` to be `0`. If the user holds shift and presses the right arrow key five times, we would expect the
+/// word `hello` to be selected, the `anchor` to still be `0`, and the `active` to now be `5`.
 #[derive(Clone, Default, PartialEq, Eq, Hash)]
 pub struct Selection {
     /// This is the end of the selection that stays unchanged while holding shift and pressing the arrow keys.
     pub anchor: usize,
     /// This is the end of the selection that moves while holding shift and pressing the arrow keys.
-    // TODO(lord): active instead of extent?
-    pub extent: usize,
+    pub active: usize,
 }
 
 #[allow(clippy::len_without_is_empty)]
@@ -132,7 +131,7 @@ impl Selection {
     pub fn new_caret(index: usize) -> Selection {
         Selection {
             anchor: index,
-            extent: index,
+            active: index,
         }
     }
 
@@ -140,14 +139,14 @@ impl Selection {
     ///
     /// Because of bidirectional text, this is not necessarily "left".
     pub fn min(&self) -> usize {
-        usize::min(self.anchor, self.extent)
+        usize::min(self.anchor, self.active)
     }
 
     /// Corresponds to the downstream end of the selection — the one with a greater byte index.
     ///
     /// Because of bidirectional text, this is not necessarily "right".
     pub fn max(&self) -> usize {
-        usize::max(self.anchor, self.extent)
+        usize::max(self.anchor, self.active)
     }
 
     /// The sorted range of the document that would be replaced if text were inserted at this selection.
@@ -157,10 +156,10 @@ impl Selection {
 
     /// The number of characters in the selection. If the selection is a caret, this is `0`.
     pub fn len(&self) -> usize {
-        if self.anchor > self.extent {
-            self.anchor - self.extent
+        if self.anchor > self.active {
+            self.anchor - self.active
         } else {
-            self.extent - self.anchor
+            self.active - self.anchor
         }
     }
 
@@ -184,16 +183,16 @@ impl Selection {
 pub trait InputHandler {
     /// Gets the range of the document that is currently selected.
     /// If the selection is a vertical caret bar, then `range.start == range.end`.
-    /// Both `selection.anchor` and `selection.extent` must be less than or equal to the value returned
+    /// Both `selection.anchor` and `selection.active` must be less than or equal to the value returned
     /// from `InputHandler::len()`, and must land on a extended grapheme cluster boundary in the document.
     fn selection(&mut self) -> Selection;
 
     /// Sets the range of the document that is currently selected.
     /// If the selection is a vertical caret bar, then `range.start == range.end`.
-    /// Both `selection.anchor` and `selection.extent` must be less than or equal to the value returned
+    /// Both `selection.anchor` and `selection.active` must be less than or equal to the value returned
     /// from `InputHandler::len()`.
     ///
-    /// The `set_selection` implementation should round up (downstream) both `selection.anchor` and `selection.extent`
+    /// The `set_selection` implementation should round up (downstream) both `selection.anchor` and `selection.active`
     /// to the nearest extended grapheme cluster boundary.
     ///
     /// Requries a mutable lock.
@@ -263,9 +262,9 @@ pub trait InputHandler {
     ///
     /// This method also sets the composition range to `None`, and updates the selection:
     ///
-    /// - If both the selection's anchor and extent are `< range.start`, then nothing is updated.
-    /// - If both the selection's anchor and extent are `> range.end`, then subtract `range.len()` from both, and add `text.len()`.
-    /// - If neither of the previous two conditions are true, then set both anchor and extent to `range.start + text.len()`.
+    /// - If both the selection's anchor and active are `< range.start`, then nothing is updated.
+    /// - If both the selection's anchor and active are `> range.end`, then subtract `range.len()` from both, and add `text.len()`.
+    /// - If neither of the previous two conditions are true, then set both anchor and active to `range.start + text.len()`.
     ///
     /// After the above update, if we increase each end of the selection if necessary to put it on a grapheme cluster boundary.
     ///
@@ -326,7 +325,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         KbKey::ArrowLeft => {
             let movement = Movement::Grapheme(Direction::Left);
             if event.mods.shift() {
-                input_handler.handle_action(Action::MoveExtent(movement));
+                input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
                 input_handler.handle_action(Action::Move(movement));
             }
@@ -334,7 +333,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         KbKey::ArrowRight => {
             let movement = Movement::Grapheme(Direction::Right);
             if event.mods.shift() {
-                input_handler.handle_action(Action::MoveExtent(movement));
+                input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
                 input_handler.handle_action(Action::Move(movement));
             }
@@ -342,7 +341,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         KbKey::ArrowUp => {
             let movement = Movement::Vertical(VerticalMovement::LineUp);
             if event.mods.shift() {
-                input_handler.handle_action(Action::MoveExtent(movement));
+                input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
                 input_handler.handle_action(Action::Move(movement));
             }
@@ -350,7 +349,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         KbKey::ArrowDown => {
             let movement = Movement::Vertical(VerticalMovement::LineDown);
             if event.mods.shift() {
-                input_handler.handle_action(Action::MoveExtent(movement));
+                input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
                 input_handler.handle_action(Action::Move(movement));
             }
@@ -457,10 +456,10 @@ pub enum VerticalMovement {
 pub enum Action {
     /// Moves the selection.
     ///
-    /// Before moving, if the extent and the anchor of the selection are not at the same
+    /// Before moving, if the active and the anchor of the selection are not at the same
     /// position (it's a non-caret selection), then:
     ///
-    /// 1. First set both extent and anchor to the same position: the selection's
+    /// 1. First set both active and anchor to the same position: the selection's
     /// upstream index if `Movement` is an upstream movement, or the downstream index if
     /// `Movement` is a downstream movement.
     ///
@@ -468,10 +467,10 @@ pub enum Action {
     /// per the usual rules.
     Move(Movement),
 
-    /// Moves just the selection's extent.
+    /// Moves just the selection's active.
     ///
     /// Equivalent to holding shift while performing movements or clicks on most operating systems.
-    MoveExtent(Movement),
+    MoveSelecting(Movement),
 
     /// Select the entire document.
     SelectAll,
@@ -506,7 +505,7 @@ pub enum Action {
     /// Deletes some text.
     ///
     /// If some text is already selected, `Movement` is ignored, and the selection is deleted.
-    /// If the selection's anchor is the same as the extent, then first apply `MoveExtent(Movement)`
+    /// If the selection's anchor is the same as the active, then first apply `MoveSelecting(Movement)`
     /// and then delete the resulting selection.
     Delete(Movement),
 
@@ -555,7 +554,7 @@ pub enum Action {
     /// Scrolls the text field without modifying the selection.
     Scroll(VerticalMovement),
 
-    /// Centers the selection vertically in the text field. The average of the anchor's y and the extent's y should be
+    /// Centers the selection vertically in the text field. The average of the anchor's y and the active's y should be
     /// exactly halfway down the field.
     /// If the selection is taller than the text field's visible height, then instead
     /// scrolls the minimum distance such that the text field is completely vertically filled by the selection.
