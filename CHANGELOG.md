@@ -55,6 +55,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `set_cursor` can be called in the `update` method. ([#1361] by [@jneem])
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
+- Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
 
 ### Changed
 
@@ -355,6 +356,7 @@ Last release without a changelog :(
 [@tay64]: https://github.com/tay64
 [@JAicewizard]: https://github.com/JAicewizard
 [@andrewhickman]: https://github.com/andrewhickman
+[@colinfruit]: https://github.com/colinfruit
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -538,6 +540,7 @@ Last release without a changelog :(
 [#1361]: https://github.com/linebender/druid/pull/1361
 [#1371]: https://github.com/linebender/druid/pull/1371
 [#1410]: https://github.com/linebender/druid/pull/1410
+[#1438]: https://github.com/linebender/druid/pull/1438
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
