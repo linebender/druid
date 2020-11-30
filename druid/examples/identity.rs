@@ -22,8 +22,9 @@
 //! can send messages that are only handled by that widget/controler.
 //!
 //! This is a contrived example; if you were designing a real app you might
-//! choose a different mechanism (such as just just changin the `Data` in the on_click),
-//! but this is just an example.
+//! choose a different mechanism (such as just just changing the `Data` in the on_click).
+//! Identities are useful when the source and target of the change are far apart in
+//! the widget tree.
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Controller, Flex, Label, WidgetId};
