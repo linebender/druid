@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Demonstrates alignment of children in the flex container.
-//! This example showcases the full set of functionality of flex, giving you 
+//! This example showcases the full set of functionality of flex, giving you
 //! knobs to change all the parameters. 99% of the time you will want to
 //! hard-code these parameters, which will simplify your code considerably.
 
