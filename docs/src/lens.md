@@ -1,149 +1,168 @@
 # Lenses and the `Lens` trait
 
-Let's say we're building a todo list application, and we are designing the widget
-that will represent a single todo item. Our data model looks like this:
+One of the key abstractions in `druid` along with `Data` is the `Lens` trait. This page explains what they are, and then how to use them. `Lens`es may seem complicated at first, but they are also very powerful, allowing you to write code that is reusable and concise, understandable and powerful (once you understand `Lens`es themselves).
 
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:todo_item}}
-```
+## Fundamentals: Definition and Implementation
 
-We would like our widget to display the title of the item, and then below
-that to display two checkmarks that toggle the 'completed' and 'urgent' bools.
-`Checkbox` (a widget included in Druid) implements `Widget<bool>`.
-How do we use it with `TodoItem`? By using a `Lens`.
+Like Rust itself, lenses are one of those things that require effort up front to learn, but are very fun and powerful to use once you understand them. This section represents the effort part of the equation. I promise if you stick with it you will reap the rewards.
 
-## Conceptual
+Let's start with the definition of a `Lens`:
 
-You can think of a lens as a way of "focusing in" on one part of the data. You
-have a `TodoItem`, but you *want* a `bool`.
+```rust
+pub trait Lens<T, U> {
+    fn with<F: FnOnce(&U)>(&self, data: &T, f: F);
 
-`Lens` is a trait for types that perform this "focusing in" (aka *lensing*).
-A simplified version of the `Lens` trait might look like this:
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:simple_lens}}
-```
-
-That is, this type takes an instance of `In`, and returns an instance of `Out`.
-
-For instance, imagine we wanted a lens to focus onto the `completed` state of
-our `TodoItem`. With our simple trait, we might do:
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:completed_lens}}
-```
-
-> **Note**: `Lens` isn't that helpful on its own; in Druid it is generally used alongside
-`LensWrap`, which is a special widget that uses a `Lens` to change the `Data`
-type of its child. Lets say we have a `Checkbox`, but our data is a `TodoItem`:
-we can do, `LensWrap::new(my_checkbox, CompletedLens)` in order to bridge the
-gap.
-
-Our example is missing out on an important feature of lenses, though, which is that
-they allow mutations that occur on the *lensed* data to propagate back to the
-source. For this to work, lenses actually work with closures. The real signature
-of `Lens` looks more like this (names changed for clarity):
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:lens}}
-```
-
-Here `In` refers to the input to the `Lens` and `Out` is the output. `F` is a
-closure that can return a result, `R`.
-
-Now, instead of just being passed `Out` directly from the function, we pass the
-function a closure that will *itself* be passed an `Out`; if our closure returns
-a result, that will be given back to us.
-
-This is unnecessary in the case of non-mutable access, but it is important for
-mutable access, because in many circumstances (such as when using an `Rc` or
-`Arc`) accessing a field mutably is expensive even if you don't do any mutation.
-
-In any case, the real implementation of our lens would look like,
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:completed_lens_real}}
-```
-
-That seems pretty simple and fairly annoying to write, which is why you
-generally don't have to.
-
-## Deriving lenses
-
-For simple field access, you can `derive` the `Lens` trait.
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:todo_item_lens}}
-```
-
-This handles the boilerplate of writing a lens for each field. It also does
-something slightly sneaky: it exposes the generated lenses through the type
-itself, as associated constants. What this means is that if you want to use the
-lens that gives you the `completed` field, you can access it via
-`TodoItem::completed`. The generated code basically looks something like:
-
-```rust, noplaypen
-struct GeneratedLens_AppData_title;
-struct GeneratedLens_AppData_completed;
-struct GeneratedLens_AppData_urgent;
-
-impl TodoItem {
-    const title = GeneratedLens_AppData_title;
-    const completed = GeneratedLens_AppData_completed;
-    const urgent = GeneratedLens_AppData_urgent;
+    fn with_mut<F: FnOnce(&mut U)>(&self, data: &mut T, f: F);
 }
 ```
 
-One consequence of this is that if your type has a method with the same name as
-one of its fields, `derive` will fail. To get around this, you can specify a
-custom name for a field's lens:
+I've copied this definition from the `druid` source code, but then simplified it a little, by removing the return types, as they are not fundamental to the way lenses work.
 
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:lens_name}}
+The first thing to notice is the generics on the `Lens` itself. There are 3 types involve in the lens: the lens itself, `T` and `U`. The two type parameters represent the mis-match that lenses solve: we have a function that operates on `U`, and an object of type `T`, so we need to transform `T` into `U` somehow.
+
+Time for an example. Let's implement & use `Lens` manually so we can see what's going on.
+
+```rust
+struct Container {
+    inner: String,
+    another: String,
+}
+
+// Here the lens doesn't have any data, but there are cases where
+// it might, for example it might contain an index into a collection.
+struct InnerLens;
+
+// Our lens will apply functions that take a `u8` to a `Container`.
+impl Lens<Container, String> for InnerLens {
+    fn with<F: FnOnce(&String)>(&self, data: &Container, f: F) {
+        f(&data.inner);
+    }
+
+    fn with_mut<F: FnOnce(&mut String)>(&self, data: &mut Container, f: F) {
+        f(&mut data.inner);
+    }
+}
 ```
 
-## Using lenses
+This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only vaid lens from `Container` to `String` we could have made - we could also project from `Container` to `another`. We made the choice how to transform `Container` into `String` when we implemented `Lens`.
 
-The easiest way to use a lens is with the `lens` method that is provided through
-the `WigetExt` trait; this is a convenient way to wrap a widget in a `LensWrap`
-with a given lens.
+You'll also notice that both methods take an immutable reference to `self`, even the `mut` variant. The lense itself should be thought of as a fixed thing that knows how to do the mapping. In the above case it contains no data, and will most likely not even be present in the final compiled/optimized code.
 
-Let's build the UI for our todo list item:
+Now for a slightly more involved example
 
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:build_ui}}
+```rust
+struct Container2 {
+    first_name: String,
+    last_name: String,
+    age: u16, // in the future maybe people will live past 256?
+}
+
+struct Name {
+    first: String,
+    last: String,
+}
+
+struct NameLens;
+
+impl Lens<Container2, Name> for NameLens {
+    fn with<F: FnOnce(&Name)>(&self, data: &Container, f: F) {
+        let first = data.first_name.clone();
+        let last = data.last_name.clone();
+        f(&Name { first, last });
+    }
+
+    fn with_mut<F: FnOnce(&mut Name)>(&self, data: &mut Container, f: F) {
+        let first = data.first_name.clone();
+        let last = data.last_name.clone();
+        let mut name = Name { first, last };
+        f(&mut name);
+        data.first_name = name.first;
+        data.last_name = name.last;
+    }
+}
 ```
 
-## Advanced lenses
+> Side note: if you try doing this with `struct Name<'a> { first: &'a String, ...`, you'll find that it's not possible to be generic over the mutability of the fields in `Name`, so we can't make the `Name` struct borrow the data both mutably and immutably. Even if we could in this case, things quickly get very complicated. Also, sometimes `Widget`s need to keep a copy of the data around for use internally. For now the accepted best practice is to make `Clone`ing cheap and use that.
 
-Field access is a very simple (and common, and *useful*) case, but lenses can do much more than that.
+Now as I'm sure you've realised, the above is very inefficient. Given that we will be traversing our data very often, we need it to be cheap. (This wasn't a problem before, because when we don't need to build the inner type, we can just use references. It also wouldn't be a problem if our data was cheap to copy/clone, for example any of the primitive number types `u8`, ... `f64`) Luckily, this is exactly the kind of thing that rust excels at. Let's rewrite the above example to be fast!
 
-### `LensExt` and combinators
+```rust
+struct Container2 {
+    first_name: Rc<String>,
+    last_name: Rc<String>,
+    age: u16,
+}
 
-Similar to the `WidgetExt` trait, we offer a `LensExt` trait that provides
-various functions for composing lenses. These are similar to the various methods
-on iterator; you can `map` from one lens to another, you can index into a
-collection, or you can efficiently access data in an `Arc` without unnecessary
-mutation; see the main crate documentation for more.
+struct Name {
+    first: Rc<String>,
+    last: Rc<String>,
+}
 
-As your application gets more complicated, it will become likely that you want
-to use fancier sorts of lensing, and `map` and company can start to get out
-of hand; when that happens, you can always implement a lens by hand.
+struct NameLens;
 
-### Getting something from a collection
-
-Your application is a contact book, and you would like a lens that
-focuses on a specific contact. You might write something like this:
-
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:contact}}
+impl Lens<Container2, Name> for NameLens {
+    // .. identical to previous example
+}
 ```
 
-### Doing a conversion
+As you'll see, we've introduced `Rc`: the reference-counted pointer. You will see this and its multithreaded cousin `Arc` used pervasively in the examples. Now, the only time we actually have to copy memory is when `Rc::make_mut` is called in the `f` in `with_mut`. This means that in the case where nothing changes, all we will be doing is incrementing and decrementing reference counts. Moreover, we give the compiler the opportunity to inline `f` and `with`/`with_mut`, making this abstraction potentially zero-cost (disclaimer: I haven't actually studied the produced assembly to validate this claim).
 
-What if you have a distance in miles that you would like to display in
-kilometres?
+The trade-off is that we introduce more complexity into the `Name` type: to make changes to the data we have to use `Rc::make_mut` to get mutable access to the `String`. (The code in the lens will ensure that the newer copy of the `Rc`d data is saved to the outer type.) This means the writing fast druid code requires knowledge of the Rust pointer types (`Rc`/`Arc`, and also potentially `RefCell`/`Mutex`).
 
-```rust,noplaypen
-{{#include ../book_examples/src/lens_md.rs:conversion}}
+We can actually do even better than this. Suppose that we are working on a vector of data rather than a string. We can import the `im` crate to get collections that use *structural sharing*, meaning that even when the vector is mutated, we only *Clone* what we need to. Because `im` is so useful, it is included in `druid` (behind the `im` feature).
+
+```rust
+struct Container2 {
+    // Pretend that it's the 1980s and we store only ASCII names.
+    first_name: im::Vector<u8>,
+    last_name: im::Vector<u8>,
+    age: u16,
+}
+
+struct Name {
+    first: im::Vector<u8>,
+    last: im::Vector<u8>,
+}
+
+struct NameLens;
+
+impl Lens<Container2, Name> for NameLens {
+    // .. identical to previous example
+}
 ```
+
+Now in addition to almost free `Clone`s, we also have cheap incremental updates to the data itself. In the case of names, this isn't that important, but if the vector had `1_000_000_000` elements, we could still make changes in only *O(log(n))* time (in this case the difference between `1_000_000_000` and `30` - pretty big!).
+
+Right, now you understand how `Lens`es work. Congratulations, you've done the hardest bit! If you get lost later on, read this section again, and eventually it will all make sense.
+
+### Bonus - The actual `Lens` definition
+
+The actual definition of `Lens` in `druid` allows the user to return values from the lens. This isn't strictly necessary, one could always use a value captured in the closure to store the result, but it is useful. Also, because the types `T` and `U` always appear behind pointers (`&` and `&mut`), we can relax the `Sized` requirement that is applied by default, meaning we can implement `Lens` for types like `[T]` (slice) and `str`.
+
+Here is the real definition for completeness:
+
+```rust
+pub trait Lens<T: ?Sized, U: ?Sized> {
+    fn with<V, F: FnOnce(&U) -> V>(&self, data: &T, f: F) -> V;
+
+    fn with_mut<V, F: FnOnce(&mut U) -> V>(&self, data: &mut T, f: F) -> V;
+}
+```
+
+## Lenses in Druid
+
+Now on to the more fun bit: how we can use `Lens`es to get all those lovely qualities we talked about in the introduction. What you'll notice in this section is that we rarely have to build lenses ourself: we can often get what we want using the `Lens` proc macro, or through the functions in `LensExt`.
+
+Let's go back to the first example we looked at, with one of the fields removed for simplicity:
+
+```rust
+#[derive(Lens)]
+struct Container {
+    inner: u8,
+}
+```
+
+Let's look at the code that get's generated (I captured this using `cargo-expand`).
+
+
+
