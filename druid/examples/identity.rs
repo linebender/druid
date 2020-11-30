@@ -21,7 +21,7 @@
 //! The key insight is that each button is linked to a specific counter, and
 //! can send messages that are only handled by that widget/controler.
 //!
-//! This is a contrived example; if you were designing a real app you might
+//! If you were designing a real app you might
 //! choose a different mechanism (such as just just changing the `Data` in the on_click).
 //! Identities are useful when the source and target of the change are far apart in
 //! the widget tree.
