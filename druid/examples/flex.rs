@@ -13,8 +13,9 @@
 // limitations under the License.
 
 //! Demonstrates alignment of children in the flex container.
-//! This is more of a widget showcase where you can turn all the knobs
-//! and see how it behaves and less of an example.
+//! This example showcases the full set of functionality of flex, giving you 
+//! knobs to change all the parameters. 99% of the time you will want to
+//! hard-code these parameters, which will simplify your code considerably.
 
 use druid::widget::prelude::*;
 use druid::widget::{
