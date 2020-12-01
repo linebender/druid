@@ -35,9 +35,11 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
+use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
 use winapi::um::unknwnbase::*;
+use winapi::um::uxtheme::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
@@ -577,6 +579,22 @@ impl MyWndProc {
             warn!("Could not get HWND");
         }
     }
+
+    fn get_system_metric(&self, metric: c_int) -> i32 {
+        unsafe {
+            // This is only supported on windows 10.
+            if let Some(func) = OPTIONAL_FUNCTIONS.GetSystemMetricsForDpi {
+                let dpi = self.scale().x() * SCALE_TARGET_DPI;
+                func(metric, dpi as u32)
+            }
+            // Support for older versions of windows
+            else {
+                // Note: On Windows 8.1 GetSystemMetrics() is scaled to the DPI the window
+                // was created with, and not the current DPI of the window
+                GetSystemMetrics(metric)
+            }
+        }
+    }
 }
 
 impl WndProc for MyWndProc {
@@ -645,6 +663,18 @@ impl WndProc for MyWndProc {
             WM_ACTIVATE => {
                 if LOWORD(wparam as u32) as u32 != 0 {
                     unsafe {
+                        if !self.has_titlebar() {
+                            // This makes windows paint the dropshadow around the window
+                            // since we give it a "1 pixel frame" that we paint over anyway.
+                            // From my testing top seems to be the best option when it comes to avoiding resize artifacts.
+                            let margins = MARGINS {
+                                cxLeftWidth: 0,
+                                cxRightWidth: 0,
+                                cyTopHeight: 1,
+                                cyBottomHeight: 0,
+                            };
+                            DwmExtendFrameIntoClientArea(hwnd, &margins);
+                        }
                         if SetWindowPos(
                             hwnd,
                             HWND_TOPMOST,
@@ -660,7 +690,7 @@ impl WndProc for MyWndProc {
                         ) == 0
                         {
                             warn!(
-                                "failed to update window style: {}",
+                                "SetWindowPos failed with error: {}",
                                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                             );
                         };
@@ -727,86 +757,78 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
-                // Workaround to get rid of caption but keeping the borders created by it.
-                let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
-                if style == 0 {
-                    warn!(
-                        "failed to get window style: {}",
-                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                    );
-                    return Some(0);
-                }
-
-                if !self.has_titlebar() && (style & WS_CAPTION) != 0 {
-                    let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
-                    if let Some(mut s) = s.as_mut() {
-                        if let Some(func) = OPTIONAL_FUNCTIONS.GetSystemMetricsForDpi {
-                            // This function is only supported on windows 10
-                            let dpi = self.scale().x() * SCALE_TARGET_DPI;
-                            // Height of the different parts that make the titlebar
-                            let border = func(SM_CXPADDEDBORDER, dpi as u32);
-                            let frame = func(SM_CYSIZEFRAME, dpi as u32);
-                            let caption = func(SM_CYCAPTION, dpi as u32);
-                            // Maximized window titlebar height is just the caption
-                            if (style & WS_MAXIMIZE) != 0 {
-                                s.rgrc[0].top -= (caption) as i32;
-                            }
-                            // Normal window titlebar height is a combination of border frame and caption
-                            else {
-                                s.rgrc[0].top -= (border + frame + caption) as i32;
-                            }
-                        }
-                        // Support for windows 8.1
-                        else {
-                            // Note: With SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE) that we use on 8.1,
-                            // Windows will not scale the titlebar area when DPI changes.
-                            // Instead it is "stuck" at the DPI setting the window was created with.
-                            // GetSystemMetrics() also reports values with the DPI the window was created with.
-                            let border = GetSystemMetrics(SM_CXPADDEDBORDER);
-                            let frame = GetSystemMetrics(SM_CYSIZEFRAME);
-                            let caption = GetSystemMetrics(SM_CYCAPTION);
-                            if (style & WS_MAXIMIZE) != 0 {
-                                s.rgrc[0].top -= (caption) as i32;
-                            } else {
-                                s.rgrc[0].top -= (border + frame + caption) as i32;
+                if wparam != 0 as usize && !self.has_titlebar() {
+                    if let Ok(handle) = self.handle.try_borrow() {
+                        if handle.get_window_state() == window::WindowState::MAXIMIZED {
+                            // When maximized, windows still adds offsets for the frame
+                            // so we counteract them here.
+                            let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
+                            if let Some(mut s) = s.as_mut() {
+                                let border = self.get_system_metric(SM_CXPADDEDBORDER);
+                                let frame = self.get_system_metric(SM_CYSIZEFRAME);
+                                s.rgrc[0].top += (border + frame) as i32;
+                                s.rgrc[0].right -= (border + frame) as i32;
+                                s.rgrc[0].left += (border + frame) as i32;
+                                s.rgrc[0].bottom -= (border + frame) as i32;
                             }
                         }
                     }
+                    return Some(0);
                 }
                 None
             },
             WM_NCHITTEST => unsafe {
                 let mut hit = DefWindowProcW(hwnd, msg, wparam, lparam);
-                if !self.has_titlebar() {
-                    let mut rect = RECT {
-                        left: 0,
-                        top: 0,
-                        right: 0,
-                        bottom: 0,
-                    };
-                    if GetWindowRect(hwnd, &mut rect) == 0 {
-                        warn!(
-                            "failed to get window rect: {}",
-                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
-                        );
-                    };
-                    let a = HIWORD(lparam as u32) as i16 as i32 - rect.top;
-                    if (a == 0) && (hit != HTTOPLEFT) && (hit != HTTOPRIGHT) && self.resizable() {
-                        hit = HTTOP;
+                if !self.has_titlebar() && self.resizable() {
+                    if let Ok(handle) = self.handle.try_borrow() {
+                        if handle.get_window_state() != window::WindowState::MAXIMIZED {
+                            let mut rect = RECT {
+                                left: 0,
+                                top: 0,
+                                right: 0,
+                                bottom: 0,
+                            };
+                            if GetWindowRect(hwnd, &mut rect) == 0 {
+                                warn!(
+                                    "failed to get window rect: {}",
+                                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                );
+                            };
+                            let y_cord = HIWORD(lparam as u32) as i16 as i32;
+                            let x_cord = LOWORD(lparam as u32) as i16 as i32;
+                            let HIT_SIZE = self.get_system_metric(SM_CYSIZEFRAME)
+                                + self.get_system_metric(SM_CXPADDEDBORDER);
+
+                            if y_cord - rect.top <= HIT_SIZE {
+                                if x_cord - rect.left <= HIT_SIZE {
+                                    hit = HTTOPLEFT;
+                                } else if rect.right - x_cord <= HIT_SIZE {
+                                    hit = HTTOPRIGHT;
+                                } else {
+                                    hit = HTTOP;
+                                }
+                            } else if rect.bottom - y_cord <= HIT_SIZE {
+                                if x_cord - rect.left <= HIT_SIZE {
+                                    hit = HTBOTTOMLEFT;
+                                } else if rect.right - x_cord <= HIT_SIZE {
+                                    hit = HTBOTTOMRIGHT;
+                                } else {
+                                    hit = HTBOTTOM;
+                                }
+                            } else if x_cord - rect.left <= HIT_SIZE {
+                                hit = HTLEFT;
+                            } else if rect.right - x_cord <= HIT_SIZE {
+                                hit = HTRIGHT;
+                            }
+                        }
                     }
                 }
-                if hit != HTTOP {
-                    let mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
-
-                    if self.with_window_state(|state| state.handle_titlebar.get()) && !mouseDown {
-                        self.with_window_state(move |state| state.handle_titlebar.set(false));
-                    };
-
-                    if self.with_window_state(|state| state.handle_titlebar.get())
-                        && hit == HTCLIENT
-                    {
-                        hit = HTCAPTION;
-                    }
+                let mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
+                if self.with_window_state(|state| state.handle_titlebar.get()) && !mouseDown {
+                    self.with_window_state(move |state| state.handle_titlebar.set(false));
+                };
+                if self.with_window_state(|state| state.handle_titlebar.get()) && hit == HTCLIENT {
+                    hit = HTCAPTION;
                 }
                 Some(hit)
             },
@@ -840,8 +862,12 @@ impl WndProc for MyWndProc {
                             &self.dwrite_factory,
                             &size_dp.to_rect().into(),
                         );
+                        let present_after = match self.present_strategy {
+                            PresentStrategy::Sequential => 1,
+                            _ => 0,
+                        };
                         if let Some(ref mut dxgi_state) = s.dxgi_state {
-                            (*dxgi_state.swap_chain).Present(0, 0);
+                            (*dxgi_state.swap_chain).Present(present_after, 0);
                         }
                         ValidateRect(hwnd, null_mut());
                     } else {
@@ -1035,8 +1061,8 @@ impl WndProc for MyWndProc {
                         let count = if down {
                             // TODO: it may be more precise to use the timestamp from the event.
                             let this_click = Instant::now();
-                            let thresh_x = unsafe { GetSystemMetrics(SM_CXDOUBLECLK) };
-                            let thresh_y = unsafe { GetSystemMetrics(SM_CYDOUBLECLK) };
+                            let thresh_x = self.get_system_metric(SM_CXDOUBLECLK);
+                            let thresh_y = self.get_system_metric(SM_CYDOUBLECLK);
                             let in_box = (x - s.last_click_pos.0).abs() <= thresh_x / 2
                                 && (y - s.last_click_pos.1).abs() <= thresh_y / 2;
                             let threshold = Duration::from_millis(dct as u64);
