@@ -288,10 +288,10 @@ impl Widget<AppData> for GameOfLifeWidget {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _env: &Env) {
-        if data.fps() != old_data.fps() {
+        if (data.fps() - old_data.fps()).abs() > 0.001 {
             let deadline = Duration::from_millis(data.iter_interval())
                 .checked_sub(Instant::now().duration_since(self.last_update))
-                .unwrap_or(Duration::from_secs(0));
+                .unwrap_or_else(|| Duration::from_secs(0));
             self.timer_id = ctx.request_timer(deadline);
         }
         if data.grid != old_data.grid {
