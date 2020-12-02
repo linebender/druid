@@ -294,7 +294,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                 .unwrap_or(Duration::from_secs(0));
             self.timer_id = ctx.request_timer(deadline);
         }
-        if data.grid != old_data.grid{
+        if data.grid != old_data.grid {
             ctx.request_paint();
         }
     }
