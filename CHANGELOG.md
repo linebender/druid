@@ -124,7 +124,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Don't drop events while showing file dialogs ([#1302], [#1328] by [@jneem])
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
 - Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
-
+- WidgetPod: change not laid out `debug_panic` to warning ([#1441] by [@Maan2003])
 ### Visual
 
 - `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
@@ -357,6 +357,7 @@ Last release without a changelog :(
 [@JAicewizard]: https://github.com/JAicewizard
 [@andrewhickman]: https://github.com/andrewhickman
 [@colinfruit]: https://github.com/colinfruit
+[@Maan2003]: https://github.com/Maan2003
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -542,6 +543,7 @@ Last release without a changelog :(
 [#1371]: https://github.com/linebender/druid/pull/1371
 [#1410]: https://github.com/linebender/druid/pull/1410
 [#1438]: https://github.com/linebender/druid/pull/1438
+[#1441]: https://github.com/linebender/druid/pull/1441
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
