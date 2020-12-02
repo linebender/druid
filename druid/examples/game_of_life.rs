@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! This is an example of how you would implement the game of life with druid.
-//!
+//! This example doesnt showcase anything specific in druid.
 
 use std::ops::{Index, IndexMut};
 use std::time::Duration;
