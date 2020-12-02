@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(clippy::unreadable_literal)]
-
-//! Game of life
+//! This is an example of how you would implement the game of life with druid.
+//!
 
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
@@ -22,12 +21,11 @@ use std::time::{Duration, Instant};
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
 use druid::{
-    AppLauncher, Color, Data, Lens, LocalizedString, MouseButton, Point, Rect, TimerToken,
-    WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, Lens, MouseButton, Point, Rect, TimerToken, WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
-const GRID_SIZE: usize = 40;
+const GRID_SIZE: usize = 41;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 
 const BG: Color = Color::grey8(23);
@@ -37,98 +35,9 @@ const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
 const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
 const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
-#[allow(clippy::clippy::rc_buffer)]
 #[derive(Clone, Data)]
 struct Grid {
     storage: Arc<Vec<bool>>,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-struct GridPos {
-    row: usize,
-    col: usize,
-}
-
-#[derive(Clone)]
-struct ColorScheme {
-    colors: Vec<Color>,
-    current: usize,
-}
-
-impl GridPos {
-    pub fn above(self) -> Option<GridPos> {
-        if self.row == 0 {
-            None
-        } else {
-            Some(GridPos {
-                row: self.row - 1,
-                col: self.col,
-            })
-        }
-    }
-    pub fn below(self) -> Option<GridPos> {
-        if self.row == GRID_SIZE - 1 {
-            None
-        } else {
-            Some(GridPos {
-                row: self.row + 1,
-                col: self.col,
-            })
-        }
-    }
-    pub fn left(self) -> Option<GridPos> {
-        if self.col == 0 {
-            None
-        } else {
-            Some(GridPos {
-                row: self.row,
-                col: self.col - 1,
-            })
-        }
-    }
-    pub fn right(self) -> Option<GridPos> {
-        if self.col == GRID_SIZE - 1 {
-            None
-        } else {
-            Some(GridPos {
-                row: self.row,
-                col: self.col + 1,
-            })
-        }
-    }
-    #[allow(dead_code)]
-    pub fn above_left(self) -> Option<GridPos> {
-        self.above().and_then(|pos| pos.left())
-    }
-    pub fn above_right(self) -> Option<GridPos> {
-        self.above().and_then(|pos| pos.right())
-    }
-    #[allow(dead_code)]
-    pub fn below_left(self) -> Option<GridPos> {
-        self.below().and_then(|pos| pos.left())
-    }
-    pub fn below_right(self) -> Option<GridPos> {
-        self.below().and_then(|pos| pos.right())
-    }
-}
-
-#[derive(Clone, Lens, Data)]
-struct AppData {
-    grid: Grid,
-    drawing: bool,
-    paused: bool,
-    speed: f64,
-}
-
-impl AppData {
-    // allows time interval in the range [100ms, 5000ms]
-    // equivalently, 0.2 ~ 20fps
-    pub fn iter_interval(&self) -> u64 {
-        (1000. / self.fps()) as u64
-    }
-    pub fn fps(&self) -> f64 {
-        self.speed.max(0.01) * 20.0
-    }
 }
 
 impl Grid {
@@ -207,6 +116,76 @@ impl Grid {
                 self[GridPos { row, col }] = false;
             }
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct GridPos {
+    row: usize,
+    col: usize,
+}
+
+impl GridPos {
+    pub fn above(self) -> Option<GridPos> {
+        if self.row == 0 {
+            None
+        } else {
+            Some(GridPos {
+                row: self.row - 1,
+                col: self.col,
+            })
+        }
+    }
+    pub fn below(self) -> Option<GridPos> {
+        if self.row == GRID_SIZE - 1 {
+            None
+        } else {
+            Some(GridPos {
+                row: self.row + 1,
+                col: self.col,
+            })
+        }
+    }
+    pub fn left(self) -> Option<GridPos> {
+        if self.col == 0 {
+            None
+        } else {
+            Some(GridPos {
+                row: self.row,
+                col: self.col - 1,
+            })
+        }
+    }
+    pub fn right(self) -> Option<GridPos> {
+        if self.col == GRID_SIZE - 1 {
+            None
+        } else {
+            Some(GridPos {
+                row: self.row,
+                col: self.col + 1,
+            })
+        }
+    }
+}
+
+#[derive(Clone)]
+struct ColorScheme {
+    colors: Vec<Color>,
+}
+
+#[derive(Clone, Lens, Data)]
+struct AppData {
+    grid: Grid,
+    drawing: bool,
+    paused: bool,
+    ups: f64,
+}
+
+impl AppData {
+    // allows time interval in the range [100ms, 5000ms]
+    // equivalently, 0.2 ~ 20ups
+    pub fn iter_interval(&self) -> u64 {
+        (1000. / self.ups) as u64
     }
 }
 
@@ -340,33 +319,31 @@ impl Widget<AppData> for GameOfLifeWidget {
 }
 
 // gives back positions of a glider pattern
-//   *
-// * *
-//  **
+// _____
+// |  *|
+// |* *|
+// | **|
+// ‾‾‾‾‾
 fn glider(left_most: GridPos) -> Option<[GridPos; 5]> {
-    if left_most.row < 1 || left_most.row > GRID_SIZE - 2 || left_most.col > GRID_SIZE - 3 {
-        return None;
-    }
-    let center = left_most.right().unwrap();
+    let center = left_most.right()?;
     Some([
         left_most,
-        center.below_right().unwrap(),
-        center.below().unwrap(),
-        center.right().unwrap(),
-        center.above_right().unwrap(),
+        center.below()?.right()?,
+        center.below()?,
+        center.right()?,
+        center.above()?.right()?,
     ])
 }
 
 // gives back positions of a blinker pattern
-//  *
-//  *
-//  *
+// ___
+// |*|
+// |*|
+// |*|
+// ‾‾‾
 fn blinker(top: GridPos) -> Option<[GridPos; 3]> {
-    if top.row > GRID_SIZE - 3 || top.col < 1 || top.col > GRID_SIZE - 2 {
-        return None;
-    }
-    let center = top.below().unwrap();
-    Some([top, center, center.below().unwrap()])
+    let center = top.below()?;
+    Some([top, center, center.below()?])
 }
 
 fn make_widget() -> impl Widget<AppData> {
@@ -418,10 +395,16 @@ fn make_widget() -> impl Widget<AppData> {
                 .with_child(
                     Flex::row()
                         .with_child(
-                            Label::new(|data: &AppData, _env: &_| format!("{:.2}FPS", data.fps()))
+                            Label::new(|data: &AppData, _env: &_| format!("{:.2}UPS", data.ups))
                                 .padding(3.0),
                         )
-                        .with_flex_child(Slider::new().expand_width().lens(AppData::speed), 1.)
+                        .with_flex_child(
+                            Slider::new()
+                                .with_range(0.2, 20.0)
+                                .expand_width()
+                                .lens(AppData::ups),
+                            1.,
+                        )
                         .padding(8.0),
                 )
                 .background(BG),
@@ -435,10 +418,7 @@ pub fn main() {
             height: 800.0,
         })
         .resizable(false)
-        .title(
-            LocalizedString::new("custom-widget-demo-window-title")
-                .with_placeholder("Game of Life"),
-        );
+        .title("Game of Life");
     let mut grid = Grid::new();
     let pattern0 = glider(GridPos { row: 5, col: 5 });
     for x in &pattern0 {
@@ -454,7 +434,7 @@ pub fn main() {
             grid,
             drawing: false,
             paused: false,
-            speed: 0.5,
+            ups: 10.0,
         })
         .expect("launch failed");
 }
@@ -462,8 +442,9 @@ pub fn main() {
 impl Index<GridPos> for ColorScheme {
     type Output = Color;
     fn index(&self, pos: GridPos) -> &Self::Output {
-        let idx = pos.row * GRID_SIZE + pos.col;
-        self.colors.index(idx % self.colors.len())
+        // We devide by 2 so that the colour changes every 2 positions instead of every 1
+        let idx = (pos.row * GRID_SIZE + pos.col) / 2;
+        &self.colors[idx % self.colors.len()]
     }
 }
 
@@ -471,7 +452,7 @@ impl Index<GridPos> for Grid {
     type Output = bool;
     fn index(&self, pos: GridPos) -> &Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
-        self.storage.index(idx)
+        &self.storage[idx]
     }
 }
 
@@ -482,22 +463,10 @@ impl IndexMut<GridPos> for Grid {
     }
 }
 
-impl PartialEq for Grid {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..POOL_SIZE {
-            if self.storage[i as usize] != other.storage[i as usize] {
-                return false;
-            }
-        }
-        true
-    }
-}
-
 impl Default for ColorScheme {
     fn default() -> Self {
         ColorScheme {
             colors: vec![C0, C1, C2, C3, C4],
-            current: 0,
         }
     }
 }
