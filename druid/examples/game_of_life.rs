@@ -16,7 +16,7 @@
 //!
 
 use std::ops::{Index, IndexMut};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
