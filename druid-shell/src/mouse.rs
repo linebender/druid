@@ -254,7 +254,7 @@ pub enum Cursor {
     ResizeLeftRight,
     ResizeUpDown,
     // The platform cursor should be small. Any image data that it uses should be shared (i.e.
-    // behind an `Arc` or using a platform API that does the sharing.
+    // behind an `Arc` or using a platform API that does the sharing).
     Custom(platform::window::CustomCursor),
 }
 
