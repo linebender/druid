@@ -240,6 +240,7 @@ struct DxgiState {
 #[derive(Clone, PartialEq)]
 pub struct CustomCursor(Arc<HCursor>);
 
+#[derive(PartialEq)]
 struct HCursor(HCURSOR);
 
 impl Drop for HCursor {
