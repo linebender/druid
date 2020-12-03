@@ -299,11 +299,15 @@ impl<T: Data> Widget<T> for Split<T> {
                         ctx.request_layout();
                     }
 
-                    if ctx.is_hot() && self.bar_hit_test(ctx.size(), mouse.pos) || ctx.is_active() {
-                        match self.split_axis {
-                            Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
-                            Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
-                        };
+                    if ctx.is_hot() || ctx.is_active() {
+                        if self.bar_hit_test(ctx.size(), mouse.pos) {
+                            match self.split_axis {
+                                Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
+                                Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
+                            };
+                        } else {
+                            ctx.clear_cursor();
+                        }
                     }
                 }
                 _ => {}
