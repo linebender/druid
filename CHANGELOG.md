@@ -82,6 +82,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `Delegate::command` now returns `Handled`, not `bool` ([#1298] by [@jneem])
 - `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
+- The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
 
 ### Deprecated
 
@@ -542,6 +543,7 @@ Last release without a changelog :(
 [#1361]: https://github.com/linebender/druid/pull/1361
 [#1371]: https://github.com/linebender/druid/pull/1371
 [#1410]: https://github.com/linebender/druid/pull/1410
+[#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
 
