@@ -164,7 +164,7 @@ pub(crate) struct WindowState {
     deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CustomCursor(gdk::Cursor);
 
 impl WindowBuilder {

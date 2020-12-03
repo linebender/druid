@@ -15,7 +15,6 @@
 //! The fundamental druid types.
 
 use std::collections::{HashMap, VecDeque};
-use std::rc::Rc;
 
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
@@ -127,9 +126,10 @@ pub(crate) struct WidgetState {
     /// Associate timers with widgets that requested them.
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
     /// The cursor that was set using one of the context methods.
-    pub(crate) cursor_setting: CursorSetting,
-    /// The result of merging up children cursors.
-    pub(crate) cursor: Option<Rc<Cursor>>,
+    pub(crate) cursor_change: CursorChange,
+    /// The result of merging up children cursors. This gets cleared when merging state up (unlike
+    /// cursor_change, which is persistent).
+    pub(crate) cursor: Option<Cursor>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -147,14 +147,14 @@ pub(crate) enum FocusChange {
 
 /// The possible cursor states for a widget.
 #[derive(Clone)]
-pub(crate) enum CursorSetting {
+pub(crate) enum CursorChange {
     /// No cursor has been set.
     Default,
     /// Someone set a cursor, but if a child widget also set their cursor then we'll use theirs
     /// instead of ours.
-    Set(Rc<Cursor>),
+    Set(Cursor),
     /// Someone set a cursor, and we'll use it regardless of what the children say.
-    Override(Rc<Cursor>),
+    Override(Cursor),
 }
 
 impl<T, W: Widget<T>> WidgetPod<T, W> {
@@ -1043,7 +1043,7 @@ impl WidgetState {
             children: Bloom::new(),
             children_changed: false,
             timers: HashMap::new(),
-            cursor_setting: CursorSetting::Default,
+            cursor_change: CursorChange::Default,
             cursor: None,
         }
     }
@@ -1084,14 +1084,18 @@ impl WidgetState {
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
 
+        // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
+        // things will be recalculated just from `cursor_change`.
         let child_cursor = child_state.cursor.take();
-        if child_state.has_active || child_state.is_hot {
-            if let CursorSetting::Override(cursor) = &self.cursor_setting {
-                self.cursor = Some(Rc::clone(cursor));
-            } else if child_cursor.is_some() {
-                self.cursor = child_cursor;
-            } else if let CursorSetting::Set(cursor) = &child_state.cursor_setting {
-                self.cursor = Some(Rc::clone(cursor));
+        if let CursorChange::Override(cursor) = &self.cursor_change {
+            self.cursor = Some(cursor.clone());
+        } else if child_state.has_active || child_state.is_hot {
+            self.cursor = child_cursor;
+        }
+
+        if self.cursor.is_none() {
+            if let CursorChange::Set(cursor) = &self.cursor_change {
+                self.cursor = Some(cursor.clone());
             }
         }
     }

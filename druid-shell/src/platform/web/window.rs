@@ -100,7 +100,7 @@ struct WindowState {
 }
 
 // TODO: support custom cursors
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CustomCursor;
 
 impl WindowState {

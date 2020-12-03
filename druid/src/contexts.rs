@@ -18,11 +18,10 @@ use std::{
     any::{Any, TypeId},
     collections::VecDeque,
     ops::{Deref, DerefMut},
-    rc::Rc,
     time::Duration,
 };
 
-use crate::core::{CommandQueue, CursorSetting, FocusChange, WidgetState};
+use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
@@ -267,7 +266,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`hot`]: EventCtx::is_hot
     /// [`active`]: EventCtx::is_active
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        self.widget_state.cursor_setting = CursorSetting::Set(Rc::new(cursor.clone()));
+        self.widget_state.cursor_change = CursorChange::Set(cursor.clone());
     }
 
     /// Override the cursor icon.
@@ -281,7 +280,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`hot`]: EventCtx::is_hot
     /// [`active`]: EventCtx::is_active
     pub fn override_cursor(&mut self, cursor: &Cursor) {
-        self.widget_state.cursor_setting = CursorSetting::Override(Rc::new(cursor.clone()));
+        self.widget_state.cursor_change = CursorChange::Override(cursor.clone());
     }
 
     /// Clear the cursor icon.
@@ -291,7 +290,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`override_cursor`]: EventCtx::override_cursor
     /// [`set_cursor`]: EventCtx::set_cursor
     pub fn clear_cursor(&mut self) {
-        self.widget_state.cursor_setting = CursorSetting::Default;
+        self.widget_state.cursor_change = CursorChange::Default;
     }
 });
 
