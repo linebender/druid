@@ -240,10 +240,9 @@ impl std::fmt::Debug for MouseButtons {
 }
 
 //NOTE: this currently only contains cursors that are included by default on
-//both Windows and macOS. We may want to provide polyfills for various additional cursors,
-//and we will also want to add some mechanism for adding custom cursors.
+//both Windows and macOS. We may want to provide polyfills for various additional cursors.
 /// Mouse cursors.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Cursor {
     /// The default arrow cursor.
     Arrow,
@@ -254,6 +253,8 @@ pub enum Cursor {
     NotAllowed,
     ResizeLeftRight,
     ResizeUpDown,
+    // The platform cursor should be small. Any image data that it uses should be shared (i.e.
+    // behind an `Arc` or using a platform API that does the sharing).
     Custom(platform::window::CustomCursor),
 }
 

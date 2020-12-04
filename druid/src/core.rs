@@ -21,7 +21,7 @@ use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
-    ArcStr, BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent,
+    ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
     RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
 };
@@ -125,6 +125,11 @@ pub(crate) struct WidgetState {
     pub(crate) children_changed: bool,
     /// Associate timers with widgets that requested them.
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    /// The cursor that was set using one of the context methods.
+    pub(crate) cursor_change: CursorChange,
+    /// The result of merging up children cursors. This gets cleared when merging state up (unlike
+    /// cursor_change, which is persistent).
+    pub(crate) cursor: Option<Cursor>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -138,6 +143,18 @@ pub(crate) enum FocusChange {
     Next,
     /// Focus should pass to the previous focusable widget
     Previous,
+}
+
+/// The possible cursor states for a widget.
+#[derive(Clone)]
+pub(crate) enum CursorChange {
+    /// No cursor has been set.
+    Default,
+    /// Someone set a cursor, but if a child widget also set their cursor then we'll use theirs
+    /// instead of ours.
+    Set(Cursor),
+    /// Someone set a cursor, and we'll use it regardless of what the children say.
+    Override(Cursor),
 }
 
 impl<T, W: Widget<T>> WidgetPod<T, W> {
@@ -569,7 +586,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             state: parent_ctx.state,
             widget_state: &mut self.state,
             notifications: parent_ctx.notifications,
-            cursor: parent_ctx.cursor,
             is_handled: false,
             is_root: false,
         };
@@ -759,7 +775,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if recurse {
             let mut notifications = VecDeque::new();
             let mut inner_ctx = EventCtx {
-                cursor: ctx.cursor,
                 state: ctx.state,
                 widget_state: &mut self.state,
                 notifications: &mut notifications,
@@ -795,14 +810,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         env: &Env,
     ) {
         let EventCtx {
-            cursor,
             state,
             notifications: parent_notifications,
             ..
         } = ctx;
         let mut sentinal = VecDeque::new();
         let mut inner_ctx = EventCtx {
-            cursor,
             state,
             notifications: &mut sentinal,
             widget_state: &mut self.state,
@@ -983,7 +996,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
-            cursor: ctx.cursor,
             prev_env,
             env,
         };
@@ -1031,6 +1043,8 @@ impl WidgetState {
             children: Bloom::new(),
             children_changed: false,
             timers: HashMap::new(),
+            cursor_change: CursorChange::Default,
+            cursor: None,
         }
     }
 
@@ -1069,6 +1083,21 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
+
+        // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
+        // things will be recalculated just from `cursor_change`.
+        let child_cursor = child_state.cursor.take();
+        if let CursorChange::Override(cursor) = &self.cursor_change {
+            self.cursor = Some(cursor.clone());
+        } else if child_state.has_active || child_state.is_hot {
+            self.cursor = child_cursor;
+        }
+
+        if self.cursor.is_none() {
+            if let CursorChange::Set(cursor) = &self.cursor_change {
+                self.cursor = Some(cursor.clone());
+            }
+        }
     }
 
     #[inline]

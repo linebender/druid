@@ -184,11 +184,6 @@ impl<T: Data> Window<T> {
             _ => (),
         }
 
-        let mut cursor = match event {
-            Event::MouseMove(..) => Some(Cursor::Arrow),
-            _ => None,
-        };
-
         let event = match event {
             Event::Timer(token) => {
                 if let Some(widget_id) = self.timers.get(&token) {
@@ -217,7 +212,6 @@ impl<T: Data> Window<T> {
                 ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
             let mut notifications = VecDeque::new();
             let mut ctx = EventCtx {
-                cursor: &mut cursor,
                 state: &mut state,
                 notifications: &mut notifications,
                 widget_state: &mut widget_state,
@@ -252,8 +246,10 @@ impl<T: Data> Window<T> {
             }
         }
 
-        if let Some(cursor) = cursor {
+        if let Some(cursor) = &widget_state.cursor {
             self.handle.set_cursor(&cursor);
+        } else if matches!(event, Event::MouseMove(..)) {
+            self.handle.set_cursor(&Cursor::Arrow);
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);
@@ -286,18 +282,16 @@ impl<T: Data> Window<T> {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state =
             ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
-        let mut cursor = None;
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
-            cursor: &mut cursor,
             state: &mut state,
             prev_env: None,
             env,
         };
 
         self.root.update(&mut update_ctx, data, env);
-        if let Some(cursor) = cursor {
-            self.handle.set_cursor(&cursor);
+        if let Some(cursor) = &widget_state.cursor {
+            self.handle.set_cursor(cursor);
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);

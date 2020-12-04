@@ -532,7 +532,7 @@ struct PresentData {
     last_ust: Option<u64>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CustomCursor(xproto::Cursor);
 
 impl Window {

@@ -27,8 +27,6 @@ use druid::{
 use druid::widget::prelude::*;
 use druid::widget::{Button, Controller};
 
-use std::rc::Rc;
-
 /// This Controller switches the current cursor based on the selection.
 /// The crucial part of this code is actually making and initialising
 /// the cursor. This happens here. Because we cannot make the cursor
@@ -44,28 +42,31 @@ impl<W: Widget<AppState>> Controller<AppState, W> for CursorArea {
         data: &mut AppState,
         env: &Env,
     ) {
-        match event {
-            Event::WindowConnected => {
-                data.custom = ctx.window().make_cursor(&data.custom_desc).map(Rc::new);
-            }
-            Event::MouseMove(_) => {
-                // Because the cursor is reset to the default on every `MouseMove`
-                // event we have to explicitly overwrite this every event.
-                ctx.set_cursor(&data.cursor);
-            }
-            _ => {}
+        if let Event::WindowConnected = event {
+            data.custom = ctx.window().make_cursor(&data.custom_desc);
         }
         child.event(ctx, event, data, env);
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &AppState,
+        data: &AppState,
+        env: &Env,
+    ) {
+        if data.cursor != old_data.cursor {
+            ctx.set_cursor(&data.cursor);
+        }
+        child.update(ctx, old_data, data, env);
     }
 }
 
 fn ui_builder() -> impl Widget<AppState> {
     Button::new("Change cursor")
-        .on_click(|ctx, data: &mut AppState, _env| {
-            data.cursor = next_cursor(&data.cursor, data.custom.clone());
-            // After changing the cursor, we need to update the active cursor
-            // via the context in order for the change to take effect immediately.
-            ctx.set_cursor(&data.cursor);
+        .on_click(|_ctx, data: &mut AppState, _env| {
+            data.next_cursor();
         })
         .padding(50.0)
         .controller(CursorArea {})
@@ -75,31 +76,33 @@ fn ui_builder() -> impl Widget<AppState> {
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
-    cursor: Rc<Cursor>,
-    custom: Option<Rc<Cursor>>,
+    cursor: Cursor,
+    custom: Option<Cursor>,
     // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
     // https://docs.rs/druid/0.6.0/druid/trait.Data.html
     #[data(ignore)]
     custom_desc: CursorDesc,
 }
 
-fn next_cursor(c: &Cursor, custom: Option<Rc<Cursor>>) -> Rc<Cursor> {
-    Rc::new(match c {
-        Cursor::Arrow => Cursor::IBeam,
-        Cursor::IBeam => Cursor::Crosshair,
-        Cursor::Crosshair => Cursor::OpenHand,
-        Cursor::OpenHand => Cursor::NotAllowed,
-        Cursor::NotAllowed => Cursor::ResizeLeftRight,
-        Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
-        Cursor::ResizeUpDown => {
-            if let Some(custom) = custom {
-                return custom;
-            } else {
-                Cursor::Arrow
+impl AppState {
+    fn next_cursor(&mut self) {
+        self.cursor = match self.cursor {
+            Cursor::Arrow => Cursor::IBeam,
+            Cursor::IBeam => Cursor::Crosshair,
+            Cursor::Crosshair => Cursor::OpenHand,
+            Cursor::OpenHand => Cursor::NotAllowed,
+            Cursor::NotAllowed => Cursor::ResizeLeftRight,
+            Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
+            Cursor::ResizeUpDown => {
+                if let Some(custom) = &self.custom {
+                    custom.clone()
+                } else {
+                    Cursor::Arrow
+                }
             }
-        }
-        Cursor::Custom(_) => Cursor::Arrow,
-    })
+            Cursor::Custom(_) => Cursor::Arrow,
+        };
+    }
 }
 
 pub fn main() {
@@ -110,7 +113,7 @@ pub fn main() {
     let custom_desc = CursorDesc::new(cursor_image, (0.0, 0.0));
 
     let data = AppState {
-        cursor: Rc::new(Cursor::Arrow),
+        cursor: Cursor::Arrow,
         custom: None,
         custom_desc,
     };

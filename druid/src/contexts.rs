@@ -21,7 +21,7 @@ use std::{
     time::Duration,
 };
 
-use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
@@ -67,7 +67,6 @@ pub struct EventCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
     pub(crate) notifications: &'a mut VecDeque<Notification>,
-    pub(crate) cursor: &'a mut Option<Cursor>,
     pub(crate) is_handled: bool,
     pub(crate) is_root: bool,
 }
@@ -95,7 +94,6 @@ pub struct LifeCycleCtx<'a, 'b> {
 pub struct UpdateCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) cursor: &'a mut Option<Cursor>,
     pub(crate) prev_env: Option<&'a Env>,
     pub(crate) env: &'a Env,
 }
@@ -258,20 +256,41 @@ impl_context_method!(
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// Set the cursor icon.
     ///
-    /// Call this when handling a mouse move event, to set the cursor for the
-    /// widget. A container widget can safely call this method, then recurse
-    /// to its children, as a sequence of calls within an event propagation
-    /// only has the effect of the last one (ie no need to worry about
-    /// flashing).
+    /// This setting will be retained until [`clear_cursor`] is called, but it will only take
+    /// effect when this widget is either [`hot`] or [`active`]. If a child widget also sets a
+    /// cursor, the child widget's cursor will take precedence. (If that isn't what you want, use
+    /// [`override_cursor`] instead.)
     ///
-    /// This method is expected to be called mostly from the [`MouseMove`]
-    /// event handler, but can also be called in response to other events,
-    /// for example pressing a key to change the behavior of a widget, or
-    /// in response to data changes.
-    ///
-    /// [`MouseMove`]: enum.Event.html#variant.MouseMove
+    /// [`clear_cursor`]: EventCtx::clear_cursor
+    /// [`override_cursor`]: EventCtx::override_cursor
+    /// [`hot`]: EventCtx::is_hot
+    /// [`active`]: EventCtx::is_active
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        *self.cursor = Some(cursor.clone());
+        self.widget_state.cursor_change = CursorChange::Set(cursor.clone());
+    }
+
+    /// Override the cursor icon.
+    ///
+    /// This setting will be retained until [`clear_cursor`] is called, but it will only take
+    /// effect when this widget is either [`hot`] or [`active`]. This will override the cursor
+    /// preferences of a child widget. (If that isn't what you want, use [`set_cursor`] instead.)
+    ///
+    /// [`clear_cursor`]: EventCtx::clear_cursor
+    /// [`set_cursor`]: EventCtx::override_cursor
+    /// [`hot`]: EventCtx::is_hot
+    /// [`active`]: EventCtx::is_active
+    pub fn override_cursor(&mut self, cursor: &Cursor) {
+        self.widget_state.cursor_change = CursorChange::Override(cursor.clone());
+    }
+
+    /// Clear the cursor icon.
+    ///
+    /// This undoes the effect of [`set_cursor`] and [`override_cursor`].
+    ///
+    /// [`override_cursor`]: EventCtx::override_cursor
+    /// [`set_cursor`]: EventCtx::set_cursor
+    pub fn clear_cursor(&mut self) {
+        self.widget_state.cursor_change = CursorChange::Default;
     }
 });
 

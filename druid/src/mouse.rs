@@ -15,7 +15,7 @@
 //! The mousey bits
 
 use crate::kurbo::{Point, Vec2};
-use crate::{Modifiers, MouseButton, MouseButtons};
+use crate::{Cursor, Data, Modifiers, MouseButton, MouseButtons};
 
 /// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
@@ -92,5 +92,11 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             button,
             wheel_delta,
         }
+    }
+}
+
+impl Data for Cursor {
+    fn same(&self, other: &Cursor) -> bool {
+        self == other
     }
 }

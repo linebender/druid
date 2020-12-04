@@ -146,7 +146,7 @@ struct ViewState {
     text: PietText,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 // TODO: support custom cursors
 pub struct CustomCursor;
 

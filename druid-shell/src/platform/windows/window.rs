@@ -237,9 +237,10 @@ struct DxgiState {
     swap_chain: *mut IDXGISwapChain1,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CustomCursor(Arc<HCursor>);
 
+#[derive(PartialEq)]
 struct HCursor(HCURSOR);
 
 impl Drop for HCursor {
