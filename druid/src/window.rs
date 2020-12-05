@@ -147,6 +147,18 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+
+        if let Some(focus_req) = widget_state.request_focus.take() {
+            let old = self.focus;
+            let new = self.widget_for_focus_request(focus_req);
+            // Only send RouteFocusChanged in case there's actual change
+            if old != new {
+                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
+                self.lifecycle(queue, &event, data, env, false);
+                self.focus = new;
+            }
+        }
+
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
 
@@ -233,17 +245,6 @@ impl<T: Data> Window<T> {
         // because the token may be reused and re-added in a lifecycle pass below.
         if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
             self.timers.remove(&token);
-        }
-
-        if let Some(focus_req) = widget_state.request_focus.take() {
-            let old = self.focus;
-            let new = self.widget_for_focus_request(focus_req);
-            // Only send RouteFocusChanged in case there's actual change
-            if old != new {
-                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
-                self.lifecycle(queue, &event, data, env, false);
-                self.focus = new;
-            }
         }
 
         if let Some(cursor) = &widget_state.cursor {

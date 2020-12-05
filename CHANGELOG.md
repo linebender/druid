@@ -56,7 +56,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
-- Expose `request_focus` on `WidgetPod`. ([#????] by [@ForLoveOfCats])
+- Expose `request_focus` on `WidgetPod`. ([#1445] by [@ForLoveOfCats])
 
 ### Changed
 
@@ -84,6 +84,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 - The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
+- Handle focus request after sending `WidgetAdded` for changed children. ([#1445] by [@ForLoveOfCats])
 
 ### Deprecated
 
@@ -547,6 +548,7 @@ Last release without a changelog :(
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
+[#1445]: https://github.com/linebender/druid/pull/1445
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
