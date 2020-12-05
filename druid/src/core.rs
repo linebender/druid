@@ -207,6 +207,17 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.is_hot
     }
 
+    /// Request keyboard focus for the contained widget.
+    ///
+    /// See [`EventCtx::is_focused`] for more information about focus.
+    ///
+    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn request_focus(&mut self, ctx: &mut EventCtx) {
+        let id = self.state.id;
+        self.state.request_focus = Some(FocusChange::Focus(id));
+        ctx.widget_state.merge_up(&mut self.state);
+    }
+
     /// Return a reference to the inner widget.
     pub fn widget(&self) -> &W {
         &self.inner

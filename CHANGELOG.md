@@ -56,6 +56,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
+- Expose `request_focus` on `WidgetPod`. ([#????] by [@ForLoveOfCats])
 
 ### Changed
 
