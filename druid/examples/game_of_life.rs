@@ -57,7 +57,6 @@ impl Grid {
                 // death by loneliness or overcrowding
                 if life && !(2..=3).contains(&n_lives_around) {
                     indices_to_mutate.push(pos);
-                    continue;
                 }
                 // resurrection by life support
                 if !life && n_lives_around == 3 {
@@ -422,13 +421,14 @@ pub fn main() {
         .title("Game of Life");
     let mut grid = Grid::new();
     let pattern0 = glider(GridPos { row: 5, col: 5 });
-    for x in &pattern0 {
-        grid.set_alive(x);
+    if let Some(x) = pattern0 {
+        grid.set_alive(&x);
     }
     let pattern1 = blinker(GridPos { row: 29, col: 29 });
-    for x in &pattern1 {
-        grid.set_alive(x);
+    if let Some(x) = pattern1 {
+        grid.set_alive(&x);
     }
+    
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(AppData {
