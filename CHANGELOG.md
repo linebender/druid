@@ -93,6 +93,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Fixed
 
+- `ClipBox` should forward events if any child is active, not just the immediate child. ([#1448] by [@derekdreery])
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
@@ -126,6 +127,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
 - Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
 - WidgetPod: change not laid out `debug_panic` to warning ([#1441] by [@Maan2003])
+
 ### Visual
 
 - `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
@@ -359,6 +361,7 @@ Last release without a changelog :(
 [@andrewhickman]: https://github.com/andrewhickman
 [@colinfruit]: https://github.com/colinfruit
 [@Maan2003]: https://github.com/Maan2003
+[@derekdreery]: https://github.com/derekdreery
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -546,6 +549,7 @@ Last release without a changelog :(
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
+[#1448]: https://github.com/linebender/druid/pull/1448
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
