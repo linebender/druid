@@ -16,10 +16,10 @@
 //! Diferent image formats can be "unlocked" by adding their
 //! corresponding feature.
 
+use druid::piet::InterpolationMode;
 use druid::widget::prelude::*;
 use druid::widget::{FillStrat, Flex, Image, WidgetExt};
 use druid::{AppLauncher, Color, ImageBuf, WindowDesc};
-use druid::piet::InterpolationMode;
 
 pub fn main() {
     let main_window = WindowDesc::new(ui_builder);
