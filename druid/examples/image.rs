@@ -33,7 +33,7 @@ fn ui_builder() -> impl Widget<u32> {
     let png_data = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
 
     // We create 2 images, one not having any modifications and the other
-    // is set to a fixed width and an interpolation mode.
+    // is set to a fixed width, a fill strategy and an interpolation mode.
     // You can see how this affects the final result. You can play with the
     // Interpolation mode to see hwo this affects things.
     // Note that this image is already anti-aliased so NearestNeighbor looks
