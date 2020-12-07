@@ -35,7 +35,7 @@ const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
 const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
 const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
-#[derive(Clone, Data)]
+#[derive(Clone, Data, PartialEq)]
 struct Grid {
     storage: Arc<Vec<bool>>,
 }
@@ -437,6 +437,17 @@ pub fn main() {
             ups: 10.0,
         })
         .expect("launch failed");
+}
+
+impl PartialEq for Grid {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..POOL_SIZE {
+            if self.storage[i as usize] != other.storage[i as usize] {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl Index<GridPos> for ColorScheme {
