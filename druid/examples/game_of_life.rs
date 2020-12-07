@@ -428,7 +428,7 @@ pub fn main() {
     if let Some(x) = pattern1 {
         grid.set_alive(&x);
     }
-    
+
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(AppData {
