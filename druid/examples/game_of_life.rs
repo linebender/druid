@@ -267,7 +267,7 @@ impl Widget<AppData> for GameOfLifeWidget {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _env: &Env) {
-        if (data.fps() - old_data.fps()).abs() > 0.001 {
+        if (data.ups - old_data.ups).abs() > 0.001 {
             let deadline = Duration::from_millis(data.iter_interval())
                 .checked_sub(Instant::now().duration_since(self.last_update))
                 .unwrap_or_else(|| Duration::from_secs(0));
@@ -460,17 +460,6 @@ impl IndexMut<GridPos> for Grid {
     fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
         Arc::make_mut(&mut self.storage).index_mut(idx)
-    }
-}
-
-impl PartialEq for Grid {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..POOL_SIZE {
-            if self.storage[i as usize] != other.storage[i as usize] {
-                return false;
-            }
-        }
-        true
     }
 }
 
