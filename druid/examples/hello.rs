@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This is a very small example of how to setup a druid application.
+//! It does the almost bare minimum while still being usefull.
+
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
 use druid::{AppLauncher, WidgetExt, WindowDesc};
