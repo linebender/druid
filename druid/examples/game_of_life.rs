@@ -439,17 +439,6 @@ pub fn main() {
         .expect("launch failed");
 }
 
-impl PartialEq for Grid {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..POOL_SIZE {
-            if self.storage[i as usize] != other.storage[i as usize] {
-                return false;
-            }
-        }
-        true
-    }
-}
-
 impl Index<GridPos> for ColorScheme {
     type Output = Color;
     fn index(&self, pos: GridPos) -> &Self::Output {
@@ -471,6 +460,17 @@ impl IndexMut<GridPos> for Grid {
     fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
         Arc::make_mut(&mut self.storage).index_mut(idx)
+    }
+}
+
+impl PartialEq for Grid {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..POOL_SIZE {
+            if self.storage[i as usize] != other.storage[i as usize] {
+                return false;
+            }
+        }
+        true
     }
 }
 
