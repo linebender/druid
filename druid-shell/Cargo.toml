@@ -36,9 +36,11 @@ dxt = ["piet-common/dxt"]
 hdr = ["piet-common/hdr"]
 
 [dependencies]
+skulpin = {git = "https://github.com/aclysma/skulpin.git", features = ["skulpin_winit", "skulpin_sdl2", "skia_complete", "winit-23"], default-features = false, rev = "8a913ed52fcbe3cdd2cb97ed245f7e5798ee05c4"}
+
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.2.0-pre6"
+piet-common = {path = "../../piet/piet-common"}
 kurbo = "0.7.0"
 
 log = "0.4.11"
@@ -95,6 +97,6 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "=0.2.0-pre6", features = ["png"] }
+piet-common = {path = "../../piet/piet-common"}
 simple_logger = { version = "1.9.0", default-features = false }
 static_assertions = "1.1.0"
