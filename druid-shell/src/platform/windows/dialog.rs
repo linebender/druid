@@ -26,6 +26,7 @@ use std::convert::TryInto;
 use std::ffi::OsString;
 use std::ptr::null_mut;
 
+use winapi::ctypes::c_void;
 use winapi::shared::minwindef::*;
 use winapi::shared::ntdef::LPWSTR;
 use winapi::shared::windef::*;
@@ -146,6 +147,21 @@ pub(crate) unsafe fn get_file_dialog_path(
     }
 
     as_result(file_dialog.SetOptions(flags))?;
+
+    // set a starting directory
+    if let Some(path) = options.starting_directory {
+        let mut item: *mut IShellItem = null_mut();
+        if let Err(err) = as_result(SHCreateItemFromParsingName(
+            path.as_os_str().to_wide().as_ptr(),
+            null_mut(),
+            &IShellItem::uuidof(),
+            &mut item as *mut *mut IShellItem as *mut *mut c_void,
+        )) {
+            log::warn!("Failed to convert path: {}", err.to_string());
+        } else {
+            as_result(file_dialog.SetDefaultFolder(item))?;
+        }
+    }
 
     // show the dialog
     as_result(file_dialog.Show(hwnd_owner))?;
