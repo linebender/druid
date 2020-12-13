@@ -43,11 +43,15 @@ pub(crate) fn get_file_dialog_path(
         (FileDialogType::Open, true) => ("Open Folder", FileChooserAction::SelectFolder),
         (FileDialogType::Save, _) => ("Save File", FileChooserAction::Save),
     };
+    let title = options.title.as_deref().unwrap_or(title);
 
-    let dialog = gtk::FileChooserNativeBuilder::new()
+    let mut dialog = gtk::FileChooserNativeBuilder::new()
         .transient_for(window)
-        .title(title)
-        .build();
+        .title(title);
+    if let Some(button_text) = &options.button_text {
+        dialog = dialog.accept_label(button_text);
+    }
+    let dialog = dialog.build();
 
     dialog.set_action(action);
 
