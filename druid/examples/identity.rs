@@ -14,17 +14,18 @@
 
 //! An example of sending commands to specific widgets.
 //!
-//! This example is fairly contrived; the basic idea is that there are 2 counters,
-//! and 2 buttons. If you press button one, counter one goes up. If you press button
-//! two counter 2 goes up.
+//! This example is fairly contrived; the basic idea is that there are two counters,
+//! and two buttons. If you press button one, counter one goes up. If you press button
+//! two counter two goes up.
 //!
-//! The key insight is that each button is linked to a specific counter, and
-//! can send messages that are only handled by that widget/controler.
+//! The key insight is that the data is not mutated by the button directly;
+//! instead the button sends a command to a separate controller widget
+//! that performs the actual mutation.
 //!
-//! If you were designing a real app you might
-//! choose a different mechanism (such as just just changing the `Data` in the on_click).
-//! Identities are useful when the source and target of the change are far apart in
-//! the widget tree.
+//! If you were designing a real app you might choose a different mechanism
+//! (such as just just changing the `Data` in the on_click); however there are
+//! other circumstances where widgets may need to communicate with specific
+//! other widgets, and identity is a useful mechanism in those cases.
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Controller, Flex, Label, WidgetId};
