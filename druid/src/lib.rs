@@ -156,6 +156,7 @@ mod command;
 mod contexts;
 mod core;
 mod data;
+mod dialog;
 mod env;
 mod event;
 mod ext_event;
@@ -182,9 +183,9 @@ pub use piet::{
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
-    FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, ImageBuf, KbKey, KeyEvent, Location,
-    Modifiers, Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen,
-    SysMods, TimerToken, WindowHandle, WindowState,
+    FileInfo, FileSpec, FormatId, HotKey, ImageBuf, KbKey, KeyEvent, Location, Modifiers, Monitor,
+    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
+    WindowHandle, WindowState,
 };
 
 pub use crate::core::WidgetPod;
@@ -194,6 +195,7 @@ pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Notification, Selector, SingleUse, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
+pub use dialog::FileDialogOptions;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
