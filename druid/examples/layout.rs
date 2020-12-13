@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example shows how to construct a basic layout. using
-//! Collumns and Rows, and loops for repeated Widgets.
+//! This example shows how to construct a basic layout,
+//! using columns, rows, and loops, for repeated Widgets.
 
 use druid::widget::{Button, Flex, Label};
-use druid::{AppLauncher, Color,  Widget, WidgetExt, WindowDesc};
+use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
     // Usually we put all the widgets in one big tree using builder-style
     // methods. Sometimes we split them up in declarations to increase
-    // readability.  In this case we also have some recurring elements,
+    // readability. In this case we also have some recurring elements,
     // we add those in a loop later on.
     let mut col = Flex::column().with_child(
-        // The Flex first child is another flex! but in this case it is
+        // The `Flex`'s first child is another Flex! In this case it is
         // a row.
         Flex::row()
             // The row has its own children.
@@ -44,7 +44,7 @@ fn build_app() -> impl Widget<u32> {
             // After we added all the children, we can set some more
             // values using builder-style methods. Since these methods
             // dont return the original `Flex` but a SizedBox and Container
-            // respectivaly, we have to put these at the end.
+            // respectively, we have to put these at the end.
             .fix_height(100.0)
             //turquoise
             .background(Color::rgb8(0, 0x77, 0x88)),
@@ -60,7 +60,8 @@ fn build_app() -> impl Widget<u32> {
             weight,
         );
     }
-    // And the deput paint layout
+    // This method asks druid to draw colored rectangles around our widgets,
+    // so we can visually inspect their layout rectangles.
     col.debug_paint_layout()
 }
 
