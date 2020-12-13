@@ -44,6 +44,7 @@ farbfeld = ["druid-shell/farbfeld"]
 dxt = ["druid-shell/dxt"]
 hdr = ["druid-shell/hdr"]
 
+# Remember to update this when changing an image feature.
 all-image = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "tiff", "webp", "pnm", "dds", "tga", "farbfeld", "dxt", "hdr"]
 
 [dependencies]
