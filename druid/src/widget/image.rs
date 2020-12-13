@@ -16,6 +16,7 @@
 //! Please consider using SVG and the SVG widget as it scales much better.
 
 use crate::{
+    kurbo::Rect,
     piet::{ImageBuf, InterpolationMode, PietImage},
     widget::common::FillStrat,
     widget::prelude::*,
@@ -32,11 +33,7 @@ use crate::{
 /// or pixelated images and so is not recommended for things like icons.
 /// Instead consider using [SVG files] and enabling the `svg` feature with `cargo`.
 ///
-/// (See also:
-/// [`ImageBuf`],
-/// [`FillStrat`],
-/// [`InterpolationMode`]
-/// )
+/// (See also: [`ImageBuf`], [`FillStrat`], [`InterpolationMode`])
 ///
 /// # Example
 ///
@@ -79,54 +76,89 @@ pub struct Image {
     paint_data: Option<PietImage>,
     fill: FillStrat,
     interpolation: InterpolationMode,
+    clip_area: Option<Rect>,
 }
 
 impl Image {
     /// Create an image drawing widget from an image buffer.
     ///
-    /// By default, the Image will scale to fit its box constraints
-    /// ([`FillStrat::Fill`])
-    /// and will be scaled bilinearly
-    /// ([`InterpolationMode::Bilinear`])
+    /// By default, the Image will scale to fit its box constraints ([`FillStrat::Fill`])
+    /// and will be scaled bilinearly ([`InterpolationMode::Bilinear`])
     ///
-    /// [`FillStrat::Fill`]: ../widget/enum.FillStrat.html#variant.Fill
-    /// [`InterpolationMode::Bilinear`]: ../piet/enum.InterpolationMode.html#variant.Bilinear
+    /// The underlying `ImageBuf` uses `Arc` for buffer data, making it cheap to clone.
+    ///
+    /// [`FillStrat::Fill`]: crate::widget::FillStrat::Fill
+    /// [`InterpolationMode::Bilinear`]: crate::piet::InterpolationMode::Bilinear
+    #[inline]
     pub fn new(image_data: ImageBuf) -> Self {
         Image {
             image_data,
             paint_data: None,
             fill: FillStrat::default(),
             interpolation: InterpolationMode::Bilinear,
+            clip_area: None,
         }
     }
 
     /// A builder-style method for specifying the fill strategy.
+    #[inline]
     pub fn fill_mode(mut self, mode: FillStrat) -> Self {
         self.fill = mode;
+        // Invalidation not necessary
         self
     }
 
     /// Modify the widget's fill strategy.
+    #[inline]
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
-        self.paint_data = None;
+        // Invalidation not necessary
     }
 
     /// A builder-style method for specifying the interpolation strategy.
+    #[inline]
     pub fn interpolation_mode(mut self, interpolation: InterpolationMode) -> Self {
         self.interpolation = interpolation;
+        // Invalidation not necessary
         self
     }
 
     /// Modify the widget's interpolation mode.
+    #[inline]
     pub fn set_interpolation_mode(&mut self, interpolation: InterpolationMode) {
         self.interpolation = interpolation;
-        self.paint_data = None;
+        // Invalidation not necessary
+    }
+
+    /// Set the area of the image that will be displayed.
+    ///
+    /// If `None`, then the whole image will be displayed.
+    #[inline]
+    pub fn clip_area(mut self, clip_area: Option<Rect>) -> Self {
+        self.clip_area = clip_area;
+        // Invalidation not necessary
+        self
+    }
+
+    /// Set the area of the image that will be displayed.
+    ///
+    /// If `None`, then the whole image will be displayed.
+    #[inline]
+    pub fn set_clip_area(&mut self, clip_area: Option<Rect>) {
+        self.clip_area = clip_area;
+        // Invalidation not necessary
     }
 
     /// Set new `ImageBuf`.
+    #[inline]
     pub fn set_image_data(&mut self, image_data: ImageBuf) {
         self.image_data = image_data;
+        self.invalidate();
+    }
+
+    /// Invalidate the image cache, forcing it to be recreated.
+    #[inline]
+    fn invalidate(&mut self) {
         self.paint_data = None;
     }
 }
@@ -180,11 +212,20 @@ impl<T: Data> Widget<T> for Image {
                     .get_or_insert_with(|| image_data.to_image(ctx.render_ctx))
             };
             ctx.transform(offset_matrix);
-            ctx.draw_image(
-                piet_image,
-                self.image_data.size().to_rect(),
-                self.interpolation,
-            );
+            if let Some(area) = self.clip_area {
+                ctx.draw_image_area(
+                    piet_image,
+                    area,
+                    self.image_data.size().to_rect(),
+                    self.interpolation,
+                );
+            } else {
+                ctx.draw_image(
+                    piet_image,
+                    self.image_data.size().to_rect(),
+                    self.interpolation,
+                );
+            }
         });
     }
 }
@@ -195,6 +236,32 @@ mod tests {
     use crate::piet::ImageFormat;
 
     use super::*;
+
+    /// Painting an empty image shouldn't crash druid.
+    #[test]
+    fn empty_paint() {
+        use crate::{tests::harness::Harness, WidgetId};
+
+        let _id_1 = WidgetId::next();
+        let image_data = ImageBuf::empty();
+
+        let image_widget =
+            Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
+
+        Harness::create_with_render(
+            (),
+            image_widget,
+            Size::new(400., 600.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |_target| {
+                // if we painted the image, then success!
+            },
+        )
+    }
 
     #[test]
     fn tall_paint() {
@@ -212,7 +279,7 @@ mod tests {
             Image::new(image_data).interpolation_mode(InterpolationMode::NearestNeighbor);
 
         Harness::create_with_render(
-            true,
+            (),
             image_widget,
             Size::new(400., 600.),
             |harness| {
@@ -244,6 +311,7 @@ mod tests {
             },
         )
     }
+
     #[test]
     fn wide_paint() {
         use crate::{tests::harness::Harness, WidgetId};
@@ -296,6 +364,7 @@ mod tests {
             },
         );
     }
+
     #[test]
     fn into_png() {
         use crate::{
@@ -383,5 +452,43 @@ mod tests {
             let state = harness.get_state(id_1);
             assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
         })
+    }
+
+    #[test]
+    fn image_clip_area() {
+        use crate::{tests::harness::Harness, WidgetId};
+        use std::iter;
+
+        let _id_1 = WidgetId::next();
+        let image_data = ImageBuf::from_raw(
+            vec![255, 255, 255, 0, 0, 0, 0, 0, 0, 255, 255, 255],
+            ImageFormat::Rgb,
+            2,
+            2,
+        );
+
+        let image_widget = Image::new(image_data)
+            .interpolation_mode(InterpolationMode::NearestNeighbor)
+            .clip_area(Some(Rect::new(1., 1., 2., 2.)));
+
+        Harness::create_with_render(
+            true,
+            image_widget,
+            Size::new(2., 2.),
+            |harness| {
+                harness.send_initial_events();
+                harness.just_layout();
+                harness.paint();
+            },
+            |target| {
+                let raw_pixels = target.into_raw();
+                assert_eq!(raw_pixels.len(), 4 * 4);
+
+                // Because we clipped to the bottom pixel, all pixels in the final image should
+                // match it.
+                let expecting: Vec<u8> = iter::repeat(255).take(16).collect();
+                assert_eq!(&*raw_pixels, &*expecting);
+            },
+        )
     }
 }
