@@ -74,11 +74,21 @@ pub(crate) struct AppState<T> {
     inner: Rc<RefCell<Inner<T>>>,
 }
 
+/// The information for forwarding druid-shell's file dialog reply to the right place.
+struct DialogInfo {
+    /// The window to send the command to.
+    id: WindowId,
+    /// The command to send if the dialog is accepted.
+    accept_cmd: Selector<FileInfo>,
+    /// The command to send if the dialog is cancelled.
+    cancel_cmd: Selector<()>,
+}
+
 struct Inner<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
-    file_dialogs: HashMap<FileDialogToken, (WindowId, Selector<FileInfo>, Selector<()>)>,
+    file_dialogs: HashMap<FileDialogToken, DialogInfo>,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
@@ -466,6 +476,20 @@ impl<T: Data> DruidHandler<T> {
             window_id,
         }
     }
+
+    fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.app_state.inner.borrow_mut();
+        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                dialog_info.accept_cmd.with(info).to(dialog_info.id)
+            } else {
+                dialog_info.cancel_cmd.to(dialog_info.id)
+            };
+            inner.dispatch_cmd(cmd);
+        } else {
+            log::error!("unknown dialog token");
+        }
+    }
 }
 
 impl<T: Data> AppState<T> {
@@ -624,10 +648,14 @@ impl<T: Data> AppState<T> {
             .unwrap_or(crate::commands::OPEN_PANEL_CANCELLED);
         let token = handle.and_then(|mut handle| handle.open_file(options.opt));
         if let Some(token) = token {
-            self.inner
-                .borrow_mut()
-                .file_dialogs
-                .insert(token, (window_id, accept_cmd, cancel_cmd));
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
         }
     }
 
@@ -646,10 +674,14 @@ impl<T: Data> AppState<T> {
             .unwrap_or(crate::commands::SAVE_PANEL_CANCELLED);
         let token = handle.and_then(|mut handle| handle.save_as(options.opt));
         if let Some(token) = token {
-            self.inner
-                .borrow_mut()
-                .file_dialogs
-                .insert(token, (window_id, accept_cmd, cancel_cmd));
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
         }
     }
 
@@ -768,31 +800,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn save_as(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        let mut inner = self.app_state.inner.borrow_mut();
-        if let Some((window_id, save, cancel)) = inner.file_dialogs.remove(&token) {
-            let cmd = if let Some(info) = file_info {
-                save.with(info).to(window_id)
-            } else {
-                cancel.to(window_id)
-            };
-            inner.dispatch_cmd(cmd);
-        } else {
-            log::error!("unknown save dialog token");
-        }
+        self.handle_dialog_response(token, file_info);
     }
 
     fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        let mut inner = self.app_state.inner.borrow_mut();
-        if let Some((window_id, open, cancel)) = inner.file_dialogs.remove(&token) {
-            let cmd = if let Some(info) = file_info {
-                open.with(info).to(window_id)
-            } else {
-                cancel.to(window_id)
-            };
-            inner.dispatch_cmd(cmd);
-        } else {
-            log::error!("unknown open dialog token");
-        }
+        self.handle_dialog_response(token, file_info);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {

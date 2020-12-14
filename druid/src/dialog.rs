@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Configuration for open and save file dialogs.
+//!
+//! This is a wrapper around [`druid_shell::FileDialogOptions`] with a few extra druid specifics.
+//! As such, many of the docs are copied from `druid_shell`, and should be kept in sync.
+
 use std::path::PathBuf;
 
 use druid_shell::FileDialogOptions as ShellOptions;
