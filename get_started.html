@@ -204,7 +204,7 @@ We solve both these problems by passing in a widget-tree with one single widget 
                     .with_flex_child(Label::new(&quot;top left&quot;), 1.0)
                     .with_flex_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0),
                 1.0)
-            .with_child(
+            .with_flex_child(
                 Flex::column()
                     .with_flex_child(Label::new(&quot;top right&quot;), 1.0)
                     .with_flex_child(Align::centered(Label::new(&quot;bottom right&quot;)), 1.0),
