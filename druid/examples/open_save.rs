@@ -85,7 +85,7 @@ impl AppDelegate<String> for Delegate {
         data: &mut String,
         _env: &Env,
     ) -> Handled {
-        if let Some(Some(file_info)) = cmd.get(commands::SAVE_FILE) {
+        if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
                 println!("Error writing file: {}", e);
             }

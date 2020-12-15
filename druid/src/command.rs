@@ -257,15 +257,22 @@ pub mod sys {
     /// Sent when the user cancels a save file panel.
     pub const SAVE_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.save-panel-cancelled");
 
-    /// Save the current path, must be handled by the application.
+    /// Save the current path.
     ///
-    /// How this should be handled depends on the payload:
-    /// `Some(handle)`: the app should save to that path and store the `handle` for future use.
-    /// `None`: the app should have received `Some` before and use the stored `FileInfo`.
+    /// The application should save its data, to a path that should be determined by the
+    /// application. Usually, this will be the most recent path provided by a [`SAVE_FILE_AS`]
+    /// or [`OPEN_FILE`] command.
+    pub const SAVE_FILE: Selector<()> = Selector::new("druid-builtin.menu-file-save");
+
+    /// Save to a given location.
     ///
-    /// The path might be a file or a directory,
-    /// so always check whether it matches your expectations.
-    pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
+    /// This command is emitted by druid whenever a save file dialog successfully completes. The
+    /// application should save its data to the path proved, and should store the path in order to
+    /// handle [`SAVE_FILE`] commands in the future.
+    ///
+    /// The path might be a file or a directory, so always check whether it matches your
+    /// expectations.
+    pub const SAVE_FILE_AS: Selector<FileInfo> = Selector::new("druid-builtin.menu-file-save-as");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
