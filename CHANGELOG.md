@@ -56,6 +56,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
+- Open and save dialogs send configurable commands. ([#1463] by [@jneem])
 - Windows: Dialogs now respect the parameter passed to `force_starting_directory()` ([#1452] by [@MaximilianKoestler])
 
 ### Changed
@@ -84,6 +85,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 - The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
+- Part of the `SAVE_FILE` command is now `SAVE_FILE_AS` ([#1463] by [@jneem])
 
 ### Deprecated
 
@@ -552,6 +554,7 @@ Last release without a changelog :(
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
 [#1448]: https://github.com/linebender/druid/pull/1448
+[#1463]: https://github.com/linebender/druid/pull/1463
 [#1452]: https://github.com/linebender/druid/pull/1452
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master

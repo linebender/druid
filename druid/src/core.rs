@@ -146,7 +146,7 @@ pub(crate) enum FocusChange {
 }
 
 /// The possible cursor states for a widget.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum CursorChange {
     /// No cursor has been set.
     Default,
@@ -1086,7 +1086,7 @@ impl WidgetState {
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
-        let child_cursor = child_state.cursor.take();
+        let child_cursor = child_state.take_cursor();
         if let CursorChange::Override(cursor) = &self.cursor_change {
             self.cursor = Some(cursor.clone());
         } else if child_state.has_active || child_state.is_hot {
@@ -1098,6 +1098,13 @@ impl WidgetState {
                 self.cursor = Some(cursor.clone());
             }
         }
+    }
+
+    /// Because of how cursor merge logic works, we need to handle the leaf case;
+    /// in that case there will be nothing in the `cursor` field (as merge_up
+    /// is never called) and so we need to also check the `cursor_change` field.
+    fn take_cursor(&mut self) -> Option<Cursor> {
+        self.cursor.take().or_else(|| self.cursor_change.cursor())
     }
 
     #[inline]
@@ -1116,6 +1123,15 @@ impl WidgetState {
 
     pub(crate) fn layout_rect(&self) -> Rect {
         Rect::from_origin_size(self.origin, self.size)
+    }
+}
+
+impl CursorChange {
+    fn cursor(&self) -> Option<Cursor> {
+        match self {
+            CursorChange::Set(c) | CursorChange::Override(c) => Some(c.clone()),
+            CursorChange::Default => None,
+        }
     }
 }
 

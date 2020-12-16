@@ -279,3 +279,18 @@ impl CursorDesc {
         }
     }
 }
+
+impl std::fmt::Debug for Cursor {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Cursor::Arrow => write!(f, "Cursor::Arrow"),
+            Cursor::IBeam => write!(f, "Cursor::IBeam"),
+            Cursor::Crosshair => write!(f, "Cursor::Crosshair"),
+            Cursor::OpenHand => write!(f, "Cursor::OpenHand"),
+            Cursor::NotAllowed => write!(f, "Cursor::NotAllowed"),
+            Cursor::ResizeLeftRight => write!(f, "Cursor::ResizeLeftRight"),
+            Cursor::ResizeUpDown => write!(f, "Cursor::ResizeUpDown"),
+            Cursor::Custom(_) => write!(f, "Cursor::Custom"),
+        }
+    }
+}
