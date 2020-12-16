@@ -57,6 +57,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
 - Open and save dialogs send configurable commands. ([#1463] by [@jneem])
+- Windows: Dialogs now respect the parameter passed to `force_starting_directory()` ([#1452] by [@MaximilianKoestler])
 
 ### Changed
 
@@ -364,6 +365,7 @@ Last release without a changelog :(
 [@colinfruit]: https://github.com/colinfruit
 [@Maan2003]: https://github.com/Maan2003
 [@derekdreery]: https://github.com/derekdreery
+[@MaximilianKoestler]: https://github.com/MaximilianKoestler
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -553,6 +555,7 @@ Last release without a changelog :(
 [#1441]: https://github.com/linebender/druid/pull/1441
 [#1448]: https://github.com/linebender/druid/pull/1448
 [#1463]: https://github.com/linebender/druid/pull/1463
+[#1452]: https://github.com/linebender/druid/pull/1452
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
