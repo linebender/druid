@@ -19,7 +19,6 @@ use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use instant::Instant;
 
@@ -34,7 +33,7 @@ use super::application::Application;
 use super::error::Error;
 use super::keycodes::convert_keyboard_event;
 use super::menu::Menu;
-use crate::common_util::IdleCallback;
+use crate::common_util::{ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
@@ -44,11 +43,6 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::window;
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
-
-// This is the default timing on windows.
-const MULTI_CLICK_INTERVAL: Duration = Duration::from_millis(500);
-// the max distance between two clicks for them to count as a multi-click
-const MULTI_CLICK_MAX_DISTANCE: f64 = 5.0;
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -104,17 +98,6 @@ struct WindowState {
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
-}
-
-/// A small helper for determining the click-count of a mouse-down event.
-///
-/// Click-count is incremented if both the duration and distance between a pair
-/// of clicks are below some threshold.
-#[derive(Debug, Clone)]
-struct ClickCounter {
-    last_click: Cell<Instant>,
-    last_pos: Cell<Point>,
-    click_count: Cell<u8>,
 }
 
 // TODO: support custom cursors
@@ -180,36 +163,12 @@ impl WindowState {
     }
 }
 
-impl ClickCounter {
-    fn new() -> ClickCounter {
-        ClickCounter {
-            last_click: Cell::new(Instant::now()),
-            click_count: Cell::new(0),
-            last_pos: Cell::new(Point::new(f64::MAX, 0.0)),
-        }
-    }
-
-    fn get_click_count(&self, click_pos: Point) -> u8 {
-        let click_time = Instant::now();
-        let last_time = self.last_click.replace(click_time);
-        let last_pos = self.last_pos.replace(click_pos);
-        let elapsed = click_time - last_time;
-        let distance = last_pos.distance(click_pos);
-        if elapsed > MULTI_CLICK_INTERVAL || distance > MULTI_CLICK_MAX_DISTANCE {
-            self.click_count.set(0);
-        }
-        let click_count = self.click_count.get().saturating_add(1);
-        self.click_count.set(click_count);
-        click_count
-    }
-}
-
 fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_canvas_event_listener(ws, "mousedown", move |event: web_sys::MouseEvent| {
         if let Some(button) = mouse_button(event.button()) {
             let pos = Point::new(event.offset_x() as f64, event.offset_y() as f64);
-            let count = state.click_counter.get_click_count(pos);
+            let count = state.click_counter.count_for_click(pos);
 
             let buttons = mouse_buttons(event.buttons());
             let event = MouseEvent {
@@ -461,7 +420,7 @@ impl WindowBuilder {
             canvas,
             context,
             invalid: RefCell::new(Region::EMPTY),
-            click_counter: ClickCounter::new(),
+            click_counter: ClickCounter::default(),
         });
 
         setup_web_callbacks(&window);

@@ -16,14 +16,14 @@
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::c_void;
 use std::os::raw::{c_int, c_uint};
 use std::panic::Location;
 use std::ptr;
 use std::slice;
 use std::sync::{Arc, Mutex, Weak};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
@@ -35,7 +35,7 @@ use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
-use crate::common_util::IdleCallback;
+use crate::common_util::{ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
@@ -158,9 +158,7 @@ pub(crate) struct WindowState {
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
-    last_click: Cell<(f64, f64)>,
-    last_click_time: Cell<Instant>,
-    last_click_count: Cell<u8>,
+    click_counter: ClickCounter,
     deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
@@ -263,9 +261,7 @@ impl WindowBuilder {
             handler: RefCell::new(handler),
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
-            last_click: Cell::new((0.0, 0.0)),
-            last_click_time: Cell::new(Instant::now()),
-            last_click_count: Cell::new(0),
+            click_counter: ClickCounter::default(),
             deferred_queue: RefCell::new(Vec::new()),
         });
 
@@ -419,30 +415,22 @@ impl WindowBuilder {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
                         let gtk_count = get_mouse_click_count(event.get_event_type());
-                        let raw_pos = event.get_position();
+                        let pos: Point =  event.get_position().into();
                         let count = if gtk_count == 1 {
-                            let this_click_time = Instant::now();
                             let settings = state.drawing_area.get_settings().unwrap();
-                            let thresh_ms = settings.get_property_gtk_double_click_time();
-                            let thresh_dur = Duration::from_millis(thresh_ms as u64);
                             let thresh_dist = settings.get_property_gtk_double_click_distance();
-                            let last_click = state.last_click.get();
-                            let dist = (raw_pos.0 - last_click.0).powi(2) + (raw_pos.1 - last_click.1).powi(2);
-                            if dist > (thresh_dist * thresh_dist) as f64 || this_click_time - state.last_click_time.get() > thresh_dur {
-                                state.last_click_count.set(0);
+                            state.click_counter.set_distance(thresh_dist.into());
+                            if let Ok(ms) = settings.get_property_gtk_double_click_time().try_into() {
+                                state.click_counter.set_interval_ms(ms);
                             }
-                            let count = state.last_click_count.get().saturating_add(1);
-                            state.last_click_count.set(count);
-                            state.last_click.set(raw_pos);
-                            state.last_click_time.set(this_click_time);
-                            count
+                            state.click_counter.count_for_click(pos)
                         } else {
                             0
                         };
                         if gtk_count == 0 || gtk_count == 1 {
                             handler.mouse_down(
                                 &MouseEvent {
-                                    pos: Point::from(raw_pos).to_dp(scale),
+                                    pos: pos.to_dp(scale),
                                     buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
                                     mods: get_modifiers(button_state),
                                     count,
