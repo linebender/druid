@@ -19,6 +19,7 @@
 use std::any::Any;
 use std::ffi::c_void;
 use std::mem;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
@@ -31,6 +32,7 @@ use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
     NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
 };
+use cocoa::quartzcore::CVTimeStamp;
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
@@ -48,6 +50,7 @@ use super::appkit::{
 };
 use super::application::Application;
 use super::dialog;
+use super::display_link::{CVDisplayLink, CVDisplayLinkRef};
 use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
 use super::util::{assert_main_thread, make_nsstring};
@@ -138,6 +141,14 @@ struct ViewState {
     nsview: WeakPtr,
     handler: Box<dyn WinHandler>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
+    display_link: CVDisplayLink,
+    /// Tracks whether an animation frame been requested. Set in `request_anim_frame`,
+    /// reset in `display_link_output` when the v-sync starts and `view_will_draw` is
+    /// scheduled.
+    anim_frame_pending: AtomicBool,
+    /// Region that needs to be repainted. `invalidate` and `invalidate_rect` add the
+    /// invalidated rects into the region, `draw_rect` clears it.
+    invalid_region: Region,
     /// Tracks window focusing left clicks
     focus_click: bool,
     // Tracks whether we have already received the mouseExited event
@@ -406,7 +417,6 @@ lazy_static! {
         );
         decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
         decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
-        decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
         decl.add_method(
             sel!(handleTimer:),
             handle_timer as extern "C" fn(&mut Object, Sel, id),
@@ -434,10 +444,21 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
         let view: id = msg_send![VIEW_CLASS.0, new];
         let nsview = WeakPtr::new(view);
         let keyboard_state = KeyboardState::new();
+
+        // Animation frames are synchronized to the display refresh rate through
+        // a `CVDisplayLink`. Display link is started in `request_anim_frame`,
+        // it periodically calls `display_link_output`, and is stopped after
+        // missing one frame.
+        let display_link = CVDisplayLink::with_active_cg_displays();
+        display_link.set_output_callback(display_link_output, view as *mut c_void);
+
         let state = ViewState {
             nsview,
             handler,
             idle_queue,
+            display_link,
+            anim_frame_pending: AtomicBool::new(false),
+            invalid_region: Region::EMPTY,
             focus_click: false,
             mouse_left: true,
             keyboard_state,
@@ -447,6 +468,10 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
+
+        // Setting the view as opaque prevents invalidation artifacts during partial
+        // drawing combined with animations.
+        view.setOpaque_(YES);
 
         // The rect of the tracking area doesn't matter, because
         // we use the InVisibleRect option where the OS syncs the size automatically.
@@ -725,6 +750,15 @@ extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+
+        // It seems that no matter what rects are actually invalidated through
+        // `setNeedsDisplayInRect`, AppKit always sends us `dirtyRect` covering
+        // the whole view. Let's ignore it and paint only to the actually
+        // invalidated region.
+        let invalid: Region = mem::replace(&mut view_state.invalid_region, Region::EMPTY);
+
         let context: id = msg_send![class![NSGraphicsContext], currentContext];
         //FIXME: when core_graphics is at 0.20, we should be able to use
         //core_graphics::sys::CGContextRef as our pointer type.
@@ -732,16 +766,6 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             msg_send![context, CGContext];
         let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
 
-        // FIXME: use the actual invalid region instead of just this bounding box.
-        // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
-        let rect = Rect::from_origin_size(
-            (dirtyRect.origin.x, dirtyRect.origin.y),
-            (dirtyRect.size.width, dirtyRect.size.height),
-        );
-        let invalid = Region::from(rect);
-
-        let view_state: *mut c_void = *this.get_ivar("viewState");
-        let view_state = &mut *(view_state as *mut ViewState);
         let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
 
         (*view_state).handler.paint(&mut piet_ctx, &invalid);
@@ -752,6 +776,26 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), drawRect: dirtyRect];
     }
+}
+
+unsafe extern "C" fn display_link_output(
+    _display_link_out: CVDisplayLinkRef,
+    _in_now_timestamp: *const CVTimeStamp,
+    _in_output_timestamp: *const CVTimeStamp,
+    _flags_in: i64,
+    _flagsOut: *mut i64,
+    display_link_context: *mut c_void,
+) -> i32 {
+    let view = &mut *(display_link_context as *mut Object);
+    let view_state: *mut c_void = *view.get_ivar("viewState");
+    let view_state = &mut *(view_state as *mut ViewState);
+    let pending = view_state.anim_frame_pending.swap(false, Ordering::SeqCst);
+    if pending {
+        let () = msg_send![view, performSelectorOnMainThread: sel!(viewWillDraw) withObject: nil waitUntilDone: NO];
+    } else {
+        view_state.display_link.stop();
+    }
+    0
 }
 
 extern "C" fn run_idle(this: &mut Object, _: Sel) {
@@ -770,12 +814,6 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
                 view_state.handler.as_mut().idle(it);
             }
         }
-    }
-}
-
-extern "C" fn redraw(this: &mut Object, _: Sel) {
-    unsafe {
-        let () = msg_send![this as *const _, setNeedsDisplay: YES];
     }
 }
 
@@ -866,31 +904,51 @@ impl WindowHandle {
         }
     }
 
+    /// Request a new paint, but without invalidating anything.
     pub fn request_anim_frame(&self) {
+        let view = self.nsview.load();
         unsafe {
-            // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
-            let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
-                withObject: nil waitUntilDone: NO];
+            if let Some(view) = (*view).as_ref() {
+                let view_state: *mut c_void = *view.get_ivar("viewState");
+                let view_state = &mut *(view_state as *mut ViewState);
+                view_state.anim_frame_pending.store(true, Ordering::SeqCst);
+                view_state.display_link.start();
+            }
         }
     }
 
-    // Request invalidation of the entire window contents.
+    /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
+        let view = self.nsview.load();
+        let bounds: NSRect = unsafe { msg_send![*view, bounds] };
+        let rect = Rect::from_origin_size(
+            (bounds.origin.x, bounds.origin.y),
+            (bounds.size.width, bounds.size.height),
+        );
         unsafe {
-            // We could share impl with redraw, but we'd need to deal with nil.
-            let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+            if let Some(view) = (*view).as_ref() {
+                let view_state: *mut c_void = *view.get_ivar("viewState");
+                let view_state = &mut *(view_state as *mut ViewState);
+                view_state.invalid_region.add_rect(rect);
+            }
+            let () = msg_send![*view, setNeedsDisplayInRect: bounds];
         }
     }
 
     /// Request invalidation of one rectangle.
     pub fn invalidate_rect(&self, rect: Rect) {
-        let rect = NSRect::new(
+        let view = self.nsview.load();
+        let bounds = NSRect::new(
             NSPoint::new(rect.x0, rect.y0),
             NSSize::new(rect.width(), rect.height()),
         );
         unsafe {
-            // We could share impl with redraw, but we'd need to deal with nil.
-            let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
+            if let Some(view) = (*view).as_ref() {
+                let view_state: *mut c_void = *view.get_ivar("viewState");
+                let view_state = &mut *(view_state as *mut ViewState);
+                view_state.invalid_region.add_rect(rect);
+            }
+            let () = msg_send![*view, setNeedsDisplayInRect: bounds];
         }
     }
 
@@ -937,8 +995,9 @@ impl WindowHandle {
         let view = self.nsview.load();
         unsafe {
             if let Some(view) = (*view).as_ref() {
-                let state: *mut c_void = *view.get_ivar("viewState");
-                (*(state as *mut ViewState)).text.clone()
+                let view_state: *mut c_void = *view.get_ivar("viewState");
+                let view_state = &mut *(view_state as *mut ViewState);
+                view_state.text.clone()
             } else {
                 // this codepath should only happen during tests in druid, when view is nil
                 PietText::new_with_unique_state()

@@ -20,6 +20,7 @@ pub mod appkit;
 pub mod application;
 pub mod clipboard;
 pub mod dialog;
+mod display_link;
 pub mod error;
 mod keyboard;
 pub mod menu;
