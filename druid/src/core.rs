@@ -537,7 +537,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.is_expecting_set_origin_call = true;
 
         let child_mouse_pos = match ctx.mouse_pos {
-            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2()),
+            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2() + self.viewport_offset()),
             None => None,
         };
         let prev_size = self.state.size;
