@@ -476,20 +476,6 @@ impl<T: Data> DruidHandler<T> {
             window_id,
         }
     }
-
-    fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        let mut inner = self.app_state.inner.borrow_mut();
-        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
-            let cmd = if let Some(info) = file_info {
-                dialog_info.accept_cmd.with(info).to(dialog_info.id)
-            } else {
-                dialog_info.cancel_cmd.to(dialog_info.id)
-            };
-            inner.dispatch_cmd(cmd);
-        } else {
-            log::error!("unknown dialog token");
-        }
-    }
 }
 
 impl<T: Data> AppState<T> {
@@ -685,6 +671,24 @@ impl<T: Data> AppState<T> {
         }
     }
 
+    fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.inner.borrow_mut();
+        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                dialog_info.accept_cmd.with(info).to(dialog_info.id)
+            } else {
+                dialog_info.cancel_cmd.to(dialog_info.id)
+            };
+            inner.append_command(cmd);
+        } else {
+            log::error!("unknown dialog token");
+        }
+
+        std::mem::drop(inner);
+        self.process_commands();
+        self.inner.borrow_mut().do_update();
+    }
+
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
         let desc = cmd.get_unchecked(sys_cmd::NEW_WINDOW);
         // The NEW_WINDOW command is private and only druid can receive it by normal means,
@@ -800,11 +804,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn save_as(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        self.handle_dialog_response(token, file_info);
+        self.app_state.handle_dialog_response(token, file_info);
     }
 
     fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        self.handle_dialog_response(token, file_info);
+        self.app_state.handle_dialog_response(token, file_info);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
