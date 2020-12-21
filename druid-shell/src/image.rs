@@ -196,7 +196,7 @@ impl ImageBuf {
     /// Attempt to load an image from raw bytes.
     ///
     /// If the image crate can't decode an image from the data an error will be returned.
-    pub fn from_data(raw_image: &[u8]) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_data(raw_image: &[u8]) -> Result<ImageBuf, Box<dyn Error + Send + Sync>> {
         let image_data = image::load_from_memory(raw_image).map_err(|e| e)?;
         Ok(ImageBuf::from_dynamic_image(image_data))
     }
