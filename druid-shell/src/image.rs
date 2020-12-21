@@ -202,7 +202,7 @@ impl ImageBuf {
     }
 
     /// Attempt to load an image from the file at the provided path.
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<ImageBuf, Box<dyn Error + Send + Sync>> {
         let image_data = image::open(path).map_err(|e| e)?;
         Ok(ImageBuf::from_dynamic_image(image_data))
     }
