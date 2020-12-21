@@ -262,7 +262,7 @@ pub mod sys {
     /// The application should save its data, to a path that should be determined by the
     /// application. Usually, this will be the most recent path provided by a [`SAVE_FILE_AS`]
     /// or [`OPEN_FILE`] command.
-    pub const SAVE_FILE: Selector<()> = Selector::new("druid-builtin.menu-file-save");
+    pub const SAVE_FILE: Selector<()> = Selector::new("druid-builtin.save-file");
 
     /// Save to a given location.
     ///
@@ -272,7 +272,7 @@ pub mod sys {
     ///
     /// The path might be a file or a directory, so always check whether it matches your
     /// expectations.
-    pub const SAVE_FILE_AS: Selector<FileInfo> = Selector::new("druid-builtin.menu-file-save-as");
+    pub const SAVE_FILE_AS: Selector<FileInfo> = Selector::new("druid-builtin.save-file-as");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
