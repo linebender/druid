@@ -18,7 +18,7 @@
 use druid_shell::ImageBuf;
 
 use crate::{
-    piet::{Image as PietImage, InterpolationMode},
+    piet::{InterpolationMode, PietImage},
     widget::common::FillStrat,
     widget::prelude::*,
     Data,
