@@ -89,6 +89,10 @@ pub(crate) fn get_file_dialog_path(
         }
     }
 
+    if let Some(default_name) = &options.default_name {
+        dialog.set_current_name(default_name);
+    }
+
     let result = dialog.run();
 
     let result = match result {
