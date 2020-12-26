@@ -44,9 +44,8 @@ use crate::{
 /// ```
 /// use druid::{
 ///     widget::{Image, FillStrat},
-///     piet::InterpolationMode,
+///     piet::{ImageBuf, InterpolationMode},
 /// };
-/// use druid_shell::ImageBuf;
 ///
 /// let image_data = ImageBuf::empty();
 /// let image_widget = Image::new(image_data)
@@ -59,9 +58,8 @@ use crate::{
 /// ```
 /// use druid::{
 ///     widget::{Image, FillStrat},
-///     piet::InterpolationMode,
+///     piet::{ImageBuf, InterpolationMode},
 /// };
-/// use druid_shell::ImageBuf;
 ///
 /// let image_data = ImageBuf::empty();
 /// let mut image_widget = Image::new(image_data);
