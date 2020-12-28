@@ -176,14 +176,14 @@ mod window;
 // Types from kurbo & piet that are required by public API.
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
 pub use piet::{
-    Color, FontFamily, FontStyle, FontWeight, LinearGradient, RadialGradient, RenderContext,
-    TextAlignment, UnitPoint,
+    Color, FontFamily, FontStyle, FontWeight, ImageBuf, LinearGradient, RadialGradient,
+    RenderContext, TextAlignment, UnitPoint,
 };
 // these are the types from shell that we expose; others we only use internally.
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
-    FileInfo, FileSpec, FormatId, HotKey, ImageBuf, KbKey, KeyEvent, Location, Modifiers, Monitor,
+    FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers, Monitor,
     MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
     WindowHandle, WindowState,
 };
