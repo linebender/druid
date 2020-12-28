@@ -15,9 +15,9 @@
 //! Common types for representing mouse events and state
 
 use crate::kurbo::{Point, Vec2};
+use crate::piet::ImageBuf;
 use crate::platform;
-
-use crate::{ImageBuf, Modifiers};
+use crate::Modifiers;
 
 /// Information about the mouse event.
 ///

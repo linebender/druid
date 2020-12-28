@@ -48,7 +48,6 @@ mod common_util;
 mod dialog;
 mod error;
 mod hotkey;
-mod image;
 mod keyboard;
 mod menu;
 mod mouse;
@@ -58,7 +57,6 @@ mod scale;
 mod screen;
 mod window;
 
-pub use crate::image::ImageBuf;
 pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
