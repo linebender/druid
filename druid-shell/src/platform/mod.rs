@@ -35,11 +35,18 @@ pub use x11::*;
 #[cfg(all(feature = "x11", target_os = "linux"))]
 pub(crate) mod shared;
 
-#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+#[cfg(all(feature = "wayland", target_os = "linux"))]
+mod wayland;
+#[cfg(all(feature = "wayland", target_os = "linux"))]
+pub use wayland::*;
+#[cfg(all(feature = "wayland", target_os = "linux"))]
+pub(crate) mod shared;
+
+#[cfg(all(not(feature = "x11"), not(feature = "wayland"), target_os = "linux"))]
 mod gtk;
-#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+#[cfg(all(not(feature = "x11"), not(feature = "wayland"), target_os = "linux"))]
 pub use self::gtk::*;
-#[cfg(all(not(feature = "x11"), target_os = "linux"))]
+#[cfg(all(not(feature = "x11"), not(feature = "wayland"), target_os = "linux"))]
 pub(crate) mod shared;
 
 #[cfg(target_arch = "wasm32")]

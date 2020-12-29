@@ -29,6 +29,7 @@
 #![warn(broken_intra_doc_links)]
 #![allow(clippy::new_without_default)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
+#![allow(unused_imports)] // TODO remove
 
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
