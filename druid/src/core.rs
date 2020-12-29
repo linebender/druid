@@ -1152,10 +1152,22 @@ mod tests {
         fn make_widgets() -> impl Widget<u32> {
             Split::columns(
                 Flex::<u32>::row()
-                    .with_child(TextBox::new().with_formatter(ParseFormatter).with_id(ID_1))
-                    .with_child(TextBox::new().with_formatter(ParseFormatter).with_id(ID_2))
-                    .with_child(TextBox::new().with_formatter(ParseFormatter).with_id(ID_3)),
-                Scroll::new(TextBox::new().with_formatter(ParseFormatter)),
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_1),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_2),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_3),
+                    ),
+                Scroll::new(TextBox::new().with_formatter(ParseFormatter::new())),
             )
         }
 

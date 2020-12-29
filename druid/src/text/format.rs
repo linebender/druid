@@ -105,11 +105,18 @@ pub struct ValidationError {
 
 /// A naive [`Formatter`] for types that implement [`FromStr`].
 ///
+/// For types that implement [`std::fmt::Display`], the [`ParseFormatter::new`]
+/// constructor creates a formatter that format's it's value using that trait.
+/// If you would like to customize the formatting, you can use the
+/// [`ParseFormatter::with_format_fn`] constructor, and pass your own formatting
+/// function.
+///
 /// [`Formatter`]: Formatter
 /// [`FromStr`]: std::str::FromStr
 #[non_exhaustive]
-//TODO: take a fmt string (like `{:.2}` to allow user to customize output
-pub struct ParseFormatter;
+pub struct ParseFormatter<T> {
+    fmt_fn: Box<dyn Fn(&T) -> String>,
+}
 
 impl Validation {
     /// Create a `Validation` indicating succes.
@@ -161,20 +168,32 @@ impl ValidationError {
     }
 }
 
-impl ParseFormatter {
+impl<T: std::fmt::Display> ParseFormatter<T> {
     /// Create a new `ParseFormatter`.
     pub fn new() -> Self {
-        ParseFormatter
+        ParseFormatter {
+            fmt_fn: Box::new(|val| val.to_string()),
+        }
     }
 }
 
-impl<T> Formatter<T> for ParseFormatter
+impl<T> ParseFormatter<T> {
+    /// Create a new `ParseFormatter` using the provided formatting function.
+    /// provided function.
+    pub fn with_format_fn(f: impl Fn(&T) -> String + 'static) -> Self {
+        ParseFormatter {
+            fmt_fn: Box::new(f),
+        }
+    }
+}
+
+impl<T> Formatter<T> for ParseFormatter<T>
 where
-    T: FromStr + std::fmt::Display,
+    T: FromStr,
     <T as FromStr>::Err: std::error::Error + 'static,
 {
     fn format(&self, value: &T) -> String {
-        value.to_string()
+        (self.fmt_fn)(value)
     }
 
     fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
@@ -201,8 +220,8 @@ impl std::error::Error for ValidationError {
     }
 }
 
-impl Default for ParseFormatter {
+impl<T: std::fmt::Display> Default for ParseFormatter<T> {
     fn default() -> Self {
-        ParseFormatter
+        ParseFormatter::new()
     }
 }

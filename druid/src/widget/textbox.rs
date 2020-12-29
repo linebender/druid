@@ -314,8 +314,11 @@ impl TextBox<String> {
     /// Turn this `TextBox` into a [`ValueTextBox`], using the [`Formatter`] to
     /// manage the value.
     ///
+    /// For simple value formatting, you can use the [`ParseFormatter`].
+    ///
     /// [`ValueTextBox`]: ValueTextBox
     /// [`Formatter`]: crate::text::format::Formatter
+    /// [`ParseFormatter`]: crate::text::format::ParseFormatter
     pub fn with_formatter<T: Data>(
         self,
         formatter: impl Formatter<T> + 'static,
