@@ -25,6 +25,8 @@ gtk = ["druid-shell/gtk"]
 image = ["druid-shell/image"]
 svg = ["usvg", "harfbuzz-sys"]
 x11 = ["druid-shell/x11"]
+# **WARNING** not ready for the prime time. Many things don't work yet.
+wayland = ["druid-shell/wayland"]
 crochet = []
 serde = ["im/serde"]
 

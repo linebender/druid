@@ -48,6 +48,7 @@ use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
+use crate::platform::shared::Timer;
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
@@ -59,7 +60,7 @@ use crate::window::{
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util::{self, Timer};
+use super::util;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -405,7 +406,7 @@ pub(crate) struct Window {
     atoms: WindowAtoms,
     state: RefCell<WindowState>,
     /// Timers, sorted by "earliest deadline first"
-    timer_queue: Mutex<BinaryHeap<Timer>>,
+    timer_queue: Mutex<BinaryHeap<Timer<()>>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     // Writing to this wakes up the event loop, so that it can run idle handlers.
     idle_pipe: RawFd,
@@ -1531,7 +1532,7 @@ impl WindowHandle {
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         if let Some(w) = self.window.upgrade() {
-            let timer = Timer::new(deadline);
+            let timer = Timer::new(deadline, ());
             w.timer_queue.lock().unwrap().push(timer);
             timer.token()
         } else {

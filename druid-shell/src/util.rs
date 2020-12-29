@@ -118,3 +118,17 @@ macro_rules! borrow_mut {
         })
     }};
 }
+
+/// This is a useful way to clone some values into a `move` closure. Currently only used in the
+/// Wayland backend.
+#[allow(unused_macros)]
+macro_rules! with_cloned {
+    ($($val:ident),* ; $($rest:tt)*) => {
+        {
+            $(
+                let $val = $val.clone();
+            )*
+            $($rest)*
+        }
+    };
+}
