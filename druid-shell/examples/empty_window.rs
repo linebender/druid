@@ -15,28 +15,49 @@
 /// An example that is as simple as possible (just throw up an empty window).
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Size};
-use druid_shell::piet::{Color, RenderContext};
+use druid_shell::kurbo::{Point, Rect, Size};
+use druid_shell::piet::{Color, FixedLinearGradient, GradientStop, RenderContext};
 
 use druid_shell::{
-    Application, Cursor, FileDialogOptions, FileDialogToken, FileInfo, FileSpec, HotKey, KeyEvent,
-    Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogToken, FileInfo, KeyEvent, MouseEvent, Region, TimerToken,
+    WinHandler, WindowBuilder, WindowHandle,
 };
 
 #[derive(Default)]
 struct HelloState {
     size: Size,
-    handle: WindowHandle,
+    handle: Option<WindowHandle>,
 }
 
 impl WinHandler for HelloState {
     fn connect(&mut self, handle: &WindowHandle) {
-        self.handle = handle.clone();
+        self.handle = Some(handle.clone());
     }
 
-    fn prepare_paint(&mut self) {}
+    fn prepare_paint(&mut self) {
+        self.handle.as_mut().unwrap().invalidate();
+    }
 
-    fn paint(&mut self, _piet: &mut piet_common::Piet, _: &Region) {}
+    fn paint(&mut self, piet: &mut piet_common::Piet, _: &Region) {
+        // draw a gradient so we can see what's going on.
+        let brush = piet
+            .gradient(FixedLinearGradient {
+                start: Point::ZERO,
+                end: self.size.to_vec2().to_point(),
+                stops: vec![
+                    GradientStop {
+                        pos: 0.0,
+                        color: Color::RED,
+                    },
+                    GradientStop {
+                        pos: 1.0,
+                        color: Color::BLUE,
+                    },
+                ],
+            })
+            .unwrap();
+        piet.fill(Rect::ZERO.with_size(self.size), &brush);
+    }
 
     fn command(&mut self, id: u32) {
         println!("command id {}", id);
@@ -60,7 +81,7 @@ impl WinHandler for HelloState {
     }
 
     fn mouse_move(&mut self, event: &MouseEvent) {
-        self.handle.set_cursor(&Cursor::Arrow);
+        self.handle.as_mut().unwrap().set_cursor(&Cursor::Arrow);
         println!("mouse_move {:?}", event);
     }
 
@@ -89,7 +110,7 @@ impl WinHandler for HelloState {
     }
 
     fn request_close(&mut self) {
-        self.handle.close();
+        self.handle.as_ref().unwrap().close();
     }
 
     fn destroy(&mut self) {

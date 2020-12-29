@@ -26,15 +26,15 @@ struct MenuItem;
 
 impl Menu {
     pub fn new() -> Menu {
-        todo!()
+        Menu
     }
 
     pub fn new_for_popup() -> Menu {
-        todo!()
+        Menu
     }
 
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
-        todo!()
+        ()
     }
 
     pub fn add_item(
@@ -45,10 +45,10 @@ impl Menu {
         enabled: bool,
         _selected: bool,
     ) {
-        todo!()
+        ()
     }
 
     pub fn add_separator(&mut self) {
-        todo!()
+        ()
     }
 }

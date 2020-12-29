@@ -12,14 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! GTK-based platform support
-
 pub mod application;
+mod buffer;
 pub mod clipboard;
 pub mod dialog;
 pub mod error;
+mod events;
 pub mod keycodes;
 pub mod menu;
+mod pointer;
 pub mod screen;
 pub mod util;
 pub mod window;
+mod xkb;
+
+/// Number of bytes for a pixel (argb = 4)
+const PIXEL_WIDTH: i32 = 4;
+/// Number of frames we need (2 for double buffering)
+const NUM_FRAMES: i32 = 2;
+
+/// Little enum to make it clearer what some return values mean.
+#[derive(Copy, Clone)]
+enum Changed {
+    Changed,
+    Unchanged,
+}
+
+impl Changed {
+    fn is_changed(self) -> bool {
+        matches!(self, Changed::Changed)
+    }
+    fn is_unchanged(self) -> bool {
+        matches!(self, Changed::Unchanged)
+    }
+}

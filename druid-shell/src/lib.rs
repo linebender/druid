@@ -33,6 +33,8 @@
     html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
 )]
 #![allow(unused_imports)] // TODO remove
+#![allow(unused_variables)] // TODO remove
+#![allow(dead_code)] // TODO remove
 
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
