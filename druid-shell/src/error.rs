@@ -24,6 +24,8 @@ use crate::backend::error as backend;
 pub enum Error {
     /// The Application instance has already been created.
     ApplicationAlreadyExists,
+    /// Tried to use the application after it had been dropped.
+    ApplicationDropped,
     /// The window has already been destroyed.
     WindowDropped,
     /// Platform specific error.
@@ -37,6 +39,12 @@ impl fmt::Display for Error {
         match self {
             Error::ApplicationAlreadyExists => {
                 write!(f, "An application instance has already been created.")
+            }
+            Error::ApplicationDropped => {
+                write!(
+                    f,
+                    "The application this operation requires has been dropped."
+                )
             }
             Error::Platform(err) => fmt::Display::fmt(err, f),
             Error::WindowDropped => write!(f, "The window has already been destroyed."),
