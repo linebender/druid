@@ -6,6 +6,9 @@ You can find its changes [documented below](#060---2020-06-01).
 ## [Unreleased]
 
 ### Highlights
+- Text improvements: `TextLayout` type ([#1182]) and cich text support ([#1245])
+- The `Formatter` trait provides more flexible handling of converions between
+values and their textual representations. ([#1377])
 
 ### Added
 
@@ -58,6 +61,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
 - Open and save dialogs send configurable commands. ([#1463] by [@jneem])
 - Windows: Dialogs now respect the parameter passed to `force_starting_directory()` ([#1452] by [@MaximilianKoestler])
+- Value formatting with the `Formatter` trait ([#1377] by [@cmyr])
 
 ### Changed
 
@@ -88,6 +92,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Part of the `SAVE_FILE` command is now `SAVE_FILE_AS` ([#1463] by [@jneem])
 
 ### Deprecated
+- Parse widget (replaced with `Formatter` trait) ([#1377] by [@cmyr])
 
 ### Removed
 
