@@ -763,7 +763,7 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
-                if wparam != 0 as usize && !self.has_titlebar() {
+                if wparam != 0 && !self.has_titlebar() {
                     if let Ok(handle) = self.handle.try_borrow() {
                         if handle.get_window_state() == window::WindowState::MAXIMIZED {
                             // When maximized, windows still adds offsets for the frame

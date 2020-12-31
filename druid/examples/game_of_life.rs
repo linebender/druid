@@ -30,7 +30,7 @@ use std::sync::Arc;
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 
-const BG: Color = Color::grey8(23 as u8);
+const BG: Color = Color::grey8(23);
 const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
 const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
 const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
@@ -145,7 +145,7 @@ impl Grid {
                 let n_lives_around = self.n_neighbors(pos);
                 let life = self[pos];
                 // death by loneliness or overcrowding
-                if life && (n_lives_around < 2 || n_lives_around > 3) {
+                if life && !(2..=3).contains(&n_lives_around) {
                     indices_to_mutate.push(pos);
                     continue;
                 }
