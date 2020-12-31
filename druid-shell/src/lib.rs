@@ -36,6 +36,10 @@
 #[cfg(all(target_os = "linux", feature = "gtk"))]
 extern crate gtk_rs as gtk;
 
+// Reexport the version of `image` we are using.
+#[cfg(feature = "image")]
+pub use image;
+
 pub use kurbo;
 pub use piet_common as piet;
 

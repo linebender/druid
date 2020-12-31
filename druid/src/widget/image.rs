@@ -17,7 +17,7 @@
 
 use crate::{
     kurbo::Rect,
-    piet::{ImageBuf, InterpolationMode, PietImage},
+    piet::{Image as _, ImageBuf, InterpolationMode, PietImage},
     widget::common::FillStrat,
     widget::prelude::*,
     Data,
@@ -205,7 +205,17 @@ impl<T: Data> Widget<T> for Image {
             ctx.clip(clip_rect);
         }
 
+        let piet_image = {
+            let image_data = &self.image_data;
+            self.paint_data
+                .get_or_insert_with(|| image_data.to_image(ctx.render_ctx))
+        };
+        if piet_image.size().is_empty() {
+            // zero-sized image = nothing to draw
+            return;
+        }
         ctx.with_save(|ctx| {
+            // we have to re-do this because the whole struct is moved into the closure.
             let piet_image = {
                 let image_data = &self.image_data;
                 self.paint_data

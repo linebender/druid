@@ -180,6 +180,8 @@ pub use piet::{
     RenderContext, TextAlignment, UnitPoint,
 };
 // these are the types from shell that we expose; others we only use internally.
+#[cfg(feature = "image")]
+pub use shell::image;
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
