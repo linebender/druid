@@ -400,19 +400,19 @@ impl Value {
 
     fn is_same_type(&self, other: &Value) -> bool {
         use Value::*;
-        match (self, other) {
-            (Point(_), Point(_)) => true,
-            (Size(_), Size(_)) => true,
-            (Rect(_), Rect(_)) => true,
-            (Insets(_), Insets(_)) => true,
-            (Color(_), Color(_)) => true,
-            (Float(_), Float(_)) => true,
-            (Bool(_), Bool(_)) => true,
-            (UnsignedInt(_), UnsignedInt(_)) => true,
-            (String(_), String(_)) => true,
-            (Font(_), Font(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Point(_) , Point(_))
+                | (Size(_), Size(_))
+                | (Rect(_), Rect(_))
+                | (Insets(_), Insets(_))
+                | (Color(_), Color(_))
+                | (Float(_), Float(_))
+                | (Bool(_), Bool(_))
+                | (UnsignedInt(_), UnsignedInt(_))
+                | (String(_), String(_))
+                | (Font(_), Font(_))
+        )
     }
 }
 

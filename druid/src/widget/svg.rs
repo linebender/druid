@@ -18,8 +18,6 @@ use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use log::error;
-
 use crate::{
     kurbo::BezPath, widget::common::FillStrat, widget::prelude::*, Affine, Color, Data, Rect,
 };
@@ -39,23 +37,6 @@ impl Svg {
             svg_data,
             fill: FillStrat::default(),
         }
-    }
-
-    /// Measure the SVG's size
-    #[allow(clippy::needless_return)]
-    fn get_size(&self) -> Size {
-        let root = self.svg_data.tree.root();
-        match *root.borrow() {
-            usvg::NodeKind::Svg(svg) => {
-                // Borrow checker gets confused without an explicit return
-                return Size::new(svg.size.width(), svg.size.height());
-            }
-            _ => {
-                //TODO: I don't think this is reachable?
-                error!("This SVG has no size for some reason.");
-                return Size::ZERO;
-            }
-        };
     }
 
     /// A builder-style method for specifying the fill strategy.
@@ -85,19 +66,17 @@ impl<T: Data> Widget<T> for Svg {
         _env: &Env,
     ) -> Size {
         bc.debug_check("SVG");
-
-        if bc.is_width_bounded() {
-            bc.max()
-        } else {
-            bc.constrain(self.get_size())
-        }
+        // preferred size comes from the svg
+        let size = self.svg_data.size();
+        bc.constrain_aspect_ratio(size.height / size.width, size.width)
     }
+
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.get_size());
+        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.svg_data.size());
 
         let clip_rect = Rect::ZERO.with_size(ctx.size());
 
-        // The SvgData's to_piet function dose not clip to the svg's size
+        // The SvgData's to_piet function does not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         ctx.clip(clip_rect);
         self.svg_data.to_piet(offset_matrix, ctx);
@@ -135,68 +114,57 @@ impl SvgData {
     pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
         let root = self.tree.root();
         for n in root.children() {
-            match *n.borrow() {
-                usvg::NodeKind::Path(ref p) => {
-                    let mut path = BezPath::new();
-                    for segment in p.data.iter() {
-                        match *segment {
-                            usvg::PathSegment::MoveTo { x, y } => {
-                                path.move_to((x, y));
-                            }
-                            usvg::PathSegment::LineTo { x, y } => {
-                                path.line_to((x, y));
-                            }
-                            usvg::PathSegment::CurveTo {
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                x,
-                                y,
-                            } => {
-                                path.curve_to((x1, y1), (x2, y2), (x, y));
-                            }
-                            usvg::PathSegment::ClosePath => {
-                                path.close_path();
-                            }
-                        }
-                    }
-
-                    path.apply_affine(Affine::new([
-                        p.transform.a,
-                        p.transform.b,
-                        p.transform.c,
-                        p.transform.d,
-                        p.transform.e,
-                        p.transform.f,
-                    ]));
-                    path.apply_affine(offset_matrix);
-
-                    match &p.fill {
-                        Some(fill) => {
-                            let brush = color_from_usvg(&fill.paint, fill.opacity);
-                            ctx.fill(path.clone(), &brush);
-                        }
-                        None => {}
-                    }
-
-                    match &p.stroke {
-                        Some(stroke) => {
-                            let brush = color_from_usvg(&stroke.paint, stroke.opacity);
-                            ctx.stroke(path.clone(), &brush, stroke.width.value());
-                        }
-                        None => {}
-                    }
-                }
-                usvg::NodeKind::Defs => {
-                    // TODO: implement defs
-                }
-                _ => {
-                    // TODO: handle more of the SVG spec.
-                    error!("{:?} is unimplemented", n.clone());
-                }
-            }
+            render_node(&n, offset_matrix * self.inner_affine(), ctx);
         }
+    }
+
+    /// Calculates the transform that should be applied first to the svg path data, to convert from
+    /// image coordinates to piet coordinates.
+    fn inner_affine(&self) -> Affine {
+        let viewbox = self.viewbox();
+        let size = self.size();
+        // we want to move the viewbox top left to (0,0) and then scale it from viewbox size to
+        // size.
+        // TODO respect preserveAspectRatio
+        let t = Affine::translate((viewbox.min_x(), viewbox.min_y()));
+        let scale =
+            Affine::scale_non_uniform(size.width / viewbox.width(), size.height / viewbox.height());
+        scale * t
+    }
+
+    /// Get the viewbox for the svg. This is the area that should be drawn.
+    fn viewbox(&self) -> Rect {
+        let root = self.tree.root();
+        let rect = match *root.borrow() {
+            usvg::NodeKind::Svg(svg) => {
+                let r = svg.view_box.rect;
+                Rect::new(r.left(), r.top(), r.right(), r.bottom())
+            }
+            _ => {
+                log::error!(
+                    "this SVG has no viewbox. It is expected that usvg always adds a viewbox"
+                );
+                Rect::ZERO
+            }
+        };
+        rect
+    }
+
+    /// Get the size of the svg. This is the size that the svg requests to be drawn. If it is
+    /// different from the viewbox size, then scaling will be required.
+    fn size(&self) -> Size {
+        let root = self.tree.root();
+        let rect = match *root.borrow() {
+            usvg::NodeKind::Svg(svg) => {
+                let s = svg.size;
+                Size::new(s.width(), s.height())
+            }
+            _ => {
+                log::error!("this SVG has no size. It is expected that usvg always adds a size");
+                Size::ZERO
+            }
+        };
+        rect
     }
 }
 
@@ -224,21 +192,120 @@ impl FromStr for SvgData {
     }
 }
 
+// TODO recursive descent can blow the stack. Consider not using recursion
+
+/// Take a usvg node and render it to the given context.
+fn render_node(n: &usvg::Node, offset_matrix: Affine, ctx: &mut PaintCtx) {
+    match *n.borrow() {
+        usvg::NodeKind::Path(ref p) => render_path(p, offset_matrix, ctx),
+        usvg::NodeKind::Defs => {
+            // TODO: implement defs
+        }
+        usvg::NodeKind::Group(_) => {
+            // TODO I'm not sure if we need to apply the transform, or if usvg has already
+            // done it for us? I'm guessing the latter for now, but that could easily be wrong.
+            for child in n.children() {
+                render_node(&child, offset_matrix, ctx);
+            }
+        }
+        _ => {
+            // TODO: handle more of the SVG spec.
+            log::error!("{:?} is unimplemented", n.clone());
+        }
+    }
+}
+
+/// Take a usvg path and render it to the given context.
+fn render_path(p: &usvg::Path, offset_matrix: Affine, ctx: &mut PaintCtx) {
+    if matches!(
+        p.visibility,
+        usvg::Visibility::Hidden | usvg::Visibility::Collapse
+    ) {
+        // skip rendering
+        return;
+    }
+
+    let mut path = BezPath::new();
+    for segment in p.data.iter() {
+        match *segment {
+            usvg::PathSegment::MoveTo { x, y } => {
+                path.move_to((x, y));
+            }
+            usvg::PathSegment::LineTo { x, y } => {
+                path.line_to((x, y));
+            }
+            usvg::PathSegment::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => {
+                path.curve_to((x1, y1), (x2, y2), (x, y));
+            }
+            usvg::PathSegment::ClosePath => {
+                path.close_path();
+            }
+        }
+    }
+
+    path.apply_affine(offset_matrix * transform_to_affine(p.transform));
+
+    match &p.fill {
+        Some(fill) => {
+            let brush = color_from_usvg(&fill.paint, fill.opacity);
+            ctx.fill(path.clone(), &brush);
+        }
+        None => {}
+    }
+
+    match &p.stroke {
+        Some(stroke) => {
+            let brush = color_from_usvg(&stroke.paint, stroke.opacity);
+            ctx.stroke(path, &brush, stroke.width.value());
+        }
+        None => {}
+    }
+}
+
 fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
     match paint {
         usvg::Paint::Color(c) => Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value()),
         _ => {
             //TODO: implement link
-            error!("We don't support Paint::Link yet, so here's some pink.");
+            log::error!("We don't support Paint::Link yet, so here's some pink.");
             Color::rgb8(255, 192, 203)
         }
     }
+}
+
+/// Convert a usvg transform to a kurbo `Affine`.
+fn transform_to_affine(t: usvg::Transform) -> Affine {
+    Affine::new([t.a, t.b, t.c, t.d, t.e, t.f])
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn usvg_transform_vs_affine() {
+        assert_eq!(
+            transform_to_affine(usvg::Transform::new_translate(1., 2.)),
+            Affine::translate((1., 2.))
+        );
+        assert_eq!(
+            transform_to_affine(usvg::Transform::new_scale(1., 2.)),
+            Affine::scale_non_uniform(1., 2.)
+        );
+        // amazingly we get actual equality here
+        assert_eq!(
+            transform_to_affine(usvg::Transform::new_rotate(180.)),
+            Affine::rotate(std::f64::consts::PI)
+        );
+    }
 
     #[test]
     fn translate() {
