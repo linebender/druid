@@ -1,6 +1,6 @@
 [package]
 name = "druid-shell"
-version = "0.6.0"
+version = "0.7.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
@@ -44,7 +44,7 @@ kurbo = "0.7.1"
 log = "0.4.11"
 lazy_static = "1.4.0"
 time = "0.2.16"
-cfg-if = "0.1.10"
+cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
@@ -65,7 +65,7 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
 
 [target.'cfg(target_os="macos")'.dependencies]
 block = "0.1.6"
-cocoa = "0.23.0"
+cocoa = "0.24.0"
 objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
