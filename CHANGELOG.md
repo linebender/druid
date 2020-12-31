@@ -1,11 +1,34 @@
 # Changelog
 
-The latest published Druid release is [0.6.0](#060---2020-06-01) which was released on 2020-06-01.
-You can find its changes [documented below](#060---2020-06-01).
+The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
+You can find its changes [documented below](#070---2021-01-01).
 
-## [Unreleased]
+# Unreleased
 
 ### Highlights
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Visual
+
+### Docs
+
+### Examples
+
+### Outside News
+
+## [0.7.0] - 2021-01-01
+
+### Highlights
+
 - Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245])
 - The `Formatter` trait provides more flexible handling of converions between
 values and their textual representations. ([#1377])
