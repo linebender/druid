@@ -14,19 +14,98 @@
 
 //! A button widget.
 
-use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
-use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
+use crate::{theme, Affine, Color, Data, Insets, LinearGradient, UnitPoint};
+use crate::{widget::prelude::*, KeyOrValue};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
 // should be reevaluated at some point.
 const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
 
+/// This describes the values a Button needs to paint itself
+#[derive(Debug)]
+pub struct Style {
+    /// Border width
+    pub border_width: KeyOrValue<f64>,
+    /// Corner radius
+    pub border_radius: KeyOrValue<f64>,
+    /// Border color
+    pub border_color: KeyOrValue<Color>,
+    /// Whether or not to paint the background as a gradient.
+    /// If false, the background defaults to background_color_a
+    pub background_is_gradient: KeyOrValue<bool>,
+    /// First color of gradient, or default color of background
+    pub background_color_a: KeyOrValue<Color>,
+    /// First color of gradient, or alt color of background
+    pub background_color_b: KeyOrValue<Color>,
+}
+
+impl std::default::Default for Style {
+    fn default() -> Self {
+        Self {
+            border_width: theme::BUTTON_BORDER_WIDTH.into(),
+            border_radius: theme::BUTTON_BORDER_RADIUS.into(),
+            border_color: theme::BORDER_DARK.into(),
+            background_is_gradient: true.into(),
+            background_color_a: theme::BUTTON_LIGHT.into(),
+            background_color_b: theme::BUTTON_DARK.into(),
+        }
+    }
+}
+
+/// The Button widget holds a StyleSheet which can resolve to multiple Styles
+pub trait StyleSheet {
+    /// How a button normally looks
+    fn normal(&self) -> Style;
+    /// How a button looks on mouse hover
+    fn hot(&self) -> Style {
+        let normal = self.normal();
+
+        Style {
+            border_color: theme::BORDER_LIGHT.into(),
+            ..normal
+        }
+    }
+    /// How a button looks on mouse down
+    fn active(&self) -> Style {
+        let hot = self.hot();
+        Style {
+            background_color_a: theme::BUTTON_DARK.into(),
+            background_color_b: theme::BUTTON_LIGHT.into(),
+            ..hot
+        }
+    }
+}
+
+struct Default;
+
+impl StyleSheet for Default {
+    fn normal(&self) -> Style {
+        Style::default()
+    }
+}
+
+impl std::default::Default for Box<dyn StyleSheet> {
+    fn default() -> Self {
+        Box::new(Default)
+    }
+}
+
+impl<T> From<T> for Box<dyn StyleSheet>
+where
+    T: 'static + StyleSheet,
+{
+    fn from(style: T) -> Self {
+        Box::new(style)
+    }
+}
+
 /// A button with a text label.
 pub struct Button<T> {
     label: Label<T>,
     label_size: Size,
+    stylesheet: Box<dyn StyleSheet>,
 }
 
 impl<T: Data> Button<T> {
@@ -72,7 +151,14 @@ impl<T: Data> Button<T> {
         Button {
             label,
             label_size: Size::ZERO,
+            stylesheet: Box::new(Default {}),
         }
+    }
+
+    /// Create a new Button with the provided StyleSheet
+    pub fn with_style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
+        self.stylesheet = style.into();
+        self
     }
 
     /// Construct a new dynamic button.
@@ -158,36 +244,41 @@ impl<T: Data> Widget<T> for Button<T> {
         let is_active = ctx.is_active();
         let is_hot = ctx.is_hot();
         let size = ctx.size();
-        let stroke_width = env.get(theme::BUTTON_BORDER_WIDTH);
+
+        // We choose our style up top
+        let style = if is_active {
+            self.stylesheet.active()
+        } else if is_hot {
+            self.stylesheet.hot()
+        } else {
+            self.stylesheet.normal()
+        };
+
+        // Now we resolve the specific values we need out of that style
+        let stroke_width = style.border_width.resolve(env);
+        let stroke_color = style.border_color.resolve(env);
+        let is_gradient = style.background_is_gradient.resolve(env);
+        let background_a = style.background_color_a.resolve(env);
+        let background_b = style.background_color_b.resolve(env);
+        let border_radius = style.border_radius.resolve(env);
 
         let rounded_rect = size
             .to_rect()
             .inset(-stroke_width / 2.0)
-            .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
+            .to_rounded_rect(border_radius);
 
-        let bg_gradient = if is_active {
-            LinearGradient::new(
+        ctx.stroke(rounded_rect, &stroke_color, stroke_width);
+
+        if is_gradient {
+            let bg_gradient = LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
-            )
+                (background_a, background_b),
+            );
+            ctx.fill(rounded_rect, &bg_gradient);
         } else {
-            LinearGradient::new(
-                UnitPoint::TOP,
-                UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
-            )
-        };
-
-        let border_color = if is_hot {
-            env.get(theme::BORDER_LIGHT)
-        } else {
-            env.get(theme::BORDER_DARK)
-        };
-
-        ctx.stroke(rounded_rect, &border_color, stroke_width);
-
-        ctx.fill(rounded_rect, &bg_gradient);
+            ctx.fill(rounded_rect, &background_a);
+        }
 
         let label_offset = (size.to_vec2() - self.label_size.to_vec2()) / 2.0;
 

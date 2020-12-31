@@ -15,7 +15,7 @@
 //! Common widgets.
 
 mod align;
-mod button;
+pub mod button;
 mod checkbox;
 mod click;
 mod clip_box;
@@ -43,7 +43,6 @@ mod slider;
 mod spinner;
 mod split;
 mod stepper;
-pub mod styled_button;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;

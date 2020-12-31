@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::Flex;
+use druid::widget::{button, Button, Flex};
 use druid::{AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -35,30 +35,28 @@ pub fn main() {
 
 struct ButtonStyleSheet;
 
-use druid::widget::styled_button;
-
-impl styled_button::StyleSheet for ButtonStyleSheet {
-    fn normal(&self) -> styled_button::Style {
-        styled_button::Style {
+impl button::StyleSheet for ButtonStyleSheet {
+    fn normal(&self) -> button::Style {
+        button::Style {
             border_width: (0.).into(),
             background_is_gradient: false.into(),
             background_color_a: druid::theme::PRIMARY_DARK.into(),
-            ..styled_button::Style::default()
+            ..button::Style::default()
         }
     }
 
-    fn hot(&self) -> styled_button::Style {
+    fn hot(&self) -> button::Style {
         let normal = self.normal();
 
-        styled_button::Style {
+        button::Style {
             background_color_a: druid::theme::PRIMARY_LIGHT.into(),
             ..normal
         }
     }
 
-    fn active(&self) -> styled_button::Style {
+    fn active(&self) -> button::Style {
         let hot = self.hot();
-        styled_button::Style {
+        button::Style {
             background_color_a: druid::theme::BUTTON_DARK.into(),
             ..hot
         }
@@ -66,8 +64,8 @@ impl styled_button::StyleSheet for ButtonStyleSheet {
 }
 
 fn build_root_widget() -> impl Widget<AppState> {
-    let button = styled_button::Button::new("Heyo");
-    let styled_button = styled_button::Button::new("Heyo").with_style(ButtonStyleSheet {});
+    let button = Button::new("Heyo");
+    let styled_button = Button::new("Heyo").with_style(ButtonStyleSheet {});
 
     Flex::column()
         .with_child(button)
