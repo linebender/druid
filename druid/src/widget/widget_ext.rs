@@ -165,8 +165,8 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// The function provided will be called when the widget is added to the
     /// widget tree.
     ///
-    /// [`Added`]: widget/struct.Added.html
-    /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+    /// [`Added`]: crate::widget::Added
+    /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
     fn on_added(
         self,
         f: impl Fn(&mut LifeCycleCtx, &T, &Env) + 'static,

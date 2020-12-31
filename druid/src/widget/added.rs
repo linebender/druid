@@ -14,8 +14,8 @@
 
 //! A [`Controller`] widget that responds to [`LifeCycle::WidgetAdded`] event.
 //!
-//! [`Controller`]: struct.Controller.html
-//! [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+//! [`Controller`]: crate::widget::Controller
+//! [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
 
 use crate::widget::Controller;
 use crate::{Data, Env, LifeCycleCtx, Widget};
@@ -25,10 +25,10 @@ use crate::{Data, Env, LifeCycleCtx, Widget};
 /// This is also available, for convenience, as an `on_added` method
 /// via [`WidgetExt`].
 ///
-/// [`Controller`]: struct.Controller.html
-/// [`ControllerHost`]: struct.ControllerHost.html
-/// [`WidgetExt`]: ../trait.WidgetExt.html
-/// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+/// [`Controller`]: crate::widget::Controller
+/// [`ControllerHost`]: crate::widget::ControllerHost
+/// [`WidgetExt`]: crate::widget::WidgetExt
+/// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
 pub struct Added<T> {
     /// A closure that will be invoked when the child widget is added
     /// to the widget tree
