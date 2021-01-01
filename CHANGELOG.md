@@ -6,7 +6,7 @@ You can find its changes [documented below](#060---2020-06-01).
 ## [Unreleased]
 
 ### Highlights
-- Text improvements: `TextLayout` type ([#1182]) and cich text support ([#1245])
+- Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245])
 - The `Formatter` trait provides more flexible handling of converions between
 values and their textual representations. ([#1377])
 
