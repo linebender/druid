@@ -231,6 +231,12 @@ impl MouseButtons {
     pub fn clear(&mut self) {
         self.0 = 0;
     }
+
+    /// Count the number of pressed buttons in the set.
+    #[inline]
+    pub fn count(&mut self) -> u32 {
+        self.0.count_ones()
+    }
 }
 
 impl std::fmt::Debug for MouseButtons {
