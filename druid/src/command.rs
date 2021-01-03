@@ -44,7 +44,7 @@ pub(crate) type SelectorSymbol = &'static str;
 /// [`get_unchecked`]: struct.Command.html#method.get_unchecked
 /// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
-pub struct Selector<T = ()>(SelectorSymbol, PhantomData<*const T>);
+pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 
 /// An arbitrary command.
 ///
@@ -79,6 +79,30 @@ pub struct Command {
     symbol: SelectorSymbol,
     payload: Arc<dyn Any>,
     target: Target,
+}
+
+/// A message passed up the tree from a [`Widget`] to its ancestors.
+///
+/// In the course of handling an event, a [`Widget`] may change some internal
+/// state that is of interest to one of its ancestors. In this case, the widget
+/// may submit a [`Notification`].
+///
+/// In practice, a [`Notification`] is very similar to a [`Command`]; the
+/// main distinction relates to delivery. [`Command`]s are delivered from the
+/// root of the tree down towards the target, and this delivery occurs after
+/// the originating event call has returned. [`Notification`]s are delivered *up*
+/// the tree, and this occurs *during* event handling; immediately after the
+/// child widget's [`event`] method returns, the notification will be delivered
+/// to the child's parent, and then the parent's parent, until the notification
+/// is handled.
+///
+/// [`Widget`]: crate::Widget
+/// [`event`]: crate::Widget::event
+#[derive(Clone)]
+pub struct Notification {
+    symbol: SelectorSymbol,
+    payload: Arc<dyn Any>,
+    source: WidgetId,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -217,7 +241,7 @@ pub mod sys {
     pub const NEW_FILE: Selector = Selector::new("druid-builtin.menu-file-new");
 
     /// When submitted by the application, a file picker dialog will be shown to the user,
-    /// and an [`OPEN_FILE`] command will be sent if a file is chosen.
+    /// and an [`OPEN_FILE`] command will be sent if a path is chosen.
     ///
     /// [`OPEN_FILE`]: constant.OPEN_FILE.html
     pub const SHOW_OPEN_PANEL: Selector<FileDialogOptions> =
@@ -226,7 +250,7 @@ pub mod sys {
     /// Sent when the user cancels an open file panel.
     pub const OPEN_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.open-panel-cancelled");
 
-    /// Open a file, must be handled by the application.
+    /// Open a path, must be handled by the application.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
@@ -242,12 +266,22 @@ pub mod sys {
     /// Sent when the user cancels a save file panel.
     pub const SAVE_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.save-panel-cancelled");
 
-    /// Save the current file, must be handled by the application.
+    /// Save the current path.
     ///
-    /// How this should be handled depends on the payload:
-    /// `Some(handle)`: the app should save to that file and store the `handle` for future use.
-    /// `None`: the app should have received `Some` before and use the stored `FileInfo`.
-    pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
+    /// The application should save its data, to a path that should be determined by the
+    /// application. Usually, this will be the most recent path provided by a [`SAVE_FILE_AS`]
+    /// or [`OPEN_FILE`] command.
+    pub const SAVE_FILE: Selector<()> = Selector::new("druid-builtin.save-file");
+
+    /// Save to a given location.
+    ///
+    /// This command is emitted by druid whenever a save file dialog successfully completes. The
+    /// application should save its data to the path proved, and should store the path in order to
+    /// handle [`SAVE_FILE`] commands in the future.
+    ///
+    /// The path might be a file or a directory, so always check whether it matches your
+    /// expectations.
+    pub const SAVE_FILE_AS: Selector<FileInfo> = Selector::new("druid-builtin.save-file-as");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");
@@ -343,6 +377,19 @@ impl Command {
         .default_to(Target::Global)
     }
 
+    /// A helper method for creating a `Notification` from a `Command`.
+    ///
+    /// This is slightly icky; it lets us do `SOME_SELECTOR.with(SOME_PAYLOAD)`
+    /// (which generates a command) and then privately convert it to a
+    /// notification.
+    pub(crate) fn into_notification(self, source: WidgetId) -> Notification {
+        Notification {
+            symbol: self.symbol,
+            payload: self.payload,
+            source,
+        }
+    }
+
     /// Set the `Command`'s [`Target`].
     ///
     /// [`Command::target`] can be used to get the current [`Target`].
@@ -394,7 +441,7 @@ impl Command {
                 panic!(
                     "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
-                )
+                );
             }))
         } else {
             None
@@ -423,6 +470,43 @@ impl Command {
                 self.symbol
             )
         })
+    }
+}
+
+impl Notification {
+    /// Returns `true` if `self` matches this [`Selector`].
+    pub fn is<T>(&self, selector: Selector<T>) -> bool {
+        self.symbol == selector.symbol()
+    }
+
+    /// Returns the payload for this [`Selector`], if the selector matches.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the payload has a different type, than what the selector
+    /// is supposed to carry. This can happen when two selectors with different
+    /// types but the same key are used.
+    ///
+    /// [`is`]: #method.is
+    pub fn get<T: Any>(&self, selector: Selector<T>) -> Option<&T> {
+        if self.symbol == selector.symbol() {
+            Some(self.payload.downcast_ref().unwrap_or_else(|| {
+                panic!(
+                    "The selector \"{}\" exists twice with different types. \
+                    See druid::Command::get for more information",
+                    selector.symbol()
+                );
+            }))
+        } else {
+            None
+        }
+    }
+
+    /// The [`WidgetId`] of the [`Widget`] that sent this [`Notification`].
+    ///
+    /// [`Widget`]: crate::Widget
+    pub fn source(&self) -> WidgetId {
+        self.source
     }
 }
 
@@ -496,6 +580,16 @@ impl Into<Option<Target>> for WidgetId {
     }
 }
 
+impl std::fmt::Debug for Notification {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Notification: Selector {} from {:?}",
+            self.symbol, self.source
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -506,5 +600,12 @@ mod tests {
         let payload = vec![0, 1, 2];
         let command = Command::new(sel, payload, Target::Auto);
         assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
+    }
+
+    #[test]
+    fn selector_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Selector>();
     }
 }

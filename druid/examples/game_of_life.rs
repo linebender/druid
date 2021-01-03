@@ -17,7 +17,7 @@
 //! Game of life
 
 use std::ops::{Index, IndexMut};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
@@ -30,13 +30,14 @@ use std::sync::Arc;
 const GRID_SIZE: usize = 40;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 
-const BG: Color = Color::grey8(23 as u8);
+const BG: Color = Color::grey8(23);
 const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
 const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
 const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
 const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
 const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
 
+#[allow(clippy::clippy::rc_buffer)]
 #[derive(Clone, Data)]
 struct Grid {
     storage: Arc<Vec<bool>>,
@@ -144,7 +145,7 @@ impl Grid {
                 let n_lives_around = self.n_neighbors(pos);
                 let life = self[pos];
                 // death by loneliness or overcrowding
-                if life && (n_lives_around < 2 || n_lives_around > 3) {
+                if life && !(2..=3).contains(&n_lives_around) {
                     indices_to_mutate.push(pos);
                     continue;
                 }
@@ -213,6 +214,7 @@ struct GameOfLifeWidget {
     timer_id: TimerToken,
     cell_size: Size,
     color_scheme: ColorScheme,
+    last_update: Instant,
 }
 
 impl GameOfLifeWidget {
@@ -236,7 +238,8 @@ impl Widget<AppData> for GameOfLifeWidget {
         match event {
             Event::WindowConnected => {
                 ctx.request_paint();
-                let deadline = Duration::from_millis(data.iter_interval() as u64);
+                let deadline = Duration::from_millis(data.iter_interval());
+                self.last_update = Instant::now();
                 self.timer_id = ctx.request_timer(deadline);
             }
             Event::Timer(id) => {
@@ -245,7 +248,8 @@ impl Widget<AppData> for GameOfLifeWidget {
                         data.grid.evolve();
                         ctx.request_paint();
                     }
-                    let deadline = Duration::from_millis(data.iter_interval() as u64);
+                    let deadline = Duration::from_millis(data.iter_interval());
+                    self.last_update = Instant::now();
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
@@ -265,8 +269,9 @@ impl Widget<AppData> for GameOfLifeWidget {
             }
             Event::MouseMove(e) => {
                 if data.drawing {
-                    let grid_pos_opt = self.grid_pos(e.pos);
-                    grid_pos_opt.iter().for_each(|pos| data.grid[*pos] = true);
+                    if let Some(grid_pos_opt) = self.grid_pos(e.pos) {
+                        data.grid[grid_pos_opt] = true
+                    }
                 }
             }
             _ => {}
@@ -282,8 +287,16 @@ impl Widget<AppData> for GameOfLifeWidget {
     ) {
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, _data: &AppData, _env: &Env) {
-        ctx.request_paint();
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _env: &Env) {
+        if (data.fps() - old_data.fps()).abs() > 0.001 {
+            let deadline = Duration::from_millis(data.iter_interval())
+                .checked_sub(Instant::now().duration_since(self.last_update))
+                .unwrap_or_else(|| Duration::from_secs(0));
+            self.timer_id = ctx.request_timer(deadline);
+        }
+        if data.grid != old_data.grid {
+            ctx.request_paint();
+        }
     }
 
     fn layout(
@@ -366,6 +379,7 @@ fn make_widget() -> impl Widget<AppData> {
                     height: 0.0,
                 },
                 color_scheme: Default::default(),
+                last_update: Instant::now(),
             },
             1.0,
         )

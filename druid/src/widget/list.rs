@@ -15,6 +15,7 @@
 //! Simple list view widget.
 
 use std::cmp::Ordering;
+use std::f64;
 use std::sync::Arc;
 
 #[cfg(feature = "im")]
@@ -23,14 +24,16 @@ use crate::im::Vector;
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
+    widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A list widget for a variable-size collection of items.
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
+    axis: Axis,
+    spacing: KeyOrValue<f64>,
 }
 
 impl<T: Data> List<T> {
@@ -40,7 +43,27 @@ impl<T: Data> List<T> {
         List {
             closure: Box::new(move || Box::new(closure())),
             children: Vec::new(),
+            axis: Axis::Vertical,
+            spacing: KeyOrValue::Concrete(0.),
         }
+    }
+
+    /// Sets the widget to display the list horizontally, not vertically.
+    pub fn horizontal(mut self) -> Self {
+        self.axis = Axis::Horizontal;
+        self
+    }
+
+    /// Set the spacing between elements.
+    pub fn with_spacing(mut self, spacing: impl Into<KeyOrValue<f64>>) -> Self {
+        self.spacing = spacing.into();
+        self
+    }
+
+    /// Set the spacing between elements.
+    pub fn set_spacing(&mut self, spacing: impl Into<KeyOrValue<f64>>) -> &mut Self {
+        self.spacing = spacing.into();
+        self
     }
 
     /// When the widget is created or the data changes, create or remove children as needed
@@ -235,11 +258,13 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let mut width = bc.min().width;
-        let mut y = 0.0;
-
+        let axis = self.axis;
+        let spacing = self.spacing.resolve(env);
+        let mut minor = axis.minor(bc.min());
+        let mut major_pos = 0.0;
         let mut paint_rect = Rect::ZERO;
         let mut children = self.children.iter_mut();
+        let child_bc = axis.constraints(bc, 0., f64::INFINITY);
         data.for_each(|child_data, _| {
             let child = match children.next() {
                 Some(child) => child,
@@ -247,20 +272,19 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                     return;
                 }
             };
-            let child_bc = BoxConstraints::new(
-                Size::new(bc.min().width, 0.0),
-                Size::new(bc.max().width, std::f64::INFINITY),
-            );
             let child_size = child.layout(ctx, &child_bc, child_data, env);
-            let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
-            child.set_layout_rect(ctx, child_data, env, rect);
+            let child_pos: Point = axis.pack(major_pos, 0.).into();
+            child.set_origin(ctx, child_data, env, child_pos);
             paint_rect = paint_rect.union(child.paint_rect());
-            width = width.max(child_size.width);
-            y += child_size.height;
+            minor = minor.max(axis.minor(child_size));
+            major_pos += axis.major(child_size) + spacing;
         });
 
-        let my_size = bc.constrain(Size::new(width, y));
-        let insets = paint_rect - Rect::ZERO.with_size(my_size);
+        // correct overshoot at end.
+        major_pos -= spacing;
+
+        let my_size = bc.constrain(Size::from(axis.pack(major_pos, minor)));
+        let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
         my_size
     }

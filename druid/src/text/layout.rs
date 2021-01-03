@@ -16,12 +16,13 @@
 
 use std::ops::Range;
 
+use super::TextStorage;
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::piet::{
     Color, PietText, PietTextLayout, Text as _, TextAlignment, TextAttribute, TextLayout as _,
     TextLayoutBuilder as _,
 };
-use crate::{ArcStr, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext, UpdateCtx};
+use crate::{Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext, UpdateCtx};
 
 /// A component for displaying text on screen.
 ///
@@ -43,8 +44,8 @@ use crate::{ArcStr, Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext, Up
 /// [`rebuild_if_needed`]: #method.rebuild_if_needed
 /// [`Env`]: struct.Env.html
 #[derive(Clone)]
-pub struct TextLayout {
-    text: ArcStr,
+pub struct TextLayout<T> {
+    text: Option<T>,
     font: KeyOrValue<FontDescriptor>,
     // when set, this will be used to override the size in he font descriptor.
     // This provides an easy way to change only the font size, while still
@@ -56,16 +57,25 @@ pub struct TextLayout {
     alignment: TextAlignment,
 }
 
-impl TextLayout {
+/// Metrics describing the layout text.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LayoutMetrics {
+    /// The nominal size of the layout.
+    pub size: Size,
+    /// The distance from the nominal top of the layout to the first baseline.
+    pub first_baseline: f64,
+    //TODO: add inking_rect
+}
+
+impl<T> TextLayout<T> {
     /// Create a new `TextLayout` object.
     ///
-    /// You do not provide the actual text at creation time; instead you pass
-    /// it in when calling [`rebuild_if_needed`].
+    /// You must set the text ([`set_text`]) before using this object.
     ///
-    /// [`rebuild_if_needed`]: #method.rebuild_if_needed
-    pub fn new(text: impl Into<ArcStr>) -> Self {
+    /// [`set_text`]: #method.set_text
+    pub fn new() -> Self {
         TextLayout {
-            text: text.into(),
+            text: None,
             font: crate::theme::UI_FONT.into(),
             text_color: crate::theme::LABEL_COLOR.into(),
             text_size_override: None,
@@ -75,22 +85,13 @@ impl TextLayout {
         }
     }
 
-    /// Returns `true` if this layout needs to be rebuilt.
+    /// Create a new `TextLayout` with the provided text.
     ///
-    /// This happens (for instance) after style attributes are modified.
-    ///
-    /// This does not account for things like the text changing, handling that
-    /// is the responsibility of the user.
-    pub fn needs_rebuild(&self) -> bool {
-        self.layout.is_none()
-    }
-
-    /// Set the text to display.
-    pub fn set_text(&mut self, text: impl Into<ArcStr>) {
-        let text = text.into();
-        if text != self.text {
-            self.text = text;
-            self.layout = None;
+    /// This is useful when the text is not died to application data.
+    pub fn from_text(text: impl Into<T>) -> Self {
+        TextLayout {
+            text: Some(text.into()),
+            ..TextLayout::new()
         }
     }
 
@@ -139,6 +140,7 @@ impl TextLayout {
     /// You may pass `f64::INFINITY` to disable word wrapping
     /// (the default behaviour).
     pub fn set_wrap_width(&mut self, width: f64) {
+        let width = width.max(0.0);
         // 1e-4 is an arbitrary small-enough value that we don't care to rewrap
         if (width - self.wrap_width).abs() > 1e-4 {
             self.wrap_width = width;
@@ -155,6 +157,40 @@ impl TextLayout {
             self.layout = None;
         }
     }
+}
+
+impl<T: TextStorage> TextLayout<T> {
+    /// Returns `true` if this layout needs to be rebuilt.
+    ///
+    /// This happens (for instance) after style attributes are modified.
+    ///
+    /// This does not account for things like the text changing, handling that
+    /// is the responsibility of the user.
+    pub fn needs_rebuild(&self) -> bool {
+        self.layout.is_none()
+    }
+
+    /// Set the text to display.
+    pub fn set_text(&mut self, text: T) {
+        if self.text.is_none() || self.text.as_ref().unwrap().as_str() != text.as_str() {
+            self.text = Some(text);
+            self.layout = None;
+        }
+    }
+
+    /// Returns the [`TextStorage`] backing this layout, if it exists.
+    ///
+    /// [`TextStorage`]: trait.TextStorage.html
+    pub fn text(&self) -> Option<&T> {
+        self.text.as_ref()
+    }
+
+    /// Returns the inner Piet [`TextLayout`] type.
+    ///
+    /// [`TextLayout`]: ./piet/trait.TextLayout.html
+    pub fn layout(&self) -> Option<&PietTextLayout> {
+        self.layout.as_ref()
+    }
 
     /// The size of the laid-out text.
     ///
@@ -166,6 +202,31 @@ impl TextLayout {
             .as_ref()
             .map(|layout| layout.size())
             .unwrap_or_default()
+    }
+
+    /// Return the text's [`LayoutMetrics`].
+    ///
+    /// This is not meaningful until [`rebuild_if_needed`] has been called.
+    ///
+    /// [`rebuild_if_needed`]: #method.rebuild_if_needed
+    /// [`LayoutMetrics`]: struct.LayoutMetrics.html
+    pub fn layout_metrics(&self) -> LayoutMetrics {
+        debug_assert!(
+            self.layout.is_some(),
+            "TextLayout::layout_metrics called without rebuilding layout object. Text was '{}'",
+            self.text().as_ref().map(|s| s.as_str()).unwrap_or_default()
+        );
+
+        if let Some(layout) = self.layout.as_ref() {
+            let first_baseline = layout.line_metric(0).unwrap().baseline;
+            let size = layout.size();
+            LayoutMetrics {
+                size,
+                first_baseline,
+            }
+        } else {
+            LayoutMetrics::default()
+        }
     }
 
     /// For a given `Point` (relative to this object's origin), returns index
@@ -253,29 +314,29 @@ impl TextLayout {
     ///
     /// [`layout`]: trait.Widget.html#method.layout
     pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) {
-        if self.layout.is_none() {
-            let font = self.font.resolve(env);
-            let color = self.text_color.resolve(env);
-            let size_override = self.text_size_override.as_ref().map(|key| key.resolve(env));
+        if let Some(text) = &self.text {
+            if self.layout.is_none() {
+                let font = self.font.resolve(env);
+                let color = self.text_color.resolve(env);
+                let size_override = self.text_size_override.as_ref().map(|key| key.resolve(env));
 
-            let descriptor = if let Some(size) = size_override {
-                font.with_size(size)
-            } else {
-                font
-            };
+                let descriptor = if let Some(size) = size_override {
+                    font.with_size(size)
+                } else {
+                    font
+                };
 
-            self.layout = Some(
-                factory
-                    .new_text_layout(self.text.clone())
+                let builder = factory
+                    .new_text_layout(text.clone())
                     .max_width(self.wrap_width)
                     .alignment(self.alignment)
                     .font(descriptor.family.clone(), descriptor.size)
                     .default_attribute(descriptor.weight)
                     .default_attribute(descriptor.style)
-                    .default_attribute(TextAttribute::TextColor(color))
-                    .build()
-                    .unwrap(),
-            )
+                    .default_attribute(TextAttribute::TextColor(color));
+                let layout = text.add_attributes(builder, env).build().unwrap();
+                self.layout = Some(layout);
+            }
         }
     }
 
@@ -291,7 +352,10 @@ impl TextLayout {
         debug_assert!(
             self.layout.is_some(),
             "TextLayout::draw called without rebuilding layout object. Text was '{}'",
-            &self.text
+            self.text
+                .as_ref()
+                .map(|t| t.as_str())
+                .unwrap_or("layout is missing text")
         );
         if let Some(layout) = self.layout.as_ref() {
             ctx.draw_text(layout, point);
@@ -299,7 +363,7 @@ impl TextLayout {
     }
 }
 
-impl std::fmt::Debug for TextLayout {
+impl<T> std::fmt::Debug for TextLayout<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("TextLayout")
             .field("font", &self.font)
@@ -314,5 +378,11 @@ impl std::fmt::Debug for TextLayout {
                 },
             )
             .finish()
+    }
+}
+
+impl<T: TextStorage> Default for TextLayout<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }

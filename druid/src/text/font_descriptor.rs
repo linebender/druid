@@ -36,15 +36,17 @@ impl FontDescriptor {
     /// Create a new descriptor with the provided [`FontFamily`].
     ///
     /// [`FontFamily`]: struct.FontFamily.html
-    pub fn new(family: FontFamily) -> Self {
+    pub const fn new(family: FontFamily) -> Self {
         FontDescriptor {
             family,
-            ..Default::default()
+            size: crate::piet::util::DEFAULT_FONT_SIZE,
+            weight: FontWeight::REGULAR,
+            style: FontStyle::Regular,
         }
     }
 
     /// Buider-style method to set the descriptor's font size.
-    pub fn with_size(mut self, size: f64) -> Self {
+    pub const fn with_size(mut self, size: f64) -> Self {
         self.size = size;
         self
     }
@@ -52,7 +54,7 @@ impl FontDescriptor {
     /// Buider-style method to set the descriptor's [`FontWeight`].
     ///
     /// [`FontWeight`]: struct.FontWeight.html
-    pub fn with_weight(mut self, weight: FontWeight) -> Self {
+    pub const fn with_weight(mut self, weight: FontWeight) -> Self {
         self.weight = weight;
         self
     }
@@ -60,7 +62,7 @@ impl FontDescriptor {
     /// Buider-style method to set the descriptor's [`FontStyle`].
     ///
     /// [`FontStyle`]: enum.FontStyle.html
-    pub fn with_style(mut self, style: FontStyle) -> Self {
+    pub const fn with_style(mut self, style: FontStyle) -> Self {
         self.style = style;
         self
     }

@@ -17,7 +17,7 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    commands, core::CommandQueue, Command, Data, Env, Event, MenuDesc, SingleUse, Target,
+    commands, core::CommandQueue, Command, Data, Env, Event, Handled, MenuDesc, SingleUse, Target,
     WindowDesc, WindowId,
 };
 
@@ -57,12 +57,7 @@ impl<'a> DelegateCtx<'a> {
                     .to(Target::Global),
             );
         } else {
-            const MSG: &str = "WindowDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("DelegateCtx::new_window: {}", MSG)
-            }
+            debug_panic!("DelegateCtx::new_window<T> - T must match the application data type.");
         }
     }
 
@@ -78,12 +73,7 @@ impl<'a> DelegateCtx<'a> {
                     .to(Target::Window(window)),
             );
         } else {
-            const MSG: &str = "MenuDesc<T> - T must match the application data type.";
-            if cfg!(debug_assertions) {
-                panic!(MSG);
-            } else {
-                log::error!("DelegateCtx::set_menu: {}", MSG)
-            }
+            debug_panic!("DelegateCtx::set_menu<T> - T must match the application data type.");
         }
     }
 }
@@ -122,7 +112,7 @@ pub trait AppDelegate<T: Data> {
     /// This function is called with each ([`Target`], [`Command`]) pair before
     /// they are sent down the tree.
     ///
-    /// If your implementation returns `true`, the command will be sent down
+    /// If your implementation returns `Handled::No`, the command will be sent down
     /// the widget tree. Otherwise it will not.
     ///
     /// To do anything fancier than this, you can submit arbitary commands
@@ -138,8 +128,8 @@ pub trait AppDelegate<T: Data> {
         cmd: &Command,
         data: &mut T,
         env: &Env,
-    ) -> bool {
-        true
+    ) -> Handled {
+        Handled::No
     }
 
     /// The handler for window creation events.

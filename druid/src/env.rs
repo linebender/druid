@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
-use crate::{ArcStr, Color, Data, Point, Rect, Size};
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -90,20 +90,21 @@ struct EnvImpl {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Key<T> {
     key: &'static str,
-    value_type: PhantomData<*const T>,
+    value_type: PhantomData<T>,
 }
 
 // we could do some serious deriving here: the set of types that can be stored
 // could be defined per-app
 // Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Data, PartialEq)]
 #[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
     Point(Point),
     Size(Size),
     Rect(Rect),
+    Insets(Insets),
     Color(Color),
     Float(f64),
     Bool(bool),
@@ -125,7 +126,7 @@ pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
     ///
     /// [`Value`]: enum.Value.html
-    Concrete(Value),
+    Concrete(T),
     /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
     ///
     /// [`Key<T>`]: struct.Key.html
@@ -163,7 +164,7 @@ impl<T> KeyLike<T> for KeyOrValue<T> {
 }
 
 /// Values which can be stored in an environment.
-pub trait ValueType: Sized + Into<Value> {
+pub trait ValueType: Sized + Clone + Into<Value> {
     /// Attempt to convert the generic `Value` into this type.
     fn try_from_value(v: &Value) -> Result<Self, ValueTypeError>;
 }
@@ -399,18 +400,19 @@ impl Value {
 
     fn is_same_type(&self, other: &Value) -> bool {
         use Value::*;
-        match (self, other) {
-            (Point(_), Point(_)) => true,
-            (Size(_), Size(_)) => true,
-            (Rect(_), Rect(_)) => true,
-            (Color(_), Color(_)) => true,
-            (Float(_), Float(_)) => true,
-            (Bool(_), Bool(_)) => true,
-            (UnsignedInt(_), UnsignedInt(_)) => true,
-            (String(_), String(_)) => true,
-            (Font(_), Font(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Point(_) , Point(_))
+                | (Size(_), Size(_))
+                | (Rect(_), Rect(_))
+                | (Insets(_), Insets(_))
+                | (Color(_), Color(_))
+                | (Float(_), Float(_))
+                | (Bool(_), Bool(_))
+                | (UnsignedInt(_), UnsignedInt(_))
+                | (String(_), String(_))
+                | (Font(_), Font(_))
+        )
     }
 }
 
@@ -420,32 +422,13 @@ impl Debug for Value {
             Value::Point(p) => write!(f, "Point {:?}", p),
             Value::Size(s) => write!(f, "Size {:?}", s),
             Value::Rect(r) => write!(f, "Rect {:?}", r),
+            Value::Insets(i) => write!(f, "Insets {:?}", i),
             Value::Color(c) => write!(f, "Color {:?}", c),
             Value::Float(x) => write!(f, "Float {}", x),
             Value::Bool(b) => write!(f, "Bool {}", b),
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
             Value::Font(font) => write!(f, "Font {:?}", font),
-        }
-    }
-}
-
-impl Data for Value {
-    fn same(&self, other: &Value) -> bool {
-        use Value::*;
-        match (self, other) {
-            (Point(p1), Point(p2)) => p1.x.same(&p2.x) && p1.y.same(&p2.y),
-            (Rect(r1), Rect(r2)) => {
-                r1.x0.same(&r2.x0) && r1.y0.same(&r2.y0) && r1.x1.same(&r2.x1) && r1.y1.same(&r2.y1)
-            }
-            (Size(s1), Size(s2)) => s1.width.same(&s2.width) && s1.height.same(&s2.height),
-            (Color(c1), Color(c2)) => c1.as_rgba_u32() == c2.as_rgba_u32(),
-            (Float(f1), Float(f2)) => f1.same(&f2),
-            (Bool(b1), Bool(b2)) => b1 == b2,
-            (UnsignedInt(f1), UnsignedInt(f2)) => f1.same(&f2),
-            (String(s1), String(s2)) => s1.same(s2),
-            (Font(s1), Font(s2)) => s1.same(s2),
-            _ => false,
         }
     }
 }
@@ -572,6 +555,7 @@ impl_value_type!(Color, Color);
 impl_value_type!(Rect, Rect);
 impl_value_type!(Point, Point);
 impl_value_type!(Size, Size);
+impl_value_type!(Insets, Insets);
 impl_value_type!(ArcStr, String);
 impl_value_type!(FontDescriptor, Font);
 
@@ -582,7 +566,7 @@ impl<T: ValueType> KeyOrValue<T> {
     /// [`Env`]: struct.Env.html
     pub fn resolve(&self, env: &Env) -> T {
         match self {
-            KeyOrValue::Concrete(value) => value.to_inner_unchecked(),
+            KeyOrValue::Concrete(ref value) => value.to_owned(),
             KeyOrValue::Key(key) => env.get(key),
         }
     }
@@ -590,7 +574,7 @@ impl<T: ValueType> KeyOrValue<T> {
 
 impl<T: Into<Value>> From<T> for KeyOrValue<T> {
     fn from(value: T) -> KeyOrValue<T> {
-        KeyOrValue::Concrete(value.into())
+        KeyOrValue::Concrete(value)
     }
 }
 
@@ -614,5 +598,12 @@ mod tests {
         let value: KeyOrValue<ArcStr> = ArcStr::from("Owned").into();
 
         assert_eq!(key.resolve(&env), value.resolve(&env));
+    }
+
+    #[test]
+    fn key_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Key<()>>();
     }
 }

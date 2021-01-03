@@ -18,8 +18,8 @@ use druid_shell::kurbo::{Line, Size};
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
-    Application, Cursor, FileDialogOptions, FileSpec, HotKey, KeyEvent, Menu, MouseEvent, Region,
-    SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Application, Cursor, FileDialogOptions, FileDialogToken, FileInfo, FileSpec, HotKey, KeyEvent,
+    Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -56,11 +56,14 @@ impl WinHandler for HelloState {
                     FileSpec::TEXT,
                     FileSpec::JPG,
                 ]);
-                let filename = self.handle.open_file_sync(options);
-                println!("result: {:?}", filename);
+                self.handle.open_file(options);
             }
             _ => println!("unexpected id {}", id),
         }
+    }
+
+    fn open_file(&mut self, _token: FileDialogToken, file_info: Option<FileInfo>) {
+        println!("open file result: {:?}", file_info);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
@@ -95,6 +98,14 @@ impl WinHandler for HelloState {
 
     fn size(&mut self, size: Size) {
         self.size = size;
+    }
+
+    fn got_focus(&mut self) {
+        println!("Got focus");
+    }
+
+    fn lost_focus(&mut self) {
+        println!("Lost focus");
     }
 
     fn request_close(&mut self) {

@@ -21,7 +21,10 @@ use std::rc::Rc;
 
 use crate::kurbo::Size;
 use crate::piet::Piet;
-use crate::shell::{Application, IdleToken, MouseEvent, Region, Scale, WinHandler, WindowHandle};
+use crate::shell::{
+    Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region, Scale, WinHandler,
+    WindowHandle,
+};
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
@@ -29,8 +32,8 @@ use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, InternalEvent, KeyEvent, MenuDesc, PlatformError, Target,
-    TimerToken, WindowDesc, WindowId,
+    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Selector,
+    Target, TimerToken, WindowDesc, WindowId,
 };
 
 use crate::app::{PendingWindow, WindowConfig};
@@ -71,10 +74,21 @@ pub(crate) struct AppState<T> {
     inner: Rc<RefCell<Inner<T>>>,
 }
 
+/// The information for forwarding druid-shell's file dialog reply to the right place.
+struct DialogInfo {
+    /// The window to send the command to.
+    id: WindowId,
+    /// The command to send if the dialog is accepted.
+    accept_cmd: Selector<FileInfo>,
+    /// The command to send if the dialog is cancelled.
+    cancel_cmd: Selector<()>,
+}
+
 struct Inner<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
+    file_dialogs: HashMap<FileDialogToken, DialogInfo>,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
@@ -143,6 +157,7 @@ impl<T> AppState<T> {
             app,
             delegate,
             command_queue: VecDeque::new(),
+            file_dialogs: HashMap::new(),
             root_menu: None,
             ext_event_host,
             data,
@@ -207,9 +222,9 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    fn delegate_cmd(&mut self, cmd: &Command) -> bool {
+    fn delegate_cmd(&mut self, cmd: &Command) -> Handled {
         self.with_delegate(|del, data, env, ctx| del.command(ctx, cmd.target(), cmd, data, env))
-            .unwrap_or(true)
+            .unwrap_or(Handled::No)
     }
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
@@ -319,10 +334,11 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    /// Returns `true` if the command was handled.
-    fn dispatch_cmd(&mut self, cmd: Command) -> bool {
-        if !self.delegate_cmd(&cmd) {
-            return true;
+    fn dispatch_cmd(&mut self, cmd: Command) -> Handled {
+        let handled = self.delegate_cmd(&cmd);
+        self.do_update();
+        if handled.is_handled() {
+            return handled;
         }
 
         match cmd.target() {
@@ -330,11 +346,11 @@ impl<T: Data> Inner<T> {
                 // first handle special window-level events
                 if cmd.is(sys_cmd::SET_MENU) {
                     self.set_menu(id, &cmd);
-                    return true;
+                    return Handled::Yes;
                 }
                 if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) {
                     self.show_context_menu(id, &cmd);
-                    return true;
+                    return Handled::Yes;
                 }
                 if let Some(w) = self.windows.get_mut(id) {
                     let event = Event::Command(cmd);
@@ -346,16 +362,20 @@ impl<T: Data> Inner<T> {
             Target::Widget(id) => {
                 for w in self.windows.iter_mut().filter(|w| w.may_contain_widget(id)) {
                     let event = Event::Internal(InternalEvent::TargetedCommand(cmd.clone()));
-                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        return true;
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env)
+                        .is_handled()
+                    {
+                        return Handled::Yes;
                     }
                 }
             }
             Target::Global => {
                 for w in self.windows.iter_mut() {
                     let event = Event::Command(cmd.clone());
-                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env) {
-                        return true;
+                    if w.event(&mut self.command_queue, event, &mut self.data, &self.env)
+                        .is_handled()
+                    {
+                        return Handled::Yes;
                     }
                 }
             }
@@ -363,10 +383,10 @@ impl<T: Data> Inner<T> {
                 log::error!("{:?} reached window handler with `Target::Auto`", cmd);
             }
         }
-        false
+        Handled::No
     }
 
-    fn do_window_event(&mut self, source_id: WindowId, event: Event) -> bool {
+    fn do_window_event(&mut self, source_id: WindowId, event: Event) -> Handled {
         match event {
             Event::Command(..) | Event::Internal(InternalEvent::TargetedCommand(..)) => {
                 panic!("commands should be dispatched via dispatch_cmd");
@@ -377,13 +397,13 @@ impl<T: Data> Inner<T> {
         // if the event was swallowed by the delegate we consider it handled?
         let event = match self.delegate_event(source_id, event) {
             Some(event) => event,
-            None => return true,
+            None => return Handled::Yes,
         };
 
         if let Some(win) = self.windows.get_mut(source_id) {
             win.event(&mut self.command_queue, event, &mut self.data, &self.env)
         } else {
-            false
+            Handled::No
         }
     }
 
@@ -489,7 +509,7 @@ impl<T: Data> AppState<T> {
     ///
     /// This is principally because in certain cases (such as keydown on Windows)
     /// the OS needs to know if an event was handled.
-    fn do_window_event(&mut self, event: Event, window_id: WindowId) -> bool {
+    fn do_window_event(&mut self, event: Event, window_id: WindowId) -> Handled {
         let result = self.inner.borrow_mut().do_window_event(window_id, event);
         self.process_commands();
         self.inner.borrow_mut().do_update();
@@ -586,7 +606,7 @@ impl<T: Data> AppState<T> {
             T::Window(id) if cmd.is(sys_cmd::SHOW_SAVE_PANEL) => self.show_save_panel(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::CONFIGURE_WINDOW) => self.configure_window(cmd, id),
             T::Window(id) if cmd.is(sys_cmd::CLOSE_WINDOW) => {
-                if !self.inner.borrow_mut().dispatch_cmd(cmd) {
+                if !self.inner.borrow_mut().dispatch_cmd(cmd).is_handled() {
                     self.request_close_window(id);
                 }
             }
@@ -606,9 +626,6 @@ impl<T: Data> AppState<T> {
 
     fn show_open_panel(&mut self, cmd: Command, window_id: WindowId) {
         let options = cmd.get_unchecked(sys_cmd::SHOW_OPEN_PANEL).to_owned();
-        //FIXME: this is blocking; if we hold `borrow_mut` we are likely to cause
-        //a crash. as a workaround we take a clone of the window handle.
-        //it's less clear what the better solution would be.
         let handle = self
             .inner
             .borrow_mut()
@@ -616,14 +633,21 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let result = handle.and_then(|mut handle| handle.open_file_sync(options));
-        self.inner.borrow_mut().dispatch_cmd({
-            if let Some(info) = result {
-                sys_cmd::OPEN_FILE.with(info).to(window_id)
-            } else {
-                sys_cmd::OPEN_PANEL_CANCELLED.to(window_id)
-            }
-        });
+        let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::OPEN_FILE);
+        let cancel_cmd = options
+            .cancel_cmd
+            .unwrap_or(crate::commands::OPEN_PANEL_CANCELLED);
+        let token = handle.and_then(|mut handle| handle.open_file(options.opt));
+        if let Some(token) = token {
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
+        }
     }
 
     fn show_save_panel(&mut self, cmd: Command, window_id: WindowId) {
@@ -634,14 +658,39 @@ impl<T: Data> AppState<T> {
             .windows
             .get_mut(window_id)
             .map(|w| w.handle.clone());
-        let result = handle.and_then(|mut handle| handle.save_as_sync(options));
-        self.inner.borrow_mut().dispatch_cmd({
-            if let Some(info) = result {
-                sys_cmd::SAVE_FILE.with(Some(info)).to(window_id)
+        let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::SAVE_FILE_AS);
+        let cancel_cmd = options
+            .cancel_cmd
+            .unwrap_or(crate::commands::SAVE_PANEL_CANCELLED);
+        let token = handle.and_then(|mut handle| handle.save_as(options.opt));
+        if let Some(token) = token {
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
+        }
+    }
+
+    fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.inner.borrow_mut();
+        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                dialog_info.accept_cmd.with(info).to(dialog_info.id)
             } else {
-                sys_cmd::SAVE_PANEL_CANCELLED.to(window_id)
-            }
-        });
+                dialog_info.cancel_cmd.to(dialog_info.id)
+            };
+            inner.append_command(cmd);
+        } else {
+            log::error!("unknown dialog token");
+        }
+
+        std::mem::drop(inner);
+        self.process_commands();
+        self.inner.borrow_mut().do_update();
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
@@ -724,7 +773,7 @@ impl<T: Data> AppState<T> {
         let env = self.env();
 
         pending.title.resolve(&data, &env);
-        builder.set_title(pending.title.display_text());
+        builder.set_title(pending.title.display_text().to_string());
 
         let platform_menu = pending
             .menu
@@ -778,6 +827,14 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.handle_system_cmd(id, Some(self.window_id));
     }
 
+    fn save_as(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        self.app_state.handle_dialog_response(token, file_info);
+    }
+
+    fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        self.app_state.handle_dialog_response(token, file_info);
+    }
+
     fn mouse_down(&mut self, event: &MouseEvent) {
         // TODO: double-click detection (or is this done in druid-shell?)
         let event = Event::MouseDown(event.clone().into());
@@ -802,6 +859,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn key_down(&mut self, event: KeyEvent) -> bool {
         self.app_state
             .do_window_event(Event::KeyDown(event), self.window_id)
+            .is_handled()
     }
 
     fn key_up(&mut self, event: KeyEvent) {

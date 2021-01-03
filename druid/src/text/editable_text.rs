@@ -15,7 +15,8 @@
 //! Traits for text editing and a basic String implementation.
 
 use std::borrow::Cow;
-use std::ops::Range;
+use std::ops::{Deref, Range};
+use std::sync::Arc;
 
 use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
@@ -190,6 +191,53 @@ impl EditableText for String {
     }
 }
 
+impl EditableText for Arc<String> {
+    fn cursor(&self, position: usize) -> Option<StringCursor> {
+        <String as EditableText>::cursor(self, position)
+    }
+    fn edit(&mut self, range: Range<usize>, new: impl Into<String>) {
+        let new = new.into();
+        if !range.is_empty() || !new.is_empty() {
+            Arc::make_mut(self).edit(range, new)
+        }
+    }
+    fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
+        Some(Cow::Borrowed(&self[range]))
+    }
+    fn len(&self) -> usize {
+        self.deref().len()
+    }
+    fn prev_word_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().prev_word_offset(offset)
+    }
+    fn next_word_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().next_word_offset(offset)
+    }
+    fn prev_grapheme_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().prev_grapheme_offset(offset)
+    }
+    fn next_grapheme_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().next_grapheme_offset(offset)
+    }
+    fn prev_codepoint_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().prev_codepoint_offset(offset)
+    }
+    fn next_codepoint_offset(&self, offset: usize) -> Option<usize> {
+        self.deref().next_codepoint_offset(offset)
+    }
+    fn preceding_line_break(&self, offset: usize) -> usize {
+        self.deref().preceding_line_break(offset)
+    }
+    fn next_line_break(&self, offset: usize) -> usize {
+        self.deref().next_line_break(offset)
+    }
+    fn is_empty(&self) -> bool {
+        self.deref().is_empty()
+    }
+    fn from_str(s: &str) -> Self {
+        Arc::new(s.to_owned())
+    }
+}
 /// A cursor with convenience functions for moving through EditableText.
 pub trait EditableTextCursor<EditableText> {
     /// Set cursor position.
@@ -323,6 +371,7 @@ pub fn len_utf8_from_first_byte(b: u8) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Data;
 
     #[test]
     fn replace() {
@@ -475,5 +524,13 @@ mod tests {
         assert_eq!(b.len(), b.next_line_break(11));
         assert_eq!(b.len(), b.next_line_break(13));
         assert_eq!(b.len(), b.next_line_break(19));
+    }
+
+    #[test]
+    fn arcstring_empty_edit() {
+        let a = Arc::new("hello".to_owned());
+        let mut b = a.clone();
+        b.edit(5..5, "");
+        assert!(a.same(&b));
     }
 }

@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{Align, Flex, Label, TextBox};
-use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
+use druid::widget::{Flex, Label, TextBox};
+use druid::{
+    AppLauncher, Data, Env, FontDescriptor, FontFamily, Lens, LocalizedString, UnitPoint, Widget,
+    WidgetExt, WindowDesc,
+};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
@@ -43,19 +46,28 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<HelloState> {
     // a label that will determine its text based on the current app data.
-    let label = Label::new(|data: &HelloState, _env: &Env| format!("Hello {}!", data.name));
+    let label = Label::new(|data: &HelloState, _env: &Env| {
+        if data.name.is_empty() {
+            "Hello anybody!?".to_string()
+        } else {
+            format!("Hello {}!", data.name)
+        }
+    })
+    .with_font(FontDescriptor::new(FontFamily::SERIF).with_size(32.0))
+    .align_horizontal(UnitPoint::CENTER);
+
     // a textbox that modifies `name`.
     let textbox = TextBox::new()
         .with_placeholder("Who are we greeting?")
+        .with_text_size(18.0)
         .fix_width(TEXT_BOX_WIDTH)
+        .align_horizontal(UnitPoint::CENTER)
         .lens(HelloState::name);
 
     // arrange the two widgets vertically, with some padding
-    let layout = Flex::column()
+    Flex::column()
         .with_child(label)
         .with_spacer(VERTICAL_WIDGET_SPACING)
-        .with_child(textbox);
-
-    // center the two widgets in the available space
-    Align::centered(layout)
+        .with_child(textbox)
+        .align_vertical(UnitPoint::CENTER)
 }

@@ -15,11 +15,8 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
-use crate::shell::kurbo::{Point, Rect, Size};
-use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetPod,
-};
+use crate::widget::prelude::*;
+use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -53,8 +50,8 @@ impl<T: Data> Container<T> {
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../struct.Color.thml
-    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
     pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
@@ -69,8 +66,8 @@ impl<T: Data> Container<T> {
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../struct.Color.thml
-    /// [`Key<Color>`]: ../struct.Key.thml
+    /// [`Color`]: ../enum.Color.html
+    /// [`Key<Color>`]: ../struct.Key.html
     /// [`Env`]: ../struct.Env.html
     /// [`Painter`]: struct.Painter.html
     pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
@@ -158,8 +155,7 @@ impl<T: Data> Widget<T> for Container<T> {
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
         let size = self.inner.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
-        self.inner
-            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
+        self.inner.set_origin(ctx, data, env, origin);
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,

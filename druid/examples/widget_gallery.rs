@@ -14,13 +14,13 @@
 
 use druid::{
     im,
-    kurbo::{Affine, BezPath, Circle},
+    kurbo::{Affine, BezPath, Circle, Point},
     piet::{FixedLinearGradient, GradientStop, InterpolationMode},
     widget::{
-        prelude::*, Button, Checkbox, FillStrat, Flex, Image, ImageData, Label, List, Painter,
-        ProgressBar, RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
+        prelude::*, Button, Checkbox, FillStrat, Flex, Image, Label, List, Painter, ProgressBar,
+        RadioGroup, Scroll, Slider, Spinner, Stepper, Switch, TextBox,
     },
-    AppLauncher, Color, Data, Lens, Rect, Widget, WidgetExt, WidgetPod, WindowDesc,
+    AppLauncher, Color, Data, ImageBuf, Lens, Widget, WidgetExt, WidgetPod, WindowDesc,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -182,7 +182,7 @@ fn ui_builder() -> impl Widget<AppData> {
             ))
             .with_child(label_widget(
                 Image::new(
-                    ImageData::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap(),
+                    ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap(),
                 )
                 .fill_mode(FillStrat::Fill)
                 .interpolation_mode(InterpolationMode::Bilinear),
@@ -355,19 +355,13 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
             .take(self.drawable_widgets)
             .enumerate()
         {
-            let rect = Rect::new(
-                x_position,
-                y_position,
-                x_position + self.cell_size.width,
-                y_position + self.cell_size.height,
-            );
             widget.layout(
                 ctx,
                 &BoxConstraints::new(self.cell_size, self.cell_size),
                 data,
                 env,
             );
-            widget.set_layout_rect(ctx, data, env, rect);
+            widget.set_origin(ctx, data, env, Point::new(x_position, y_position));
             // Increment position for the next cell
             x_position += self.cell_size.width + self.spacing;
             // If we can't fit in another cell in this row ...

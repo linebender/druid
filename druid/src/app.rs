@@ -24,6 +24,8 @@ use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
 
 use druid_shell::WindowState;
 
+const WINDOW_MIN_SIZE: Size = Size::new(400., 400.);
+
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 
@@ -39,7 +41,7 @@ pub struct AppLauncher<T> {
 /// It does not include anything related to app data.
 pub struct WindowConfig {
     pub(crate) size: Option<Size>,
-    pub(crate) min_size: Option<Size>,
+    pub(crate) min_size: Size,
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
@@ -187,7 +189,7 @@ impl Default for WindowConfig {
     fn default() -> Self {
         WindowConfig {
             size: None,
-            min_size: None,
+            min_size: WINDOW_MIN_SIZE,
             position: None,
             resizable: None,
             show_titlebar: None,
@@ -231,7 +233,7 @@ impl WindowConfig {
     /// [`window_size`]: #method.window_size
     /// [display points]: struct.Scale.html
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
-        self.min_size = Some(size.into());
+        self.min_size = size.into();
         self
     }
 
@@ -285,9 +287,6 @@ impl WindowConfig {
         if let Some(size) = self.size {
             builder.set_size(size);
         }
-        if let Some(min_size) = self.min_size {
-            builder.set_min_size(min_size);
-        }
 
         if let Some(position) = self.position {
             builder.set_position(position);
@@ -300,6 +299,8 @@ impl WindowConfig {
         if let Some(state) = self.state {
             builder.set_window_state(state);
         }
+
+        builder.set_min_size(self.min_size);
     }
 
     /// Apply this window configuration to the passed in WindowHandle
@@ -422,8 +423,8 @@ impl<T: Data> WindowDesc<T> {
     /// [`position`] Position in pixels.
     ///
     /// [`position`]: struct.Point.html
-    pub fn set_position(mut self, position: Point) -> Self {
-        self.config = self.config.set_position(position);
+    pub fn set_position(mut self, position: impl Into<Point>) -> Self {
+        self.config = self.config.set_position(position.into());
         self
     }
 

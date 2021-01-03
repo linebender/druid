@@ -521,3 +521,37 @@ fn request_update() {
         assert!(updated.get());
     })
 }
+
+#[test]
+/// Ensure that notifications are delivered to ancestors, but not siblings.
+fn notifications() {
+    const NOTIFICATION: Selector = Selector::new("druid-tests.some-notification");
+
+    let sender = ModularWidget::new(()).event_fn(|_, ctx, event, _, _| {
+        if matches!(event, Event::WindowConnected) {
+            ctx.submit_notification(NOTIFICATION);
+        }
+    });
+
+    let sibling_rec = Recording::default();
+    let parent_rec = Recording::default();
+    let grandparent_rec = Recording::default();
+
+    let tree = Flex::row()
+        .with_child(sender)
+        .with_child(SizedBox::empty().record(&sibling_rec))
+        .record(&parent_rec)
+        .padding(10.0)
+        .record(&grandparent_rec);
+
+    let saw_notification = |rec: &Recording| {
+        rec.drain()
+            .any(|ev| matches!(ev, Record::E(Event::Notification(_))))
+    };
+    Harness::create_simple((), tree, |harness| {
+        harness.send_initial_events();
+        assert!(!saw_notification(&sibling_rec));
+        assert!(saw_notification(&parent_rec));
+        assert!(saw_notification(&grandparent_rec));
+    });
+}

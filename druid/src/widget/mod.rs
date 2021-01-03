@@ -18,6 +18,7 @@ mod align;
 mod button;
 mod checkbox;
 mod click;
+mod clip_box;
 mod common;
 mod container;
 mod controller;
@@ -47,25 +48,27 @@ mod sub_window;
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
 mod switch;
+mod tabs;
 mod textbox;
 mod view_switcher;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
 
-pub use self::image::{Image, ImageData};
+pub use self::image::Image;
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use click::Click;
+pub use clip_box::{ClipBox, Viewport};
 pub use common::FillStrat;
 pub use container::Container;
 pub use controller::{Controller, ControllerHost};
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
 pub use identity_wrapper::IdentityWrapper;
-pub use label::{Label, LabelText, LineBreaking};
+pub use label::{Label, LabelText, LineBreaking, RawLabel};
 pub use lens_wrap::LensWrap;
 pub use list::{List, ListIter};
 pub use padding::Padding;
@@ -84,7 +87,8 @@ pub use sub_window::SubWindowHost;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
-pub use textbox::TextBox;
+pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
+pub use textbox::{TextBox, TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
@@ -115,7 +119,7 @@ pub use widget_ext::WidgetExt;
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
-        BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+        BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
         RenderContext, Size, UpdateCtx, Widget, WidgetId,
     };
 }

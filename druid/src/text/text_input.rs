@@ -57,13 +57,13 @@ pub trait TextInput {
 
 /// Handles key events and returns actions that are applicable to
 /// single line textboxes
-#[derive(Default)]
-pub struct BasicTextInput {}
+#[derive(Default, Debug, Clone)]
+pub struct BasicTextInput;
 
 impl BasicTextInput {
     /// Create a new `BasicTextInput`.
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 }
 
@@ -112,6 +112,18 @@ impl TextInput for BasicTextInput {
             k_e if (HotKey::new(None, KbKey::ArrowRight)).matches(k_e) => {
                 EditAction::Move(Movement::Right)
             }
+            k_e if (HotKey::new(None, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::Move(Movement::Up)
+            }
+            k_e if (HotKey::new(None, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::Move(Movement::Down)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowUp)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Up)
+            }
+            k_e if (HotKey::new(SysMods::Shift, KbKey::ArrowDown)).matches(k_e) => {
+                EditAction::ModifySelection(Movement::Down)
+            }
             // Delete left word
             k_e if (HotKey::new(SysMods::Cmd, KbKey::Backspace)).matches(k_e) => {
                 EditAction::JumpBackspace(Movement::LeftWord)
@@ -133,14 +145,10 @@ impl TextInput for BasicTextInput {
                 EditAction::Move(Movement::NextLineBreak)
             }
             // Actual typing
-            k_e if key_event_is_printable(k_e) => {
-                if let KbKey::Character(chars) = &k_e.key {
-                    EditAction::Insert(chars.to_owned())
-                } else {
-                    return None;
-                }
-            }
-            _ => return None,
+            k_e => match string_from_key(k_e) {
+                Some(txt) => EditAction::Insert(txt),
+                None => return None,
+            },
         };
 
         Some(action)
@@ -148,20 +156,14 @@ impl TextInput for BasicTextInput {
 }
 
 /// Determine whether a keyboard event contains insertable text.
-fn key_event_is_printable(event: &KeyEvent) -> bool {
-    if let KbKey::Character(_) = &event.key {
-        if event.mods.ctrl() || event.mods.meta() {
-            return false;
-        }
-        // On mac, Alt functions more like AltGr.
+fn string_from_key(event: &KeyEvent) -> Option<String> {
+    match &event.key {
+        KbKey::Character(_) if event.mods.ctrl() || event.mods.meta() => None,
         #[cfg(not(target_os = "macos"))]
-        {
-            if event.mods.alt() {
-                return false;
-            }
-        }
-        true
-    } else {
-        false
+        KbKey::Character(_) if event.mods.alt() => None,
+        KbKey::Character(chars) => Some(chars.to_owned()),
+        KbKey::Enter => Some("\n".into()),
+        KbKey::Tab => Some("\t".into()),
+        _ => None,
     }
 }

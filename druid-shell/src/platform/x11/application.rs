@@ -269,8 +269,7 @@ impl Application {
                 let w = self
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(ev)
-                    .context("KEY_PRESS - failed to handle")?;
+                w.handle_key_press(ev);
             }
             Event::ButtonPress(ev) => {
                 let w = self
@@ -283,8 +282,7 @@ impl Application {
                     w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(ev)
-                        .context("BUTTON_PRESS - failed to handle")?;
+                    w.handle_button_press(ev);
                 }
             }
             Event::ButtonRelease(ev) => {
@@ -295,23 +293,20 @@ impl Application {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(ev)
-                        .context("BUTTON_RELEASE - failed to handle")?;
+                    w.handle_button_release(ev);
                 }
             }
             Event::MotionNotify(ev) => {
                 let w = self
                     .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(ev)
-                    .context("MOTION_NOTIFY - failed to handle")?;
+                w.handle_motion_notify(ev);
             }
             Event::ClientMessage(ev) => {
                 let w = self
                     .window(ev.window)
                     .context("CLIENT_MESSAGE - failed to get window")?;
-                w.handle_client_message(ev)
-                    .context("CLIENT_MESSAGE - failed to handle")?;
+                w.handle_client_message(ev);
             }
             Event::DestroyNotify(ev) => {
                 if ev.window == self.window_id {
@@ -323,8 +318,7 @@ impl Application {
                 let w = self
                     .window(ev.window)
                     .context("DESTROY_NOTIFY - failed to get window")?;
-                w.handle_destroy_notify(ev)
-                    .context("DESTROY_NOTIFY - failed to handle")?;
+                w.handle_destroy_notify(ev);
 
                 // Remove our reference to the Window and allow it to be dropped
                 let windows_left = self

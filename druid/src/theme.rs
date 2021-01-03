@@ -18,7 +18,7 @@
 
 use crate::piet::Color;
 
-use crate::{Env, FontDescriptor, FontFamily, Key};
+use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key};
 
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
@@ -54,12 +54,23 @@ pub const BASIC_WIDGET_HEIGHT: Key<f64> =
 /// The default font for labels, buttons, text boxes, and other UI elements.
 pub const UI_FONT: Key<FontDescriptor> = Key::new("org.linebender.druid.theme.ui-font");
 
+/// A bold version of the default UI font.
+pub const UI_FONT_BOLD: Key<FontDescriptor> = Key::new("org.linebender.druid.theme.ui-font-bold");
+
+/// An Italic version of the default UI font.
+pub const UI_FONT_ITALIC: Key<FontDescriptor> =
+    Key::new("org.linebender.druid.theme.ui-font-italic");
+
 /// The default minimum width for a 'wide' widget; a textbox, slider, progress bar, etc.
 pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("org.linebender.druid.theme.long-widget-width");
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> =
     Key::new("org.linebender.druid.theme.bordered_widget_height");
 
-pub const TEXTBOX_BORDER_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.textbox_radius");
+pub const TEXTBOX_BORDER_RADIUS: Key<f64> =
+    Key::new("org.linebender.druid.theme.textbox_border_radius");
+pub const TEXTBOX_BORDER_WIDTH: Key<f64> =
+    Key::new("org.linebender.druid.theme.textbox_border_width");
+pub const TEXTBOX_INSETS: Key<Insets> = Key::new("org.linebender.druid.theme.textbox_insets");
 
 /// The default horizontal spacing between widgets.
 pub const WIDGET_PADDING_HORIZONTAL: Key<f64> =
@@ -112,6 +123,8 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(WIDE_WIDGET_WIDTH, 100.)
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
+        .adding(TEXTBOX_BORDER_WIDTH, 1.)
+        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 4.0, 2.0))
         .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLLBAR_MAX_OPACITY, 0.7)
@@ -126,6 +139,18 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(
             UI_FONT,
             FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(15.0),
+        )
+        .adding(
+            UI_FONT_BOLD,
+            FontDescriptor::new(FontFamily::SYSTEM_UI)
+                .with_weight(FontWeight::BOLD)
+                .with_size(15.0),
+        )
+        .adding(
+            UI_FONT_ITALIC,
+            FontDescriptor::new(FontFamily::SYSTEM_UI)
+                .with_style(FontStyle::Italic)
+                .with_size(15.0),
         )
 }
 

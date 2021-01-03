@@ -18,14 +18,13 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
-
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
-    BoxConstraints, Color, Command, Data, Env, Event, EventCtx, InternalEvent, InternalLifeCycle,
-    LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Region, RenderContext, Target, TextLayout,
-    TimerToken, UpdateCtx, Widget, WidgetId,
+    ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
+    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
 };
 
 /// Our queue type
@@ -52,7 +51,7 @@ pub struct WidgetPod<T, W> {
     env: Option<Env>,
     inner: W,
     // stashed layout so we don't recompute this when debugging
-    debug_widget_text: TextLayout,
+    debug_widget_text: TextLayout<ArcStr>,
 }
 
 /// Generic state for all widgets in the hierarchy.
@@ -73,14 +72,25 @@ pub struct WidgetPod<T, W> {
 #[derive(Clone)]
 pub(crate) struct WidgetState {
     pub(crate) id: WidgetId,
-    /// The frame of this widget in its parents coordinate space.
-    /// This should always be set; it is only an `Option` so that we
-    /// can more easily track (and help debug) if it hasn't been set.
-    layout_rect: Option<Rect>,
+    /// The size of the child; this is the value returned by the child's layout
+    /// method.
+    size: Size,
+    /// The origin of the child in the parent's coordinate space; together with
+    /// `size` these constitute the child's layout rect.
+    origin: Point,
+    /// A flag used to track and debug missing calls to set_origin.
+    is_expecting_set_origin_call: bool,
     /// The insets applied to the layout rect to generate the paint rect.
     /// In general, these will be zero; the exception is for things like
     /// drop shadows or overflowing text.
     pub(crate) paint_insets: Insets,
+
+    /// The offset of the baseline relative to the bottom of the widget.
+    ///
+    /// In general, this will be zero; the bottom of the widget will be considered
+    /// the baseline. Widgets that contain text or controls that expect to be
+    /// laid out alongside text can set this as appropriate.
+    pub(crate) baseline_offset: f64,
 
     // The region that needs to be repainted, relative to the widget's bounds.
     pub(crate) invalid: Region,
@@ -116,6 +126,11 @@ pub(crate) struct WidgetState {
     pub(crate) children_changed: bool,
     /// Associate timers with widgets that requested them.
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    /// The cursor that was set using one of the context methods.
+    pub(crate) cursor_change: CursorChange,
+    /// The result of merging up children cursors. This gets cleared when merging state up (unlike
+    /// cursor_change, which is persistent).
+    pub(crate) cursor: Option<Cursor>,
 
     // Port -> Host
     pub(crate) sub_window_hosts: Option<Vec<WidgetId>>,
@@ -134,6 +149,18 @@ pub(crate) enum FocusChange {
     Previous,
 }
 
+/// The possible cursor states for a widget.
+#[derive(Clone, Debug)]
+pub(crate) enum CursorChange {
+    /// No cursor has been set.
+    Default,
+    /// Someone set a cursor, but if a child widget also set their cursor then we'll use theirs
+    /// instead of ours.
+    Set(Cursor),
+    /// Someone set a cursor, and we'll use it regardless of what the children say.
+    Override(Cursor),
+}
+
 impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// Create a new widget pod.
     ///
@@ -149,7 +176,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             old_data: None,
             env: None,
             inner,
-            debug_widget_text: TextLayout::new(""),
+            debug_widget_text: TextLayout::new(),
         }
     }
 
@@ -157,6 +184,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// we want to control mutation.
     pub(crate) fn state(&self) -> &WidgetState {
         &self.state
+    }
+
+    /// Returns `true` if the widget has received [`LifeCycle::WidgetAdded`].
+    ///
+    /// [`LifeCycle::WidgetAdded`]: ./enum.LifeCycle.html#variant.WidgetAdded
+    pub fn is_initialized(&self) -> bool {
+        self.old_data.is_some()
     }
 
     /// Query the "active" state of the widget.
@@ -194,9 +228,21 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
     /// Set the layout [`Rect`].
     ///
+    /// This is soft-deprecated; you should use [`set_origin`] instead for new code.
+    ///
+    /// [`set_origin`]: WidgetPod::set_origin
+    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
+        if layout_rect.size() != self.state.size {
+            log::warn!("set_layout_rect passed different size than returned by layout method");
+        }
+        self.set_origin(ctx, data, env, layout_rect.origin());
+    }
+
+    /// Set the origin of this widget, in the parent's coordinate space.
+    ///
     /// A container widget should call the [`Widget::layout`] method on its children in
-    /// its own [`Widget::layout`] implementation, then possibly modify the returned [`Size`], and
-    /// finally call this `set_layout_rect` method on the child to set the final layout [`Rect`].
+    /// its own [`Widget::layout`] implementation, and then call `set_origin` to
+    /// position those children.
     ///
     /// The child will receive the [`LifeCycle::Size`] event informing them of the final [`Size`].
     ///
@@ -204,24 +250,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
-        let mut needs_merge = false;
+    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, origin: Point) {
+        self.state.origin = origin;
+        self.state.is_expecting_set_origin_call = false;
+        let layout_rect = self.layout_rect();
 
-        let old_size = self.state.layout_rect.map(|r| r.size());
-        let new_size = layout_rect.size();
-
-        self.state.layout_rect = Some(layout_rect);
-
-        if old_size.is_none() || old_size.unwrap() != new_size {
-            let mut child_ctx = LifeCycleCtx {
-                widget_state: &mut self.state,
-                state: ctx.state,
-            };
-            let size_event = LifeCycle::Size(new_size);
-            self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
-            needs_merge = true;
-        }
-
+        // if the widget has moved, it may have moved under the mouse, in which
+        // case we need to handle that.
         if WidgetPod::set_hot_state(
             &mut self.inner,
             &mut self.state,
@@ -231,22 +266,21 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             data,
             env,
         ) {
-            needs_merge = true;
-        }
-
-        if needs_merge {
             ctx.widget_state.merge_up(&mut self.state);
         }
     }
 
     /// Returns the layout [`Rect`].
     ///
-    /// This will be the same [`Rect`] that was set by [`set_layout_rect`].
+    /// This will be a [`Rect`] with a [`Size`] determined by the child's [`layout`]
+    /// method, and the origin that was set by [`set_origin`].
     ///
     /// [`Rect`]: struct.Rect.html
-    /// [`set_layout_rect`]: #method.set_layout_rect
+    /// [`Size`]: struct.Size.html
+    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`set_origin`]: WidgetPod::set_origin
     pub fn layout_rect(&self) -> Rect {
-        self.state.layout_rect.unwrap_or_default()
+        self.state.layout_rect()
     }
 
     /// Set the viewport offset.
@@ -316,6 +350,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
         union_pant_rect - parent_bounds
+    }
+
+    /// The distance from the bottom of this widget to the baseline.
+    pub fn baseline_offset(&self) -> f64 {
+        self.state.baseline_offset
     }
 
     /// Determines if the provided `mouse_pos` is inside `rect`
@@ -416,6 +455,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return;
         }
 
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: paint method called before receiving WidgetAdded.",
+                ctx.widget_id()
+            );
+            return;
+        }
+
         ctx.with_save(|ctx| {
             let layout_origin = self.layout_rect().origin().to_vec2();
             ctx.transform(Affine::translate(layout_origin));
@@ -438,7 +485,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 Color::BLACK
             };
             let id_string = id.to_raw().to_string();
-            self.debug_widget_text.set_text(id_string);
+            self.debug_widget_text.set_text(id_string.into());
             self.debug_widget_text.set_text_size(10.0);
             self.debug_widget_text.set_text_color(text_color);
             self.debug_widget_text.rebuild_if_needed(ctx.text(), env);
@@ -482,21 +529,47 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         data: &T,
         env: &Env,
     ) -> Size {
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: layout method called before receiving WidgetAdded.",
+                ctx.widget_id()
+            );
+            return Size::ZERO;
+        }
+
         self.state.needs_layout = false;
+        self.state.is_expecting_set_origin_call = true;
 
         let child_mouse_pos = match ctx.mouse_pos {
             Some(pos) => Some(pos - self.layout_rect().origin().to_vec2()),
             None => None,
         };
+        let prev_size = self.state.size;
+
         let mut child_ctx = LayoutCtx {
             widget_state: &mut self.state,
             state: ctx.state,
             mouse_pos: child_mouse_pos,
         };
-        let size = self.inner.layout(&mut child_ctx, bc, data, env);
+
+        let new_size = self.inner.layout(&mut child_ctx, bc, data, env);
+        if new_size != prev_size {
+            let mut child_ctx = LifeCycleCtx {
+                widget_state: child_ctx.widget_state,
+                state: child_ctx.state,
+            };
+            let size_event = LifeCycle::Size(new_size);
+            self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
+        }
 
         ctx.widget_state.merge_up(&mut child_ctx.widget_state);
+        self.state.size = new_size;
+        self.log_layout_issues(new_size);
 
+        new_size
+    }
+
+    fn log_layout_issues(&self, size: Size) {
         if size.width.is_infinite() {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite width.", name);
@@ -505,7 +578,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let name = self.widget().type_name();
             log::warn!("Widget `{}` has an infinite height.", name);
         }
-        size
+    }
+
+    /// Execute the closure with this widgets `EventCtx`.
+    #[cfg(feature = "crochet")]
+    pub fn with_event_context<F>(&mut self, parent_ctx: &mut EventCtx, mut fun: F)
+    where
+        F: FnMut(&mut W, &mut EventCtx),
+    {
+        let mut ctx = EventCtx {
+            state: parent_ctx.state,
+            widget_state: &mut self.state,
+            notifications: parent_ctx.notifications,
+            is_handled: false,
+            is_root: false,
+        };
+        fun(&mut self.inner, &mut ctx);
+        parent_ctx.widget_state.merge_up(&mut self.state);
     }
 
     /// Propagate an event.
@@ -517,30 +606,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`event`]: trait.Widget.html#tymethod.event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        if self.old_data.is_none() {
-            log::error!(
-                "widget {:?} is receiving an event without having first \
-                 received WidgetAdded.",
+        if !self.is_initialized() {
+            debug_panic!(
+                "{:?}: event method called before receiving WidgetAdded.",
                 ctx.widget_id()
             );
+            return;
         }
 
         // log if we seem not to be laid out when we should be
-        if self.state.layout_rect.is_none() {
-            match event {
-                Event::Internal(_) => (),
-                Event::Timer(_) => (),
-                Event::WindowConnected => (),
-                Event::WindowSize(_) => (),
-                _ => {
-                    log::warn!(
-                        "Widget '{}' received an event ({:?}) without having been laid out. \
-                        This likely indicates a missed call to set_layout_rect.",
-                        self.inner.type_name(),
-                        event,
-                    );
-                }
-            }
+        if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
+            log::warn!(
+                "{:?} received an event ({:?}) without having been laid out. \
+                This likely indicates a missed call to set_layout_rect.",
+                ctx.widget_id(),
+                event,
+            );
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
@@ -551,7 +632,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return;
         }
         let had_active = self.state.has_active;
-        let rect = self.state.layout_rect.unwrap_or_default();
+        let rect = self.layout_rect();
 
         // If we need to replace either the event or its data.
         let mut modified_event = None;
@@ -692,13 +773,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
             Event::Command(_) => true,
+            Event::Notification(_) => false,
         };
 
         if recurse {
+            let mut notifications = VecDeque::new();
             let mut inner_ctx = EventCtx {
-                cursor: ctx.cursor,
                 state: ctx.state,
                 widget_state: &mut self.state,
+                notifications: &mut notifications,
                 is_handled: false,
                 is_root: false,
             };
@@ -717,15 +800,67 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
                 _ => {
                     self.inner.event(&mut inner_ctx, &inner_event, data, env);
+
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
                 }
             }
+
+            // we try to handle the notifications that occured below us in the tree
+            self.send_notifications(ctx, &mut notifications, data, env);
         }
 
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
         // Doing this conditionally only makes sense when there's a measurable performance boost.
         ctx.widget_state.merge_up(&mut self.state);
+    }
+
+    /// Send notifications originating from this widget's children to this
+    /// widget.
+    ///
+    /// Notifications that are unhandled will be added to the notification
+    /// list for the parent's `EventCtx`, to be retried there.
+    fn send_notifications(
+        &mut self,
+        ctx: &mut EventCtx,
+        notifications: &mut VecDeque<Notification>,
+        data: &mut T,
+        env: &Env,
+    ) {
+        let EventCtx {
+            state,
+            notifications: parent_notifications,
+            ..
+        } = ctx;
+        let mut sentinal = VecDeque::new();
+        let mut inner_ctx = EventCtx {
+            state,
+            notifications: &mut sentinal,
+            widget_state: &mut self.state,
+            is_handled: false,
+            is_root: false,
+        };
+
+        for _ in 0..notifications.len() {
+            let notification = notifications.pop_front().unwrap();
+            let event = Event::Notification(notification);
+            self.inner.event(&mut inner_ctx, &event, data, env);
+            if inner_ctx.is_handled {
+                inner_ctx.is_handled = false;
+            } else if let Event::Notification(notification) = event {
+                // we will try again with the next parent
+                parent_notifications.push_back(notification);
+            } else {
+                unreachable!()
+            }
+        }
+
+        if !inner_ctx.notifications.is_empty() {
+            log::warn!(
+                "A Notification was submitted while handling another \
+            notification; the submitted notification will be ignored."
+            );
+        }
     }
 
     /// Propagate a [`LifeCycle`] event.
@@ -803,6 +938,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                 true
             }
+            _ if !self.is_initialized() => {
+                debug_panic!(
+                    "{:?}: received LifeCycle::{:?} before WidgetAdded.",
+                    self.id(),
+                    event
+                );
+                return;
+            }
             LifeCycle::Size(_) => {
                 // We are a descendant of a widget that received the Size event.
                 // This event was meant only for our parent, so don't recurse.
@@ -854,13 +997,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if !self.state.request_update {
             match (self.old_data.as_ref(), self.env.as_ref()) {
                 (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+                (Some(_), None) => self.env = Some(env.clone()),
                 (None, _) => {
-                    log::warn!("old_data missing in {:?}, skipping update", self.id());
-                    self.old_data = Some(data.clone());
-                    self.env = Some(env.clone());
+                    debug_panic!(
+                        "{:?} is receiving an update without having first received WidgetAdded.",
+                        self.id()
+                    );
                     return;
                 }
-                _ => (),
+                (Some(_), Some(_)) => {}
             }
         }
 
@@ -906,10 +1051,13 @@ impl WidgetState {
     pub(crate) fn new(id: WidgetId, size: Option<Size>) -> WidgetState {
         WidgetState {
             id,
-            layout_rect: size.map(|s| s.to_rect()),
+            origin: Point::ORIGIN,
+            size: size.unwrap_or_default(),
+            is_expecting_set_origin_call: true,
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
             viewport_offset: Vec2::ZERO,
+            baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
             is_active: false,
@@ -922,6 +1070,8 @@ impl WidgetState {
             children: Bloom::new(),
             children_changed: false,
             timers: HashMap::new(),
+            cursor_change: CursorChange::Default,
+            cursor: None,
             sub_window_hosts: None,
         }
     }
@@ -961,11 +1111,33 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
+
+        // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
+        // things will be recalculated just from `cursor_change`.
+        let child_cursor = child_state.take_cursor();
+        if let CursorChange::Override(cursor) = &self.cursor_change {
+            self.cursor = Some(cursor.clone());
+        } else if child_state.has_active || child_state.is_hot {
+            self.cursor = child_cursor;
+        }
+
+        if self.cursor.is_none() {
+            if let CursorChange::Set(cursor) = &self.cursor_change {
+                self.cursor = Some(cursor.clone());
+            }
+        }
+    }
+
+    /// Because of how cursor merge logic works, we need to handle the leaf case;
+    /// in that case there will be nothing in the `cursor` field (as merge_up
+    /// is never called) and so we need to also check the `cursor_change` field.
+    fn take_cursor(&mut self) -> Option<Cursor> {
+        self.cursor.take().or_else(|| self.cursor_change.cursor())
     }
 
     #[inline]
     pub(crate) fn size(&self) -> Size {
-        self.layout_rect.unwrap_or_default().size()
+        self.size
     }
 
     /// The paint region for this widget.
@@ -974,11 +1146,20 @@ impl WidgetState {
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub(crate) fn paint_rect(&self) -> Rect {
-        self.layout_rect.unwrap_or_default() + self.paint_insets
+        self.layout_rect() + self.paint_insets
     }
 
     pub(crate) fn layout_rect(&self) -> Rect {
-        self.layout_rect.unwrap_or_default()
+        Rect::from_origin_size(self.origin, self.size)
+    }
+}
+
+impl CursorChange {
+    fn cursor(&self) -> Option<Cursor> {
+        match self {
+            CursorChange::Set(c) | CursorChange::Override(c) => Some(c.clone()),
+            CursorChange::Default => None,
+        }
     }
 
     pub(crate) fn add_sub_window_host(&mut self, host_id: WidgetId) {
@@ -994,6 +1175,7 @@ impl WidgetState {
 mod tests {
     use super::*;
     use crate::ext_event::ExtEventHost;
+    use crate::text::format::ParseFormatter;
     use crate::widget::{Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
 
@@ -1003,13 +1185,25 @@ mod tests {
 
     #[test]
     fn register_children() {
-        fn make_widgets() -> impl Widget<Option<u32>> {
+        fn make_widgets() -> impl Widget<u32> {
             Split::columns(
-                Flex::<Option<u32>>::row()
-                    .with_child(TextBox::new().with_id(ID_1).parse())
-                    .with_child(TextBox::new().with_id(ID_2).parse())
-                    .with_child(TextBox::new().with_id(ID_3).parse()),
-                Scroll::new(TextBox::new().parse()),
+                Flex::<u32>::row()
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_1),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_2),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_3),
+                    ),
+                Scroll::new(TextBox::new().with_formatter(ParseFormatter::new())),
             )
         }
 
@@ -1036,7 +1230,7 @@ mod tests {
 
         let env = Env::default();
 
-        widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &None, &env);
+        widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &1, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));
         assert!(ctx.widget_state.children.may_contain(&ID_2));
         assert!(ctx.widget_state.children.may_contain(&ID_3));

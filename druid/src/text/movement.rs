@@ -14,7 +14,9 @@
 
 //! Text editing movements.
 
-use crate::text::{EditableText, Selection};
+use crate::kurbo::Point;
+use crate::piet::TextLayout as _;
+use crate::text::{EditableText, Selection, TextLayout, TextStorage};
 
 /// The specification of a movement.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -23,6 +25,10 @@ pub enum Movement {
     Left,
     /// Move to the right by one grapheme cluster.
     Right,
+    /// Move up one visible line.
+    Up,
+    /// Move down one visible line.
+    Down,
     /// Move to the left by one word.
     LeftWord,
     /// Move to the right by one word.
@@ -37,44 +43,98 @@ pub enum Movement {
     EndOfDocument,
 }
 
-/// Compute the result of movement on a selection .
-pub fn movement(m: Movement, s: Selection, text: &impl EditableText, modify: bool) -> Selection {
-    let offset = match m {
+/// Compute the result of movement on a selection.
+///
+/// returns a new selection representing the state after the movement.
+///
+/// If `modify` is true, only the 'active' edge (the `end`) of the selection
+/// should be changed; this is the case when the user moves with the shift
+/// key pressed.
+pub fn movement<T: EditableText + TextStorage>(
+    m: Movement,
+    s: Selection,
+    layout: &TextLayout<T>,
+    modify: bool,
+) -> Selection {
+    let (text, layout) = match (layout.text(), layout.layout()) {
+        (Some(text), Some(layout)) => (text, layout),
+        _ => {
+            debug_assert!(false, "movement() called before layout rebuild");
+            return s;
+        }
+    };
+
+    let (offset, h_pos) = match m {
         Movement::Left => {
             if s.is_caret() || modify {
-                text.prev_grapheme_offset(s.end).unwrap_or(0)
+                text.prev_grapheme_offset(s.end)
+                    .map(|off| (off, None))
+                    .unwrap_or((0, s.h_pos))
             } else {
-                s.min()
+                (s.min(), None)
             }
         }
         Movement::Right => {
             if s.is_caret() || modify {
-                text.next_grapheme_offset(s.end).unwrap_or(s.end)
+                text.next_grapheme_offset(s.end)
+                    .map(|off| (off, None))
+                    .unwrap_or((s.end, s.h_pos))
             } else {
-                s.max()
+                (s.max(), None)
             }
         }
 
-        Movement::PrecedingLineBreak => text.preceding_line_break(s.end),
-        Movement::NextLineBreak => text.next_line_break(s.end),
+        Movement::Up => {
+            let cur_pos = layout.hit_test_text_position(s.end);
+            let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
+            if cur_pos.line == 0 {
+                (0, Some(h_pos))
+            } else {
+                let lm = layout.line_metric(cur_pos.line).unwrap();
+                let point_above = Point::new(h_pos, cur_pos.point.y - lm.height);
+                let up_pos = layout.hit_test_point(point_above);
+                (up_pos.idx, Some(point_above.x))
+            }
+        }
+        Movement::Down => {
+            let cur_pos = layout.hit_test_text_position(s.end);
+            let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
+            if cur_pos.line == layout.line_count() - 1 {
+                (text.len(), Some(h_pos))
+            } else {
+                let lm = layout.line_metric(cur_pos.line).unwrap();
+                // may not work correctly for point sizes below 1.0
+                let y_below = lm.y_offset + lm.height + 1.0;
+                let point_below = Point::new(h_pos, y_below);
+                let up_pos = layout.hit_test_point(point_below);
+                (up_pos.idx, Some(point_below.x))
+            }
+        }
 
-        Movement::StartOfDocument => 0,
-        Movement::EndOfDocument => text.len(),
+        Movement::PrecedingLineBreak => (text.preceding_line_break(s.end), None),
+        Movement::NextLineBreak => (text.next_line_break(s.end), None),
+
+        Movement::StartOfDocument => (0, None),
+        Movement::EndOfDocument => (text.len(), None),
 
         Movement::LeftWord => {
-            if s.is_caret() || modify {
+            let offset = if s.is_caret() || modify {
                 text.prev_word_offset(s.end).unwrap_or(0)
             } else {
                 s.min()
-            }
+            };
+            (offset, None)
         }
         Movement::RightWord => {
-            if s.is_caret() || modify {
+            let offset = if s.is_caret() || modify {
                 text.next_word_offset(s.end).unwrap_or(s.end)
             } else {
                 s.max()
-            }
+            };
+            (offset, None)
         }
     };
-    Selection::new(if modify { s.start } else { offset }, offset)
+
+    let start = if modify { s.start } else { offset };
+    Selection::new(start, offset).with_h_pos(h_pos)
 }

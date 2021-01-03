@@ -26,7 +26,7 @@
 //! - `DRUID_SHELL_DISABLE_X11_PRESENT`: if this is set and `druid-shell` is using the `x11`
 //! backend, it will avoid using the Present extension.
 
-#![deny(intra_doc_link_resolution_failure)]
+#![warn(broken_intra_doc_links)]
 #![allow(clippy::new_without_default)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
@@ -35,6 +35,10 @@
 // The `target_os` requirement is there to exclude anything `wasm` like.
 #[cfg(all(target_os = "linux", feature = "gtk"))]
 extern crate gtk_rs as gtk;
+
+// Reexport the version of `image` we are using.
+#[cfg(feature = "image")]
+pub use image;
 
 pub use kurbo;
 pub use piet_common as piet;
@@ -65,13 +69,13 @@ pub use error::Error;
 pub use hotkey::{HotKey, RawMods, SysMods};
 pub use keyboard::{Code, IntoKey, KbKey, KeyEvent, KeyState, Location, Modifiers};
 pub use menu::Menu;
-pub use mouse::{Cursor, MouseButton, MouseButtons, MouseEvent};
+pub use mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
 pub use window::{
-    IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle, WindowLevel,
-    WindowState,
+    FileDialogToken, IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    WindowLevel, WindowState,
 };
 
 pub use keyboard_types;

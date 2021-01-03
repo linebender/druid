@@ -215,11 +215,12 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`LensWrap`]: struct.LensWrap.html
     /// [`Lens`]: trait.Lens.html
-    fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<T, L, Self> {
+    fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<S, T, L, Self> {
         LensWrap::new(self, lens)
     }
 
     /// Parse a `Widget<String>`'s contents
+    #[deprecated(since = "0.7.0", note = "Use TextBox::with_formatter instead")]
     fn parse(self) -> Parse<Self>
     where
         Self: Widget<String>,
@@ -286,21 +287,21 @@ impl<T: Data, W> EnvScope<T, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::TextBox;
+    use crate::widget::Slider;
     use crate::Color;
 
     #[test]
     fn container_reuse() {
-        // this should be Container<Align<Container<TextBox>>>
-        let widget = TextBox::new()
+        // this should be Container<Align<Container<Slider>>>
+        let widget = Slider::new()
             .background(Color::BLACK)
             .align_left()
             .border(Color::BLACK, 1.0);
         assert!(widget.border_is_some());
         assert!(!widget.background_is_some());
 
-        // this should be Container<TextBox>
-        let widget = TextBox::new()
+        // this should be Container<Slider>
+        let widget = Slider::new()
             .background(Color::BLACK)
             .border(Color::BLACK, 1.0);
         assert!(widget.background_is_some());
@@ -309,12 +310,32 @@ mod tests {
 
     #[test]
     fn sized_box_reuse() {
-        // this should be SizedBox<Align<SizedBox<TextBox>>>
-        let widget = TextBox::new().fix_height(10.0).align_left().fix_width(1.0);
+        // this should be SizedBox<Align<SizedBox<Slider>>>
+        let widget = Slider::new().fix_height(10.0).align_left().fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), None));
 
-        // this should be SizedBox<TextBox>
-        let widget = TextBox::new().fix_height(10.0).fix_width(1.0);
+        // this should be SizedBox<Slider>
+        let widget = Slider::new().fix_height(10.0).fix_width(1.0);
         assert_eq!(widget.width_and_height(), (Some(1.0), Some(10.0)));
+    }
+
+    /// we only care that this will compile; see
+    /// https://github.com/linebender/druid/pull/1414/
+    #[test]
+    fn lens_with_generic_param() {
+        use crate::widget::{Checkbox, Flex, Slider};
+
+        #[derive(Debug, Clone, Data, Lens)]
+        struct MyData<T> {
+            data: T,
+            floatl: f64,
+        }
+
+        #[allow(dead_code)]
+        fn make_widget() -> impl Widget<MyData<bool>> {
+            Flex::row()
+                .with_child(Slider::new().lens(MyData::<bool>::floatl))
+                .with_child(Checkbox::new("checkbox").lens(MyData::<bool>::data))
+        }
     }
 }

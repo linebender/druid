@@ -21,7 +21,8 @@ use druid::widget::{
 use druid::Target::Global;
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, ContextMenu, Data,
-    DelegateCtx, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc, WindowId,
+    DelegateCtx, Handled, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc,
+    WindowId,
 };
 use log::info;
 
@@ -153,14 +154,14 @@ impl AppDelegate<State> for Delegate {
         cmd: &Command,
         data: &mut State,
         _env: &Env,
-    ) -> bool {
+    ) -> Handled {
         match cmd {
             _ if cmd.is(sys_cmds::NEW_FILE) => {
                 let new_win = WindowDesc::new(ui_builder)
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
                 ctx.new_window(new_win);
-                false
+                Handled::Yes
             }
             _ if cmd.is(MENU_COUNT_ACTION) => {
                 data.selected = *cmd.get_unchecked(MENU_COUNT_ACTION);
@@ -168,7 +169,7 @@ impl AppDelegate<State> for Delegate {
                 for id in &self.windows {
                     ctx.set_menu(menu.clone(), *id);
                 }
-                false
+                Handled::Yes
             }
             // wouldn't it be nice if a menu (like a button) could just mutate state
             // directly if desired?
@@ -178,7 +179,7 @@ impl AppDelegate<State> for Delegate {
                 for id in &self.windows {
                     ctx.set_menu(menu.clone(), *id);
                 }
-                false
+                Handled::Yes
             }
             _ if cmd.is(MENU_DECREMENT_ACTION) => {
                 data.menu_count = data.menu_count.saturating_sub(1);
@@ -186,13 +187,13 @@ impl AppDelegate<State> for Delegate {
                 for id in &self.windows {
                     ctx.set_menu(menu.clone(), *id);
                 }
-                false
+                Handled::Yes
             }
             _ if cmd.is(MENU_SWITCH_GLOW_ACTION) => {
                 data.glow_hot = !data.glow_hot;
-                false
+                Handled::Yes
             }
-            _ => true,
+            _ => Handled::No,
         }
     }
 

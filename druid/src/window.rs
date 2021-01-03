@@ -14,13 +14,12 @@
 
 //! Management of multiple windows.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::mem;
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
 
-use crate::kurbo::{Point, Rect, Size};
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
@@ -31,9 +30,9 @@ use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, TimerToken,
-    UpdateCtx, Widget, WidgetId, WidgetPod,
+    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
+    TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// A unique identifier for a window.
@@ -49,6 +48,7 @@ pub struct Window<T> {
     invalid: Region,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) context_menu: Option<MenuDesc<T>>,
+    // This will be `Some` whenever the most recently displayed frame was an animation frame.
     pub(crate) last_anim: Option<Instant>,
     pub(crate) last_mouse_pos: Option<Point>,
     pub(crate) focus: Option<WidgetId>,
@@ -174,7 +174,7 @@ impl<T: Data> Window<T> {
         event: Event,
         data: &mut T,
         env: &Env,
-    ) -> bool {
+    ) -> Handled {
         match &event {
             Event::WindowSize(size) => self.size = *size,
             Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) | Event::Wheel(e) => {
@@ -184,18 +184,13 @@ impl<T: Data> Window<T> {
             _ => (),
         }
 
-        let mut cursor = match event {
-            Event::MouseMove(..) => Some(Cursor::Arrow),
-            _ => None,
-        };
-
         let event = match event {
             Event::Timer(token) => {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
                     log::error!("No widget found for timer {:?}", token);
-                    return false;
+                    return Handled::No;
                 }
             }
             other => other,
@@ -215,16 +210,23 @@ impl<T: Data> Window<T> {
         let is_handled = {
             let mut state =
                 ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+            let mut notifications = VecDeque::new();
             let mut ctx = EventCtx {
-                cursor: &mut cursor,
                 state: &mut state,
+                notifications: &mut notifications,
                 widget_state: &mut widget_state,
                 is_handled: false,
                 is_root: true,
             };
 
             self.root.event(&mut ctx, &event, data, env);
-            ctx.is_handled
+            if !ctx.notifications.is_empty() {
+                log::info!("{} unhandled notifications:", ctx.notifications.len());
+                for (i, n) in ctx.notifications.iter().enumerate() {
+                    log::info!("{}: {:?}", i, n);
+                }
+            }
+            Handled::from(ctx.is_handled)
         };
 
         // Clean up the timer token and do it immediately after the event handling
@@ -244,8 +246,13 @@ impl<T: Data> Window<T> {
             }
         }
 
-        if let Some(cursor) = cursor {
+        if let Some(cursor) = &widget_state.cursor {
             self.handle.set_cursor(&cursor);
+        } else if matches!(
+            event,
+            Event::MouseMove(..) | Event::Internal(InternalEvent::MouseLeave)
+        ) {
+            self.handle.set_cursor(&Cursor::Arrow);
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);
@@ -286,6 +293,10 @@ impl<T: Data> Window<T> {
         };
 
         self.root.update(&mut update_ctx, data, env);
+        if let Some(cursor) = &widget_state.cursor {
+            self.handle.set_cursor(cursor);
+        }
+
         self.post_event_processing(&mut widget_state, queue, data, env, false);
     }
 
@@ -322,20 +333,8 @@ impl<T: Data> Window<T> {
         let last = self.last_anim.take();
         let elapsed_ns = last.map(|t| now.duration_since(t).as_nanos()).unwrap_or(0) as u64;
 
-        if self.root.state().needs_layout {
-            self.layout(queue, data, env);
-        }
-
-        // Here, `self.wants_animation_frame()` refers to the animation frame that is currently
-        // being prepared for. (This is relying on the fact that `self.layout()` can't request
-        // an animation frame.)
         if self.wants_animation_frame() {
             self.event(queue, Event::AnimFrame(elapsed_ns), data, env);
-        }
-
-        // Here, `self.wants_animation_frame()` is true if we want *another* animation frame after
-        // the current one. (It got modified in the call to `self.event` above.)
-        if self.wants_animation_frame() {
             self.last_anim = Some(now);
         }
     }
@@ -348,6 +347,10 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
+        if self.root.state().needs_layout {
+            self.layout(queue, data, env);
+        }
+
         piet.fill(
             invalid.bounding_box(),
             &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
@@ -365,13 +368,9 @@ impl<T: Data> Window<T> {
             mouse_pos: self.last_mouse_pos,
         };
         let bc = BoxConstraints::tight(self.size);
-        let size = self.root.layout(&mut layout_ctx, &bc, data, env);
-        self.root.set_layout_rect(
-            &mut layout_ctx,
-            data,
-            env,
-            Rect::from_origin_size(Point::ORIGIN, size),
-        );
+        self.root.layout(&mut layout_ctx, &bc, data, env);
+        self.root
+            .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
@@ -423,7 +422,7 @@ impl<T: Data> Window<T> {
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {
         if self.title.resolve(data, env) {
-            self.handle.set_title(self.title.display_text());
+            self.handle.set_title(&self.title.display_text());
         }
     }
 

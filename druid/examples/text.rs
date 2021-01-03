@@ -14,10 +14,13 @@
 
 //! An example of various text layout features.
 
-use druid::widget::{Controller, Flex, Label, LineBreaking, RadioGroup, Scroll};
+use druid::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
+use druid::text::{Attribute, RichText, TextStorage};
+use druid::widget::prelude::*;
+use druid::widget::{Controller, Flex, Label, LineBreaking, RadioGroup, RawLabel, Scroll};
 use druid::{
-    AppLauncher, Color, Data, Env, Lens, LocalizedString, TextAlignment, UpdateCtx, Widget,
-    WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, FontFamily, FontStyle, FontWeight, Lens, LocalizedString,
+    TextAlignment, Widget, WidgetExt, WindowDesc,
 };
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Text Options");
@@ -29,18 +32,34 @@ const SPACER_SIZE: f64 = 8.0;
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
+    text: RichText,
     line_break_mode: LineBreaking,
     alignment: TextAlignment,
 }
 
-/// A controller that sets properties on a label.
+//NOTE: we implement these traits for our base data (instead of just lensing
+//into the RichText object, for the label) so that our label controller can
+//have access to the other fields.
+impl PietTextStorage for AppState {
+    fn as_str(&self) -> &str {
+        self.text.as_str()
+    }
+}
+
+impl TextStorage for AppState {
+    fn add_attributes(&self, builder: PietTextLayoutBuilder, env: &Env) -> PietTextLayoutBuilder {
+        self.text.add_attributes(builder, env)
+    }
+}
+
+/// A controller that updates label properties as required.
 struct LabelController;
 
-impl Controller<AppState, Label<AppState>> for LabelController {
+impl Controller<AppState, RawLabel<AppState>> for LabelController {
     #[allow(clippy::float_cmp)]
     fn update(
         &mut self,
-        child: &mut Label<AppState>,
+        child: &mut RawLabel<AppState>,
         ctx: &mut UpdateCtx,
         old_data: &AppState,
         data: &AppState,
@@ -52,6 +71,7 @@ impl Controller<AppState, Label<AppState>> for LabelController {
         }
         if old_data.alignment != data.alignment {
             child.set_text_alignment(data.alignment);
+            ctx.request_layout();
         }
         child.update(ctx, old_data, data, env);
     }
@@ -63,10 +83,19 @@ pub fn main() {
         .title(WINDOW_TITLE)
         .window_size((400.0, 600.0));
 
+    let text = RichText::new(TEXT.into())
+        .with_attribute(0..9, Attribute::text_color(Color::rgb(1.0, 0.2, 0.1)))
+        .with_attribute(0..9, Attribute::size(24.0))
+        .with_attribute(0..9, Attribute::font_family(FontFamily::SERIF))
+        .with_attribute(194..239, Attribute::weight(FontWeight::BOLD))
+        .with_attribute(764.., Attribute::size(12.0))
+        .with_attribute(764.., Attribute::style(FontStyle::Italic));
+
     // create the initial app state
     let initial_state = AppState {
         line_break_mode: LineBreaking::Clip,
         alignment: Default::default(),
+        text,
     };
 
     // start the application
@@ -78,7 +107,7 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<AppState> {
     let label = Scroll::new(
-        Label::new(TEXT)
+        RawLabel::new()
             .with_text_color(Color::BLACK)
             .controller(LabelController)
             .background(Color::WHITE)

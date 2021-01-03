@@ -14,13 +14,8 @@
 
 //! A widget that aligns its child (for example, centering it).
 
-use crate::kurbo::{Rect, Size};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    UpdateCtx, Widget, WidgetPod,
-};
-
-use crate::piet::UnitPoint;
+use crate::widget::prelude::*;
+use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -121,9 +116,9 @@ impl<T: Data> Widget<T> for Align<T> {
         let extra_height = (my_size.height - size.height).max(0.);
         let origin = self
             .align
-            .resolve(Rect::new(0., 0., extra_width, extra_height));
-        self.child
-            .set_layout_rect(ctx, data, env, Rect::from_origin_size(origin, size));
+            .resolve(Rect::new(0., 0., extra_width, extra_height))
+            .expand();
+        self.child.set_origin(ctx, data, env, origin);
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);

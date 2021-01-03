@@ -15,7 +15,8 @@
 //! Common types for representing mouse events and state
 
 use crate::kurbo::{Point, Vec2};
-
+use crate::piet::ImageBuf;
+use crate::platform;
 use crate::Modifiers;
 
 /// Information about the mouse event.
@@ -239,10 +240,9 @@ impl std::fmt::Debug for MouseButtons {
 }
 
 //NOTE: this currently only contains cursors that are included by default on
-//both Windows and macOS. We may want to provide polyfills for various additional cursors,
-//and we will also want to add some mechanism for adding custom cursors.
+//both Windows and macOS. We may want to provide polyfills for various additional cursors.
 /// Mouse cursors.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Cursor {
     /// The default arrow cursor.
     Arrow,
@@ -253,4 +253,44 @@ pub enum Cursor {
     NotAllowed,
     ResizeLeftRight,
     ResizeUpDown,
+    // The platform cursor should be small. Any image data that it uses should be shared (i.e.
+    // behind an `Arc` or using a platform API that does the sharing).
+    Custom(platform::window::CustomCursor),
+}
+
+/// A platform-independent description of a custom cursor.
+#[derive(Clone)]
+pub struct CursorDesc {
+    pub(crate) image: ImageBuf,
+    pub(crate) hot: Point,
+}
+
+impl CursorDesc {
+    /// Creates a new `CursorDesc`.
+    ///
+    /// `hot` is the "hot spot" of the cursor, measured in terms of the pixels in `image` with
+    /// `(0, 0)` at the top left. The hot spot is the logical position of the mouse cursor within
+    /// the image. For example, if the image is a picture of a arrow, the hot spot might be the
+    /// coordinates of the arrow's tip.
+    pub fn new(image: ImageBuf, hot: impl Into<Point>) -> CursorDesc {
+        CursorDesc {
+            image,
+            hot: hot.into(),
+        }
+    }
+}
+
+impl std::fmt::Debug for Cursor {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Cursor::Arrow => write!(f, "Cursor::Arrow"),
+            Cursor::IBeam => write!(f, "Cursor::IBeam"),
+            Cursor::Crosshair => write!(f, "Cursor::Crosshair"),
+            Cursor::OpenHand => write!(f, "Cursor::OpenHand"),
+            Cursor::NotAllowed => write!(f, "Cursor::NotAllowed"),
+            Cursor::ResizeLeftRight => write!(f, "Cursor::ResizeLeftRight"),
+            Cursor::ResizeUpDown => write!(f, "Cursor::ResizeUpDown"),
+            Cursor::Custom(_) => write!(f, "Cursor::Custom"),
+        }
+    }
 }

@@ -113,7 +113,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// assert_eq!(lens::Id.deref().get(&Box::new(42)), 42);
+    /// assert_eq!(lens::Identity.deref().get(&Box::new(42)), 42);
     /// ```
     fn deref(self) -> Then<Self, Deref, B>
     where
@@ -174,7 +174,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*;
-    /// assert_eq!(lens::Id.index(2).get(&vec![0u32, 1, 2, 3]), 2);
+    /// assert_eq!(lens::Identity.index(2).get(&vec![0u32, 1, 2, 3]), 2);
     /// ```
     fn index<I>(self, index: I) -> Then<Self, Index<I>, B>
     where
@@ -189,7 +189,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// ```
     /// # use druid::*; use std::sync::Arc;
-    /// let lens = lens::Id.index(2).in_arc();
+    /// let lens = lens::Identity.index(2).in_arc();
     /// let mut x = Arc::new(vec![0, 1, 2, 3]);
     /// let original = x.clone();
     /// assert_eq!(lens.get(&x), 2);
@@ -205,6 +205,34 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         Self: Sized,
     {
         InArc::new(self)
+    }
+
+    /// A lens that reverses a boolean value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::*;
+    /// use druid::LensExt;
+    ///
+    /// #[derive(Lens)]
+    /// struct MyThing {
+    ///     first: bool
+    /// }
+    ///
+    /// let lens = MyThing::first.not();
+    /// let mut val = MyThing { first: false };
+    /// assert_eq!(lens.with(&val, |v| *v), true);
+    /// lens.with_mut(&mut val, |v| *v = false);
+    /// assert_eq!(val.first, true);
+    /// ```
+    fn not(self) -> Then<Self, Not, B>
+    where
+        Self: Sized,
+        B: Sized + Into<bool> + Copy,
+        bool: Into<B>,
+    {
+        self.then(Not)
     }
 }
 
@@ -426,13 +454,15 @@ where
     }
 }
 
-/// The identity lens: the lens which does nothing, i.e. exposes exactly the original value.
+/// The identity lens: the lens which does nothing, i.e. exposes exactly
+/// the original value.
 ///
-/// Useful for starting a lens combinator chain, or passing to lens-based interfaces.
+/// Useful for starting a lens combinator chain, or passing to lens-based
+/// interfaces.
 #[derive(Debug, Copy, Clone)]
-pub struct Id;
+pub struct Identity;
 
-impl<A: ?Sized> Lens<A, A> for Id {
+impl<A: ?Sized> Lens<A, A> for Identity {
     fn with<V, F: FnOnce(&A) -> V>(&self, data: &A, f: F) -> V {
         f(data)
     }
@@ -488,24 +518,51 @@ where
 ///
 /// This is useful when you wish to have a display only widget, require a type-erased widget, or
 /// obtain app data out of band and ignore your input. (E.g sub-windows)
-#[derive(Debug, Copy, Clone)]
-pub struct Unit<T> {
-    phantom_t: PhantomData<T>,
-}
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Unit;
 
-impl<T> Default for Unit<T> {
-    fn default() -> Self {
-        Unit {
-            phantom_t: Default::default(),
-        }
-    }
-}
-
-impl<T> Lens<T, ()> for Unit<T> {
+impl<T> Lens<T, ()> for Unit {
     fn with<V, F: FnOnce(&()) -> V>(&self, _data: &T, f: F) -> V {
         f(&())
     }
     fn with_mut<V, F: FnOnce(&mut ()) -> V>(&self, _data: &mut T, f: F) -> V {
         f(&mut ())
+    }
+}
+
+/// A lens that negates a boolean.
+///
+/// It should usually be created using the `LensExt::not` method.
+#[derive(Debug, Copy, Clone)]
+pub struct Not;
+
+impl<T> Lens<T, bool> for Not
+where
+    T: Into<bool> + Copy,
+    bool: Into<T>,
+{
+    fn with<V, F: FnOnce(&bool) -> V>(&self, data: &T, f: F) -> V {
+        let tmp = !<T as Into<bool>>::into(*data);
+        f(&tmp)
+    }
+    fn with_mut<V, F: FnOnce(&mut bool) -> V>(&self, data: &mut T, f: F) -> V {
+        let mut tmp = !<T as Into<bool>>::into(*data);
+        let out = f(&mut tmp);
+        *data = (!tmp).into();
+        out
+    }
+}
+
+/// A lens that always gives the same value and discards changes.
+#[derive(Debug, Copy, Clone)]
+pub struct Constant<T>(pub T);
+
+impl<A, B: Clone> Lens<A, B> for Constant<B> {
+    fn with<V, F: FnOnce(&B) -> V>(&self, _: &A, f: F) -> V {
+        f(&self.0)
+    }
+    fn with_mut<V, F: FnOnce(&mut B) -> V>(&self, _: &mut A, f: F) -> V {
+        let mut tmp = self.0.clone();
+        f(&mut tmp)
     }
 }

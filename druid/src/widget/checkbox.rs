@@ -17,11 +17,7 @@
 use crate::kurbo::{BezPath, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
-use crate::widget::{Label, LabelText};
-use crate::{
-    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx,
-    Widget,
-};
+use crate::widget::{prelude::*, Label, LabelText};
 
 /// A checkbox that toggles a `bool`.
 pub struct Checkbox {
@@ -29,11 +25,16 @@ pub struct Checkbox {
 }
 
 impl Checkbox {
-    /// Create a new `Checkbox` with a label.
-    pub fn new(label: impl Into<LabelText<bool>>) -> Checkbox {
+    /// Create a new `Checkbox` with a text label.
+    pub fn new(text: impl Into<LabelText<bool>>) -> Checkbox {
         Checkbox {
-            child_label: Label::new(label),
+            child_label: Label::new(text),
         }
+    }
+
+    /// Update the text label.
+    pub fn set_text(&mut self, label: impl Into<LabelText<bool>>) {
+        self.child_label.set_text(label);
     }
 }
 
@@ -83,7 +84,10 @@ impl Widget<bool> for Checkbox {
             check_size + x_padding + label_size.width,
             check_size.max(label_size.height),
         );
-        bc.constrain(desired_size)
+        let our_size = bc.constrain(desired_size);
+        let baseline = self.child_label.baseline_offset() + (our_size.height - label_size.height);
+        ctx.set_baseline_offset(baseline);
+        our_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
