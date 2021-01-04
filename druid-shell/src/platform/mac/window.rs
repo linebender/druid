@@ -947,18 +947,14 @@ impl WindowHandle {
     }
 
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        self.open_save_impl(FileDialogType::Open, options)
+        Some(self.open_save_impl(FileDialogType::Open, options))
     }
 
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        self.open_save_impl(FileDialogType::Save, options)
+        Some(self.open_save_impl(FileDialogType::Save, options))
     }
 
-    fn open_save_impl(
-        &mut self,
-        ty: FileDialogType,
-        opts: FileDialogOptions,
-    ) -> Option<FileDialogToken> {
+    fn open_save_impl(&mut self, ty: FileDialogType, opts: FileDialogOptions) -> FileDialogToken {
         let token = FileDialogToken::next();
         let self_clone = self.clone();
         unsafe {
@@ -979,7 +975,7 @@ impl WindowHandle {
             let block = block.copy();
             let () = msg_send![panel, beginWithCompletionHandler: block];
         }
-        Some(token)
+        token
     }
 
     /// Set the title for this menu.
