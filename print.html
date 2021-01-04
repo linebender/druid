@@ -211,7 +211,7 @@ application, then it will show you how to set up a basic application, build it a
 </code></pre>
 <p>and adding the druid dependency to your Cargo.toml</p>
 <pre><code class="language-no_compile">[dependencies]
-druid = &quot;0.6.0&quot;
+druid = &quot;0.7.0&quot;
 // or to be on the bleeding edge:
 druid = { git = &quot;https://github.com/linebender/druid.git&quot; }
 </code></pre>
@@ -225,7 +225,7 @@ app built and running</em>.</p>
 </code></pre>
 <p>And then adding Druid as a dependency to Cargo.toml</p>
 <pre><code class="language-toml">[dependencies]
-druid = &quot;0.6.0&quot;
+druid = &quot;0.7.0&quot;
 </code></pre>
 <p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
 <pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
@@ -708,7 +708,7 @@ impl Lens&lt;f64, f64&gt; for MilesToKm {
 }
 </code></pre>
 <h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
 and accessing state about your specific application, such as color schemes,
 localized strings, and other resources.</p>
 <p>The <code>Env</code> is created when the application is launched, and is passed down to all
@@ -720,7 +720,7 @@ widget.</p>
 <h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
 <p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
 <code>Env</code> can only store a few types of things; these are represented by the
-<a href="https://docs.rs/druid/0.6.0/druid/struct.Value.html"><code>Value</code></a> type, which looks like this:</p>
+<a href="https://docs.rs/druid/0.7.0/druid/struct.Value.html"><code>Value</code></a> type, which looks like this:</p>
 <pre><code class="language-rust noplaypen">pub enum Value {
     Point(Point),
     Size(Size),
@@ -734,7 +734,7 @@ widget.</p>
     Font(FontDescriptor),
 }
 </code></pre>
-<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/0.6.0/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/0.6.0/druid/struct.Key.html"><code>Key</code></a> is
+<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/0.7.0/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/0.7.0/druid/struct.Key.html"><code>Key</code></a> is
 a combination of a string identifier and a type.</p>
 <p>You can think of this as strict types, enforced at runtime. This is less scary
 than it sounds, assuming the user follows a few simple guidelines. That said, <strong>It is the
@@ -755,7 +755,7 @@ const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-he
 <li>
 <p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
 that most keys are set when your application launches, using
-<a href="https://docs.rs/druid/0.6.0/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
+<a href="https://docs.rs/druid/0.7.0/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
 cannot be deleted, although it can be overwritten.</p>
 </li>
 <li>
@@ -766,7 +766,7 @@ replace it with any other type.</p>
 </ol>
 <p>Assuming these rules are followed, <code>Env</code> should just work.</p>
 <h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
-<p>Druid includes a <a href="https://docs.rs/druid/0.6.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
+<p>Druid includes a <a href="https://docs.rs/druid/0.7.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
 <pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;org.linebender.example.important-label-color&quot;);
@@ -779,8 +779,8 @@ fn make_labels() {
 </code></pre>
 <h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
 <p>You may override values in the environment for a given widget (and all of its
-children) by using the <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
-the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
+children) by using the <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
+the <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn scoped_label() {
     let my_label = Label::&lt;()&gt;::new(&quot;Warning!&quot;).env_scope(|env, _| {
         env.set(druid::theme::LABEL_COLOR, Color::BLACK);
@@ -791,8 +791,8 @@ the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#method.env_s
 <h2><a class="header" href="#localization" id="localization">Localization</a></h2>
 <p><em>localization is currently half-baked</em></p>
 <p>The <code>Env</code> contains the localization resources for the current locale. A
-<a href="https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
-calling its <a href="https://docs.rs/druid/0.6.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
+<a href="https://docs.rs/druid/0.7.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
+calling its <a href="https://docs.rs/druid/0.7.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
 <p>In general, you should not need to worry about localization directly. See the
 <a href="./localization.html">localization</a> chapter for an overview of localization in Druid.</p>
 <h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
@@ -858,10 +858,10 @@ based on the display that the window is currently located on.</p>
 will eventually need to create and use custom <code>Widget</code>s.</p>
 <h2><a class="header" href="#painter-and-controller" id="painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
 <p>There are two helper widgets in Druid that let you customize widget behaviour
-without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
-<a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
+without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
+<a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
 <h3><a class="header" href="#painter" id="painter">Painter</a></h3>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
 respond to events or otherwise contain update logic. Its general use is to
 either provide a custom background to some other widget, or to implement
 something like an icon or another graphical element that will be contained in
@@ -879,13 +879,13 @@ with rounded corners, we could use a <code>Painter</code>:</p>
 </code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
 set size, you must pass it explicit contraints, such as by wrapping it in a
-<a href="https://docs.rs/druid/0.6.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
+<a href="https://docs.rs/druid/0.7.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
 }
 </code></pre>
 <p>One other useful thing about <code>Painter</code> is that it can be used as the background
-of a <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
+of a <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
 as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
@@ -895,14 +895,14 @@ as a background, we could do:</p>
     .background(make_color_swatch())
 }
 </code></pre>
-<p>(This uses the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
+<p>(This uses the <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
 container.)</p>
 <h3><a class="header" href="#controller" id="controller">Controller</a></h3>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
 make widgets that handle events, but don't do any layout or drawing. The idea
 here is that you can use some <code>Controller</code> type to customize the behaviour of
 some set of children.</p>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
 like <a href="./widget.html"><code>Widget</code></a>; it does not have <code>paint</code> or <code>layout</code> methods. Also unlike
 <a href="./widget.html"><code>Widget</code></a>, all of its methods are optional; you can override only the method
 that you need.</p>

@@ -168,10 +168,10 @@
 will eventually need to create and use custom <code>Widget</code>s.</p>
 <h2><a class="header" href="#painter-and-controller" id="painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
 <p>There are two helper widgets in Druid that let you customize widget behaviour
-without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
-<a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
+without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html"><code>Painter</code></a> and
+<a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
 <h3><a class="header" href="#painter" id="painter">Painter</a></h3>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
 respond to events or otherwise contain update logic. Its general use is to
 either provide a custom background to some other widget, or to implement
 something like an icon or another graphical element that will be contained in
@@ -189,13 +189,13 @@ with rounded corners, we could use a <code>Painter</code>:</p>
 </code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
 set size, you must pass it explicit contraints, such as by wrapping it in a
-<a href="https://docs.rs/druid/0.6.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
+<a href="https://docs.rs/druid/0.7.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
 }
 </code></pre>
 <p>One other useful thing about <code>Painter</code> is that it can be used as the background
-of a <a href="https://docs.rs/druid/0.6.0/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
+of a <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
 as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
@@ -205,14 +205,14 @@ as a background, we could do:</p>
     .background(make_color_swatch())
 }
 </code></pre>
-<p>(This uses the <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.6.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
+<p>(This uses the <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
 container.)</p>
 <h3><a class="header" href="#controller" id="controller">Controller</a></h3>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
 make widgets that handle events, but don't do any layout or drawing. The idea
 here is that you can use some <code>Controller</code> type to customize the behaviour of
 some set of children.</p>
-<p>The <a href="https://docs.rs/druid/0.6.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
+<p>The <a href="https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
 like <a href="./widget.html"><code>Widget</code></a>; it does not have <code>paint</code> or <code>layout</code> methods. Also unlike
 <a href="./widget.html"><code>Widget</code></a>, all of its methods are optional; you can override only the method
 that you need.</p>
