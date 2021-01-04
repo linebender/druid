@@ -145,6 +145,11 @@ window.search = window.search || {};
             url.push("");
         }
 
+        // encodeURIComponent escapes all chars that could allow an XSS except
+        // for '. Due to that we also manually replace ' with its url-encoded
+        // representation (%27).
+        var searchterms = encodeURIComponent(searchterms.join(" ")).replace(/\'/g, "%27");
+
         return '<a href="' + path_to_root + url[0] + '?' + URL_MARK_PARAM + '=' + searchterms + '#' + url[1]
             + '" aria-details="teaser_' + teaser_count + '">' + result.doc.breadcrumbs + '</a>'
             + '<span class="teaser" id="teaser_' + teaser_count + '" aria-label="Search Result Teaser">' 
@@ -311,7 +316,7 @@ window.search = window.search || {};
     
     // Eventhandler for keyevents on `document`
     function globalKeyHandler(e) {
-        if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.type === 'textarea') { return; }
+        if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.type === 'textarea' || e.target.type === 'text') { return; }
 
         if (e.keyCode === ESCAPE_KEYCODE) {
             e.preventDefault();
