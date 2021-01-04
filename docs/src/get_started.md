@@ -13,7 +13,7 @@ Setting up a project is a simple as creating a new Rust project;
 And then adding Druid as a dependency to Cargo.toml
 ```toml
 [dependencies]
-druid = "0.6.0"
+druid = "0.7.0"
 ```
 
 To show a minimal window with a label replace `main.rs` with this;
