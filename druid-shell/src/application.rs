@@ -75,9 +75,9 @@ impl Application {
     ///
     /// [druid#771]: https://github.com/linebender/druid/issues/771
     pub fn new() -> Result<Application, Error> {
-        if APPLICATION_CREATED.compare_and_swap(false, true, Ordering::AcqRel) {
-            return Err(Error::ApplicationAlreadyExists);
-        }
+        APPLICATION_CREATED
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .map_err(|_| Error::ApplicationAlreadyExists)?;
         util::claim_main_thread();
         let platform_app = platform::Application::new()?;
         let state = Rc::new(RefCell::new(State { running: false }));
