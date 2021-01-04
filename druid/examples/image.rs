@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example shows how to draw an image. Using the Image feature.
-//! Diferent image formats can be "unlocked" by adding their
-//! corresponding feature.
+//! This example shows how to draw an image; using images requires
+//! enabling the `image` feature in your Cargo.toml; you will also need
+//! to specify the image formats you would like to use. See druid/Cargo.toml
+//! to see all features.
 
 use druid::piet::InterpolationMode;
 use druid::widget::prelude::*;
