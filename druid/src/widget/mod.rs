@@ -43,7 +43,6 @@ mod slider;
 mod spinner;
 mod split;
 mod stepper;
-mod sub_window;
 #[cfg(feature = "svg")]
 #[cfg_attr(docsrs, doc(cfg(feature = "svg")))]
 mod svg;
@@ -83,7 +82,6 @@ pub use slider::Slider;
 pub use spinner::Spinner;
 pub use split::Split;
 pub use stepper::Stepper;
-pub use sub_window::SubWindowHost;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;

@@ -133,7 +133,7 @@ pub(crate) struct WidgetState {
     pub(crate) cursor: Option<Cursor>,
 
     // Port -> Host
-    pub(crate) sub_window_hosts: Option<Vec<WidgetId>>,
+    pub(crate) sub_window_hosts: Vec<WidgetId>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -1009,13 +1009,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
-        if let Some(hosts) = &self.state.sub_window_hosts {
-            for host in hosts {
-                let cloned: T = (*data).clone();
-                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, Box::new(cloned), *host);
-
-                ctx.submit_command(command)
-            }
+        for host in &self.state.sub_window_hosts {
+            let cloned: T = (*data).clone();
+            let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, Box::new(cloned), *host);
+            ctx.submit_command(command);
         }
 
         let prev_env = self.env.as_ref().filter(|p| !p.same(env));
@@ -1072,7 +1069,7 @@ impl WidgetState {
             timers: HashMap::new(),
             cursor_change: CursorChange::Default,
             cursor: None,
-            sub_window_hosts: None,
+            sub_window_hosts: Vec::new(),
         }
     }
 
@@ -1152,6 +1149,10 @@ impl WidgetState {
     pub(crate) fn layout_rect(&self) -> Rect {
         Rect::from_origin_size(self.origin, self.size)
     }
+
+    pub(crate) fn add_sub_window_host(&mut self, host_id: WidgetId) {
+        self.sub_window_hosts.push(host_id)
+    }
 }
 
 impl CursorChange {
@@ -1159,14 +1160,6 @@ impl CursorChange {
         match self {
             CursorChange::Set(c) | CursorChange::Override(c) => Some(c.clone()),
             CursorChange::Default => None,
-        }
-    }
-
-    pub(crate) fn add_sub_window_host(&mut self, host_id: WidgetId) {
-        if let Some(ports) = &mut self.sub_window_hosts {
-            ports.push(host_id);
-        } else {
-            self.sub_window_hosts = Some(vec![host_id])
         }
     }
 }

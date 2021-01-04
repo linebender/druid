@@ -14,9 +14,7 @@
 
 use druid::commands::CLOSE_WINDOW;
 use druid::lens::Unit;
-use druid::widget::{
-    Align, Button, Controller, ControllerHost, Flex, Label, SubWindowHost, TextBox,
-};
+use druid::widget::{Align, Button, Controller, ControllerHost, Flex, Label, TextBox};
 use druid::{
     theme, Affine, AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LensExt, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size,
@@ -136,8 +134,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                             window_pos: *window_pos,
                         })
                     } else {
-                        let req = SubWindowHost::make_requirement(
-                            ctx.widget_id(),
+                        let win_id = ctx.new_sub_window(
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .window_size(Size::new(100.0, 23.0))
@@ -147,12 +144,9 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                                         + window_pos.to_vec2()
                                         + cursor_size.to_vec2(),
                                 ),
-                            false,
                             Label::<()>::new(self.tip.clone()),
                             (),
                         );
-                        let win_id = req.window_id;
-                        ctx.new_sub_window(req);
                         Some(TooltipState::Showing(win_id))
                     }
                 }
@@ -326,19 +320,16 @@ fn build_root_widget() -> impl Widget<HelloState> {
             let tb = TextBox::new().lens(SubState::my_stuff);
             let drag_thing = Label::new("Drag me").controller(DragWindowController::new());
             let col = Flex::column().with_child(drag_thing).with_child(tb);
-            let req = SubWindowHost::make_requirement(
-                ctx.widget_id(),
+
+            ctx.new_sub_window(
                 WindowConfig::default()
                     .show_titlebar(false)
                     .window_size(Size::new(100., 100.))
                     .set_position(Point::new(1000.0, 500.0))
                     .set_level(WindowLevel::AppWindow),
-                true,
                 col,
                 data.clone(),
             );
-
-            ctx.new_sub_window(req)
         })
         .center()
         .lens(HelloState::sub);

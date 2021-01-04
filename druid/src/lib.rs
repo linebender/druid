@@ -206,7 +206,6 @@ pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, ContextMenu, MenuDesc, MenuItem};
 pub use mouse::MouseEvent;
-pub use sub_window::SubWindowRequirement;
 pub use text::{ArcStr, FontDescriptor, TextLayout};
 pub use util::Handled;
 pub use widget::{Widget, WidgetExt, WidgetId};
