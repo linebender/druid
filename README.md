@@ -76,7 +76,7 @@ a lone dependency (it re-exports all the parts of `druid-shell`, `piet`, and `ku
 that you'll need):
 
 ```toml
-druid = "0.6.0"
+druid = "0.7.0"
 ```
 
 Since Druid is currently in fast-evolving state, you might prefer to drink from
