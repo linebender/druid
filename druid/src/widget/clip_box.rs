@@ -14,6 +14,7 @@
 
 use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
+use crate::widget::Axis;
 use crate::{Data, WidgetPod};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
@@ -212,6 +213,16 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// false.
     pub fn pan_by(&mut self, delta: Vec2) -> bool {
         self.pan_to(self.viewport_origin() + delta)
+    }
+
+    /// Changes the viewport offset on the specified axis to 'position'.
+    ///
+    /// The other axis will remain unchanged.
+    pub fn pan_to_on_axis(&mut self, axis: Axis, position: f64) -> bool {
+        self.pan_to(
+            axis.pack(position, axis.minor_pos(self.viewport_origin()))
+                .into(),
+        )
     }
 
     /// Sets the viewport origin to `pos`.
