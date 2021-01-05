@@ -309,7 +309,7 @@ impl ScrollComponent {
                             ctx.set_handled();
                         }
                         BarHeldState::Horizontal(offset) => {
-                            let scale_x = viewport_size.height / content_size.width;
+                            let scale_x = viewport_size.width / content_size.width;
                             let bounds = self
                                 .calc_horizontal_bar_bounds(port, env)
                                 .unwrap_or(Rect::ZERO);
