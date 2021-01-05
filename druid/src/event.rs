@@ -60,7 +60,13 @@ pub enum Event {
     ///
     /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
     WindowConnected,
-    /// Sent to all widgets in a given window when that window is closed.
+    /// Sent to all widgets in a given window when the system requests a closed.
+    /// If the event is handled, the window will not be closed.
+    /// It could be cancelled by another widget, so no destructive side effects are advised.
+    WindowCloseRequested,
+    /// Sent to all widgets in a given window when the system is going to close a window.
+    /// It can't be cancelled at this point, so its safe to dispose of resources that should go away
+    /// when the window closes.
     WindowDisconnected,
     /// Called on the root widget when the window size changes.
     ///
@@ -355,6 +361,7 @@ impl Event {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             Event::WindowConnected
+            | Event::WindowCloseRequested
             | Event::WindowDisconnected
             | Event::WindowSize(_)
             | Event::Timer(_)

@@ -421,7 +421,7 @@ lazy_static! {
         );
         decl.add_method(
             sel!(windowShouldClose:),
-            window_should_close as extern "C" fn(&mut Object, Sel, id),
+            window_should_close as extern "C" fn(&mut Object, Sel, id)->BOOL,
         );
         decl.add_method(
             sel!(windowWillClose:),
@@ -831,11 +831,12 @@ extern "C" fn window_did_resign_key(this: &mut Object, _: Sel, _notification: id
     }
 }
 
-extern "C" fn window_should_close(this: &mut Object, _: Sel, _window: id) {
+extern "C" fn window_should_close(this: &mut Object, _: Sel, _window: id) -> BOOL {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         (*view_state).handler.request_close();
+        NO
     }
 }
 

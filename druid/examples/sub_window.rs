@@ -14,7 +14,7 @@
 
 use druid::commands::CLOSE_WINDOW;
 use druid::lens::Unit;
-use druid::widget::{Align, Button, Controller, ControllerHost, Flex, Label, TextBox};
+use druid::widget::{Align, Button, Checkbox, Controller, ControllerHost, Flex, Label, TextBox};
 use druid::{
     theme, Affine, AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LensExt, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size,
@@ -38,6 +38,7 @@ struct SubState {
 struct HelloState {
     name: String,
     sub: SubState,
+    closeable: bool,
 }
 
 pub fn main() {
@@ -52,6 +53,7 @@ pub fn main() {
         sub: SubState {
             my_stuff: "It's mine!".into(),
         },
+        closeable: true,
     };
 
     // start the application
@@ -302,6 +304,24 @@ impl Widget<()> for ScreenThing {
     }
 }
 
+struct CancelClose;
+
+impl<W: Widget<bool>> Controller<bool, W> for CancelClose {
+    fn event(
+        &mut self,
+        w: &mut W,
+        ctx: &mut EventCtx<'_, '_>,
+        event: &Event,
+        data: &mut bool,
+        env: &Env,
+    ) {
+        match (&data, event) {
+            (false, Event::WindowCloseRequested) => ctx.set_handled(),
+            _ => w.event(ctx, event, data, env),
+        }
+    }
+}
+
 fn build_root_widget() -> impl Widget<HelloState> {
     let label = ControllerHost::new(
         Label::new(|data: &HelloState, _env: &Env| {
@@ -334,13 +354,16 @@ fn build_root_widget() -> impl Widget<HelloState> {
         .center()
         .lens(HelloState::sub);
 
+    let check_box =
+        ControllerHost::new(Checkbox::new("Closeable?"), CancelClose).lens(HelloState::closeable);
     // arrange the two widgets vertically, with some padding
     let layout = Flex::column()
         .with_child(label)
         .with_flex_child(ScreenThing.lens(Unit::default()).padding(5.), 1.)
         .with_spacer(VERTICAL_WIDGET_SPACING)
         .with_child(textbox)
-        .with_child(button);
+        .with_child(button)
+        .with_child(check_box);
 
     // center the two widgets in the available space
     Align::centered(layout)

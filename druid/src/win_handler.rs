@@ -352,16 +352,31 @@ impl<T: Data> Inner<T> {
                     self.show_context_menu(id, &cmd);
                     return Handled::Yes;
                 }
-                if cmd.is(sys_cmd::CLOSE_WINDOW) {
-                    let event = Event::WindowDisconnected;
-                    if let Some(w) = self.windows.get_mut(id) {
-                        w.event(&mut self.command_queue, event, &mut self.data, &self.env);
-                    }
-                    return Handled::No; // We return no because we haven't actually closed the window.
-                }
                 if let Some(w) = self.windows.get_mut(id) {
-                    let event = Event::Command(cmd);
-                    return w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                    return if cmd.is(sys_cmd::CLOSE_WINDOW) {
+                        let handled = w.event(
+                            &mut self.command_queue,
+                            Event::WindowCloseRequested,
+                            &mut self.data,
+                            &self.env,
+                        );
+                        if !handled.is_handled() {
+                            w.event(
+                                &mut self.command_queue,
+                                Event::WindowDisconnected,
+                                &mut self.data,
+                                &self.env,
+                            );
+                        }
+                        handled
+                    } else {
+                        w.event(
+                            &mut self.command_queue,
+                            Event::Command(cmd),
+                            &mut self.data,
+                            &self.env,
+                        )
+                    };
                 }
             }
             // in this case we send it to every window that might contain
