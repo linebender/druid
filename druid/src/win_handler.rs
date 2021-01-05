@@ -352,6 +352,13 @@ impl<T: Data> Inner<T> {
                     self.show_context_menu(id, &cmd);
                     return Handled::Yes;
                 }
+                if cmd.is(sys_cmd::CLOSE_WINDOW) {
+                    let event = Event::WindowDisconnected;
+                    if let Some(w) = self.windows.get_mut(id) {
+                        w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                    }
+                    return Handled::No; // We return no because we haven't actually closed the window.
+                }
                 if let Some(w) = self.windows.get_mut(id) {
                     let event = Event::Command(cmd);
                     return w.event(&mut self.command_queue, event, &mut self.data, &self.env);
@@ -897,6 +904,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn request_close(&mut self) {
         self.app_state
             .handle_cmd(sys_cmd::CLOSE_WINDOW.to(self.window_id));
+        self.app_state.process_commands();
         self.app_state.inner.borrow_mut().do_update();
     }
 

@@ -60,6 +60,8 @@ pub enum Event {
     ///
     /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
     WindowConnected,
+    /// Sent to all widgets in a given window when that window is closed.
+    WindowDisconnected,
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -353,6 +355,7 @@ impl Event {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             Event::WindowConnected
+            | Event::WindowDisconnected
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)

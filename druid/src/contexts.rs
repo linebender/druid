@@ -352,6 +352,8 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     }
 
     /// Create a new sub window that will have its app data synchronised with the nearest surrounding widget pod.
+    /// 'U' must be the type of the nearest surrounding widget pod. The 'data' argument should be the current value of data
+    /// for that widget.
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
     // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
@@ -362,7 +364,8 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ) -> WindowId {
         let req = SubWindowRequirement::new(self.widget_id(), window_config, widget, data);
         let window_id = req.window_id;
-        self.widget_state.add_sub_window_host(req.host_id);
+        self.widget_state
+            .add_sub_window_host(window_id, req.host_id);
         self.submit_command(commands::NEW_SUB_WINDOW.with(SingleUse::new(req)));
         window_id
     }

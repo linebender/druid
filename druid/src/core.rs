@@ -17,14 +17,14 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
-use crate::command::sys::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
+use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
-    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
+    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -133,7 +133,7 @@ pub(crate) struct WidgetState {
     pub(crate) cursor: Option<Cursor>,
 
     // Port -> Host
-    pub(crate) sub_window_hosts: Vec<WidgetId>,
+    pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -679,6 +679,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             },
             Event::WindowConnected => true,
+            Event::WindowDisconnected => {
+                for (window_id, _) in &self.state.sub_window_hosts {
+                    ctx.submit_command(CLOSE_WINDOW.to(*window_id))
+                }
+                true
+            }
             Event::WindowSize(_) => {
                 self.state.needs_layout = true;
                 ctx.is_root
@@ -1009,7 +1015,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
-        for host in &self.state.sub_window_hosts {
+        for (_, host) in &self.state.sub_window_hosts {
             let cloned: T = (*data).clone();
             let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, Box::new(cloned), *host);
             ctx.submit_command(command);
@@ -1150,8 +1156,8 @@ impl WidgetState {
         Rect::from_origin_size(self.origin, self.size)
     }
 
-    pub(crate) fn add_sub_window_host(&mut self, host_id: WidgetId) {
-        self.sub_window_hosts.push(host_id)
+    pub(crate) fn add_sub_window_host(&mut self, window_id: WindowId, host_id: WidgetId) {
+        self.sub_window_hosts.push((window_id, host_id))
     }
 }
 

@@ -420,6 +420,10 @@ lazy_static! {
             show_context_menu as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(windowShouldClose:),
+            window_should_close as extern "C" fn(&mut Object, Sel, id),
+        );
+        decl.add_method(
             sel!(windowWillClose:),
             window_will_close as extern "C" fn(&mut Object, Sel, id),
         );
@@ -827,7 +831,15 @@ extern "C" fn window_did_resign_key(this: &mut Object, _: Sel, _notification: id
     }
 }
 
-extern "C" fn window_will_close(this: &mut Object, _: Sel, _window: id) {
+extern "C" fn window_should_close(this: &mut Object, _: Sel, _window: id) {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        (*view_state).handler.request_close();
+    }
+}
+
+extern "C" fn window_will_close(this: &mut Object, _: Sel, _notification: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
