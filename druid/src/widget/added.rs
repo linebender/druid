@@ -19,6 +19,7 @@
 
 use crate::widget::Controller;
 use crate::{Data, Env, LifeCycleCtx, Widget};
+
 /// This [`Controller`] widget responds to [`LifeCycle::WidgetAdded`] event
 /// with the provided closure. Pass this and a child widget to [`ControllerHost`]
 /// to respond to the event when the child widget is added to the widget tree.
