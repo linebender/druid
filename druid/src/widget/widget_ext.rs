@@ -161,11 +161,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         ControllerHost::new(self, controller)
     }
 
-    /// Control the [`LifeCycle::WidgetAdded`] event of this widget with an [`Added`] widget.
-    /// The function provided will be called when the widget is added to the
-    /// widget tree.
+    /// Provide a closure that will be called when this widget is added to the widget tree.
     ///
-    /// [`Added`]: crate::widget::Added
+    /// You can use this to perform any initial setup.
+    ///
+    /// This is equivalent to handling the [`LifeCycle::WidgetAdded`] event in a
+    /// custom [`Controller`].
+    ///
     /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
     fn on_added(
         self,
