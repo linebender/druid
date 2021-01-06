@@ -169,10 +169,10 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// custom [`Controller`].
     ///
     /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
-    fn on_added<W: Widget<T>>(
+    fn on_added(
         self,
-        f: impl Fn(&mut W, &mut LifeCycleCtx, &T, &Env) + 'static,
-    ) -> ControllerHost<Self, Added<T, W>> {
+        f: impl Fn(&mut Self, &mut LifeCycleCtx, &T, &Env) + 'static,
+    ) -> ControllerHost<Self, Added<T, Self>> {
         ControllerHost::new(self, Added::new(f))
     }
 
