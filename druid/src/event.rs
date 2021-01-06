@@ -60,9 +60,12 @@ pub enum Event {
     ///
     /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
     WindowConnected,
-    /// Sent to all widgets in a given window when the system requests a closed.
-    /// If the event is handled, the window will not be closed.
-    /// It could be cancelled by another widget, so no destructive side effects are advised.
+    /// Sent to all widgets in a given window when the system requests to close the window.
+    ///
+    /// If the event is handled (with [`EventCtx::set_handle`]), the window will not be closed.
+    /// All widgets are given an opportunity to handle this event; your widget should not assume
+    /// that the window *will* close just because this event is received; for instance, you should
+    /// avoid destructive side effects such as cleaning up resources.
     WindowCloseRequested,
     /// Sent to all widgets in a given window when the system is going to close a window.
     /// It can't be cancelled at this point, so its safe to dispose of resources that should go away
