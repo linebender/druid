@@ -67,9 +67,10 @@ pub enum Event {
     /// that the window *will* close just because this event is received; for instance, you should
     /// avoid destructive side effects such as cleaning up resources.
     WindowCloseRequested,
-    /// Sent to all widgets in a given window when the system is going to close a window.
-    /// It can't be cancelled at this point, so its safe to dispose of resources that should go away
-    /// when the window closes.
+    /// Sent to all widgets in a given window when the system is going to close that window.
+    ///
+    /// This event means the window *will* go away; it is safe to dispose of resources and
+    /// do any other cleanup.
     WindowDisconnected,
     /// Called on the root widget when the window size changes.
     ///
