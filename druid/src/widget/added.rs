@@ -30,22 +30,22 @@ use crate::{Data, Env, LifeCycleCtx, Widget};
 /// [`ControllerHost`]: crate::widget::ControllerHost
 /// [`WidgetExt`]: crate::widget::WidgetExt
 /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
-pub struct Added<T> {
+pub struct Added<T, W> {
     /// A closure that will be invoked when the child widget is added
     /// to the widget tree
-    action: Box<dyn Fn(&mut LifeCycleCtx, &T, &Env)>,
+    action: Box<dyn Fn(&mut W, &mut LifeCycleCtx, &T, &Env)>,
 }
 
-impl<T: Data> Added<T> {
+impl<T: Data, W: Widget<T>> Added<T, W> {
     /// Create a new [`Controller`] widget to respond to widget added to tree event.
-    pub fn new(action: impl Fn(&mut LifeCycleCtx, &T, &Env) + 'static) -> Self {
+    pub fn new(action: impl Fn(&mut W, &mut LifeCycleCtx, &T, &Env) + 'static) -> Self {
         Self {
             action: Box::new(action),
         }
     }
 }
 
-impl<T: Data, W: Widget<T>> Controller<T, W> for Added<T> {
+impl<T: Data, W: Widget<T>> Controller<T, W> for Added<T, W> {
     fn lifecycle(
         &mut self,
         child: &mut W,
@@ -55,7 +55,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Added<T> {
         env: &Env,
     ) {
         if let crate::LifeCycle::WidgetAdded = event {
-            (self.action)(ctx, data, env);
+            (self.action)(child, ctx, data, env);
         }
         child.lifecycle(ctx, event, data, env)
     }
