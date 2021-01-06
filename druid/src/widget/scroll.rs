@@ -15,7 +15,7 @@
 //! A container that scrolls its contents.
 
 use crate::widget::prelude::*;
-use crate::widget::ClipBox;
+use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
 
 /// A container that scrolls its contents.
@@ -50,6 +50,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
     /// Restrict scrolling to the vertical axis while locking child width.
     pub fn vertical(mut self) -> Self {
+        self.scroll_component.enabled = ScrollbarsEnabled::Vertical;
         self.clip.set_constrain_vertical(false);
         self.clip.set_constrain_horizontal(true);
         self
@@ -57,8 +58,15 @@ impl<T, W: Widget<T>> Scroll<T, W> {
 
     /// Restrict scrolling to the horizontal axis while locking child height.
     pub fn horizontal(mut self) -> Self {
+        self.scroll_component.enabled = ScrollbarsEnabled::Horizontal;
         self.clip.set_constrain_vertical(true);
         self.clip.set_constrain_horizontal(false);
+        self
+    }
+
+    /// Disable both scrollbars
+    pub fn disable_scrollbars(mut self) -> Self {
+        self.scroll_component.enabled = ScrollbarsEnabled::None;
         self
     }
 
@@ -82,7 +90,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         self.clip.viewport_origin().to_vec2()
     }
 
-    /// Scroll `delta` units.
+    /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
     pub fn scroll_by(&mut self, delta: Vec2) -> bool {
@@ -95,6 +103,18 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// portion that fits, prioritizing the portion closest to the origin.
     pub fn scroll_to(&mut self, region: Rect) -> bool {
         self.clip.pan_to_visible(region)
+    }
+
+    /// Scroll to this position on a particular axis.
+    ///
+    /// Returns `true` if the scroll offset has changed.
+    pub fn scroll_to_on_axis(&mut self, axis: Axis, position: f64) -> bool {
+        self.clip.pan_to_on_axis(axis, position)
+    }
+
+    /// Return the scroll offset on a particular axis
+    pub fn offset_for_axis(&self, axis: Axis) -> f64 {
+        axis.major_pos(self.clip.viewport_origin())
     }
 }
 

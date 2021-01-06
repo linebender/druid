@@ -36,7 +36,7 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
         EvenNumberedRIS,
         InTagSequence,
         Finished,
-    };
+    }
     let mut state = State::Start;
 
     let mut delete_code_point_count = 0;

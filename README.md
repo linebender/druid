@@ -76,7 +76,7 @@ a lone dependency (it re-exports all the parts of `druid-shell`, `piet`, and `ku
 that you'll need):
 
 ```toml
-druid = "0.6.0"
+druid = "0.7.0"
 ```
 
 Since Druid is currently in fast-evolving state, you might prefer to drink from
@@ -301,14 +301,14 @@ active and friendly community.
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-`druid` examples]: ./druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
-[EventCtx]: https://docs.rs/druid/0.6.0/druid/struct.EventCtx.html
-[LifeCycleCtx]: https://docs.rs/druid/0.6.0/druid/struct.LifeCycleCtx.html
-[LayoutCtx]: https://docs.rs/druid/0.6.0/druid/struct.LayoutCtx.html
-[PaintCtx]: https://docs.rs/druid/0.6.0/druid/struct.PaintCtx.html
-[UpdateCtx]: https://docs.rs/druid/0.6.0/druid/struct.UpdateCtx.html
-[Widget trait]: https://docs.rs/druid/0.6.0/druid/trait.Widget.html
-[Data trait]: https://docs.rs/druid/0.6.0/druid/trait.Data.html
-[Lens datatype]: https://docs.rs/druid/0.6.0/druid/trait.Lens.html
+[EventCtx]: https://docs.rs/druid/0.7.0/druid/struct.EventCtx.html
+[LifeCycleCtx]: https://docs.rs/druid/0.7.0/druid/struct.LifeCycleCtx.html
+[LayoutCtx]: https://docs.rs/druid/0.7.0/druid/struct.LayoutCtx.html
+[PaintCtx]: https://docs.rs/druid/0.7.0/druid/struct.PaintCtx.html
+[UpdateCtx]: https://docs.rs/druid/0.7.0/druid/struct.UpdateCtx.html
+[Widget trait]: https://docs.rs/druid/0.7.0/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.7.0/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.7.0/druid/trait.Lens.html
 [Druid book]: https://linebender.org/druid/
 [Iced]: https://github.com/hecrj/iced
 [Conrod]: https://github.com/PistonDevelopers/conrod

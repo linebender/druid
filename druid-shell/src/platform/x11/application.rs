@@ -560,7 +560,7 @@ fn poll_with_timeout(
             p.revents()
                 .unwrap_or_else(PollFlags::empty)
                 .contains(PollFlags::POLLIN)
-        };
+        }
 
         // Compute the deadline for when poll() has to wakeup
         let deadline = if honor_idle_timeout {
