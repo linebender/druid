@@ -162,6 +162,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
     ///
     /// [`Lens`]: ./trait.Lens.html
     /// [`index`]: #method.index
+    #[allow(clippy::wrong_self_convention)]
     fn as_ref<T: ?Sized>(self) -> Then<Self, Ref, B>
     where
         B: AsRef<T> + AsMut<T>,
