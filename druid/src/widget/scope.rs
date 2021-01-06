@@ -75,7 +75,7 @@ impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     }
 }
 
-impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolicy
+impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolicy
     for DefaultScopePolicy<F, Transfer>
 {
     type In = Transfer::In;
@@ -248,7 +248,7 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
 }
 
 impl<
-        F: Fn(Transfer::In) -> Transfer::State,
+        F: FnOnce(Transfer::In) -> Transfer::State,
         Transfer: ScopeTransfer,
         W: Widget<Transfer::State>,
     > Scope<DefaultScopePolicy<F, Transfer>, W>
