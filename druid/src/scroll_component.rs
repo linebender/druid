@@ -19,13 +19,45 @@ use std::time::Duration;
 
 use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
-use crate::widget::Viewport;
+use crate::widget::{Axis, Viewport};
 use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 //TODO: Add this to env
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
 pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
+
+#[derive(Debug, Copy, Clone)]
+/// Which scroll bars of a scroll area are currently enabled.
+pub enum ScrollbarsEnabled {
+    /// No scrollbars are enabled
+    None,
+    /// Scrolling on the x axis is allowed
+    Horizontal,
+    /// Scrolling on the y axis is allowed
+    Vertical,
+    /// Bidirectional scrolling is allowed
+    Both,
+}
+
+impl ScrollbarsEnabled {
+    fn is_enabled(self, axis: Axis) -> bool {
+        matches!((self, axis),
+             (ScrollbarsEnabled::Both, _) |
+             (ScrollbarsEnabled::Horizontal, Axis::Horizontal) |
+             (ScrollbarsEnabled::Vertical, Axis::Vertical))
+    }
+
+    fn is_none(self) -> bool {
+        matches!(self, ScrollbarsEnabled::None)
+    }
+}
+
+impl Default for ScrollbarsEnabled {
+    fn default() -> Self {
+        ScrollbarsEnabled::Both
+    }
+}
 
 /// Denotes which scrollbar, if any, is currently being hovered over
 /// by the mouse.
@@ -102,6 +134,8 @@ pub struct ScrollComponent {
     pub hovered: BarHoveredState,
     /// Which if any scrollbar is currently being dragged by the mouse
     pub held: BarHeldState,
+    /// Which scrollbars are enabled
+    pub enabled: ScrollbarsEnabled,
 }
 
 impl Default for ScrollComponent {
@@ -111,6 +145,7 @@ impl Default for ScrollComponent {
             timer_id: TimerToken::INVALID,
             hovered: BarHoveredState::None,
             held: BarHeldState::None,
+            enabled: ScrollbarsEnabled::Both,
         }
     }
 }
@@ -210,7 +245,8 @@ impl ScrollComponent {
     /// Draw scroll bars.
     pub fn draw_bars(&self, ctx: &mut PaintCtx, port: &Viewport, env: &Env) {
         let scroll_offset = port.rect.origin().to_vec2();
-        if self.opacity <= 0.0 {
+
+        if self.enabled.is_none() || self.opacity <= 0.0 {
             return;
         }
 
@@ -226,21 +262,25 @@ impl ScrollComponent {
         let edge_width = env.get(theme::SCROLLBAR_EDGE_WIDTH);
 
         // Vertical bar
-        if let Some(bounds) = self.calc_vertical_bar_bounds(port, env) {
-            let rect = (bounds - scroll_offset)
-                .inset(-edge_width / 2.0)
-                .to_rounded_rect(radius);
-            ctx.render_ctx.fill(rect, &brush);
-            ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+        if self.enabled.is_enabled(Axis::Vertical) {
+            if let Some(bounds) = self.calc_vertical_bar_bounds(port, env) {
+                let rect = (bounds - scroll_offset)
+                    .inset(-edge_width / 2.0)
+                    .to_rounded_rect(radius);
+                ctx.render_ctx.fill(rect, &brush);
+                ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+            }
         }
 
         // Horizontal bar
-        if let Some(bounds) = self.calc_horizontal_bar_bounds(port, env) {
-            let rect = (bounds - scroll_offset)
-                .inset(-edge_width / 2.0)
-                .to_rounded_rect(radius);
-            ctx.render_ctx.fill(rect, &brush);
-            ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+        if self.enabled.is_enabled(Axis::Horizontal) {
+            if let Some(bounds) = self.calc_horizontal_bar_bounds(port, env) {
+                let rect = (bounds - scroll_offset)
+                    .inset(-edge_width / 2.0)
+                    .to_rounded_rect(radius);
+                ctx.render_ctx.fill(rect, &brush);
+                ctx.render_ctx.stroke(rect, &border_brush, edge_width);
+            }
         }
     }
 
@@ -248,6 +288,9 @@ impl ScrollComponent {
     ///
     /// Returns false if the vertical scrollbar is not visible
     pub fn point_hits_vertical_bar(&self, port: &Viewport, pos: Point, env: &Env) -> bool {
+        if !self.enabled.is_enabled(Axis::Vertical) {
+            return false;
+        }
         let viewport_size = port.rect.size();
         let scroll_offset = port.rect.origin().to_vec2();
 
@@ -264,6 +307,9 @@ impl ScrollComponent {
     ///
     /// Returns false if the horizontal scrollbar is not visible
     pub fn point_hits_horizontal_bar(&self, port: &Viewport, pos: Point, env: &Env) -> bool {
+        if !self.enabled.is_enabled(Axis::Horizontal) {
+            return false;
+        }
         let viewport_size = port.rect.size();
         let scroll_offset = port.rect.origin().to_vec2();
 
