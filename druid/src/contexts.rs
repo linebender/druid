@@ -356,6 +356,8 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// The sub-window will have its app data synchronised with caller's nearest ancestor [`WidgetPod`].
     /// 'U' must be the type of the nearest surrounding [`WidgetPod`]. The 'data' argument should be
     /// the current value of data  for that widget.
+    ///
+    /// [`WidgetPod`]: struct.WidgetPod.html
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
     // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.    pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
