@@ -207,16 +207,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.is_hot
     }
 
-    /// Return a reference to the inner widget.
-    pub fn widget(&self) -> &W {
-        &self.inner
-    }
-
-    /// Return a mutable reference to the inner widget.
-    pub fn widget_mut(&mut self) -> &mut W {
-        &mut self.inner
-    }
-
     /// Get the identity of the widget.
     pub fn id(&self) -> WidgetId {
         self.state.id
@@ -1017,6 +1007,18 @@ impl<T, W: Widget<T> + 'static> WidgetPod<T, W> {
     /// into a dynamically boxed widget.
     pub fn boxed(self) -> WidgetPod<T, Box<dyn Widget<T>>> {
         WidgetPod::new(Box::new(self.inner))
+    }
+}
+
+impl<T, W> WidgetPod<T, W> {
+    /// Return a reference to the inner widget.
+    pub fn widget(&self) -> &W {
+        &self.inner
+    }
+
+    /// Return a mutable reference to the inner widget.
+    pub fn widget_mut(&mut self) -> &mut W {
+        &mut self.inner
     }
 }
 

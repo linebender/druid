@@ -15,6 +15,7 @@
 //! A widget-controlling widget.
 
 use crate::widget::prelude::*;
+use crate::widget::WidgetWrapper;
 
 /// A trait for types that modify behaviour of a child widget.
 ///
@@ -132,4 +133,8 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
     }
+}
+
+impl<W, C> WidgetWrapper for ControllerHost<W, C> {
+    widget_wrapper_body!(W, widget);
 }
