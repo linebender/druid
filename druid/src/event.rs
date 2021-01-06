@@ -62,10 +62,12 @@ pub enum Event {
     WindowConnected,
     /// Sent to all widgets in a given window when the system requests to close the window.
     ///
-    /// If the event is handled (with [`EventCtx::set_handle`]), the window will not be closed.
+    /// If the event is handled (with [`set_handled`]), the window will not be closed.
     /// All widgets are given an opportunity to handle this event; your widget should not assume
     /// that the window *will* close just because this event is received; for instance, you should
     /// avoid destructive side effects such as cleaning up resources.
+    ///
+    /// [`set_handled`]: struct.EventCtx.html#method.set_handled
     WindowCloseRequested,
     /// Sent to all widgets in a given window when the system is going to close that window.
     ///

@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2021 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
 
 use druid::commands::CLOSE_WINDOW;
 use druid::lens::Unit;
-use druid::widget::{Align, Button, Checkbox, Controller, ControllerHost, Flex, Label, TextBox};
+use druid::widget::{
+    Align, Button, Checkbox, Controller, ControllerHost, EnvScope, Flex, Label, TextBox,
+};
 use druid::{
     theme, Affine, AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LensExt, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size,
@@ -148,6 +150,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                                 ),
                             Label::<()>::new(self.tip.clone()),
                             (),
+                            env.clone(),
                         );
                         Some(TooltipState::Showing(win_id))
                     }
@@ -323,11 +326,14 @@ impl<W: Widget<bool>> Controller<bool, W> for CancelClose {
 }
 
 fn build_root_widget() -> impl Widget<HelloState> {
-    let label = ControllerHost::new(
-        Label::new(|data: &HelloState, _env: &Env| {
-            format!("Hello {}! {} ", data.name, data.sub.my_stuff)
-        }),
-        TooltipController::new("Tips! Are good"),
+    let label = EnvScope::new(
+        |env, _t| env.set(theme::LABEL_COLOR, env.get(theme::PRIMARY_LIGHT)),
+        ControllerHost::new(
+            Label::new(|data: &HelloState, _env: &Env| {
+                format!("Hello {}! {} ", data.name, data.sub.my_stuff)
+            }),
+            TooltipController::new("Tips! Are good"),
+        ),
     );
     // a textbox that modifies `name`.
     let textbox = TextBox::new()
@@ -336,7 +342,7 @@ fn build_root_widget() -> impl Widget<HelloState> {
         .lens(HelloState::sub.then(SubState::my_stuff));
 
     let button = Button::new("Make sub window")
-        .on_click(|ctx, data: &mut SubState, _env| {
+        .on_click(|ctx, data: &mut SubState, env| {
             let tb = TextBox::new().lens(SubState::my_stuff);
             let drag_thing = Label::new("Drag me").controller(DragWindowController::new());
             let col = Flex::column().with_child(drag_thing).with_child(tb);
@@ -349,6 +355,7 @@ fn build_root_widget() -> impl Widget<HelloState> {
                     .set_level(WindowLevel::AppWindow),
                 col,
                 data.clone(),
+                env.clone(),
             );
         })
         .center()

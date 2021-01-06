@@ -171,7 +171,8 @@ pub mod sys {
 
     use super::Selector;
     use crate::{
-        sub_window::SubWindowRequirement, FileDialogOptions, FileInfo, SingleUse, WindowConfig,
+        sub_window::{SubWindowDesc, SubWindowUpdate},
+        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
     };
 
     /// Quit the running application. This command is handled by the druid library.
@@ -215,12 +216,16 @@ pub mod sys {
     pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.show-context-menu");
 
-    pub(crate) const NEW_SUB_WINDOW: Selector<SingleUse<SubWindowRequirement>> =
+    /// This is sent to the window handler to create a new sub window.
+    pub(crate) const NEW_SUB_WINDOW: Selector<SingleUse<SubWindowDesc>> =
         Selector::new("druid-builtin.new-sub-window");
 
-    pub(crate) const SUB_WINDOW_PARENT_TO_HOST: Selector<Box<dyn Any>> =
+    /// This is sent from a WidgetPod to any attached SubWindowHosts when a data update occurs
+    pub(crate) const SUB_WINDOW_PARENT_TO_HOST: Selector<SubWindowUpdate> =
         Selector::new("druid-builtin.parent_to_host");
 
+    /// This is sent from a SubWindowHost to its parent WidgetPod after it has processed events,
+    /// if that processing changed the data value.
     pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.host_to_parent");
 

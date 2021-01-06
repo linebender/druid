@@ -26,9 +26,9 @@ use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
-    commands, sub_window::SubWindowRequirement, widget::Widget, Affine, Command, ContextMenu,
-    Cursor, Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size,
-    Target, TimerToken, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
+    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
+    TimerToken, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -351,18 +351,21 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.state.set_menu(menu);
     }
 
-    /// Create a new sub window that will have its app data synchronised with the nearest surrounding widget pod.
-    /// 'U' must be the type of the nearest surrounding widget pod. The 'data' argument should be the current value of data
-    /// for that widget.
+    /// Create a new sub-window.
+    ///
+    /// The sub-window will have its app data synchronised with caller's nearest ancestor [`WidgetPod`].
+    /// 'U' must be the type of the nearest surrounding [`WidgetPod`]. The 'data' argument should be
+    /// the current value of data  for that widget.
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
-    // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
+    // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.    pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
         &mut self,
         window_config: WindowConfig,
         widget: W,
         data: U,
+        env: Env,
     ) -> WindowId {
-        let req = SubWindowRequirement::new(self.widget_id(), window_config, widget, data);
+        let req = SubWindowDesc::new(self.widget_id(), window_config, widget, data, env);
         let window_id = req.window_id;
         self.widget_state
             .add_sub_window_host(window_id, req.host_id);

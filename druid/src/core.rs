@@ -20,6 +20,7 @@ use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
+use crate::sub_window::SubWindowUpdate;
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
@@ -1014,14 +1015,24 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 (Some(_), Some(_)) => {}
             }
         }
-
-        for (_, host) in &self.state.sub_window_hosts {
-            let cloned: T = (*data).clone();
-            let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, Box::new(cloned), *host);
-            ctx.submit_command(command);
-        }
-
         let prev_env = self.env.as_ref().filter(|p| !p.same(env));
+        let env_changed = prev_env.is_some();
+        let data_changed = self.old_data.as_ref().filter(|p| !p.same(data)).is_some();
+
+        if env_changed || data_changed {
+            for (_, host) in &self.state.sub_window_hosts {
+                let update = SubWindowUpdate {
+                    data: if data_changed {
+                        Some(Box::new((*data).clone()))
+                    } else {
+                        None
+                    },
+                    env: if env_changed { Some(env.clone()) } else { None },
+                };
+                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                ctx.submit_command(command);
+            }
+        }
 
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
