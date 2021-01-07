@@ -17,13 +17,15 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::bloom::Bloom;
+use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
+use crate::sub_window::SubWindowUpdate;
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
-    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId,
+    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -130,6 +132,9 @@ pub(crate) struct WidgetState {
     /// The result of merging up children cursors. This gets cleared when merging state up (unlike
     /// cursor_change, which is persistent).
     pub(crate) cursor: Option<Cursor>,
+
+    // Port -> Host
+    pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -674,7 +679,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
             },
-            Event::WindowConnected => true,
+            Event::WindowConnected | Event::WindowCloseRequested => true,
+            Event::WindowDisconnected => {
+                for (window_id, _) in &self.state.sub_window_hosts {
+                    ctx.submit_command(CLOSE_WINDOW.to(*window_id))
+                }
+                true
+            }
             Event::WindowSize(_) => {
                 self.state.needs_layout = true;
                 ctx.is_root
@@ -784,10 +795,24 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let inner_event = modified_event.as_ref().unwrap_or(event);
             inner_ctx.widget_state.has_active = false;
 
-            self.inner.event(&mut inner_ctx, &inner_event, data, env);
+            match inner_event {
+                Event::Command(cmd) if cmd.is(SUB_WINDOW_HOST_TO_PARENT) => {
+                    if let Some(update) = cmd
+                        .get_unchecked(SUB_WINDOW_HOST_TO_PARENT)
+                        .downcast_ref::<T>()
+                    {
+                        *data = (*update).clone();
+                    }
+                    ctx.is_handled = true
+                }
+                _ => {
+                    self.inner.event(&mut inner_ctx, &inner_event, data, env);
 
-            inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
-            ctx.is_handled |= inner_ctx.is_handled;
+                    inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
+                    ctx.is_handled |= inner_ctx.is_handled;
+                }
+            }
+
             // we try to handle the notifications that occured below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
         }
@@ -991,8 +1016,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
         }
 
-        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
+        let data_changed =
+            self.old_data.is_none() || self.old_data.as_ref().filter(|p| !p.same(data)).is_some();
 
+        if ctx.env_changed() || data_changed {
+            for (_, host) in &self.state.sub_window_hosts {
+                let update = SubWindowUpdate {
+                    data: if data_changed {
+                        Some(Box::new((*data).clone()))
+                    } else {
+                        None
+                    },
+                    env: if ctx.env_changed() {
+                        Some(env.clone())
+                    } else {
+                        None
+                    },
+                };
+                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                ctx.submit_command(command);
+            }
+        }
+
+        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
@@ -1045,6 +1091,7 @@ impl WidgetState {
             timers: HashMap::new(),
             cursor_change: CursorChange::Default,
             cursor: None,
+            sub_window_hosts: Vec::new(),
         }
     }
 
@@ -1123,6 +1170,10 @@ impl WidgetState {
 
     pub(crate) fn layout_rect(&self) -> Rect {
         Rect::from_origin_size(self.origin, self.size)
+    }
+
+    pub(crate) fn add_sub_window_host(&mut self, window_id: WindowId, host_id: WidgetId) {
+        self.sub_window_hosts.push((window_id, host_id))
     }
 }
 

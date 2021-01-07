@@ -60,6 +60,20 @@ pub enum Event {
     ///
     /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
     WindowConnected,
+    /// Sent to all widgets in a given window when the system requests to close the window.
+    ///
+    /// If the event is handled (with [`set_handled`]), the window will not be closed.
+    /// All widgets are given an opportunity to handle this event; your widget should not assume
+    /// that the window *will* close just because this event is received; for instance, you should
+    /// avoid destructive side effects such as cleaning up resources.
+    ///
+    /// [`set_handled`]: crate::EventCtx::set_handled
+    WindowCloseRequested,
+    /// Sent to all widgets in a given window when the system is going to close that window.
+    ///
+    /// This event means the window *will* go away; it is safe to dispose of resources and
+    /// do any other cleanup.
+    WindowDisconnected,
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -353,6 +367,8 @@ impl Event {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             Event::WindowConnected
+            | Event::WindowCloseRequested
+            | Event::WindowDisconnected
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)

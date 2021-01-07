@@ -22,6 +22,7 @@ const EXCEPTIONS: &[&str] = &[
     "svg",               // usvg doesn't currently build as Wasm.
     "async_event",       // the web backend doesn't currently support spawning threads.
     "blocking_function", // the web backend doesn't currently support spawning threads.
+    "sub_window",
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.
