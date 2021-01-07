@@ -43,7 +43,7 @@ fn build_root_widget() -> impl Widget<AppState> {
         ..Default::default()
     };
 
-    // Then hot and active are just mild modifications to our normal style 
+    // Then hot and active are just mild modifications to our normal style
     let hot_button_style = ButtonStyle {
         background_color_a: druid::theme::PRIMARY_LIGHT.into(),
         ..normal_button_style.clone()
@@ -57,7 +57,7 @@ fn build_root_widget() -> impl Widget<AppState> {
     // A regular button with default styling
     let button = Button::new("Heyo");
 
-    // A button with all three style states customized 
+    // A button with all three style states customized
     let styled_button = Button::new("Heyo")
         .with_style_normal(normal_button_style)
         .with_style_hot(hot_button_style)
