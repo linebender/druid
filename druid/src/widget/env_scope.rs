@@ -15,6 +15,7 @@
 //! A widget that accepts a closure to update the environment for its child.
 
 use crate::widget::prelude::*;
+use crate::widget::WidgetWrapper;
 use crate::{Data, Point, WidgetPod};
 
 /// A widget that accepts a closure to update the environment for its child.
@@ -93,4 +94,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
 
         self.child.paint(ctx, data, &new_env);
     }
+}
+
+impl<T, W: Widget<T>> WidgetWrapper for EnvScope<T, W> {
+    widget_wrapper_pod_body!(W, child);
 }
