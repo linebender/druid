@@ -359,7 +359,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// [`WidgetPod`]: struct.WidgetPod.html
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
-    // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.    pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
+    // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
         &mut self,
         window_config: WindowConfig,

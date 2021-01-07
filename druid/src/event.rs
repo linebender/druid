@@ -67,7 +67,7 @@ pub enum Event {
     /// that the window *will* close just because this event is received; for instance, you should
     /// avoid destructive side effects such as cleaning up resources.
     ///
-    /// [`set_handled`]: struct.EventCtx.html#method.set_handled
+    /// [`set_handled`]: crate::EventCtx::set_handled
     WindowCloseRequested,
     /// Sent to all widgets in a given window when the system is going to close that window.
     ///

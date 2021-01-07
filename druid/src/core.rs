@@ -1015,11 +1015,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 (Some(_), Some(_)) => {}
             }
         }
-        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
-        let env_changed = prev_env.is_some();
-        let data_changed = self.old_data.as_ref().filter(|p| !p.same(data)).is_some();
 
-        if env_changed || data_changed {
+        let data_changed =
+            self.old_data.is_none() || self.old_data.as_ref().filter(|p| !p.same(data)).is_some();
+
+        if ctx.env_changed() || data_changed {
             for (_, host) in &self.state.sub_window_hosts {
                 let update = SubWindowUpdate {
                     data: if data_changed {
@@ -1027,13 +1027,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         None
                     },
-                    env: if env_changed { Some(env.clone()) } else { None },
+                    env: if ctx.env_changed() {
+                        Some(env.clone())
+                    } else {
+                        None
+                    },
                 };
                 let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
                 ctx.submit_command(command);
             }
         }
 
+        let prev_env = self.env.as_ref().filter(|p| !p.same(env));
         let mut child_ctx = UpdateCtx {
             state: ctx.state,
             widget_state: &mut self.state,
