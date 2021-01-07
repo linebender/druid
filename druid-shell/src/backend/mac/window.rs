@@ -914,6 +914,7 @@ fn set_position_deferred(this: &mut Object, _view_state: &mut ViewState, positio
         let () = msg_send![window, setFrame: new_frame display: YES];
         debug!("set_position_deferred {:?}", position);
     }
+}
 
 unsafe extern "C" fn display_link_output(
     _display_link_out: CVDisplayLinkRef,
@@ -1082,6 +1083,7 @@ impl WindowHandle {
     /// Request invalidation of one rectangle.
     pub fn invalidate_rect(&self, rect: Rect) {
         let view = self.nsview.load();
+        let rect = rect.expand();
         let bounds = NSRect::new(
             NSPoint::new(rect.x0, rect.y0),
             NSSize::new(rect.width(), rect.height()),
