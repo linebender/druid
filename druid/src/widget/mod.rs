@@ -15,7 +15,7 @@
 //! Common widgets.
 
 mod align;
-pub mod button;
+mod button;
 mod checkbox;
 mod click;
 mod clip_box;
@@ -57,6 +57,7 @@ mod widget_ext;
 pub use self::image::Image;
 pub use align::Align;
 pub use button::Button;
+pub use button::ButtonStyle;
 pub use checkbox::Checkbox;
 pub use click::Click;
 pub use clip_box::{ClipBox, Viewport};

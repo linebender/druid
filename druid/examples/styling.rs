@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::{button, Button, Flex};
+use druid::widget::{Button, ButtonStyle, Flex};
 use druid::{AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -33,39 +33,35 @@ pub fn main() {
         .expect("Failed to launch application");
 }
 
-struct ButtonStyleSheet;
-
-impl button::StyleSheet for ButtonStyleSheet {
-    fn normal(&self) -> button::Style {
-        button::Style {
-            border_width: (0.).into(),
-            background_is_gradient: false.into(),
-            background_color_a: druid::theme::PRIMARY_DARK.into(),
-            ..button::Style::default()
-        }
-    }
-
-    fn hot(&self) -> button::Style {
-        let normal = self.normal();
-
-        button::Style {
-            background_color_a: druid::theme::PRIMARY_LIGHT.into(),
-            ..normal
-        }
-    }
-
-    fn active(&self) -> button::Style {
-        let hot = self.hot();
-        button::Style {
-            background_color_a: druid::theme::BUTTON_DARK.into(),
-            ..hot
-        }
-    }
-}
-
 fn build_root_widget() -> impl Widget<AppState> {
+    // We'll base our custom style on the default ButtonStyle with a couple overrides
+    let normal_button_style = ButtonStyle {
+        border_radius: (0.).into(),
+        border_width: (0.).into(),
+        background_is_gradient: false.into(),
+        background_color_a: druid::theme::PRIMARY_DARK.into(),
+        ..Default::default()
+    };
+
+    // Then hot and active are just mild modifications to our normal style 
+    let hot_button_style = ButtonStyle {
+        background_color_a: druid::theme::PRIMARY_LIGHT.into(),
+        ..normal_button_style.clone()
+    };
+
+    let active_button_style = ButtonStyle {
+        background_color_a: druid::theme::BUTTON_DARK.into(),
+        ..hot_button_style.clone()
+    };
+
+    // A regular button with default styling
     let button = Button::new("Heyo");
-    let styled_button = Button::new("Heyo").with_style(ButtonStyleSheet {});
+
+    // A button with all three style states customized 
+    let styled_button = Button::new("Heyo")
+        .with_style_normal(normal_button_style)
+        .with_style_hot(hot_button_style)
+        .with_style_active(active_button_style);
 
     Flex::column()
         .with_child(button)

@@ -23,9 +23,9 @@ use crate::{widget::prelude::*, KeyOrValue};
 // should be reevaluated at some point.
 const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
 
-/// This describes the values a Button needs to paint itself
-#[derive(Debug)]
-pub struct Style {
+/// The style values a Button needs to paint itself
+#[derive(Debug, Clone)]
+pub struct ButtonStyle {
     /// Border width
     pub border_width: KeyOrValue<f64>,
     /// Corner radius
@@ -41,8 +41,9 @@ pub struct Style {
     pub background_color_b: KeyOrValue<Color>,
 }
 
-impl std::default::Default for Style {
-    fn default() -> Self {
+impl ButtonStyle {
+    /// Default ButtonStyle
+    pub fn new() -> Self {
         Self {
             border_width: theme::BUTTON_BORDER_WIDTH.into(),
             border_radius: theme::BUTTON_BORDER_RADIUS.into(),
@@ -52,52 +53,32 @@ impl std::default::Default for Style {
             background_color_b: theme::BUTTON_DARK.into(),
         }
     }
-}
 
-/// The Button widget holds a StyleSheet which can resolve to multiple Styles
-pub trait StyleSheet {
-    /// How a button normally looks
-    fn normal(&self) -> Style;
-    /// How a button looks on mouse hover
-    fn hot(&self) -> Style {
-        let normal = self.normal();
+    /// Default ButtonStyle when button is hovered
+    pub fn hot() -> Self {
+        let normal = Self::new();
 
-        Style {
+        Self {
             border_color: theme::BORDER_LIGHT.into(),
             ..normal
         }
     }
-    /// How a button looks on mouse down
-    fn active(&self) -> Style {
-        let hot = self.hot();
-        Style {
+
+    /// Default ButtonStyle when button is active
+    pub fn active() -> Self {
+        let normal = Self::new();
+
+        Self {
             background_color_a: theme::BUTTON_DARK.into(),
             background_color_b: theme::BUTTON_LIGHT.into(),
-            ..hot
+            ..normal
         }
     }
 }
 
-struct Default;
-
-impl StyleSheet for Default {
-    fn normal(&self) -> Style {
-        Style::default()
-    }
-}
-
-impl std::default::Default for Box<dyn StyleSheet> {
+impl Default for ButtonStyle {
     fn default() -> Self {
-        Box::new(Default)
-    }
-}
-
-impl<T> From<T> for Box<dyn StyleSheet>
-where
-    T: 'static + StyleSheet,
-{
-    fn from(style: T) -> Self {
-        Box::new(style)
+        Self::new()
     }
 }
 
@@ -105,7 +86,9 @@ where
 pub struct Button<T> {
     label: Label<T>,
     label_size: Size,
-    stylesheet: Box<dyn StyleSheet>,
+    style_normal: ButtonStyle,
+    style_hot: ButtonStyle,
+    style_active: ButtonStyle,
 }
 
 impl<T: Data> Button<T> {
@@ -151,13 +134,27 @@ impl<T: Data> Button<T> {
         Button {
             label,
             label_size: Size::ZERO,
-            stylesheet: Box::new(Default {}),
+            style_normal: ButtonStyle::new(),
+            style_hot: ButtonStyle::hot(),
+            style_active: ButtonStyle::active(),
         }
     }
 
-    /// Create a new Button with the provided StyleSheet
-    pub fn with_style(mut self, style: impl Into<Box<dyn StyleSheet>>) -> Self {
-        self.stylesheet = style.into();
+    /// Customize this button's default style
+    pub fn with_style_normal(mut self, style: ButtonStyle) -> Self {
+        self.style_normal = style;
+        self
+    }
+
+    /// Customize this button's style on hover
+    pub fn with_style_hot(mut self, style: ButtonStyle) -> Self {
+        self.style_hot = style;
+        self
+    }
+
+    /// Customize this button's style on active
+    pub fn with_style_active(mut self, style: ButtonStyle) -> Self {
+        self.style_active = style;
         self
     }
 
@@ -247,11 +244,11 @@ impl<T: Data> Widget<T> for Button<T> {
 
         // We choose our style up top
         let style = if is_active {
-            self.stylesheet.active()
+            &self.style_active
         } else if is_hot {
-            self.stylesheet.hot()
+            &self.style_hot
         } else {
-            self.stylesheet.normal()
+            &self.style_normal
         };
 
         // Now we resolve the specific values we need out of that style
