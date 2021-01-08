@@ -317,19 +317,29 @@ impl Env {
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
     pub fn set<V: ValueType>(&mut self, key: Key<V>, value: impl Into<V>) {
-        let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
+        self.try_set_raw(key, value).unwrap();
+    }
+
+    /// Try to set a resolved `Value` for this key.
+    ///
+    /// This will return a [`ValueTypeError`] if the value's inner type differs
+    /// from the type of the key.
+    pub fn try_set_raw<V: ValueType>(
+        &mut self,
+        key: Key<V>,
+        raw: Value,
+    ) -> Result<(), ValueTypeError> {
+        let env = Arc::make_mut(&mut self.0);
         let key = key.into();
         // TODO: use of Entry might be more efficient
         if let Some(existing) = env.map.get(&key) {
-            if !existing.is_same_type(&value) {
-                panic!(
-                    "Invalid type for key '{}': {:?} differs in kind from {:?}",
-                    key, existing, value
-                );
+            if !existing.is_same_type(&raw) {
+                return Err(ValueTypeError::new(any::type_name::<V>(), raw));
             }
         }
-        env.map.insert(key, value);
+        env.map.insert(key, raw);
+        Ok(())
     }
 
     /// Returns a reference to the [`L10nManager`], which handles localization
