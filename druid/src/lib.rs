@@ -199,7 +199,7 @@ pub use command::{sys as commands, Command, Notification, Selector, SingleUse, T
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
 pub use dialog::FileDialogOptions;
-pub use env::{Env, Key, KeyOrValue, Value, ValueType};
+pub use env::{Env, Key, KeyOrValue, Value, ValueType, ValueTypeError};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};
