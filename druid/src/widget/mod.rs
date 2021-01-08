@@ -14,6 +14,10 @@
 
 //! Common widgets.
 
+// First as it defines macros
+#[macro_use]
+mod widget_wrapper;
+
 mod added;
 mod align;
 mod button;
@@ -94,6 +98,7 @@ pub use view_switcher::ViewSwitcher;
 pub use widget::{Widget, WidgetId};
 #[doc(hidden)]
 pub use widget_ext::WidgetExt;
+pub use widget_wrapper::WidgetWrapper;
 
 /// The types required to implement a `Widget`.
 ///

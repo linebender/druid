@@ -353,8 +353,30 @@ impl<T: Data> Inner<T> {
                     return Handled::Yes;
                 }
                 if let Some(w) = self.windows.get_mut(id) {
-                    let event = Event::Command(cmd);
-                    return w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                    return if cmd.is(sys_cmd::CLOSE_WINDOW) {
+                        let handled = w.event(
+                            &mut self.command_queue,
+                            Event::WindowCloseRequested,
+                            &mut self.data,
+                            &self.env,
+                        );
+                        if !handled.is_handled() {
+                            w.event(
+                                &mut self.command_queue,
+                                Event::WindowDisconnected,
+                                &mut self.data,
+                                &self.env,
+                            );
+                        }
+                        handled
+                    } else {
+                        w.event(
+                            &mut self.command_queue,
+                            Event::Command(cmd),
+                            &mut self.data,
+                            &self.env,
+                        )
+                    };
                 }
             }
             // in this case we send it to every window that might contain
@@ -594,6 +616,11 @@ impl<T: Data> AppState<T> {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
+            _ if cmd.is(sys_cmd::NEW_SUB_WINDOW) => {
+                if let Err(e) = self.new_sub_window(cmd) {
+                    log::error!("failed to create sub window: '{}'", e);
+                }
+            }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
@@ -653,7 +680,6 @@ impl<T: Data> AppState<T> {
             .windows
             .get_mut(window_id)
             .map(|w| w.handle.clone());
-
         let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::SAVE_FILE_AS);
         let cancel_cmd = options
             .cancel_cmd
@@ -697,6 +723,26 @@ impl<T: Data> AppState<T> {
         let window = desc.build_native(self)?;
         window.show();
         Ok(())
+    }
+
+    fn new_sub_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(transfer) = cmd.get(sys_cmd::NEW_SUB_WINDOW) {
+            if let Some(sub_window_desc) = transfer.take() {
+                let window = sub_window_desc.make_sub_window(self)?;
+                window.show();
+                Ok(())
+            } else {
+                panic!(
+                    "{} command must carry a SubWindowDesc internally",
+                    sys_cmd::NEW_SUB_WINDOW
+                )
+            }
+        } else {
+            panic!(
+                "{} command must carry a SingleUse<SubWindowDesc>",
+                sys_cmd::NEW_SUB_WINDOW
+            )
+        }
     }
 
     fn request_close_window(&mut self, id: WindowId) {
@@ -873,6 +919,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn request_close(&mut self) {
         self.app_state
             .handle_cmd(sys_cmd::CLOSE_WINDOW.to(self.window_id));
+        self.app_state.process_commands();
         self.app_state.inner.borrow_mut().do_update();
     }
 

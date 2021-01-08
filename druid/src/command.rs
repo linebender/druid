@@ -170,7 +170,10 @@ pub mod sys {
     use std::any::Any;
 
     use super::Selector;
-    use crate::{FileDialogOptions, FileInfo, SingleUse, WindowConfig};
+    use crate::{
+        sub_window::{SubWindowDesc, SubWindowUpdate},
+        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
+    };
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -212,6 +215,19 @@ pub mod sys {
     /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.show-context-menu");
+
+    /// This is sent to the window handler to create a new sub window.
+    pub(crate) const NEW_SUB_WINDOW: Selector<SingleUse<SubWindowDesc>> =
+        Selector::new("druid-builtin.new-sub-window");
+
+    /// This is sent from a WidgetPod to any attached SubWindowHosts when a data update occurs
+    pub(crate) const SUB_WINDOW_PARENT_TO_HOST: Selector<SubWindowUpdate> =
+        Selector::new("druid-builtin.parent_to_host");
+
+    /// This is sent from a SubWindowHost to its parent WidgetPod after it has processed events,
+    /// if that processing changed the data value.
+    pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
+        Selector::new("druid-builtin.host_to_parent");
 
     /// The selector for a command to set the window's menu. The payload should
     /// be a [`MenuDesc`] object.

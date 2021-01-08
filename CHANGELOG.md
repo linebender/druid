@@ -8,6 +8,8 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Highlights
 
 ### Added
+- Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
+- WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
 
 ### Changed
 
