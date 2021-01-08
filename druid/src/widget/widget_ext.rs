@@ -16,10 +16,12 @@
 
 use super::invalidation::DebugInvalidation;
 use super::{
-    Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
+    Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::{Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, UnitPoint, Widget};
+use crate::{
+    Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
+};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -157,6 +159,21 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Controller`]: widget/trait.Controller.html
     fn controller<C: Controller<T, Self>>(self, controller: C) -> ControllerHost<Self, C> {
         ControllerHost::new(self, controller)
+    }
+
+    /// Provide a closure that will be called when this widget is added to the widget tree.
+    ///
+    /// You can use this to perform any initial setup.
+    ///
+    /// This is equivalent to handling the [`LifeCycle::WidgetAdded`] event in a
+    /// custom [`Controller`].
+    ///
+    /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
+    fn on_added(
+        self,
+        f: impl Fn(&mut Self, &mut LifeCycleCtx, &T, &Env) + 'static,
+    ) -> ControllerHost<Self, Added<T, Self>> {
+        ControllerHost::new(self, Added::new(f))
     }
 
     /// Control the events of this widget with a [`Click`] widget. The closure

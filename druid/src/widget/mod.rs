@@ -18,6 +18,7 @@
 #[macro_use]
 mod widget_wrapper;
 
+mod added;
 mod align;
 mod button;
 mod checkbox;
@@ -59,6 +60,7 @@ mod widget;
 mod widget_ext;
 
 pub use self::image::Image;
+pub use added::Added;
 pub use align::Align;
 pub use button::Button;
 pub use checkbox::Checkbox;
