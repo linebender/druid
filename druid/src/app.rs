@@ -428,6 +428,14 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Sets the [`WindowLevel`] of the window
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(mut self, level: WindowLevel) -> Self {
+        self.config = self.config.set_level(level);
+        self
+    }
+
     /// Set initial state for the window.
     pub fn set_window_state(mut self, state: WindowState) -> Self {
         self.config = self.config.set_window_state(state);
