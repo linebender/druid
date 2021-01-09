@@ -92,6 +92,7 @@ impl TextStorage for RichText {
 ///
 /// # Example
 /// ```
+/// # use druid::text::{RichTextBuilder, Attribute};
 /// let mut rich_text = RichTextBuilder::new();
 /// rich_text.push("Hello World").add(Attribute::Underline(true));
 /// let rich_text = rich_text.build();

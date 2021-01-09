@@ -22,8 +22,8 @@ mod font_descriptor;
 pub mod format;
 mod layout;
 pub mod movement;
-pub mod selection;
 mod rich_text;
+pub mod selection;
 mod storage;
 mod text_input;
 
@@ -36,5 +36,5 @@ pub use self::movement::{movement, Movement};
 pub use self::selection::Selection;
 pub use self::text_input::{BasicTextInput, EditAction, MouseAction, TextInput};
 pub use editor::Editor;
+pub use rich_text::{AttributesAdder, RichText, RichTextBuilder};
 pub use storage::{ArcStr, TextStorage};
-pub use rich_text::{RichText, RichTextBuilder, AttributesAdder};
