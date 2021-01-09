@@ -159,7 +159,7 @@ impl WindowBuilder {
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [atoms.WM_DELETE_WINDOW];
         conn.change_property32(
-            PropMode::Replace,
+            PropMode::REPLACE,
             window_id,
             atoms.WM_PROTOCOLS,
             AtomEnum::ATOM,
@@ -215,13 +215,13 @@ impl WindowBuilder {
         let visual_id = visual_type.visual_id;
 
         let cw_values = xproto::CreateWindowAux::new().event_mask(
-            EventMask::Exposure
-                | EventMask::StructureNotify
-                | EventMask::KeyPress
-                | EventMask::KeyRelease
-                | EventMask::ButtonPress
-                | EventMask::ButtonRelease
-                | EventMask::PointerMotion,
+            EventMask::EXPOSURE
+                | EventMask::STRUCTURE_NOTIFY
+                | EventMask::KEY_PRESS
+                | EventMask::KEY_RELEASE
+                | EventMask::BUTTON_PRESS
+                | EventMask::BUTTON_RELEASE
+                | EventMask::POINTER_MOTION,
         );
 
         // Create the actual window
@@ -247,7 +247,7 @@ impl WindowBuilder {
             // Border width
             0,
             // Window class type
-            WindowClass::InputOutput,
+            WindowClass::INPUT_OUTPUT,
             // Visual ID
             visual_id,
             // Window properties mask
@@ -296,7 +296,7 @@ impl WindowBuilder {
         let pid = nix::unistd::Pid::this().as_raw();
         if let Ok(pid) = u32::try_from(pid) {
             conn.change_property32(
-                xproto::PropMode::Replace,
+                xproto::PropMode::REPLACE,
                 id,
                 atoms._NET_WM_PID,
                 AtomEnum::CARDINAL,
@@ -337,8 +337,8 @@ impl WindowBuilder {
             // We use the CompleteNotify events to schedule the next frame, and the IdleNotify
             // events to manage our buffers.
             let id = conn.generate_id()?;
-            use x11rb::protocol::present::EventMask::*;
-            conn.present_select_input(id, window_id, CompleteNotify | IdleNotify)?
+            use x11rb::protocol::present::EventMask;
+            conn.present_select_input(id, window_id, EventMask::COMPLETE_NOTIFY | EventMask::IDLE_NOTIFY)?
                 .check()
                 .context("set present event mask")?;
 
@@ -745,12 +745,12 @@ impl Window {
         let conn = self.app.connection();
         log_x11!(conn.configure_window(
             self.id,
-            &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::Above),
+            &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
         ));
         log_x11!(conn.set_input_focus(
-            xproto::InputFocus::PointerRoot,
+            xproto::InputFocus::POINTER_ROOT,
             self.id,
-            xproto::Time::CurrentTime,
+            xproto::Time::CURRENT_TIME,
         ));
     }
 
@@ -815,14 +815,14 @@ impl Window {
         // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
         // as long as _NET_WM_NAME is also set (which uses UTF8).
         log_x11!(self.app.connection().change_property8(
-            xproto::PropMode::Replace,
+            xproto::PropMode::REPLACE,
             self.id,
             AtomEnum::WM_NAME,
             AtomEnum::STRING,
             title.as_bytes(),
         ));
         log_x11!(self.app.connection().change_property8(
-            xproto::PropMode::Replace,
+            xproto::PropMode::REPLACE,
             self.id,
             self.atoms._NET_WM_NAME,
             self.atoms.UTF8_STRING,
@@ -1220,7 +1220,7 @@ impl PresentData {
             // idle fence
             x11rb::NONE,
             // present options
-            x11rb::protocol::present::Option::None.into(),
+            x11rb::protocol::present::Option::NONE.into(),
             // target msc (0 means present at the next time that msc % divisor == remainder)
             0,
             // divisor
@@ -1265,7 +1265,7 @@ fn mouse_buttons(mods: u16) -> MouseButtons {
         // BUTTON_MASK_4/5 do not work: they are for scroll events.
     ];
     for (mask, button) in button_masks {
-        if mods & (*mask as u16) != 0 {
+        if mods & u16::from(*mask) != 0 {
             buttons.insert(*button);
         }
     }
@@ -1277,18 +1277,18 @@ fn mouse_buttons(mods: u16) -> MouseButtons {
 fn key_mods(mods: u16) -> Modifiers {
     let mut ret = Modifiers::default();
     let mut key_masks = [
-        (xproto::ModMask::Shift, Modifiers::SHIFT),
-        (xproto::ModMask::Control, Modifiers::CONTROL),
+        (xproto::ModMask::SHIFT, Modifiers::SHIFT),
+        (xproto::ModMask::CONTROL, Modifiers::CONTROL),
         // X11's mod keys are configurable, but this seems
         // like a reasonable default for US keyboards, at least,
         // where the "windows" key seems to be MOD_MASK_4.
         (xproto::ModMask::M1, Modifiers::ALT),
         (xproto::ModMask::M2, Modifiers::NUM_LOCK),
         (xproto::ModMask::M4, Modifiers::META),
-        (xproto::ModMask::Lock, Modifiers::CAPS_LOCK),
+        (xproto::ModMask::LOCK, Modifiers::CAPS_LOCK),
     ];
     for (mask, modifiers) in &mut key_masks {
-        if mods & (*mask as u16) != 0 {
+        if mods & u16::from(*mask) != 0 {
             ret |= *modifiers;
         }
     }

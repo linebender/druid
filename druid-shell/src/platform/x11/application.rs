@@ -207,11 +207,11 @@ impl Application {
             // Border width
             0,
             // Window class type
-            WindowClass::InputOnly,
+            WindowClass::INPUT_ONLY,
             // Visual ID
             x11rb::COPY_FROM_PARENT,
             // Window properties mask
-            &CreateWindowAux::new().event_mask(EventMask::StructureNotify),
+            &CreateWindowAux::new().event_mask(EventMask::STRUCTURE_NOTIFY),
         )?
         .check()
         .context("create input-only window")?;
