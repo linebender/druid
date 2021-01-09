@@ -14,11 +14,9 @@
 
 //! Storing text.
 
-use std::ops::RangeBounds;
 use std::sync::Arc;
 
-use super::{Attribute, AttributeSpans};
-use crate::piet::{util, PietTextLayoutBuilder, TextLayoutBuilder, TextStorage as PietTextStorage};
+use crate::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
 use crate::{Data, Env};
 
 /// A type that represents text that can be displayed.
@@ -37,75 +35,8 @@ pub trait TextStorage: PietTextStorage + Data {
 /// it cannot be mutated, but unlike `String` it can be cheaply cloned.
 pub type ArcStr = Arc<str>;
 
-/// Text with optional style spans.
-#[derive(Debug, Clone, Data)]
-pub struct RichText {
-    buffer: ArcStr,
-    attrs: Arc<AttributeSpans>,
-}
-
-impl RichText {
-    /// Create a new `RichText` object with the provided text.
-    pub fn new(buffer: ArcStr) -> Self {
-        RichText::new_with_attributes(buffer, Default::default())
-    }
-
-    /// Create a new `RichText`, providing explicit attributes.
-    pub fn new_with_attributes(buffer: ArcStr, attributes: AttributeSpans) -> Self {
-        RichText {
-            buffer,
-            attrs: Arc::new(attributes),
-        }
-    }
-
-    /// Builder-style method for adding an [`Attribute`] to a range of text.
-    ///
-    /// [`Attribute`]: enum.Attribute.html
-    pub fn with_attribute(mut self, range: impl RangeBounds<usize>, attr: Attribute) -> Self {
-        self.add_attribute(range, attr);
-        self
-    }
-
-    /// The length of the buffer, in utf8 code units.
-    pub fn len(&self) -> usize {
-        self.buffer.len()
-    }
-
-    /// Returns `true` if the underlying buffer is empty.
-    pub fn is_empty(&self) -> bool {
-        self.buffer.is_empty()
-    }
-
-    /// Add an [`Attribute`] to the provided range of text.
-    ///
-    /// [`Attribute`]: enum.Attribute.html
-    pub fn add_attribute(&mut self, range: impl RangeBounds<usize>, attr: Attribute) {
-        let range = util::resolve_range(range, self.buffer.len());
-        Arc::make_mut(&mut self.attrs).add(range, attr);
-    }
-}
-
 impl TextStorage for ArcStr {}
-
-impl PietTextStorage for RichText {
-    fn as_str(&self) -> &str {
-        self.buffer.as_str()
-    }
-}
 
 impl TextStorage for String {}
 
 impl TextStorage for Arc<String> {}
-
-impl TextStorage for RichText {
-    fn add_attributes(
-        &self,
-        mut builder: PietTextLayoutBuilder,
-        env: &Env,
-    ) -> PietTextLayoutBuilder {
-        for (range, attr) in self.attrs.to_piet_attrs(env) {
-            builder = builder.range_attribute(range, attr);
-        }
-        builder
-    }
-}
