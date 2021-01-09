@@ -14,12 +14,14 @@
 
 //! An SVG widget.
 
-use std::error::Error;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{collections::HashMap, error::Error, rc::Rc, str::FromStr, sync::Arc};
 
 use crate::{
-    kurbo::BezPath, widget::common::FillStrat, widget::prelude::*, Affine, Color, Data, Rect,
+    kurbo::BezPath,
+    piet::{self, FixedLinearGradient, GradientStop},
+    widget::common::FillStrat,
+    widget::prelude::*,
+    Affine, Color, Data, Point, Rect,
 };
 
 /// A widget that renders a SVG
@@ -112,9 +114,12 @@ impl SvgData {
 
     /// Convert SvgData into Piet draw instructions
     pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
+        let mut state = SvgRenderer::new(offset_matrix * self.inner_affine());
+        // I actually made `SvgRenderer` able to handle a stack of `<defs>`, but I'm gonna see if
+        // resvg always puts them at the top.
         let root = self.tree.root();
         for n in root.children() {
-            render_node(&n, offset_matrix * self.inner_affine(), ctx);
+            state.render_node(&n, ctx);
         }
     }
 
@@ -192,97 +197,177 @@ impl FromStr for SvgData {
     }
 }
 
-// TODO recursive descent can blow the stack. Consider not using recursion
+struct SvgRenderer {
+    offset_matrix: Affine,
+    defs: Defs,
+}
 
-/// Take a usvg node and render it to the given context.
-fn render_node(n: &usvg::Node, offset_matrix: Affine, ctx: &mut PaintCtx) {
-    match *n.borrow() {
-        usvg::NodeKind::Path(ref p) => render_path(p, offset_matrix, ctx),
-        usvg::NodeKind::Defs => {
-            // TODO: implement defs
+impl SvgRenderer {
+    fn new(offset_matrix: Affine) -> Self {
+        Self {
+            offset_matrix,
+            defs: Defs::new(),
         }
-        usvg::NodeKind::Group(_) => {
-            // TODO I'm not sure if we need to apply the transform, or if usvg has already
-            // done it for us? I'm guessing the latter for now, but that could easily be wrong.
-            for child in n.children() {
-                render_node(&child, offset_matrix, ctx);
+    }
+
+    /// Take a usvg node and render it to the given context.
+    fn render_node(&mut self, n: &usvg::Node, ctx: &mut PaintCtx) {
+        match *n.borrow() {
+            usvg::NodeKind::Path(ref p) => self.render_path(p, ctx),
+            usvg::NodeKind::Defs => {
+                // children are defs
+                for def in n.children() {
+                    match &*def.borrow() {
+                        usvg::NodeKind::LinearGradient(linear_gradient) => {
+                            self.linear_gradient_def(linear_gradient, ctx);
+                        }
+                        other => log::error!("unsupported element: {:?}", other),
+                    }
+                }
+            }
+            usvg::NodeKind::Group(_) => {
+                // TODO I'm not sure if we need to apply the transform, or if usvg has already
+                // done it for us? I'm guessing the latter for now, but that could easily be wrong.
+                for child in n.children() {
+                    self.render_node(&child, ctx);
+                }
+            }
+            _ => {
+                // TODO: handle more of the SVG spec.
+                log::error!("{:?} is unimplemented", n.clone());
             }
         }
-        _ => {
-            // TODO: handle more of the SVG spec.
-            log::error!("{:?} is unimplemented", n.clone());
+    }
+
+    /// Take a usvg path and render it to the given context.
+    fn render_path(&self, p: &usvg::Path, ctx: &mut PaintCtx) {
+        if matches!(
+            p.visibility,
+            usvg::Visibility::Hidden | usvg::Visibility::Collapse
+        ) {
+            // skip rendering
+            return;
+        }
+
+        let mut path = BezPath::new();
+        for segment in p.data.iter() {
+            match *segment {
+                usvg::PathSegment::MoveTo { x, y } => {
+                    path.move_to((x, y));
+                }
+                usvg::PathSegment::LineTo { x, y } => {
+                    path.line_to((x, y));
+                }
+                usvg::PathSegment::CurveTo {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    x,
+                    y,
+                } => {
+                    path.curve_to((x1, y1), (x2, y2), (x, y));
+                }
+                usvg::PathSegment::ClosePath => {
+                    path.close_path();
+                }
+            }
+        }
+
+        path.apply_affine(self.offset_matrix * transform_to_affine(p.transform));
+
+        match &p.fill {
+            Some(fill) => {
+                let brush = self.brush_from_usvg(&fill.paint, fill.opacity, ctx);
+                ctx.fill(path.clone(), &*brush);
+            }
+            None => {}
+        }
+
+        match &p.stroke {
+            Some(stroke) => {
+                let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity, ctx);
+                ctx.stroke(path, &*brush, stroke.width.value());
+            }
+            None => {}
+        }
+    }
+
+    fn linear_gradient_def(&mut self, lg: &usvg::LinearGradient, ctx: &mut PaintCtx) {
+        // Get start and stop of gradient and transform them to image space (TODO check we need to
+        // apply offset matrix)
+        let start = self.offset_matrix * Point::new(lg.x1, lg.y1);
+        let end = self.offset_matrix * Point::new(lg.x2, lg.y2);
+        let stops: Vec<_> = lg
+            .base
+            .stops
+            .iter()
+            .map(|stop| GradientStop {
+                pos: stop.offset.value() as f32,
+                color: color_from_svg(stop.color, stop.opacity),
+            })
+            .collect();
+
+        // TODO error handling
+        let gradient = FixedLinearGradient { start, end, stops };
+        println!("{} => {:?}", lg.id, gradient);
+        // debug
+        let gradient_c = gradient.clone();
+        ctx.paint_with_z_index(1, move |ctx| {
+            let (start, end) = (gradient_c.start, gradient_c.end);
+            let brush = ctx.gradient(gradient_c).unwrap();
+            ctx.stroke(druid::kurbo::Line::new(start, end), &brush, 1.);
+        });
+        let gradient = ctx.gradient(gradient).unwrap();
+        self.defs.add_def(lg.id.clone(), gradient);
+    }
+
+    fn brush_from_usvg(
+        &self,
+        paint: &usvg::Paint,
+        opacity: usvg::Opacity,
+        ctx: &mut PaintCtx,
+    ) -> Rc<piet::Brush> {
+        match paint {
+            usvg::Paint::Color(c) => {
+                // TODO I'm going to assume here that not retaining colors is OK.
+                let color = color_from_svg(*c, opacity);
+                Rc::new(ctx.solid_brush(color))
+            }
+            usvg::Paint::Link(id) => self.defs.find(id).unwrap(),
         }
     }
 }
 
-/// Take a usvg path and render it to the given context.
-fn render_path(p: &usvg::Path, offset_matrix: Affine, ctx: &mut PaintCtx) {
-    if matches!(
-        p.visibility,
-        usvg::Visibility::Hidden | usvg::Visibility::Collapse
-    ) {
-        // skip rendering
-        return;
+// TODO just support linear gradient for now.
+type Def = piet::Brush;
+
+/// A map from id to <def>
+struct Defs(HashMap<String, Rc<Def>>);
+
+impl Defs {
+    fn new() -> Self {
+        Defs(HashMap::new())
     }
 
-    let mut path = BezPath::new();
-    for segment in p.data.iter() {
-        match *segment {
-            usvg::PathSegment::MoveTo { x, y } => {
-                path.move_to((x, y));
-            }
-            usvg::PathSegment::LineTo { x, y } => {
-                path.line_to((x, y));
-            }
-            usvg::PathSegment::CurveTo {
-                x1,
-                y1,
-                x2,
-                y2,
-                x,
-                y,
-            } => {
-                path.curve_to((x1, y1), (x2, y2), (x, y));
-            }
-            usvg::PathSegment::ClosePath => {
-                path.close_path();
-            }
-        }
+    /// Add a def.
+    fn add_def(&mut self, id: String, def: Def) {
+        self.0.insert(id, Rc::new(def));
     }
 
-    path.apply_affine(offset_matrix * transform_to_affine(p.transform));
-
-    match &p.fill {
-        Some(fill) => {
-            let brush = color_from_usvg(&fill.paint, fill.opacity);
-            ctx.fill(path.clone(), &brush);
-        }
-        None => {}
-    }
-
-    match &p.stroke {
-        Some(stroke) => {
-            let brush = color_from_usvg(&stroke.paint, stroke.opacity);
-            ctx.stroke(path, &brush, stroke.width.value());
-        }
-        None => {}
-    }
-}
-
-fn color_from_usvg(paint: &usvg::Paint, opacity: usvg::Opacity) -> Color {
-    match paint {
-        usvg::Paint::Color(c) => Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value()),
-        _ => {
-            //TODO: implement link
-            log::error!("We don't support Paint::Link yet, so here's some pink.");
-            Color::rgb8(255, 192, 203)
-        }
+    /// Look for a def by id.
+    fn find(&self, id: &str) -> Option<Rc<Def>> {
+        self.0.get(id).cloned()
     }
 }
 
 /// Convert a usvg transform to a kurbo `Affine`.
 fn transform_to_affine(t: usvg::Transform) -> Affine {
     Affine::new([t.a, t.b, t.c, t.d, t.e, t.f])
+}
+
+fn color_from_svg(c: usvg::Color, opacity: usvg::Opacity) -> Color {
+    Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
