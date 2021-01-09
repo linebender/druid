@@ -356,7 +356,7 @@ impl Application {
                 // TODO: if an error is caused by the present extension, disable it and fall back
                 // to copying pixels. This is blocked on
                 // https://github.com/psychon/x11rb/issues/503
-                return Err(x11rb::errors::ReplyError::from(e.clone()).into());
+                return Err(x11rb::errors::ReplyError::from(*e).into());
             }
             _ => {}
         }
