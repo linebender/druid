@@ -25,6 +25,10 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Examples
 
+### Maintenance
+
+- Updated to x11rb 0.8.0. ([#1519] by [@psychon])
+
 ### Outside News
 
 ## [0.7.0] - 2021-01-01
