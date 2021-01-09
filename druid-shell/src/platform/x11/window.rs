@@ -338,9 +338,13 @@ impl WindowBuilder {
             // events to manage our buffers.
             let id = conn.generate_id()?;
             use x11rb::protocol::present::EventMask;
-            conn.present_select_input(id, window_id, EventMask::COMPLETE_NOTIFY | EventMask::IDLE_NOTIFY)?
-                .check()
-                .context("set present event mask")?;
+            conn.present_select_input(
+                id,
+                window_id,
+                EventMask::COMPLETE_NOTIFY | EventMask::IDLE_NOTIFY,
+            )?
+            .check()
+            .context("set present event mask")?;
 
             let region_id = conn.generate_id()?;
             conn.xfixes_create_region(region_id, &[])
