@@ -311,13 +311,6 @@ impl SvgRenderer {
         // TODO error handling
         let gradient = FixedLinearGradient { start, end, stops };
         println!("{} => {:?}", lg.id, gradient);
-        // debug
-        let gradient_c = gradient.clone();
-        ctx.paint_with_z_index(1, move |ctx| {
-            let (start, end) = (gradient_c.start, gradient_c.end);
-            let brush = ctx.gradient(gradient_c).unwrap();
-            ctx.stroke(druid::kurbo::Line::new(start, end), &brush, 1.);
-        });
         let gradient = ctx.gradient(gradient).unwrap();
         self.defs.add_def(lg.id.clone(), gradient);
     }
