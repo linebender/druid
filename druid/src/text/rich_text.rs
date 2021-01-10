@@ -18,8 +18,11 @@ use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
 use super::{Attribute, AttributeSpans, TextStorage};
-use crate::piet::{util, PietTextLayoutBuilder, TextLayoutBuilder, TextStorage as PietTextStorage};
-use crate::{ArcStr, Data, Env};
+use crate::piet::{
+    util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayoutBuilder,
+    TextStorage as PietTextStorage,
+};
+use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue};
 
 /// Text with optional style spans.
 #[derive(Debug, Clone, Data)]
@@ -94,7 +97,7 @@ impl TextStorage for RichText {
 /// ```
 /// # use druid::text::{RichTextBuilder, Attribute};
 /// let mut rich_text = RichTextBuilder::new();
-/// rich_text.push("Hello World").add(Attribute::Underline(true));
+/// rich_text.push("Hello World").underline(true);
 /// let rich_text = rich_text.build();
 /// ```
 ///
@@ -111,14 +114,14 @@ impl RichTextBuilder {
         Self::default()
     }
 
-    /// Add string to the end of text and `AttributesBuilder` for the added string.
+    /// Add string to the end of text and `AttributesAdder` for the added string.
     pub fn push(&mut self, string: &str) -> AttributesAdder {
         let range = self.buffer.len()..(self.buffer.len() + string.len());
         self.buffer.push_str(string);
         self.range(range)
     }
 
-    /// Get the `AttributesBuilder` for the range.
+    /// Get the `AttributesAdder` for the range.
     pub fn range(&mut self, range: Range<usize>) -> AttributesAdder {
         AttributesAdder {
             rich_text_builder: self,
@@ -141,8 +144,50 @@ pub struct AttributesAdder<'a> {
 
 impl AttributesAdder<'_> {
     /// Add the given attribute.
-    pub fn add(&mut self, attr: Attribute) -> &mut Self {
+    pub fn add_attr(&mut self, attr: Attribute) -> &mut Self {
         self.rich_text_builder.attrs.add(self.range.clone(), attr);
+        self
+    }
+
+    /// Add a font size attribute.
+    pub fn size(&mut self, size: impl Into<KeyOrValue<f64>>) -> &mut Self {
+        self.add_attr(Attribute::size(size));
+        self
+    }
+
+    /// Add a forground color attribute.
+    pub fn text_color(&mut self, color: impl Into<KeyOrValue<Color>>) -> &mut Self {
+        self.add_attr(Attribute::text_color(color));
+        self
+    }
+
+    /// Add a font family attribute.
+    pub fn font_family(&mut self, family: FontFamily) -> &mut Self {
+        self.add_attr(Attribute::font_family(family));
+        self
+    }
+
+    /// Add a `FontWeight` attribute.
+    pub fn weight(&mut self, weight: FontWeight) -> &mut Self {
+        self.add_attr(Attribute::weight(weight));
+        self
+    }
+
+    /// Add a `FontStyle` attribute.
+    pub fn style(&mut self, style: FontStyle) -> &mut Self {
+        self.add_attr(Attribute::style(style));
+        self
+    }
+
+    /// Add a underline attribute.
+    pub fn underline(&mut self, underline: bool) -> &mut Self {
+        self.add_attr(Attribute::underline(underline));
+        self
+    }
+
+    /// Add a `FontDescriptor` attribute.
+    pub fn font_descriptor(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> &mut Self {
+        self.add_attr(Attribute::font_descriptor(font));
         self
     }
 }
