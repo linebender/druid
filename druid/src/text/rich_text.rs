@@ -91,9 +91,21 @@ impl TextStorage for RichText {
     }
 }
 
-/// A builder for [`RichText`].
+/// A builder for creating [`RichText`] objects.
+///
+/// This builder allows you to construct a [`RichText`] object by building up a sequence
+/// of styled sub-strings; first you [`push`](RichText::push) a `&str` onto the string,
+/// and then you can optionally add styles to that text via the returned [`AttributesAddr`]
+/// object.
 ///
 /// # Example
+/// ```
+/// # use druid::text::{Attribute, RichTextBuilder};
+/// # use druid::FontWeight;
+/// let mut builder = RichTextBuilder::new();
+/// builder.push("Hello ");
+/// builder.push("World!").weight(FontWeight::Bold);
+/// let rich_text = builder.build();
 /// ```
 /// # use druid::text::{RichTextBuilder, Attribute};
 /// let mut rich_text = RichTextBuilder::new();
@@ -114,15 +126,21 @@ impl RichTextBuilder {
         Self::default()
     }
 
-    /// Add string to the end of text and `AttributesAdder` for the added string.
+    /// Append a `&str` to the end of the text.
+    ///
+    /// This method returns a [`AttributesAdder`] that can be used to style the newly
+    /// added string slice.
     pub fn push(&mut self, string: &str) -> AttributesAdder {
         let range = self.buffer.len()..(self.buffer.len() + string.len());
         self.buffer.push_str(string);
-        self.range(range)
+        self.add_attributes_for_range(range)
     }
 
-    /// Get the `AttributesAdder` for the range.
-    pub fn range(&mut self, range: Range<usize>) -> AttributesAdder {
+    /// Get an [`AttributesAdder`] for the given range.
+    ///
+    /// This can be used to modify styles for a given range after it has been added.
+    pub fn add_attributes_for_range(&mut self, range: impl RangeBounds<usize>) -> AttributesAdder {
+        let range = util::resolve_range(range, self.buffer.len());
         AttributesAdder {
             rich_text_builder: self,
             range,
