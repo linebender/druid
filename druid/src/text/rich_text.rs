@@ -104,7 +104,7 @@ impl TextStorage for RichText {
 /// # use druid::FontWeight;
 /// let mut builder = RichTextBuilder::new();
 /// builder.push("Hello ");
-/// builder.push("World!").weight(FontWeight::Bold);
+/// builder.push("World!").weight(FontWeight::BOLD);
 /// let rich_text = builder.build();
 /// ```
 ///
