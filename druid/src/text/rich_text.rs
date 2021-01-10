@@ -94,7 +94,7 @@ impl TextStorage for RichText {
 /// A builder for creating [`RichText`] objects.
 ///
 /// This builder allows you to construct a [`RichText`] object by building up a sequence
-/// of styled sub-strings; first you [`push`](RichText::push) a `&str` onto the string,
+/// of styled sub-strings; first you [`push`](RichTextBuilder::push) a `&str` onto the string,
 /// and then you can optionally add styles to that text via the returned [`AttributesAdder`]
 /// object.
 ///
