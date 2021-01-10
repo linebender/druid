@@ -19,6 +19,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Fixed
 
+- Fixed docs of derived Lens ([(#1523)] by [@Maan2003])
+
 ### Visual
 
 ### Docs
@@ -590,6 +592,7 @@ Last release without a changelog :(
 [#1448]: https://github.com/linebender/druid/pull/1448
 [#1463]: https://github.com/linebender/druid/pull/1463
 [#1452]: https://github.com/linebender/druid/pull/1452
+[#1523]: https://github.com/linebender/druid/pull/1523
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
