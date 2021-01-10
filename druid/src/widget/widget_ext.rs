@@ -75,7 +75,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).width(width)
     }
 
-    /// Wrap this widget in a [`SizedBox`] with an explicit width.
+    /// Wrap this widget in a [`SizedBox`] with an explicit height.
     ///
     /// [`SizedBox`]: widget/struct.SizedBox.html
     fn fix_height(self, height: f64) -> SizedBox<T> {
