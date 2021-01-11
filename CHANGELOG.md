@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
 - RichTextBuilder ([#1520] by [@Maan2003])
 - `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
+- `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
 
 ### Changed
 
