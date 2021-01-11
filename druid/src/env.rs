@@ -393,6 +393,14 @@ impl Key<()> {
             value_type: PhantomData,
         }
     }
+
+    /// Return this key's raw string value.
+    ///
+    /// This should only be needed for things like debugging or for building
+    /// other tooling that needs to inspect keys.
+    pub const fn raw(&self) -> &'static str {
+        self.key
+    }
 }
 
 impl Value {
