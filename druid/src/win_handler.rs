@@ -193,20 +193,22 @@ impl<T: Data> Inner<T> {
     /// is configured.
     fn with_delegate<R, F>(&mut self, f: F) -> Option<R>
     where
-        F: FnOnce(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx) -> R,
+        F: FnOnce(&mut dyn AppDelegate<T>, &mut T, &Env, &mut DelegateCtx) -> R,
     {
         let Inner {
             ref mut delegate,
             ref mut command_queue,
             ref mut data,
+            ref ext_event_host,
             ref env,
             ..
         } = self;
         let mut ctx = DelegateCtx {
             command_queue,
             app_data_type: TypeId::of::<T>(),
+            ext_event_host,
         };
-        if let Some(delegate) = delegate {
+        if let Some(delegate) = delegate.as_deref_mut() {
             Some(f(delegate, data, env, &mut ctx))
         } else {
             None
