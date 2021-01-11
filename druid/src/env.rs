@@ -492,20 +492,7 @@ const DEBUG_COLOR: &[Color] = &[
 
 impl Default for Env {
     fn default() -> Self {
-        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
-
-        let inner = EnvImpl {
-            l10n: Arc::new(l10n),
-            map: HashMap::new(),
-            debug_colors: DEBUG_COLOR.into(),
-        };
-
-        let env = Env(Arc::new(inner))
-            .adding(Env::DEBUG_PAINT, false)
-            .adding(Env::DEBUG_WIDGET_ID, false)
-            .adding(Env::DEBUG_WIDGET, false);
-
-        crate::theme::add_to_env(env)
+        Env::with_i10n(vec!["builtin.ftl".into()], "./resources/i18n/")
     }
 }
 
