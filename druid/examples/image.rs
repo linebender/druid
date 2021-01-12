@@ -17,13 +17,14 @@
 //! everything behaves.
 
 use druid::piet::InterpolationMode;
+use druid::text::format::ParseFormatter;
 use druid::widget::{prelude::*, FillStrat, Image};
 use druid::widget::{
     Checkbox, CrossAxisAlignment, Flex, Label, RadioGroup, SizedBox, TextBox, WidgetExt,
 };
 use druid::{AppLauncher, Color, Data, ImageBuf, Lens, LensExt, WindowDesc};
 
-const FILL_STRAT_OPTIONS: [(&str, FillStrat); 7] = [
+static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
     ("Contain", FillStrat::Contain),
     ("Cover", FillStrat::Cover),
     ("Fill", FillStrat::Fill),
@@ -33,7 +34,7 @@ const FILL_STRAT_OPTIONS: [(&str, FillStrat); 7] = [
     ("ScaleDown", FillStrat::ScaleDown),
 ];
 
-const INTERPOLATION_MODE_OPTIONS: [(&str, InterpolationModeData); 2] = [
+static INTERPOLATION_MODE_OPTIONS: &[(&str, InterpolationModeData)] = &[
     (
         "Bilinear",
         InterpolationModeData::new(InterpolationMode::Bilinear),
@@ -127,7 +128,9 @@ fn make_control_row() -> impl Widget<AppState> {
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .with_child(Label::new("FillStrat:"))
                 .with_default_spacer()
-                .with_child(RadioGroup::new(FILL_STRAT_OPTIONS.to_vec()).lens(AppState::fill_strat)),
+                .with_child(
+                    RadioGroup::new(FILL_STRAT_OPTIONS.to_vec()).lens(AppState::fill_strat),
+                ),
         )
         .with_default_spacer()
         .with_child(
@@ -169,8 +172,8 @@ fn make_width() -> impl Widget<AppState> {
         .with_child(
             Flex::row().with_child(
                 TextBox::new()
-                    .parse()
-                    .lens(AppState::width.map(|x| Some(*x), |x, y| *x = y.unwrap_or_default()))
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
                     .fix_width(60.0),
             ),
         )
@@ -183,8 +186,8 @@ fn make_height() -> impl Widget<AppState> {
         .with_child(
             Flex::row().with_child(
                 TextBox::new()
-                    .parse()
-                    .lens(AppState::height.map(|x| Some(*x), |x, y| *x = y.unwrap_or_default()))
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
                     .fix_width(60.0),
             ),
         )
