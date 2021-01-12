@@ -178,14 +178,14 @@ struct AppData {
     grid: Grid,
     drawing: bool,
     paused: bool,
-    ups: f64,
+    updates_per_second: f64,
 }
 
 impl AppData {
     // allows time interval in the range [100ms, 5000ms]
     // equivalently, 0.2 ~ 20ups
     pub fn iter_interval(&self) -> u64 {
-        (1000. / self.ups) as u64
+        (1000. / self.updates_per_second) as u64
     }
 }
 
@@ -267,7 +267,7 @@ impl Widget<AppData> for GameOfLifeWidget {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppData, data: &AppData, _env: &Env) {
-        if (data.ups - old_data.ups).abs() > 0.001 {
+        if (data.updates_per_second - old_data.updates_per_second).abs() > 0.001 {
             let deadline = Duration::from_millis(data.iter_interval())
                 .checked_sub(Instant::now().duration_since(self.last_update))
                 .unwrap_or_else(|| Duration::from_secs(0));
@@ -395,14 +395,14 @@ fn make_widget() -> impl Widget<AppData> {
                 .with_child(
                     Flex::row()
                         .with_child(
-                            Label::new(|data: &AppData, _env: &_| format!("{:.2}UPS", data.ups))
+                            Label::new(|data: &AppData, _env: &_| format!("{:.2}updates/s", data.updates_per_second))
                                 .padding(3.0),
                         )
                         .with_flex_child(
                             Slider::new()
                                 .with_range(0.2, 20.0)
                                 .expand_width()
-                                .lens(AppData::ups),
+                                .lens(AppData::updates_per_second),
                             1.,
                         )
                         .padding(8.0),
@@ -435,7 +435,7 @@ pub fn main() {
             grid,
             drawing: false,
             paused: false,
-            ups: 10.0,
+            updates_per_second: 10.0,
         })
         .expect("launch failed");
 }
