@@ -33,6 +33,7 @@ type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 pub struct AppLauncher<T> {
     windows: Vec<WindowDesc<T>>,
     env_setup: Option<Box<EnvSetupFn<T>>>,
+    l10n_resources: Option<(Vec<String>, String)>,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     ext_event_host: ExtEventHost,
 }
@@ -107,6 +108,7 @@ impl<T: Data> AppLauncher<T> {
         AppLauncher {
             windows: vec![window],
             env_setup: None,
+            l10n_resources: None,
             delegate: None,
             ext_event_host: ExtEventHost::new(),
         }
@@ -146,6 +148,19 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
+    /// Use custom localization resource
+    ///
+    /// `resources` is a list of file names that contain strings. `base_dir`
+    /// is a path to a directory that includes per-locale subdirectories.
+    ///
+    /// This directory should be of the structure `base_dir/{locale}/{resource}`,
+    /// where '{locale}' is a valid BCP47 language tag, and {resource} is a `.ftl`
+    /// included in `resources`.
+    pub fn localization_resources(mut self, resources: Vec<String>, base_dir: String) -> Self {
+        self.l10n_resources = Some((resources, base_dir));
+        self
+    }
+
     /// Returns an [`ExtEventSink`] that can be moved between threads,
     /// and can be used to submit commands back to the application.
     ///
@@ -161,7 +176,11 @@ impl<T: Data> AppLauncher<T> {
     pub fn launch(mut self, data: T) -> Result<(), PlatformError> {
         let app = Application::new()?;
 
-        let mut env = Env::default();
+        let mut env = self
+            .l10n_resources
+            .map(|it| Env::with_i10n(it.0, &it.1))
+            .unwrap_or_default();
+
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
         }
@@ -425,6 +444,14 @@ impl<T: Data> WindowDesc<T> {
     /// [`position`]: struct.Point.html
     pub fn set_position(mut self, position: impl Into<Point>) -> Self {
         self.config = self.config.set_position(position.into());
+        self
+    }
+
+    /// Sets the [`WindowLevel`] of the window
+    ///
+    /// [`WindowLevel`]: enum.WindowLevel.html
+    pub fn set_level(mut self, level: WindowLevel) -> Self {
+        self.config = self.config.set_level(level);
         self
     }
 

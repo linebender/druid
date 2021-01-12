@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::widget::prelude::*;
+use crate::widget::WidgetWrapper;
 use crate::{Data, Lens, Point, WidgetPod};
 
 /// A policy that controls how a [`Scope`] will interact with its surrounding
@@ -75,7 +76,7 @@ impl<F: FnOnce(In) -> State, L: Lens<State, In>, In: Data, State: Data>
     }
 }
 
-impl<F: Fn(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolicy
+impl<F: FnOnce(Transfer::In) -> Transfer::State, Transfer: ScopeTransfer> ScopePolicy
     for DefaultScopePolicy<F, Transfer>
 {
     type In = Transfer::In;
@@ -248,7 +249,7 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
 }
 
 impl<
-        F: Fn(Transfer::In) -> Transfer::State,
+        F: FnOnce(Transfer::In) -> Transfer::State,
         Transfer: ScopeTransfer,
         W: Widget<Transfer::State>,
     > Scope<DefaultScopePolicy<F, Transfer>, W>
@@ -300,4 +301,8 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.paint_raw(ctx, state, env));
     }
+}
+
+impl<SP: ScopePolicy, W: Widget<SP::State>> WidgetWrapper for Scope<SP, W> {
+    widget_wrapper_pod_body!(W, inner);
 }

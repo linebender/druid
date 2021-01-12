@@ -560,7 +560,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE.with(None),
+                    commands::SAVE_FILE,
                 )
                 .hotkey(SysMods::Cmd, "s")
             }
@@ -764,7 +764,7 @@ pub mod sys {
             pub fn save<T: Data>() -> MenuItem<T> {
                 MenuItem::new(
                     LocalizedString::new("common-menu-file-save"),
-                    commands::SAVE_FILE.with(None),
+                    commands::SAVE_FILE,
                 )
                 .hotkey(SysMods::Cmd, "s")
             }

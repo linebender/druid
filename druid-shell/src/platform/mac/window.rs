@@ -420,6 +420,10 @@ lazy_static! {
             show_context_menu as extern "C" fn(&mut Object, Sel, id),
         );
         decl.add_method(
+            sel!(windowShouldClose:),
+            window_should_close as extern "C" fn(&mut Object, Sel, id)->BOOL,
+        );
+        decl.add_method(
             sel!(windowWillClose:),
             window_will_close as extern "C" fn(&mut Object, Sel, id),
         );
@@ -827,7 +831,16 @@ extern "C" fn window_did_resign_key(this: &mut Object, _: Sel, _notification: id
     }
 }
 
-extern "C" fn window_will_close(this: &mut Object, _: Sel, _window: id) {
+extern "C" fn window_should_close(this: &mut Object, _: Sel, _window: id) -> BOOL {
+    unsafe {
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state = &mut *(view_state as *mut ViewState);
+        (*view_state).handler.request_close();
+        NO
+    }
+}
+
+extern "C" fn window_will_close(this: &mut Object, _: Sel, _notification: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
@@ -947,18 +960,14 @@ impl WindowHandle {
     }
 
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        self.open_save_impl(FileDialogType::Open, options)
+        Some(self.open_save_impl(FileDialogType::Open, options))
     }
 
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        self.open_save_impl(FileDialogType::Save, options)
+        Some(self.open_save_impl(FileDialogType::Save, options))
     }
 
-    fn open_save_impl(
-        &mut self,
-        ty: FileDialogType,
-        opts: FileDialogOptions,
-    ) -> Option<FileDialogToken> {
+    fn open_save_impl(&mut self, ty: FileDialogType, opts: FileDialogOptions) -> FileDialogToken {
         let token = FileDialogToken::next();
         let self_clone = self.clone();
         unsafe {
@@ -979,7 +988,7 @@ impl WindowHandle {
             let block = block.copy();
             let () = msg_send![panel, beginWithCompletionHandler: block];
         }
-        Some(token)
+        token
     }
 
     /// Set the title for this menu.

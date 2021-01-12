@@ -44,12 +44,19 @@ impl Selection {
         }
     }
 
-    /// Create a new selection constrained to the length of the provided text.
+    /// Create a new selection that is guaranteed to be valid for the provided
+    /// text.
     #[must_use = "constrained constructs a new Selection"]
     pub fn constrained(mut self, s: &impl EditableText) -> Self {
         let s_len = s.len();
         self.start = min(self.start, s_len);
         self.end = min(self.end, s_len);
+        while s.cursor(self.start).is_none() {
+            self.start += 1;
+        }
+        while s.cursor(self.end).is_none() {
+            self.end += 1;
+        }
         self
     }
 

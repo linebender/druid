@@ -16,21 +16,33 @@
 
 use std::time::Duration;
 
-use crate::kurbo::Vec2;
+use crate::piet::PietText;
 use crate::text::{
-    BasicTextInput, EditAction, EditableText, Editor, LayoutMetrics, TextInput, TextLayout,
-    TextStorage,
+    format::{Formatter, ValidationError},
+    BasicTextInput, EditAction, EditableText, Editor, LayoutMetrics, Selection, TextInput,
+    TextLayout, TextStorage,
 };
 use crate::widget::prelude::*;
 use crate::{
-    theme, Affine, Color, Cursor, FontDescriptor, HotKey, KbKey, KeyOrValue, Point, Selector,
-    SysMods, TextAlignment, TimerToken,
+    theme, Affine, Color, Cursor, Data, FontDescriptor, HotKey, KbKey, KeyOrValue, Point, Selector,
+    SysMods, TextAlignment, TimerToken, Vec2,
 };
 
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 
+const BEGIN_EDITING: Selector = Selector::new("druid.builtin.textbox-begin-editing");
+const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete-editing");
+const CANCEL_EDITING: Selector = Selector::new("druid.builtin.textbox-cancel-editing");
+
 /// A widget that allows user text input.
+///
+/// # Editing values
+///
+/// If the text you are editing represents a value of some other type, such
+/// as a number, you should use a [`ValueTextBox`] and an appropriate
+/// [`Formatter`]. You can create a [`ValueTextBox`] by passing the appropriate
+/// [`Formatter`] to [`TextBox::with_formatter`].
 #[derive(Debug, Clone)]
 pub struct TextBox<T> {
     placeholder: TextLayout<String>,
@@ -54,8 +66,70 @@ pub struct TextBox<T> {
     was_focused_from_click: bool,
 }
 
+/// A `TextBox` that uses a [`Formatter`] to handle formatting and validation
+/// of its data.
+///
+/// There are a number of ways to customize the behaviour of the text box
+/// in relation to the provided [`Formatter`]:
+///
+/// - [`ValueTextBox::validate_while_editing`] takes a flag that determines whether
+/// or not the textbox can display text that is not valid, while editing is
+/// in progress. (Text will still be validated when the user attempts to complete
+/// editing.)
+///
+/// - [`ValueTextBox::update_data_while_editing`] takes a flag that determines
+/// whether the output value is updated during editing, when possible.
+///
+/// - [`ValueTextBox::delegate`] allows you to provide some implementation of
+/// the [`ValidationDelegate`] trait, which receives a callback during editing;
+/// this can be used to report errors further back up the tree.
+pub struct ValueTextBox<T> {
+    inner: TextBox<String>,
+    formatter: Box<dyn Formatter<T>>,
+    callback: Option<Box<dyn ValidationDelegate>>,
+    is_editing: bool,
+    validate_while_editing: bool,
+    update_data_while_editing: bool,
+    /// the last data that this textbox saw or created.
+    /// This is used to determine when a change to the data is originating
+    /// elsewhere in the application, which we need to special-case
+    last_known_data: Option<T>,
+    force_selection: Option<Selection>,
+    old_buffer: String,
+    buffer: String,
+}
+
+/// A type that can be registered to receive callbacks as the state of a
+/// [`ValueTextBox`] changes.
+pub trait ValidationDelegate {
+    /// Called with a [`TextBoxEvent`] whenever the validation state of a
+    /// [`ValueTextBox`] changes.
+    fn event(&mut self, ctx: &mut EventCtx, event: TextBoxEvent, current_text: &str);
+}
+
+/// Events sent to a [`ValidationDelegate`].
+pub enum TextBoxEvent {
+    /// The textbox began editing.
+    Began,
+    /// An edit occured which was considered valid by the [`Formatter`].
+    Changed,
+    /// An edit occured which was rejected by the [`Formatter`].
+    PartiallyInvalid(ValidationError),
+    /// The user attempted to finish editing, but the input was not valid.
+    Invalid(ValidationError),
+    /// The user finished editing, with valid input.
+    Complete,
+    /// Editing was cancelled.
+    Cancel,
+}
+
 impl TextBox<()> {
     /// Perform an `EditAction`.
+    ///
+    /// You can send a [`Command`] to a textbox containing an [`EditAction`]
+    /// that the textbox should perform.
+    ///
+    /// [`Command`]: crate::Command
     pub const PERFORM_EDIT: Selector<EditAction> =
         Selector::new("druid-builtin.textbox.perform-edit");
 }
@@ -236,7 +310,39 @@ impl<T> TextBox<T> {
     }
 }
 
+impl TextBox<String> {
+    /// Turn this `TextBox` into a [`ValueTextBox`], using the [`Formatter`] to
+    /// manage the value.
+    ///
+    /// For simple value formatting, you can use the [`ParseFormatter`].
+    ///
+    /// [`ValueTextBox`]: ValueTextBox
+    /// [`Formatter`]: crate::text::format::Formatter
+    /// [`ParseFormatter`]: crate::text::format::ParseFormatter
+    pub fn with_formatter<T: Data>(
+        self,
+        formatter: impl Formatter<T> + 'static,
+    ) -> ValueTextBox<T> {
+        ValueTextBox::new(self, formatter)
+    }
+}
+
 impl<T: TextStorage + EditableText> TextBox<T> {
+    /// Set the textbox's selection.
+    pub fn set_selection(&mut self, selection: Selection) {
+        self.editor.set_selection(selection);
+    }
+
+    /// Set the text and force the editor to update.
+    ///
+    /// This should be rarely needed; the main use-case would be if you need
+    /// to manually set the text and then immediately do hit-testing or other
+    /// tasks that rely on having an up-to-date text layout.
+    pub fn force_rebuild(&mut self, text: T, factory: &mut PietText, env: &Env) {
+        self.editor.set_text(text);
+        self.editor.rebuild_if_needed(factory, env);
+    }
+
     /// Calculate a stateful scroll offset
     fn update_hscroll(&mut self, self_width: f64, env: &Env) {
         let cursor_x = self.editor.cursor_line().p0.x;
@@ -518,6 +624,264 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
         // Paint the border
         ctx.stroke(clip_rect, &border_color, border_width);
+    }
+}
+
+impl<T: Data> ValueTextBox<T> {
+    /// Create a new `ValueTextBox` from a normal [`TextBox`] and a [`Formatter`].
+    ///
+    /// [`TextBox`]: crate::widget::TextBox
+    /// [`Formatter`]: crate::text::format::Formatter
+    pub fn new(inner: TextBox<String>, formatter: impl Formatter<T> + 'static) -> Self {
+        ValueTextBox {
+            inner,
+            formatter: Box::new(formatter),
+            callback: None,
+            is_editing: false,
+            last_known_data: None,
+            validate_while_editing: true,
+            update_data_while_editing: false,
+            old_buffer: String::new(),
+            buffer: String::new(),
+            force_selection: None,
+        }
+    }
+
+    /// Builder-style method to set an optional [`ValidationDelegate`] on this
+    /// textbox.
+    pub fn delegate(mut self, delegate: impl ValidationDelegate + 'static) -> Self {
+        self.callback = Some(Box::new(delegate));
+        self
+    }
+
+    /// Builder-style method to set whether or not this text box validates
+    /// its contents during editing.
+    ///
+    /// If `true` (the default) edits that fail validation
+    /// ([`Formatter::validate_partial_input`]) will be rejected. If `false`,
+    /// those edits will be accepted, and the text box will be updated.
+    pub fn validate_while_editing(mut self, validate: bool) -> Self {
+        self.validate_while_editing = validate;
+        self
+    }
+
+    /// Builder-style method to set whether or not this text box updates the
+    /// incoming data during editing.
+    ///
+    /// If `false` (the default) the data is only updated when editing completes.
+    pub fn update_data_while_editing(mut self, flag: bool) -> Self {
+        self.update_data_while_editing = flag;
+        self
+    }
+
+    fn complete(&mut self, ctx: &mut EventCtx, data: &mut T) {
+        match self.formatter.value(&self.buffer) {
+            Ok(new_data) => {
+                *data = new_data;
+                self.buffer = self.formatter.format(data);
+                self.is_editing = false;
+                ctx.request_update();
+                if ctx.has_focus() {
+                    ctx.resign_focus();
+                }
+                self.send_event(ctx, TextBoxEvent::Complete);
+            }
+            Err(err) => {
+                // don't tab away from here if we're editing
+                if !ctx.has_focus() {
+                    ctx.request_focus();
+                }
+
+                ctx.submit_command(
+                    TextBox::PERFORM_EDIT
+                        .with(EditAction::SelectAll)
+                        .to(ctx.widget_id()),
+                );
+                self.send_event(ctx, TextBoxEvent::Invalid(err));
+                // our content isn't valid
+                // ideally we would flash the background or something
+            }
+        }
+    }
+
+    fn cancel(&mut self, ctx: &mut EventCtx, data: &T) {
+        self.is_editing = false;
+        self.buffer = self.formatter.format(data);
+        ctx.request_update();
+        ctx.resign_focus();
+        self.send_event(ctx, TextBoxEvent::Cancel);
+    }
+
+    fn begin(&mut self, ctx: &mut EventCtx, data: &T) {
+        self.is_editing = true;
+        self.buffer = self.formatter.format_for_editing(data);
+        self.last_known_data = Some(data.clone());
+        ctx.request_update();
+        self.send_event(ctx, TextBoxEvent::Began);
+    }
+
+    fn send_event(&mut self, ctx: &mut EventCtx, event: TextBoxEvent) {
+        if let Some(delegate) = self.callback.as_mut() {
+            delegate.event(ctx, event, &self.buffer)
+        }
+    }
+}
+
+impl<T: Data> Widget<T> for ValueTextBox<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        if matches!(event, Event::Command(cmd) if cmd.is(BEGIN_EDITING)) {
+            return self.begin(ctx, data);
+        }
+
+        if self.is_editing {
+            // if we reject an edit we want to reset the selection
+            let pre_sel = *self.inner.editor().selection();
+            match event {
+                Event::Command(cmd) if cmd.is(COMPLETE_EDITING) => return self.complete(ctx, data),
+                Event::Command(cmd) if cmd.is(CANCEL_EDITING) => return self.cancel(ctx, data),
+                Event::KeyDown(k_e) if HotKey::new(None, KbKey::Enter).matches(k_e) => {
+                    ctx.set_handled();
+                    self.complete(ctx, data);
+                    return;
+                }
+                Event::KeyDown(k_e) if HotKey::new(None, KbKey::Escape).matches(k_e) => {
+                    ctx.set_handled();
+                    self.cancel(ctx, data);
+                    return;
+                }
+                event => {
+                    self.inner.event(ctx, event, &mut self.buffer, env);
+                }
+            }
+            // if an edit occured, validate it with the formatter
+            if self.buffer != self.old_buffer {
+                let mut validation = self
+                    .formatter
+                    .validate_partial_input(&self.buffer, &self.inner.editor().selection());
+
+                if self.validate_while_editing {
+                    let new_buf = match (validation.text_change.take(), validation.is_err()) {
+                        (Some(new_text), _) => {
+                            // be helpful: if the formatter is misbehaved, log it.
+                            if self
+                                .formatter
+                                .validate_partial_input(&new_text, &Selection::caret(0))
+                                .is_err()
+                            {
+                                log::warn!(
+                                    "formatter replacement text does not validate: '{}'",
+                                    &new_text
+                                );
+                                None
+                            } else {
+                                Some(new_text)
+                            }
+                        }
+                        (None, true) => Some(self.old_buffer.clone()),
+                        _ => None,
+                    };
+
+                    let new_sel = match (validation.selection_change.take(), validation.is_err()) {
+                        (Some(new_sel), _) => Some(new_sel),
+                        (None, true) => Some(pre_sel),
+                        _ => None,
+                    };
+
+                    if let Some(new_buf) = new_buf {
+                        self.buffer = new_buf;
+                    }
+                    self.force_selection = new_sel;
+
+                    if self.update_data_while_editing && !validation.is_err() {
+                        if let Ok(new_data) = self.formatter.value(&self.buffer) {
+                            *data = new_data;
+                            self.last_known_data = Some(data.clone());
+                        }
+                    }
+                }
+
+                match validation.error() {
+                    Some(err) => {
+                        self.send_event(ctx, TextBoxEvent::PartiallyInvalid(err.to_owned()))
+                    }
+                    None => self.send_event(ctx, TextBoxEvent::Changed),
+                };
+                ctx.request_update();
+            }
+        } else if let Event::MouseDown(_) = event {
+            self.begin(ctx, data);
+            // we need to rebuild immediately here in order for the click
+            // to be handled with the most recent text.
+            self.inner
+                .force_rebuild(self.buffer.clone(), ctx.text(), env);
+            self.inner.event(ctx, event, &mut self.buffer, env);
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::WidgetAdded = event {
+            self.buffer = self.formatter.format(data);
+            self.old_buffer = self.buffer.clone();
+        }
+        self.inner.lifecycle(ctx, event, &self.buffer, env);
+
+        if let LifeCycle::FocusChanged(focus) = event {
+            // if the user focuses elsewhere, we need to reset ourselves
+            if !focus {
+                ctx.submit_command(COMPLETE_EDITING.to(ctx.widget_id()));
+            } else if !self.is_editing {
+                ctx.submit_command(BEGIN_EDITING.to(ctx.widget_id()));
+            }
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        let changed_by_us = self
+            .last_known_data
+            .as_ref()
+            .map(|d| d.same(data))
+            .unwrap_or(false);
+        if self.is_editing {
+            if changed_by_us {
+                self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
+                self.old_buffer = self.buffer.clone();
+            } else {
+                // textbox is not well equipped to deal with the fact that, in
+                // druid, data can change anywhere in the tree. If we are actively
+                // editing, and new data arrives, we ignore the new data and keep
+                // editing; the alternative would be to cancel editing, which
+                // could also make sense.
+                log::warn!(
+                    "ValueTextBox data changed externally, idk: '{}'",
+                    self.formatter.format(data)
+                );
+            }
+        } else {
+            if !old_data.same(data) {
+                // we aren't editing and data changed
+                let new_text = self.formatter.format(data);
+                self.old_buffer = std::mem::replace(&mut self.buffer, new_text);
+            }
+
+            if !self.old_buffer.same(&self.buffer) {
+                // inner widget handles calling request_layout, as needed
+                self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
+                self.old_buffer = self.buffer.clone();
+            } else if ctx.env_changed() {
+                self.inner.update(ctx, &self.buffer, &self.buffer, env);
+            }
+        }
+        if let Some(sel) = self.force_selection.take() {
+            self.inner.set_selection(sel);
+        }
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+        self.inner.layout(ctx, bc, &self.buffer, env)
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
+        self.inner.paint(ctx, &self.buffer, env);
     }
 }
 

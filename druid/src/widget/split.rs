@@ -75,7 +75,7 @@ impl<T> Split<T> {
     /// The default split point is `0.5`.
     pub fn split_point(mut self, split_point: f64) -> Self {
         assert!(
-            split_point >= 0.0 && split_point <= 1.0,
+            (0.0..=1.0).contains(&split_point),
             "split_point must be in the range [0.0-1.0]!"
         );
         self.split_point_chosen = split_point;

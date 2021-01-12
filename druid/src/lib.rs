@@ -102,7 +102,7 @@
 //! Features can be added with `cargo`. For example, in your `Cargo.toml`:
 //! ```no_compile
 //! [dependencies.druid]
-//! version = "0.6.0"
+//! version = "0.7.0"
 //! features = ["im", "svg", "image"]
 //! ```
 //!
@@ -113,7 +113,7 @@
 //! [`Event`]: enum.Event.html
 //! [`druid-shell`]: https://docs.rs/druid-shell
 //! [`piet`]: https://docs.rs/piet
-//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.6.0/druid/examples
+//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.7.0/druid/examples
 //! [druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
 //! [`im` module]: im/index.html
@@ -156,6 +156,7 @@ mod command;
 mod contexts;
 mod core;
 mod data;
+mod dialog;
 mod env;
 mod event;
 mod ext_event;
@@ -163,6 +164,7 @@ mod localization;
 mod menu;
 mod mouse;
 pub mod scroll_component;
+mod sub_window;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests;
@@ -175,16 +177,18 @@ mod window;
 // Types from kurbo & piet that are required by public API.
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
 pub use piet::{
-    Color, FontFamily, FontStyle, FontWeight, LinearGradient, RadialGradient, RenderContext,
-    TextAlignment, UnitPoint,
+    Color, FontFamily, FontStyle, FontWeight, ImageBuf, LinearGradient, RadialGradient,
+    RenderContext, TextAlignment, UnitPoint,
 };
 // these are the types from shell that we expose; others we only use internally.
+#[cfg(feature = "image")]
+pub use shell::image;
 pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
-    FileDialogOptions, FileInfo, FileSpec, FormatId, HotKey, ImageBuf, KbKey, KeyEvent, Location,
-    Modifiers, Monitor, MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen,
-    SysMods, TimerToken, WindowHandle, WindowState,
+    FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers, Monitor,
+    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
+    WindowHandle, WindowState,
 };
 
 pub use crate::core::WidgetPod;
@@ -194,7 +198,8 @@ pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Notification, Selector, SingleUse, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
-pub use env::{Env, Key, KeyOrValue, Value, ValueType};
+pub use dialog::FileDialogOptions;
+pub use env::{Env, Key, KeyOrValue, Value, ValueType, ValueTypeError};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};

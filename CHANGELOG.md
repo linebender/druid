@@ -1,11 +1,48 @@
 # Changelog
 
-The latest published Druid release is [0.6.0](#060---2020-06-01) which was released on 2020-06-01.
-You can find its changes [documented below](#060---2020-06-01).
+The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
+You can find its changes [documented below](#070---2021-01-01).
 
-## [Unreleased]
+# Unreleased
 
 ### Highlights
+
+### Added
+- Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
+- WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
+- RichTextBuilder ([#1520] by [@Maan2003])
+- `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
+- `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+
+### Visual
+
+### Docs
+
+### Examples
+
+### Maintenance
+
+- Updated to x11rb 0.8.0. ([#1519] by [@psychon])
+
+### Outside News
+
+## [0.7.0] - 2021-01-01
+
+### Highlights
+
+- Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245])
+- The `Formatter` trait provides more flexible handling of converions between
+values and their textual representations. ([#1377])
 
 ### Added
 
@@ -56,6 +93,9 @@ You can find its changes [documented below](#060---2020-06-01).
 - `WidgetPod::is_initialized` to check if a widget has received `WidgetAdded`. ([#1259] by [@finnerale])
 - `TextBox::with_text_alignment` and `TextBox::set_text_alignment` ([#1371] by [@cmyr])
 - Add default minimum size to `WindowConfig`. ([#1438] by [@colinfruit])
+- Open and save dialogs send configurable commands. ([#1463] by [@jneem])
+- Windows: Dialogs now respect the parameter passed to `force_starting_directory()` ([#1452] by [@MaximilianKoestler])
+- Value formatting with the `Formatter` trait ([#1377] by [@cmyr])
 
 ### Changed
 
@@ -83,8 +123,10 @@ You can find its changes [documented below](#060---2020-06-01).
 - `TextBox` selects all contents when tabbed to on macOS ([#1283] by [@cmyr])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 - The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
+- Part of the `SAVE_FILE` command is now `SAVE_FILE_AS` ([#1463] by [@jneem])
 
 ### Deprecated
+- Parse widget (replaced with `Formatter` trait) ([#1377] by [@cmyr])
 
 ### Removed
 
@@ -93,6 +135,7 @@ You can find its changes [documented below](#060---2020-06-01).
 
 ### Fixed
 
+- `ClipBox` should forward events if any child is active, not just the immediate child. ([#1448] by [@derekdreery])
 - macOS: Timers not firing during modal loop. ([#1028] by [@xStrom])
 - GTK: Directory selection now properly ignores file filters. ([#957] by [@xStrom])
 - GTK: Don't crash when receiving an external command while a file dialog is visible. ([#1043] by [@jneem])
@@ -126,6 +169,7 @@ You can find its changes [documented below](#060---2020-06-01).
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
 - Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
 - WidgetPod: change not laid out `debug_panic` to warning ([#1441] by [@Maan2003])
+
 ### Visual
 
 - `TextBox` stroke remains inside its `paint_rect`. ([#1007] by [@jneem])
@@ -359,6 +403,8 @@ Last release without a changelog :(
 [@andrewhickman]: https://github.com/andrewhickman
 [@colinfruit]: https://github.com/colinfruit
 [@Maan2003]: https://github.com/Maan2003
+[@derekdreery]: https://github.com/derekdreery
+[@MaximilianKoestler]: https://github.com/MaximilianKoestler
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -546,6 +592,12 @@ Last release without a changelog :(
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
+[#1448]: https://github.com/linebender/druid/pull/1448
+[#1463]: https://github.com/linebender/druid/pull/1463
+[#1452]: https://github.com/linebender/druid/pull/1452
+[#1520]: https://github.com/linebender/druid/pull/1520
+[#1523]: https://github.com/linebender/druid/pull/1523
+[#1526]: https://github.com/linebender/druid/pull/1523
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

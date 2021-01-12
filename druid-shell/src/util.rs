@@ -50,16 +50,16 @@ pub fn assert_main_thread() {
 /// Panics if the main thread has already been claimed by another thread.
 pub fn claim_main_thread() {
     let thread_id = current_thread_id();
-    let old_thread_id = MAIN_THREAD_ID.compare_and_swap(0, thread_id, Ordering::AcqRel);
-    if old_thread_id != 0 {
-        if old_thread_id == thread_id {
-            log::warn!("The main thread status was already claimed by the current thread.");
-        } else {
-            panic!(
-                "The main thread status has already been claimed by thread {}",
-                thread_id
-            );
-        }
+    let old_thread_id =
+        MAIN_THREAD_ID.compare_exchange(0, thread_id, Ordering::AcqRel, Ordering::Acquire);
+    match old_thread_id {
+        Ok(0) => (),
+        Ok(_) => unreachable!(), // not possible per the docs
+        Err(0) => log::warn!("The main thread status was already claimed by the current thread."),
+        Err(k) => panic!(
+            "The main thread status has already been claimed by thread {}",
+            k
+        ),
     }
 }
 
@@ -70,14 +70,16 @@ pub fn claim_main_thread() {
 /// Panics if the main thread status is owned by another thread.
 pub fn release_main_thread() {
     let thread_id = current_thread_id();
-    let old_thread_id = MAIN_THREAD_ID.compare_and_swap(thread_id, 0, Ordering::AcqRel);
-    if old_thread_id == 0 {
-        log::warn!("The main thread status was already vacant.");
-    } else if old_thread_id != thread_id {
-        panic!(
-            "The main thread status is owned by another thread {}",
-            thread_id
-        );
+    let old_thread_id =
+        MAIN_THREAD_ID.compare_exchange(thread_id, 0, Ordering::AcqRel, Ordering::Acquire);
+    match old_thread_id {
+        Ok(n) if n == thread_id => (),
+        Ok(_) => unreachable!(), // not possible per the docs
+        Err(0) => log::warn!("The main thread status was already vacant."),
+        Err(k) => panic!(
+            "The main thread status has already been claimed by thread {}",
+            k
+        ),
     }
 }
 

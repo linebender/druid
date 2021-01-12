@@ -32,7 +32,7 @@ cargo new my-application
 and adding the druid dependency to your Cargo.toml
 ```no_compile
 [dependencies]
-druid = "0.6.0"
+druid = "0.7.0"
 // or to be on the bleeding edge:
 druid = { git = "https://github.com/linebender/druid.git" }
 ```

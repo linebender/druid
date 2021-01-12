@@ -1,6 +1,6 @@
 [package]
 name = "druid-shell"
-version = "0.6.0"
+version = "0.7.0"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Platform abstracting application shell used for druid toolkit."
@@ -38,13 +38,13 @@ hdr = ["piet-common/hdr"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.2.0-pre6"
-kurbo = "0.7.0"
+piet-common = "=0.3.2"
+kurbo = "0.7.1"
 
 log = "0.4.11"
 lazy_static = "1.4.0"
 time = "0.2.16"
-cfg-if = "0.1.10"
+cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
@@ -60,11 +60,12 @@ wio = "0.2.2"
 version = "0.3.9"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser",
             "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp",
-            "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi"]
+            "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi",
+            "shellapi"]
 
 [target.'cfg(target_os="macos")'.dependencies]
 block = "0.1.6"
-cocoa = "0.23.0"
+cocoa = "0.24.0"
 objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
@@ -84,7 +85,7 @@ glib = { version = "0.10.1", optional = true }
 glib-sys = { version = "0.10.0", optional = true }
 gtk-sys = { version = "0.10.0", optional = true }
 nix = { version = "0.18.0", optional = true }
-x11rb = { version = "0.6.0", features = ["allow-unsafe-code", "present", "randr", "xfixes"], optional = true }
+x11rb = { version = "0.8.0", features = ["allow-unsafe-code", "present", "randr", "xfixes"], optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.67"
@@ -95,6 +96,6 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "=0.2.0-pre6", features = ["png"] }
+piet-common = { version = "=0.3.2", features = ["png"] }
 simple_logger = { version = "1.9.0", default-features = false }
 static_assertions = "1.1.0"

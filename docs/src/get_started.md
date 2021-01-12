@@ -13,7 +13,7 @@ Setting up a project is a simple as creating a new Rust project;
 And then adding Druid as a dependency to Cargo.toml
 ```toml
 [dependencies]
-druid = "0.6.0"
+druid = "0.7.0"
 ```
 
 To show a minimal window with a label replace `main.rs` with this;
@@ -70,7 +70,7 @@ fn build_ui() -> impl Widget<()> {
                     .with_flex_child(Label::new("top left"), 1.0)
                     .with_flex_child(Align::centered(Label::new("bottom left")), 1.0),
                 1.0)
-            .with_child(
+            .with_flex_child(
                 Flex::column()
                     .with_flex_child(Label::new("top right"), 1.0)
                     .with_flex_child(Align::centered(Label::new("bottom right")), 1.0),

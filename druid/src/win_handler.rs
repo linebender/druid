@@ -32,8 +32,8 @@ use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
 use crate::window::Window;
 use crate::{
-    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Target,
-    TimerToken, WindowDesc, WindowId,
+    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Selector,
+    Target, TimerToken, WindowDesc, WindowId,
 };
 
 use crate::app::{PendingWindow, WindowConfig};
@@ -74,11 +74,21 @@ pub(crate) struct AppState<T> {
     inner: Rc<RefCell<Inner<T>>>,
 }
 
+/// The information for forwarding druid-shell's file dialog reply to the right place.
+struct DialogInfo {
+    /// The window to send the command to.
+    id: WindowId,
+    /// The command to send if the dialog is accepted.
+    accept_cmd: Selector<FileInfo>,
+    /// The command to send if the dialog is cancelled.
+    cancel_cmd: Selector<()>,
+}
+
 struct Inner<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
-    file_dialogs: HashMap<FileDialogToken, WindowId>,
+    file_dialogs: HashMap<FileDialogToken, DialogInfo>,
     ext_event_host: ExtEventHost,
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
@@ -183,20 +193,22 @@ impl<T: Data> Inner<T> {
     /// is configured.
     fn with_delegate<R, F>(&mut self, f: F) -> Option<R>
     where
-        F: FnOnce(&mut Box<dyn AppDelegate<T>>, &mut T, &Env, &mut DelegateCtx) -> R,
+        F: FnOnce(&mut dyn AppDelegate<T>, &mut T, &Env, &mut DelegateCtx) -> R,
     {
         let Inner {
             ref mut delegate,
             ref mut command_queue,
             ref mut data,
+            ref ext_event_host,
             ref env,
             ..
         } = self;
         let mut ctx = DelegateCtx {
             command_queue,
             app_data_type: TypeId::of::<T>(),
+            ext_event_host,
         };
-        if let Some(delegate) = delegate {
+        if let Some(delegate) = delegate.as_deref_mut() {
             Some(f(delegate, data, env, &mut ctx))
         } else {
             None
@@ -343,8 +355,30 @@ impl<T: Data> Inner<T> {
                     return Handled::Yes;
                 }
                 if let Some(w) = self.windows.get_mut(id) {
-                    let event = Event::Command(cmd);
-                    return w.event(&mut self.command_queue, event, &mut self.data, &self.env);
+                    return if cmd.is(sys_cmd::CLOSE_WINDOW) {
+                        let handled = w.event(
+                            &mut self.command_queue,
+                            Event::WindowCloseRequested,
+                            &mut self.data,
+                            &self.env,
+                        );
+                        if !handled.is_handled() {
+                            w.event(
+                                &mut self.command_queue,
+                                Event::WindowDisconnected,
+                                &mut self.data,
+                                &self.env,
+                            );
+                        }
+                        handled
+                    } else {
+                        w.event(
+                            &mut self.command_queue,
+                            Event::Command(cmd),
+                            &mut self.data,
+                            &self.env,
+                        )
+                    };
                 }
             }
             // in this case we send it to every window that might contain
@@ -584,6 +618,11 @@ impl<T: Data> AppState<T> {
                     log::error!("failed to create window: '{}'", e);
                 }
             }
+            _ if cmd.is(sys_cmd::NEW_SUB_WINDOW) => {
+                if let Err(e) = self.new_sub_window(cmd) {
+                    log::error!("failed to create sub window: '{}'", e);
+                }
+            }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
@@ -618,12 +657,20 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
 
-        let token = handle.and_then(|mut handle| handle.open_file(options));
+        let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::OPEN_FILE);
+        let cancel_cmd = options
+            .cancel_cmd
+            .unwrap_or(crate::commands::OPEN_PANEL_CANCELLED);
+        let token = handle.and_then(|mut handle| handle.open_file(options.opt));
         if let Some(token) = token {
-            self.inner
-                .borrow_mut()
-                .file_dialogs
-                .insert(token, window_id);
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
         }
     }
 
@@ -635,14 +682,39 @@ impl<T: Data> AppState<T> {
             .windows
             .get_mut(window_id)
             .map(|w| w.handle.clone());
-
-        let token = handle.and_then(|mut handle| handle.save_as(options));
+        let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::SAVE_FILE_AS);
+        let cancel_cmd = options
+            .cancel_cmd
+            .unwrap_or(crate::commands::SAVE_PANEL_CANCELLED);
+        let token = handle.and_then(|mut handle| handle.save_as(options.opt));
         if let Some(token) = token {
-            self.inner
-                .borrow_mut()
-                .file_dialogs
-                .insert(token, window_id);
+            self.inner.borrow_mut().file_dialogs.insert(
+                token,
+                DialogInfo {
+                    id: window_id,
+                    accept_cmd,
+                    cancel_cmd,
+                },
+            );
         }
+    }
+
+    fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
+        let mut inner = self.inner.borrow_mut();
+        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
+            let cmd = if let Some(info) = file_info {
+                dialog_info.accept_cmd.with(info).to(dialog_info.id)
+            } else {
+                dialog_info.cancel_cmd.to(dialog_info.id)
+            };
+            inner.append_command(cmd);
+        } else {
+            log::error!("unknown dialog token");
+        }
+
+        std::mem::drop(inner);
+        self.process_commands();
+        self.inner.borrow_mut().do_update();
     }
 
     fn new_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
@@ -653,6 +725,26 @@ impl<T: Data> AppState<T> {
         let window = desc.build_native(self)?;
         window.show();
         Ok(())
+    }
+
+    fn new_sub_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(transfer) = cmd.get(sys_cmd::NEW_SUB_WINDOW) {
+            if let Some(sub_window_desc) = transfer.take() {
+                let window = sub_window_desc.make_sub_window(self)?;
+                window.show();
+                Ok(())
+            } else {
+                panic!(
+                    "{} command must carry a SubWindowDesc internally",
+                    sys_cmd::NEW_SUB_WINDOW
+                )
+            }
+        } else {
+            panic!(
+                "{} command must carry a SingleUse<SubWindowDesc>",
+                sys_cmd::NEW_SUB_WINDOW
+            )
+        }
     }
 
     fn request_close_window(&mut self, id: WindowId) {
@@ -760,31 +852,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     }
 
     fn save_as(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        let mut inner = self.app_state.inner.borrow_mut();
-        if let Some(window_id) = inner.file_dialogs.remove(&token) {
-            let cmd = if let Some(info) = file_info {
-                sys_cmd::SAVE_FILE.with(Some(info)).to(window_id)
-            } else {
-                sys_cmd::SAVE_PANEL_CANCELLED.to(window_id)
-            };
-            inner.dispatch_cmd(cmd);
-        } else {
-            log::error!("unknown save dialog token");
-        }
+        self.app_state.handle_dialog_response(token, file_info);
     }
 
     fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
-        let mut inner = self.app_state.inner.borrow_mut();
-        if let Some(window_id) = inner.file_dialogs.remove(&token) {
-            let cmd = if let Some(info) = file_info {
-                sys_cmd::OPEN_FILE.with(info).to(window_id)
-            } else {
-                sys_cmd::OPEN_PANEL_CANCELLED.to(window_id)
-            };
-            inner.dispatch_cmd(cmd);
-        } else {
-            log::error!("unknown open dialog token");
-        }
+        self.app_state.handle_dialog_response(token, file_info);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
@@ -849,6 +921,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn request_close(&mut self) {
         self.app_state
             .handle_cmd(sys_cmd::CLOSE_WINDOW.to(self.window_id));
+        self.app_state.process_commands();
         self.app_state.inner.borrow_mut().do_update();
     }
 

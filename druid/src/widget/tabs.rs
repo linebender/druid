@@ -21,9 +21,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::kurbo::Line;
+use crate::kurbo::{Circle, Line};
 use crate::widget::prelude::*;
-use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Scope, ScopePolicy};
+use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Painter, Scope, ScopePolicy};
 use crate::{theme, Affine, Data, Insets, Lens, Point, SingleUse, WidgetExt, WidgetPod};
 
 type TabsScope<TP> = Scope<TabsScopePolicy<TP>, Box<dyn Widget<TabsState<TP>>>>;
@@ -286,9 +286,45 @@ impl<TP: TabsPolicy> TabBar<TP> {
                 .padding(Insets::uniform_xy(9., 5.));
 
             if can_close {
+                let close_button = Painter::new(|ctx, _, env| {
+                    let circ_bounds = ctx.size().to_rect().inset(-2.);
+                    let cross_bounds = circ_bounds.inset(-5.);
+                    if ctx.is_hot() {
+                        ctx.render_ctx.fill(
+                            Circle::new(
+                                circ_bounds.center(),
+                                f64::min(circ_bounds.height(), circ_bounds.width()) / 2.,
+                            ),
+                            &env.get(theme::BORDER_LIGHT),
+                        );
+                    }
+                    let cross_color = &env.get(if ctx.is_hot() {
+                        theme::BACKGROUND_DARK
+                    } else {
+                        theme::BORDER_LIGHT
+                    });
+                    ctx.render_ctx.stroke(
+                        Line::new(
+                            (cross_bounds.x0, cross_bounds.y0),
+                            (cross_bounds.x1, cross_bounds.y1),
+                        ),
+                        cross_color,
+                        2.,
+                    );
+                    ctx.render_ctx.stroke(
+                        Line::new(
+                            (cross_bounds.x1, cross_bounds.y0),
+                            (cross_bounds.x0, cross_bounds.y1),
+                        ),
+                        cross_color,
+                        2.,
+                    );
+                })
+                .fix_size(20., 20.);
+
                 let row = Flex::row()
                     .with_child(label)
-                    .with_child(Label::new("ⓧ").on_click(
+                    .with_child(close_button.on_click(
                         move |_ctx, data: &mut TabsState<TP>, _env| {
                             data.policy.close_tab(key.clone(), &mut data.inner);
                         },

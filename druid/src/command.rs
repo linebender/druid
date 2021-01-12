@@ -170,7 +170,10 @@ pub mod sys {
     use std::any::Any;
 
     use super::Selector;
-    use crate::{FileDialogOptions, FileInfo, SingleUse, WindowConfig};
+    use crate::{
+        sub_window::{SubWindowDesc, SubWindowUpdate},
+        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
+    };
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -212,6 +215,19 @@ pub mod sys {
     /// [`ContextMenu`]: ../struct.ContextMenu.html
     pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.show-context-menu");
+
+    /// This is sent to the window handler to create a new sub window.
+    pub(crate) const NEW_SUB_WINDOW: Selector<SingleUse<SubWindowDesc>> =
+        Selector::new("druid-builtin.new-sub-window");
+
+    /// This is sent from a WidgetPod to any attached SubWindowHosts when a data update occurs
+    pub(crate) const SUB_WINDOW_PARENT_TO_HOST: Selector<SubWindowUpdate> =
+        Selector::new("druid-builtin.parent_to_host");
+
+    /// This is sent from a SubWindowHost to its parent WidgetPod after it has processed events,
+    /// if that processing changed the data value.
+    pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
+        Selector::new("druid-builtin.host_to_parent");
 
     /// The selector for a command to set the window's menu. The payload should
     /// be a [`MenuDesc`] object.
@@ -257,15 +273,22 @@ pub mod sys {
     /// Sent when the user cancels a save file panel.
     pub const SAVE_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.save-panel-cancelled");
 
-    /// Save the current path, must be handled by the application.
+    /// Save the current path.
     ///
-    /// How this should be handled depends on the payload:
-    /// `Some(handle)`: the app should save to that path and store the `handle` for future use.
-    /// `None`: the app should have received `Some` before and use the stored `FileInfo`.
+    /// The application should save its data, to a path that should be determined by the
+    /// application. Usually, this will be the most recent path provided by a [`SAVE_FILE_AS`]
+    /// or [`OPEN_FILE`] command.
+    pub const SAVE_FILE: Selector<()> = Selector::new("druid-builtin.save-file");
+
+    /// Save to a given location.
     ///
-    /// The path might be a file or a directory,
-    /// so always check whether it matches your expectations.
-    pub const SAVE_FILE: Selector<Option<FileInfo>> = Selector::new("druid-builtin.menu-file-save");
+    /// This command is emitted by druid whenever a save file dialog successfully completes. The
+    /// application should save its data to the path proved, and should store the path in order to
+    /// handle [`SAVE_FILE`] commands in the future.
+    ///
+    /// The path might be a file or a directory, so always check whether it matches your
+    /// expectations.
+    pub const SAVE_FILE_AS: Selector<FileInfo> = Selector::new("druid-builtin.save-file-as");
 
     /// Show the print-setup window.
     pub const PRINT_SETUP: Selector = Selector::new("druid-builtin.menu-file-print-setup");

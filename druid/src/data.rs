@@ -23,6 +23,7 @@ use crate::piet;
 use crate::shell::Scale;
 
 pub use druid_derive::Data;
+use piet::ImageBuf;
 
 /// A trait used to represent value types.
 ///
@@ -431,6 +432,12 @@ impl Data for piet::FontStyle {
 impl Data for piet::TextAlignment {
     fn same(&self, other: &Self) -> bool {
         self == other
+    }
+}
+
+impl Data for ImageBuf {
+    fn same(&self, other: &Self) -> bool {
+        self.raw_pixels_shared().same(&other.raw_pixels_shared())
     }
 }
 

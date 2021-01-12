@@ -317,19 +317,29 @@ impl Env {
     /// Panics if the environment already has a value for the key, but it is
     /// of a different type.
     pub fn set<V: ValueType>(&mut self, key: Key<V>, value: impl Into<V>) {
-        let env = Arc::make_mut(&mut self.0);
         let value = value.into().into();
+        self.try_set_raw(key, value).unwrap();
+    }
+
+    /// Try to set a resolved `Value` for this key.
+    ///
+    /// This will return a [`ValueTypeError`] if the value's inner type differs
+    /// from the type of the key.
+    pub fn try_set_raw<V: ValueType>(
+        &mut self,
+        key: Key<V>,
+        raw: Value,
+    ) -> Result<(), ValueTypeError> {
+        let env = Arc::make_mut(&mut self.0);
         let key = key.into();
         // TODO: use of Entry might be more efficient
         if let Some(existing) = env.map.get(&key) {
-            if !existing.is_same_type(&value) {
-                panic!(
-                    "Invalid type for key '{}': {:?} differs in kind from {:?}",
-                    key, existing, value
-                );
+            if !existing.is_same_type(&raw) {
+                return Err(ValueTypeError::new(any::type_name::<V>(), raw));
             }
         }
-        env.map.insert(key, value);
+        env.map.insert(key, raw);
+        Ok(())
     }
 
     /// Returns a reference to the [`L10nManager`], which handles localization
@@ -383,6 +393,14 @@ impl Key<()> {
             value_type: PhantomData,
         }
     }
+
+    /// Return this key's raw string value.
+    ///
+    /// This should only be needed for things like debugging or for building
+    /// other tooling that needs to inspect keys.
+    pub const fn raw(&self) -> &'static str {
+        self.key
+    }
 }
 
 impl Value {
@@ -400,19 +418,19 @@ impl Value {
 
     fn is_same_type(&self, other: &Value) -> bool {
         use Value::*;
-        match (self, other) {
-            (Point(_), Point(_)) => true,
-            (Size(_), Size(_)) => true,
-            (Rect(_), Rect(_)) => true,
-            (Insets(_), Insets(_)) => true,
-            (Color(_), Color(_)) => true,
-            (Float(_), Float(_)) => true,
-            (Bool(_), Bool(_)) => true,
-            (UnsignedInt(_), UnsignedInt(_)) => true,
-            (String(_), String(_)) => true,
-            (Font(_), Font(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Point(_) , Point(_))
+                | (Size(_), Size(_))
+                | (Rect(_), Rect(_))
+                | (Insets(_), Insets(_))
+                | (Color(_), Color(_))
+                | (Float(_), Float(_))
+                | (Bool(_), Bool(_))
+                | (UnsignedInt(_), UnsignedInt(_))
+                | (String(_), String(_))
+                | (Font(_), Font(_))
+        )
     }
 }
 
@@ -449,37 +467,43 @@ impl Data for EnvImpl {
     }
 }
 
+// Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+// They're picked for visual distinction and accessbility (99 percent)
+const DEBUG_COLOR: &[Color] = &[
+    Color::rgb8(230, 25, 75),
+    Color::rgb8(60, 180, 75),
+    Color::rgb8(255, 225, 25),
+    Color::rgb8(0, 130, 200),
+    Color::rgb8(245, 130, 48),
+    Color::rgb8(70, 240, 240),
+    Color::rgb8(240, 50, 230),
+    Color::rgb8(250, 190, 190),
+    Color::rgb8(0, 128, 128),
+    Color::rgb8(230, 190, 255),
+    Color::rgb8(170, 110, 40),
+    Color::rgb8(255, 250, 200),
+    Color::rgb8(128, 0, 0),
+    Color::rgb8(170, 255, 195),
+    Color::rgb8(0, 0, 128),
+    Color::rgb8(128, 128, 128),
+    Color::rgb8(255, 255, 255),
+    Color::rgb8(0, 0, 0),
+];
+
 impl Default for Env {
     fn default() -> Self {
-        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
+        Env::with_i10n(vec!["builtin.ftl".into()], "./resources/i18n/")
+    }
+}
 
-        // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
-        // They're picked for visual distinction and accessbility (99 percent)
-        let debug_colors = vec![
-            Color::rgb8(230, 25, 75),
-            Color::rgb8(60, 180, 75),
-            Color::rgb8(255, 225, 25),
-            Color::rgb8(0, 130, 200),
-            Color::rgb8(245, 130, 48),
-            Color::rgb8(70, 240, 240),
-            Color::rgb8(240, 50, 230),
-            Color::rgb8(250, 190, 190),
-            Color::rgb8(0, 128, 128),
-            Color::rgb8(230, 190, 255),
-            Color::rgb8(170, 110, 40),
-            Color::rgb8(255, 250, 200),
-            Color::rgb8(128, 0, 0),
-            Color::rgb8(170, 255, 195),
-            Color::rgb8(0, 0, 128),
-            Color::rgb8(128, 128, 128),
-            Color::rgb8(255, 255, 255),
-            Color::rgb8(0, 0, 0),
-        ];
+impl Env {
+    pub(crate) fn with_i10n(resources: Vec<String>, base_dir: &str) -> Self {
+        let l10n = L10nManager::new(resources, base_dir);
 
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
             map: HashMap::new(),
-            debug_colors,
+            debug_colors: DEBUG_COLOR.into(),
         };
 
         let env = Env(Arc::new(inner))

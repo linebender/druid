@@ -19,9 +19,11 @@ use std::{env, fs};
 /// Examples known to not work with the web backend are skipped.
 /// Ideally this list will eventually be empty.
 const EXCEPTIONS: &[&str] = &[
+    "markdown_preview",  // rich text not implemented in piet-web
     "svg",               // usvg doesn't currently build as Wasm.
     "async_event",       // the web backend doesn't currently support spawning threads.
     "blocking_function", // the web backend doesn't currently support spawning threads.
+    "sub_window",
 ];
 
 /// Create a platform specific link from `src` to the `dst` directory.

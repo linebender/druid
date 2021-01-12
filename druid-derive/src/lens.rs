@@ -66,9 +66,12 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     // Define lens types for each field
     let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
-
+        let docs = format!(
+            "Lens for the field `{}` on [`{1}`](super::{1})",
+            field_name, ty
+        );
         quote! {
-            /// Lens for the field on #ty
+            #[doc = #docs]
             #[allow(non_camel_case_types)]
             #[derive(Debug, Copy, Clone)]
             pub struct #field_name;

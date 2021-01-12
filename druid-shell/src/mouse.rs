@@ -15,9 +15,9 @@
 //! Common types for representing mouse events and state
 
 use crate::kurbo::{Point, Vec2};
+use crate::piet::ImageBuf;
 use crate::platform;
-
-use crate::{ImageBuf, Modifiers};
+use crate::Modifiers;
 
 /// Information about the mouse event.
 ///
@@ -231,6 +231,12 @@ impl MouseButtons {
     pub fn clear(&mut self) {
         self.0 = 0;
     }
+
+    /// Count the number of pressed buttons in the set.
+    #[inline]
+    pub fn count(self) -> u32 {
+        self.0.count_ones()
+    }
 }
 
 impl std::fmt::Debug for MouseButtons {
@@ -276,6 +282,21 @@ impl CursorDesc {
         CursorDesc {
             image,
             hot: hot.into(),
+        }
+    }
+}
+
+impl std::fmt::Debug for Cursor {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Cursor::Arrow => write!(f, "Cursor::Arrow"),
+            Cursor::IBeam => write!(f, "Cursor::IBeam"),
+            Cursor::Crosshair => write!(f, "Cursor::Crosshair"),
+            Cursor::OpenHand => write!(f, "Cursor::OpenHand"),
+            Cursor::NotAllowed => write!(f, "Cursor::NotAllowed"),
+            Cursor::ResizeLeftRight => write!(f, "Cursor::ResizeLeftRight"),
+            Cursor::ResizeUpDown => write!(f, "Cursor::ResizeUpDown"),
+            Cursor::Custom(_) => write!(f, "Cursor::Custom"),
         }
     }
 }

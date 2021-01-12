@@ -94,6 +94,11 @@ pub enum Attribute {
 }
 
 impl AttributeSpans {
+    /// Create a new, empty `AttributeSpans`.
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     /// Add a new [`Attribute`] over the provided [`Range`].
     pub fn add(&mut self, range: Range<usize>, attr: Attribute) {
         match attr {

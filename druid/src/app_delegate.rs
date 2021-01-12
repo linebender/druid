@@ -17,8 +17,8 @@
 use std::any::{Any, TypeId};
 
 use crate::{
-    commands, core::CommandQueue, Command, Data, Env, Event, Handled, MenuDesc, SingleUse, Target,
-    WindowDesc, WindowId,
+    commands, core::CommandQueue, ext_event::ExtEventHost, Command, Data, Env, Event, ExtEventSink,
+    Handled, MenuDesc, SingleUse, Target, WindowDesc, WindowId,
 };
 
 /// A context passed in to [`AppDelegate`] functions.
@@ -26,6 +26,7 @@ use crate::{
 /// [`AppDelegate`]: trait.AppDelegate.html
 pub struct DelegateCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
+    pub(crate) ext_event_host: &'a ExtEventHost,
     pub(crate) app_data_type: TypeId,
 }
 
@@ -43,6 +44,14 @@ impl<'a> DelegateCtx<'a> {
     pub fn submit_command(&mut self, command: impl Into<Command>) {
         self.command_queue
             .push_back(command.into().default_to(Target::Global))
+    }
+
+    /// Returns an [`ExtEventSink`] that can be moved between threads,
+    /// and can be used to submit commands back to the application.
+    ///
+    /// [`ExtEventSink`]: struct.ExtEventSink.html
+    pub fn get_external_handle(&self) -> ExtEventSink {
+        self.ext_event_host.make_sink()
     }
 
     /// Create a new window.
