@@ -467,37 +467,43 @@ impl Data for EnvImpl {
     }
 }
 
+// Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+// They're picked for visual distinction and accessbility (99 percent)
+const DEBUG_COLOR: &[Color] = &[
+    Color::rgb8(230, 25, 75),
+    Color::rgb8(60, 180, 75),
+    Color::rgb8(255, 225, 25),
+    Color::rgb8(0, 130, 200),
+    Color::rgb8(245, 130, 48),
+    Color::rgb8(70, 240, 240),
+    Color::rgb8(240, 50, 230),
+    Color::rgb8(250, 190, 190),
+    Color::rgb8(0, 128, 128),
+    Color::rgb8(230, 190, 255),
+    Color::rgb8(170, 110, 40),
+    Color::rgb8(255, 250, 200),
+    Color::rgb8(128, 0, 0),
+    Color::rgb8(170, 255, 195),
+    Color::rgb8(0, 0, 128),
+    Color::rgb8(128, 128, 128),
+    Color::rgb8(255, 255, 255),
+    Color::rgb8(0, 0, 0),
+];
+
 impl Default for Env {
     fn default() -> Self {
-        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
+        Env::with_i10n(vec!["builtin.ftl".into()], "./resources/i18n/")
+    }
+}
 
-        // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
-        // They're picked for visual distinction and accessbility (99 percent)
-        let debug_colors = vec![
-            Color::rgb8(230, 25, 75),
-            Color::rgb8(60, 180, 75),
-            Color::rgb8(255, 225, 25),
-            Color::rgb8(0, 130, 200),
-            Color::rgb8(245, 130, 48),
-            Color::rgb8(70, 240, 240),
-            Color::rgb8(240, 50, 230),
-            Color::rgb8(250, 190, 190),
-            Color::rgb8(0, 128, 128),
-            Color::rgb8(230, 190, 255),
-            Color::rgb8(170, 110, 40),
-            Color::rgb8(255, 250, 200),
-            Color::rgb8(128, 0, 0),
-            Color::rgb8(170, 255, 195),
-            Color::rgb8(0, 0, 128),
-            Color::rgb8(128, 128, 128),
-            Color::rgb8(255, 255, 255),
-            Color::rgb8(0, 0, 0),
-        ];
+impl Env {
+    pub(crate) fn with_i10n(resources: Vec<String>, base_dir: &str) -> Self {
+        let l10n = L10nManager::new(resources, base_dir);
 
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
             map: HashMap::new(),
-            debug_colors,
+            debug_colors: DEBUG_COLOR.into(),
         };
 
         let env = Env(Arc::new(inner))
