@@ -17,7 +17,7 @@
 
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
-use druid::{AppLauncher, WidgetExt, UnitPoint,WindowDesc};
+use druid::{AppLauncher, UnitPoint, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
@@ -60,4 +60,4 @@ fn build_root_widget() -> impl Widget<String> {
         .with_spacer(VERTICAL_WIDGET_SPACING)
         .with_child(textbox)
         .align_vertical(UnitPoint::CENTER)
-    }
+}
