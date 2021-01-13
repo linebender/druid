@@ -30,11 +30,11 @@ const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 
 const BACKGROUND: Color = Color::grey8(23);
 static COLOURS: ColorScheme = &[
-    Color::rgb8(0xEB,0xF1,0xF7), //Color::rgb(235, 241, 247)
-    Color::rgb8(0xA3,0xFC,0xF7), //Color::rgb(162,252,247)
-    Color::rgb8(0xA2,0xE3,0xD8), //Color::rgb(162,227,216)
-    Color::rgb8(0xF2,0xE6,0xF1), //Color::rgb(242,230,241)
-    Color::rgb8(0xE0,0xAF,0xAF), //Color::rgb(224,175,175)
+    Color::rgb8(0xEB, 0xF1, 0xF7), //Color::rgb(235, 241, 247)
+    Color::rgb8(0xA3, 0xFC, 0xF7), //Color::rgb(162,252,247)
+    Color::rgb8(0xA2, 0xE3, 0xD8), //Color::rgb(162,227,216)
+    Color::rgb8(0xF2, 0xE6, 0xF1), //Color::rgb(242,230,241)
+    Color::rgb8(0xE0, 0xAF, 0xAF), //Color::rgb(224,175,175)
 ];
 
 #[allow(clippy::clippy::rc_buffer)]
@@ -170,7 +170,7 @@ impl GridPos {
     }
 }
 
-type ColorScheme = &'static[Color];
+type ColorScheme = &'static [Color];
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -311,7 +311,10 @@ impl Widget<AppData> for GameOfLifeWidget {
                     let rect = Rect::from_origin_size(point, cell_size);
 
                     // We devide by 2 so that the colour changes every 2 positions instead of every 1
-                    ctx.fill(rect, &COLOURS[((pos.row * GRID_SIZE + pos.col) / 2) % COLOURS.len()]);
+                    ctx.fill(
+                        rect,
+                        &COLOURS[((pos.row * GRID_SIZE + pos.col) / 2) % COLOURS.len()],
+                    );
                 }
             }
         }
@@ -394,8 +397,10 @@ fn make_widget() -> impl Widget<AppData> {
                 .with_child(
                     Flex::row()
                         .with_child(
-                            Label::new(|data: &AppData, _env: &_| format!("{:.2}updates/s", data.updates_per_second))
-                                .padding(3.0),
+                            Label::new(|data: &AppData, _env: &_| {
+                                format!("{:.2}updates/s", data.updates_per_second)
+                            })
+                            .padding(3.0),
                         )
                         .with_flex_child(
                             Slider::new()
