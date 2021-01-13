@@ -16,7 +16,7 @@
 //! This example doesnt showcase anything specific in druid.
 
 use std::ops::{Index, IndexMut};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
@@ -28,12 +28,14 @@ use std::sync::Arc;
 const GRID_SIZE: usize = 41;
 const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 
-const BG: Color = Color::grey8(23);
-const C0: Color = Color::from_rgba32_u32(0xEBF1F7);
-const C1: Color = Color::from_rgba32_u32(0xA3FCF7);
-const C2: Color = Color::from_rgba32_u32(0xA2E3D8);
-const C3: Color = Color::from_rgba32_u32(0xF2E6F1);
-const C4: Color = Color::from_rgba32_u32(0xE0AFAF);
+const BACKGROUND: Color = Color::grey8(23);
+static COLOURS: ColorScheme = &[
+    Color::rgb8(0xEB,0xF1,0xF7), //Color::rgb(235, 241, 247)
+    Color::rgb8(0xA3,0xFC,0xF7), //Color::rgb(162,252,247)
+    Color::rgb8(0xA2,0xE3,0xD8), //Color::rgb(162,227,216)
+    Color::rgb8(0xF2,0xE6,0xF1), //Color::rgb(242,230,241)
+    Color::rgb8(0xE0,0xAF,0xAF), //Color::rgb(224,175,175)
+];
 
 #[allow(clippy::clippy::rc_buffer)]
 #[derive(Clone, Data, PartialEq)]
@@ -53,15 +55,15 @@ impl Grid {
             for col in 0..GRID_SIZE {
                 let pos = GridPos { row, col };
                 let n_lives_around = self.n_neighbors(pos);
-                let life = self[pos];
-                // death by loneliness or overcrowding
-                if life && !(2..=3).contains(&n_lives_around) {
-                    indices_to_mutate.push(pos);
-                }
-                // resurrection by life support
-                if !life && n_lives_around == 3 {
-                    indices_to_mutate.push(pos);
-                }
+                match (self[pos], n_lives_around) {
+                    // death by overcrowding
+                    (true, x) if x > 3 => indices_to_mutate.push(pos),
+                    // death by loneliness
+                    (true, x) if x < 2 => indices_to_mutate.push(pos),
+                    // resurrection by life support
+                    (false, 3) => indices_to_mutate.push(pos),
+                    _ => (),
+                };
             }
         }
         for pos_mut in indices_to_mutate {
