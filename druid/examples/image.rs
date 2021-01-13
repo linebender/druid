@@ -35,14 +35,8 @@ static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
 ];
 
 static INTERPOLATION_MODE_OPTIONS: &[(&str, InterpolationMode)] = &[
-    (
-        "Bilinear",
-        InterpolationMode::Bilinear,
-    ),
-    (
-        "NearestNeighbor",
-        InterpolationMode::NearestNeighbor,
-    ),
+    ("Bilinear", InterpolationMode::Bilinear),
+    ("NearestNeighbor", InterpolationMode::NearestNeighbor),
 ];
 #[derive(Clone, Data, Lens)]
 struct AppState {
@@ -104,7 +98,7 @@ impl Widget<AppState> for Rebuilder {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
         self.inner.paint(ctx, data, env)
     }
-    
+
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
     }
