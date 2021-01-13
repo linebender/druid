@@ -161,6 +161,7 @@ impl_data_simple!(std::num::NonZeroU32);
 impl_data_simple!(std::num::NonZeroU64);
 impl_data_simple!(std::num::NonZeroU128);
 impl_data_simple!(std::num::NonZeroUsize);
+impl_data_simple!(druid::piet::InterpolationMode);
 //TODO: remove me!?
 impl_data_simple!(String);
 

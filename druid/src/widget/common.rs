@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{Affine, Size};
+use crate::{Affine, Data, Size};
 
 // These are based on https://api.flutter.dev/flutter/painting/BoxFit-class.html
 /// Strategies for inscribing a rectangle inside another rectangle.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Data, Copy, PartialEq)]
 pub enum FillStrat {
     /// As large as posible without changing aspect ratio of image and all of image shown
     Contain,
