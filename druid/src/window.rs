@@ -382,10 +382,10 @@ impl<T: Data> Window<T> {
             WindowSizePolicy::User => BoxConstraints::tight(self.size),
             WindowSizePolicy::Content => BoxConstraints::UNBOUNDED,
         };
-        let ret = self.root.layout(&mut layout_ctx, &bc, data, env);
+        let content_size = self.root.layout(&mut layout_ctx, &bc, data, env);
         if let WindowSizePolicy::Content = self.size_policy {
             let insets = self.handle.get_content_insets();
-            let full_size = (ret.to_rect() + insets).size();
+            let full_size = (content_size.to_rect() + insets).size();
             if self.size != full_size {
                 self.size = full_size;
                 self.handle.set_size(full_size)
@@ -395,7 +395,7 @@ impl<T: Data> Window<T> {
             .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
         self.lifecycle(
             queue,
-            &LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin(Point::ORIGIN)),
+            &LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin),
             data,
             env,
             false,

@@ -27,8 +27,8 @@ use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, Vec2, SingleUse, Size, Target,
-    TimerToken, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
+    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -188,7 +188,7 @@ impl_context_method!(
 
         /// The origin of the widget in window coordinates.
         pub fn window_origin(&self) -> Point {
-            self.widget_state.window_origin
+            self.widget_state.window_origin()
         }
 
         /// Takes a point in widget coordinates and transforms it to
