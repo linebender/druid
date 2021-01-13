@@ -118,6 +118,10 @@ impl Widget<AppState> for Rebuilder {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
         self.inner.paint(ctx, data, env)
     }
+    
+    fn id(&self) -> Option<WidgetId> {
+        self.inner.id()
+    }
 }
 
 fn make_control_row() -> impl Widget<AppState> {
