@@ -168,10 +168,7 @@ impl GridPos {
     }
 }
 
-#[derive(Clone)]
-struct ColorScheme {
-    colors: Vec<Color>,
-}
+type ColorScheme = &'static[Color];
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
@@ -192,7 +189,6 @@ impl AppData {
 struct GameOfLifeWidget {
     timer_id: TimerToken,
     cell_size: Size,
-    color_scheme: ColorScheme,
     last_update: Instant,
 }
 
@@ -311,7 +307,9 @@ impl Widget<AppData> for GameOfLifeWidget {
                         y: h0 * col as f64,
                     };
                     let rect = Rect::from_origin_size(point, cell_size);
-                    ctx.fill(rect, &self.color_scheme[pos]);
+
+                    // We devide by 2 so that the colour changes every 2 positions instead of every 1
+                    ctx.fill(rect, &COLOURS[((pos.row * GRID_SIZE + pos.col) / 2) % COLOURS.len()]);
                 }
             }
         }
@@ -355,7 +353,6 @@ fn make_widget() -> impl Widget<AppData> {
                     width: 0.0,
                     height: 0.0,
                 },
-                color_scheme: Default::default(),
                 last_update: Instant::now(),
             },
             1.0,
@@ -407,7 +404,7 @@ fn make_widget() -> impl Widget<AppData> {
                         )
                         .padding(8.0),
                 )
-                .background(BG),
+                .background(BACKGROUND),
         )
 }
 
@@ -440,15 +437,6 @@ pub fn main() {
         .expect("launch failed");
 }
 
-impl Index<GridPos> for ColorScheme {
-    type Output = Color;
-    fn index(&self, pos: GridPos) -> &Self::Output {
-        // We devide by 2 so that the colour changes every 2 positions instead of every 1
-        let idx = (pos.row * GRID_SIZE + pos.col) / 2;
-        &self.colors[idx % self.colors.len()]
-    }
-}
-
 impl Index<GridPos> for Grid {
     type Output = bool;
     fn index(&self, pos: GridPos) -> &Self::Output {
@@ -461,13 +449,5 @@ impl IndexMut<GridPos> for Grid {
     fn index_mut(&mut self, pos: GridPos) -> &mut Self::Output {
         let idx = pos.row * GRID_SIZE + pos.col;
         Arc::make_mut(&mut self.storage).index_mut(idx)
-    }
-}
-
-impl Default for ColorScheme {
-    fn default() -> Self {
-        ColorScheme {
-            colors: vec![C0, C1, C2, C3, C4],
-        }
     }
 }
