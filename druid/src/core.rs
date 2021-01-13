@@ -79,6 +79,8 @@ pub(crate) struct WidgetState {
     /// The origin of the child in the parent's coordinate space; together with
     /// `size` these constitute the child's layout rect.
     origin: Point,
+    /// The origin of the child in the window coordinate space;
+    pub(crate) window_origin: Point,
     /// A flag used to track and debug missing calls to set_origin.
     is_expecting_set_origin_call: bool,
     /// The insets applied to the layout rect to generate the paint rect.
@@ -910,6 +912,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         _ => false,
                     }
                 }
+                InternalLifeCycle::ParentWindowOrigin(parent_window_origin) => {
+                    self.state.window_origin = *parent_window_origin + self.state.origin.to_vec2()
+                        - self.state.viewport_offset;
+                    extra_event = Some(LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin(
+                        self.state.window_origin,
+                    )));
+                    false
+                }
                 #[cfg(test)]
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
@@ -1073,6 +1083,7 @@ impl WidgetState {
         WidgetState {
             id,
             origin: Point::ORIGIN,
+            window_origin: Point::ORIGIN,
             size: size.unwrap_or_default(),
             is_expecting_set_origin_call: true,
             paint_insets: Insets::ZERO,

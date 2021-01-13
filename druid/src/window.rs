@@ -23,7 +23,7 @@ use instant::Instant;
 use crate::piet::{Piet, RenderContext};
 use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
-use crate::app::PendingWindow;
+use crate::app::{PendingWindow, WindowSizePolicy};
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::util::ExtendDrain;
@@ -44,6 +44,7 @@ pub struct Window<T> {
     pub(crate) id: WindowId,
     pub(crate) root: WidgetPod<T, Box<dyn Widget<T>>>,
     pub(crate) title: LabelText<T>,
+    size_policy: WindowSizePolicy,
     size: Size,
     invalid: Region,
     pub(crate) menu: Option<MenuDesc<T>>,
@@ -68,6 +69,7 @@ impl<T> Window<T> {
         Window {
             id,
             root: WidgetPod::new(pending.root),
+            size_policy: pending.size_policy,
             size: Size::ZERO,
             invalid: Region::EMPTY,
             title: pending.title,
@@ -255,6 +257,15 @@ impl<T: Data> Window<T> {
             self.handle.set_cursor(&Cursor::Arrow);
         }
 
+        if matches!(
+            (event, self.size_policy),
+            (Event::WindowSize(_), WindowSizePolicy::Content)
+        ) {
+            // Because our initial size can be zero, the window system won't ask us to paint.
+            // So layout ourselves and hopefully we resize
+            self.layout(queue, data, env);
+        }
+
         self.post_event_processing(&mut widget_state, queue, data, env, false);
 
         is_handled
@@ -367,10 +378,28 @@ impl<T: Data> Window<T> {
             widget_state: &mut widget_state,
             mouse_pos: self.last_mouse_pos,
         };
-        let bc = BoxConstraints::tight(self.size);
-        self.root.layout(&mut layout_ctx, &bc, data, env);
+        let bc = match self.size_policy {
+            WindowSizePolicy::User => BoxConstraints::tight(self.size),
+            WindowSizePolicy::Content => BoxConstraints::UNBOUNDED,
+        };
+        let ret = self.root.layout(&mut layout_ctx, &bc, data, env);
+        if let WindowSizePolicy::Content = self.size_policy {
+            let insets = self.handle.get_content_insets();
+            let full_size = (ret.to_rect() + insets).size();
+            if self.size != full_size {
+                self.size = full_size;
+                self.handle.set_size(full_size)
+            }
+        }
         self.root
             .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
+        self.lifecycle(
+            queue,
+            &LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin(Point::ORIGIN)),
+            data,
+            env,
+            false,
+        );
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 

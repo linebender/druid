@@ -14,7 +14,7 @@
 
 //! Events.
 
-use crate::kurbo::{Rect, Shape, Size, Vec2};
+use crate::kurbo::{Point, Rect, Shape, Size, Vec2};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
@@ -299,6 +299,9 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
+    /// The widget parents origin in window coordinate space.
+    /// This occurs when a whole window has been laid out.
+    ParentWindowOrigin(Point),
     /// Testing only: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget

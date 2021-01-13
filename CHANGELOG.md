@@ -13,6 +13,9 @@ You can find its changes [documented below](#070---2021-01-01).
 - RichTextBuilder ([#1520] by [@Maan2003])
 - `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
 - `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
+- Shell: get_content_insets and mac implementation ([#XXXX] by [@rjwittams])
+- Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#XXXX] by [@rjwittams])
+- WindowSizePolicy: allow windows to be sized by their content ([#XXXX] by [@rjwittams])
 
 ### Changed
 

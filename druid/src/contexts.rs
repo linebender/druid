@@ -27,7 +27,7 @@ use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
+    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, Vec2, SingleUse, Size, Target,
     TimerToken, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
@@ -184,6 +184,25 @@ impl_context_method!(
         /// [`layout`]: trait.Widget.html#tymethod.layout
         pub fn size(&self) -> Size {
             self.widget_state.size()
+        }
+
+        /// The origin of the widget in window coordinates.
+        pub fn window_origin(&self) -> Point {
+            self.widget_state.window_origin
+        }
+
+        /// Takes a point in widget coordinates and transforms it to
+        /// window coordinates (relative to the content area, excluding chrome)
+        pub fn to_window(&self, widget_point: Point) -> Point {
+            self.window_origin() + widget_point.to_vec2()
+        }
+
+        /// Takes a point in widget coordinates and transforms it to
+        /// screen coordinates
+        pub fn to_screen(&self, widget_point: Point) -> Point {
+            let insets = self.window().get_content_insets();
+            let content_origin = self.window().get_position() + Vec2::new(insets.x0, insets.y0);
+            content_origin + self.to_window(widget_point).to_vec2()
         }
 
         /// The "hot" (aka hover) status of a widget.

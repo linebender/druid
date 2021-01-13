@@ -41,7 +41,7 @@ use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
@@ -1402,6 +1402,11 @@ impl WindowHandle {
     pub fn get_position(&self) -> Point {
         log::warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
         Point::new(0.0, 0.0)
+    }
+
+    pub fn get_content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::get_content_insets unimplemented for X11 platforms.");
+        Insets::ZERO
     }
 
     pub fn set_level(&self, _level: WindowLevel) {

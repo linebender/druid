@@ -22,7 +22,7 @@ use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
 use crate::keyboard::KeyEvent;
-use crate::kurbo::{Point, Rect, Size};
+use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
@@ -194,10 +194,16 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// Returns the position of the top left corner of the window in [pixels](crate::Scale), relative to the origin of the
     /// virtual screen.
     pub fn get_position(&self) -> Point {
         self.0.get_position()
+    }
+
+    /// Returns the insets of the window content from its position and size in [pixels](crate::Scale).
+    /// This is to account for any window system provided chrome, eg. title bars.
+    pub fn get_content_insets(&self) -> Insets {
+        self.0.get_content_insets()
     }
 
     /// Set the window's size in [display points](crate::Scale).

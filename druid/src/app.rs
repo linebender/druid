@@ -24,8 +24,6 @@ use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
 
 use druid_shell::WindowState;
 
-const WINDOW_MIN_SIZE: Size = Size::new(400., 400.);
-
 /// A function that modifies the initial environment.
 type EnvSetupFn<T> = dyn FnOnce(&mut Env, &T);
 
@@ -38,11 +36,22 @@ pub struct AppLauncher<T> {
     ext_event_host: ExtEventHost,
 }
 
+/// Defines how a windows size should be determined
+#[derive(Copy, Clone, Debug)]
+pub enum WindowSizePolicy {
+    /// Use the content of the window to determine the size
+    Content,
+    /// Use the provided window size
+    User,
+}
+
 /// Window configuration that can be applied to a WindowBuilder, or to an existing WindowHandle.
 /// It does not include anything related to app data.
+#[derive(Debug)]
 pub struct WindowConfig {
+    pub(crate) size_policy: WindowSizePolicy,
     pub(crate) size: Option<Size>,
-    pub(crate) min_size: Size,
+    pub(crate) min_size: Option<Size>,
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
@@ -61,12 +70,15 @@ pub struct WindowDesc<T> {
     pub id: WindowId,
 }
 
-/// The parts of a window, pending construction, that are dependent on top level app state.
+/// The parts of a window, pending construction, that are dependent on top level app state
+/// or are not part of the druid shells windowing abstraction.
 /// This includes the boxed root widget, as well as other window properties such as the title.
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
     pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
+                                              // when the native window is constructed.
 }
 
 impl<T: Data> PendingWindow<T> {
@@ -81,6 +93,7 @@ impl<T: Data> PendingWindow<T> {
             root: Box::new(root()),
             title: LocalizedString::new("app-name").into(),
             menu: MenuDesc::platform_default(),
+            size_policy: WindowSizePolicy::User,
         }
     }
 
@@ -207,8 +220,9 @@ impl<T: Data> AppLauncher<T> {
 impl Default for WindowConfig {
     fn default() -> Self {
         WindowConfig {
+            size_policy: WindowSizePolicy::User,
             size: None,
-            min_size: WINDOW_MIN_SIZE,
+            min_size: None,
             position: None,
             resizable: None,
             show_titlebar: None,
@@ -219,6 +233,12 @@ impl Default for WindowConfig {
 }
 
 impl WindowConfig {
+    /// Set the window size policy.
+    pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        self.size_policy = size_policy;
+        self
+    }
+
     /// Set the window's initial drawing area size in [display points].
     ///
     /// You can pass in a tuple `(width, height)` or a [`Size`],
@@ -252,7 +272,7 @@ impl WindowConfig {
     /// [`window_size`]: #method.window_size
     /// [display points]: struct.Scale.html
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
-        self.min_size = size.into();
+        self.min_size = Some(size.into());
         self
     }
 
@@ -319,7 +339,9 @@ impl WindowConfig {
             builder.set_window_state(state);
         }
 
-        builder.set_min_size(self.min_size);
+        if let Some(min_size) = self.min_size {
+            builder.set_min_size(min_size);
+        }
     }
 
     /// Apply this window configuration to the passed in WindowHandle
@@ -386,6 +408,12 @@ impl<T: Data> WindowDesc<T> {
     /// Set the menu for this window.
     pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
         self.pending = self.pending.menu(menu);
+        self
+    }
+
+    /// Set the window size policy
+    pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        self.config.size_policy = size_policy;
         self
     }
 

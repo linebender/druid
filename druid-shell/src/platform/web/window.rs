@@ -25,7 +25,7 @@ use instant::Instant;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
 use crate::piet::{PietText, RenderContext};
 
@@ -475,6 +475,11 @@ impl WindowHandle {
     pub fn get_size(&self) -> Size {
         log::warn!("WindowHandle::get_size unimplemented for web.");
         Size::new(0.0, 0.0)
+    }
+
+    pub fn get_content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::get_content_insets unimplemented for web.");
+        Insets::ZERO
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
