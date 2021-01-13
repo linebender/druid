@@ -17,10 +17,16 @@
 
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
-use druid::{AppLauncher, UnitPoint, WidgetExt, WindowDesc};
+use druid::{AppLauncher, UnitPoint, WidgetExt, WindowDesc, Data, Lens};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
+
+
+#[derive(Clone, Data, Lens)]
+struct HelloState {
+    name: String,
+}
 
 pub fn main() {
     // describe the main window
@@ -29,7 +35,7 @@ pub fn main() {
         .window_size((400.0, 400.0));
 
     // create the initial app state
-    let initial_state: String = "World".into();
+    let initial_state: HelloState = HelloState{name:"World".into()};
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
@@ -37,13 +43,13 @@ pub fn main() {
         .expect("Failed to launch application");
 }
 
-fn build_root_widget() -> impl Widget<String> {
+fn build_root_widget() -> impl Widget<HelloState> {
     // a label that will determine its text based on the current app data.
-    let label = Label::new(|data: &String, _env: &Env| {
-        if data.is_empty() {
+    let label = Label::new(|data: &HelloState, _env: &Env| {
+        if data.name.is_empty() {
             "Hello anybody!?".to_string()
         } else {
-            format!("Hello {}!", data)
+            format!("Hello {}!", data.name)
         }
     })
     .with_text_size(32.0);
@@ -52,7 +58,8 @@ fn build_root_widget() -> impl Widget<String> {
     let textbox = TextBox::new()
         .with_placeholder("Who are we greeting?")
         .with_text_size(18.0)
-        .fix_width(TEXT_BOX_WIDTH);
+        .fix_width(TEXT_BOX_WIDTH)
+        .lens(HelloState::name);
 
     // arrange the two widgets vertically, with some padding
     Flex::column()
