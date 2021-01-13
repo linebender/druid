@@ -34,39 +34,25 @@ static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
     ("ScaleDown", FillStrat::ScaleDown),
 ];
 
-static INTERPOLATION_MODE_OPTIONS: &[(&str, InterpolationModeData)] = &[
+static INTERPOLATION_MODE_OPTIONS: &[(&str, InterpolationMode)] = &[
     (
         "Bilinear",
-        InterpolationModeData::new(InterpolationMode::Bilinear),
+        InterpolationMode::Bilinear,
     ),
     (
         "NearestNeighbor",
-        InterpolationModeData::new(InterpolationMode::NearestNeighbor),
+        InterpolationMode::NearestNeighbor,
     ),
 ];
 #[derive(Clone, Data, Lens)]
 struct AppState {
     fill_strat: FillStrat,
     interpolate: bool,
-    interpolation_mode: InterpolationModeData,
+    interpolation_mode: InterpolationMode,
     fix_width: bool,
     width: f64,
     fix_height: bool,
     height: f64,
-}
-
-#[derive(Clone, PartialEq)]
-struct InterpolationModeData(InterpolationMode);
-
-impl InterpolationModeData {
-    const fn new(mode: InterpolationMode) -> InterpolationModeData {
-        InterpolationModeData(mode)
-    }
-}
-impl druid::Data for InterpolationModeData {
-    fn same(&self, other: &InterpolationModeData) -> bool {
-        self.0 == other.0
-    }
 }
 
 /// builds a child Flex widget from some paramaters.
@@ -202,7 +188,7 @@ fn build_widget(state: &AppState) -> Box<dyn Widget<AppState>> {
 
     let mut img = Image::new(png_data.clone()).fill_mode(state.fill_strat);
     if state.interpolate {
-        img.set_interpolation_mode(state.interpolation_mode.0)
+        img.set_interpolation_mode(state.interpolation_mode)
     }
     let mut sized = SizedBox::new(img);
     if state.fix_width {
@@ -231,7 +217,7 @@ pub fn main() {
     let state = AppState {
         fill_strat: FillStrat::Cover,
         interpolate: true,
-        interpolation_mode: InterpolationModeData::new(InterpolationMode::Bilinear),
+        interpolation_mode: InterpolationMode::Bilinear,
         fix_width: true,
         width: 200.,
         fix_height: true,
