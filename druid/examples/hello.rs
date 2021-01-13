@@ -17,11 +17,10 @@
 
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
-use druid::{AppLauncher, UnitPoint, WidgetExt, WindowDesc, Data, Lens};
+use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
-
 
 #[derive(Clone, Data, Lens)]
 struct HelloState {
@@ -35,7 +34,9 @@ pub fn main() {
         .window_size((400.0, 400.0));
 
     // create the initial app state
-    let initial_state: HelloState = HelloState{name:"World".into()};
+    let initial_state: HelloState = HelloState {
+        name: "World".into(),
+    };
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
