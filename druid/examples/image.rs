@@ -180,7 +180,7 @@ fn make_height() -> impl Widget<AppState> {
 fn build_widget(state: &AppState) -> Box<dyn Widget<AppState>> {
     let png_data = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
 
-    let mut img = Image::new(png_data.clone()).fill_mode(state.fill_strat);
+    let mut img = Image::new(png_data).fill_mode(state.fill_strat);
     if state.interpolate {
         img.set_interpolation_mode(state.interpolation_mode)
     }
