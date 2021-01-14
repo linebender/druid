@@ -13,9 +13,9 @@ You can find its changes [documented below](#070---2021-01-01).
 - RichTextBuilder ([#1520] by [@Maan2003])
 - `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
 - `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
-- Shell: get_content_insets and mac implementation ([#XXXX] by [@rjwittams])
-- Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#XXXX] by [@rjwittams])
-- WindowSizePolicy: allow windows to be sized by their content ([#XXXX] by [@rjwittams])
+- Shell: get_content_insets and mac implementation ([#1532] by [@rjwittams])
+- Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#1532] by [@rjwittams])
+- WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 
 ### Changed
 
@@ -601,6 +601,8 @@ Last release without a changelog :(
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
 [#1526]: https://github.com/linebender/druid/pull/1523
+[#1532]: https://github.com/linebender/druid/pull/1532
+[#1254]: https://github.com/linebender/druid/pull/1254
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
