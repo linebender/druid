@@ -40,7 +40,7 @@ use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
 use super::appkit::{
@@ -127,10 +127,17 @@ pub(crate) struct IdleHandle {
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
 }
 
+#[derive(Debug)]
+enum DeferredOp {
+    SetSize(Size),
+    SetPosition(Point),
+}
+
 /// This represents different Idle Callback Mechanism
 enum IdleKind {
     Callback(Box<dyn IdleCallback>),
     Token(IdleToken),
+    DeferredOp(DeferredOp),
 }
 
 /// This is the state associated with our custom NSView.
@@ -156,7 +163,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
-            size: Size::new(500.0, 400.0),
+            size: Size::new(0., 0.),
             min_size: None,
             position: None,
             level: None,
@@ -220,10 +227,11 @@ impl WindowBuilder {
                 style_mask |= NSWindowStyleMask::NSResizableWindowMask;
             }
 
-            let rect = NSRect::new(
-                NSPoint::new(0., 0.),
-                NSSize::new(self.size.width, self.size.height),
-            );
+            let screen_height = crate::Screen::get_display_rect().height();
+            let position = self.position.unwrap_or_else(|| Point::new(20., 20.));
+            let origin = NSPoint::new(position.x, screen_height - position.y - self.size.height); // Flip back
+
+            let rect = NSRect::new(origin, NSSize::new(self.size.width, self.size.height));
 
             let window: id = msg_send![WINDOW_CLASS.0, alloc];
             let window = window.initWithContentRect_styleMask_backing_defer_(
@@ -238,7 +246,6 @@ impl WindowBuilder {
                 window.setContentMinSize_(size);
             }
 
-            window.cascadeTopLeftFromPoint_(NSPoint::new(20.0, 20.0));
             window.setTitle_(make_nsstring(&self.title));
 
             let (view, idle_queue) = make_view(self.handler.expect("view"));
@@ -260,9 +267,6 @@ impl WindowBuilder {
                 idle_queue,
             };
 
-            if let Some(pos) = self.position {
-                handle.set_position(pos);
-            }
             if let Some(window_state) = self.window_state {
                 handle.set_window_state(window_state);
             }
@@ -758,6 +762,47 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     }
 }
 
+fn run_deferred(this: &mut Object, view_state: &mut ViewState, op: DeferredOp) {
+    match op {
+        DeferredOp::SetSize(size) => set_size_deferred(this, view_state, size),
+        DeferredOp::SetPosition(pos) => set_position_deferred(this, view_state, pos),
+    }
+}
+
+fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size) {
+    unsafe {
+        let window: id = msg_send![this, window];
+        let current_frame: NSRect = msg_send![window, frame];
+        let mut new_frame = current_frame;
+
+        // maintain druid origin (as mac origin is bottom left)
+        new_frame.origin.y -= size.height - current_frame.size.height;
+        new_frame.size.width = size.width;
+        new_frame.size.height = size.height;
+        let () = msg_send![window, setFrame: new_frame display: YES];
+    }
+}
+
+fn set_position_deferred(this: &mut Object, _view_state: &mut ViewState, position: Point) {
+    unsafe {
+        let window: id = msg_send![this, window];
+        let frame: NSRect = msg_send![window, frame];
+
+        let mut new_frame = frame;
+        new_frame.origin.x = position.x;
+        // TODO Everywhere we use the height for flipping around y it should be the max y in orig mac coords.
+        // Need to set up a 3 screen config to test in this arrangement.
+        // 3
+        // 1
+        // 2
+
+        let screen_height = crate::Screen::get_display_rect().height();
+        new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
+        let () = msg_send![window, setFrame: new_frame display: YES];
+        log::debug!("set_position_deferred {:?}", position);
+    }
+}
+
 extern "C" fn run_idle(this: &mut Object, _: Sel) {
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
@@ -773,6 +818,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
             IdleKind::Token(it) => {
                 view_state.handler.as_mut().idle(it);
             }
+            IdleKind::DeferredOp(op) => run_deferred(this, view_state, op),
         }
     }
 }
@@ -1005,17 +1051,7 @@ impl WindowHandle {
 
     // Need to translate mac y coords, as they start from bottom left
     pub fn set_position(&self, position: Point) {
-        unsafe {
-            // TODO this should be the max y in orig mac coords
-            let screen_height = crate::Screen::get_display_rect().height();
-            let window: id = msg_send![*self.nsview.load(), window];
-            let frame: NSRect = msg_send![window, frame];
-
-            let mut new_frame = frame;
-            new_frame.origin.x = position.x;
-            new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
-            let () = msg_send![window, setFrame: new_frame display: YES];
-        }
+        self.defer(DeferredOp::SetPosition(position))
     }
 
     pub fn get_position(&self) -> Point {
@@ -1033,6 +1069,34 @@ impl WindowHandle {
         }
     }
 
+    pub fn content_insets(&self) -> Insets {
+        unsafe {
+            let screen_height = crate::Screen::get_display_rect().height();
+
+            let window: id = msg_send![*self.nsview.load(), window];
+            let clr: NSRect = msg_send![window, contentLayoutRect];
+
+            let window_frame_r: NSRect = NSWindow::frame(window);
+            let content_frame_r: NSRect = NSWindow::convertRectToScreen_(window, clr);
+
+            let window_frame_rk = Rect::from_origin_size(
+                (
+                    window_frame_r.origin.x,
+                    screen_height - window_frame_r.origin.y - window_frame_r.size.height,
+                ),
+                (window_frame_r.size.width, window_frame_r.size.height),
+            );
+            let content_frame_rk = Rect::from_origin_size(
+                (
+                    content_frame_r.origin.x,
+                    screen_height - content_frame_r.origin.y - content_frame_r.size.height,
+                ),
+                (content_frame_r.size.width, content_frame_r.size.height),
+            );
+            window_frame_rk - content_frame_rk
+        }
+    }
+
     pub fn set_level(&self, level: WindowLevel) {
         unsafe {
             let level = levels::as_raw_window_level(level);
@@ -1042,14 +1106,7 @@ impl WindowHandle {
     }
 
     pub fn set_size(&self, size: Size) {
-        unsafe {
-            let window: id = msg_send![*self.nsview.load(), window];
-            let current_frame: NSRect = msg_send![window, frame];
-            let mut new_frame = current_frame;
-            new_frame.size.width = size.width;
-            new_frame.size.height = size.height;
-            let () = msg_send![window, setFrame: new_frame display: YES];
-        }
+        self.defer(DeferredOp::SetSize(size));
     }
 
     pub fn get_size(&self) -> Size {
@@ -1132,6 +1189,12 @@ impl WindowHandle {
         }
     }
 
+    fn defer(&self, op: DeferredOp) {
+        if let Some(i) = self.get_idle_handle() {
+            i.add_idle(IdleKind::DeferredOp(op))
+        }
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         if self.nsview.load().is_null() {
@@ -1154,6 +1217,21 @@ impl WindowHandle {
 unsafe impl Send for IdleHandle {}
 
 impl IdleHandle {
+    fn add_idle(&self, idle: IdleKind) {
+        if let Some(queue) = self.idle_queue.upgrade() {
+            let mut queue = queue.lock().expect("queue lock");
+            if queue.is_empty() {
+                unsafe {
+                    let nsview = self.nsview.load();
+                    // Note: the nsview might be nil here if the window has been dropped, but that's ok.
+                    let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
+                        withObject: nil waitUntilDone: NO);
+                }
+            }
+            queue.push(idle);
+        }
+    }
+
     /// Add an idle handler, which is called (once) when the message loop
     /// is empty. The idle handler will be run from the main UI thread, and
     /// won't be scheduled if the associated view has been dropped.
@@ -1164,33 +1242,11 @@ impl IdleHandle {
     where
         F: FnOnce(&dyn Any) + Send + 'static,
     {
-        if let Some(queue) = self.idle_queue.upgrade() {
-            let mut queue = queue.lock().expect("queue lock");
-            if queue.is_empty() {
-                unsafe {
-                    let nsview = self.nsview.load();
-                    // Note: the nsview might be nil here if the window has been dropped, but that's ok.
-                    let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
-                        withObject: nil waitUntilDone: NO);
-                }
-            }
-            queue.push(IdleKind::Callback(Box::new(callback)));
-        }
+        self.add_idle(IdleKind::Callback(Box::new(callback)));
     }
 
     pub fn add_idle_token(&self, token: IdleToken) {
-        if let Some(queue) = self.idle_queue.upgrade() {
-            let mut queue = queue.lock().expect("queue lock");
-            if queue.is_empty() {
-                unsafe {
-                    let nsview = self.nsview.load();
-                    // Note: the nsview might be nil here if the window has been dropped, but that's ok.
-                    let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
-                        withObject: nil waitUntilDone: NO);
-                }
-            }
-            queue.push(IdleKind::Token(token));
-        }
+        self.add_idle(IdleKind::Token(token));
     }
 }
 

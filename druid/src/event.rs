@@ -299,6 +299,8 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
+    /// The parents widget origin in window coordinate space has changed.
+    ParentWindowOrigin,
     /// Testing only: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget

@@ -79,6 +79,8 @@ pub(crate) struct WidgetState {
     /// The origin of the child in the parent's coordinate space; together with
     /// `size` these constitute the child's layout rect.
     origin: Point,
+    /// The origin of the parent in the window coordinate space;
+    pub(crate) parent_window_origin: Point,
     /// A flag used to track and debug missing calls to set_origin.
     is_expecting_set_origin_call: bool,
     /// The insets applied to the layout rect to generate the paint rect.
@@ -284,6 +286,12 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// [`Scroll`]: widget/struct.Scroll.html
     pub fn set_viewport_offset(&mut self, offset: Vec2) {
+        if offset != self.state.viewport_offset {
+            // We need the parent_window_origin recalculated.
+            // It should be possible to just trigger the InternalLifeCycle::ParentWindowOrigin here,
+            // instead of full layout. Would need more management in WidgetState.
+            self.state.needs_layout = true;
+        }
         self.state.viewport_offset = offset;
     }
 
@@ -910,6 +918,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         _ => false,
                     }
                 }
+                InternalLifeCycle::ParentWindowOrigin => {
+                    self.state.parent_window_origin = ctx.widget_state.window_origin();
+                    true
+                }
                 #[cfg(test)]
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
@@ -1073,6 +1085,7 @@ impl WidgetState {
         WidgetState {
             id,
             origin: Point::ORIGIN,
+            parent_window_origin: Point::ORIGIN,
             size: size.unwrap_or_default(),
             is_expecting_set_origin_call: true,
             paint_insets: Insets::ZERO,
@@ -1176,6 +1189,10 @@ impl WidgetState {
 
     pub(crate) fn add_sub_window_host(&mut self, window_id: WindowId, host_id: WidgetId) {
         self.sub_window_hosts.push((window_id, host_id))
+    }
+
+    pub(crate) fn window_origin(&self) -> Point {
+        self.parent_window_origin + self.origin.to_vec2() - self.viewport_offset
     }
 }
 

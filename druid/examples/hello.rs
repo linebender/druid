@@ -40,6 +40,7 @@ pub fn main() {
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
+        .use_simple_logger()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

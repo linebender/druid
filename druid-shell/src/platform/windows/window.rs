@@ -47,7 +47,7 @@ use winapi::um::winuser::*;
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
@@ -1655,6 +1655,11 @@ impl WindowHandle {
             }
         }
         Point::new(0.0, 0.0)
+    }
+
+    pub fn content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::content_insets unimplemented for windows.");
+        Insets::ZERO
     }
 
     // Sets the size of the window in DP

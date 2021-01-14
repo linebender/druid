@@ -28,7 +28,7 @@ use crate::shell::Region;
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
     Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -184,6 +184,29 @@ impl_context_method!(
         /// [`layout`]: trait.Widget.html#tymethod.layout
         pub fn size(&self) -> Size {
             self.widget_state.size()
+        }
+
+        /// The origin of the widget in window coordinates, relative to the top left corner of the
+        /// content area.
+        pub fn window_origin(&self) -> Point {
+            self.widget_state.window_origin()
+        }
+
+        /// Convert a point from the widget's coordinate space to the window's.
+        ///
+        /// The returned point is relative to the content area; it excludes window chrome.
+        pub fn to_window(&self, widget_point: Point) -> Point {
+            self.window_origin() + widget_point.to_vec2()
+        }
+
+        /// Convert a point from the widget's coordinate space to the screen's.
+        /// See the [`Screen`] module
+        ///
+        /// [`Screen`]: crate::shell::Screen
+        pub fn to_screen(&self, widget_point: Point) -> Point {
+            let insets = self.window().content_insets();
+            let content_origin = self.window().get_position() + Vec2::new(insets.x0, insets.y0);
+            content_origin + self.to_window(widget_point).to_vec2()
         }
 
         /// The "hot" (aka hover) status of a widget.

@@ -32,7 +32,7 @@ use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 
-use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
 use crate::common_util::{ClickCounter, IdleCallback};
@@ -816,6 +816,11 @@ impl WindowHandle {
         } else {
             Point::new(0.0, 0.0)
         }
+    }
+
+    pub fn content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
+        Insets::ZERO
     }
 
     pub fn set_level(&self, level: WindowLevel) {
