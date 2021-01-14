@@ -198,8 +198,7 @@ impl_context_method!(
             self.window_origin() + widget_point.to_vec2()
         }
 
-        /// Takes a point in widget coordinates and transforms it to
-        /// screen coordinates
+        /// Convert a point from the widget's coordinate space to the screen's.
         pub fn to_screen(&self, widget_point: Point) -> Point {
             let insets = self.window().get_content_insets();
             let content_origin = self.window().get_position() + Vec2::new(insets.x0, insets.y0);
