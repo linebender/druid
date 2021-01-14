@@ -775,7 +775,7 @@ fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size)
         let current_frame: NSRect = msg_send![window, frame];
         let mut new_frame = current_frame;
 
-        // TODO: maintain druid origin (as mac origin is bottom left)
+        // maintain druid origin (as mac origin is bottom left)
         new_frame.origin.y -= size.height - current_frame.size.height;
         new_frame.size.width = size.width;
         new_frame.size.height = size.height;
@@ -785,13 +785,19 @@ fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size)
 
 fn set_position_deferred(this: &mut Object, _view_state: &mut ViewState, position: Point) {
     unsafe {
-        // TODO this should be the max y in orig mac coords
+
 
         let window: id = msg_send![this, window];
         let frame: NSRect = msg_send![window, frame];
 
         let mut new_frame = frame;
         new_frame.origin.x = position.x;
+        // TODO Everywhere we use the height for flipping around y it should be the max y in orig mac coords.
+        // Need to set up a 3 screen config to test in this arrangement.
+        // 3
+        // 1
+        // 2
+
         let screen_height = crate::Screen::get_display_rect().height();
         new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
         let () = msg_send![window, setFrame: new_frame display: YES];
