@@ -201,6 +201,7 @@ impl WindowHandle {
     }
 
     /// Returns the insets of the window content from its position and size in [pixels](crate::Scale).
+    ///
     /// This is to account for any window system provided chrome, eg. title bars.
     pub fn get_content_insets(&self) -> Insets {
         self.0.get_content_insets()
