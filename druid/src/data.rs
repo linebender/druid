@@ -294,20 +294,6 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
     }
 }
 
-impl<T: 'static + ?Sized> Data for *const T {
-    fn same(&self, other: &Self) -> bool {
-        // This Does not dereference the pointer, only the reference to the pointer.
-        ptr::eq(*self, *other)
-    }
-}
-
-impl<T: 'static + ?Sized> Data for *mut T {
-    fn same(&self, other: &Self) -> bool {
-        // This Does not dereference the pointer, only the reference to the pointer.
-        ptr::eq(*self, *other)
-    }
-}
-
 impl<T: 'static + ?Sized> Data for std::marker::PhantomData<T> {
     fn same(&self, _other: &Self) -> bool {
         // zero-sized types
