@@ -33,6 +33,9 @@ pub(crate) type SelectorSymbol = &'static str;
 /// Having multiple selectors with the same identifier but different payload
 /// types is not allowed and can cause [`Command::get`] and [`get_unchecked`] to panic.
 ///
+/// To stop commands from loging error if they are not used,
+/// include "@@can-ignore" in the selector.
+///
 /// The type parameter `T` specifies the command's payload type.
 /// See [`Command`] for more information.
 ///
@@ -255,7 +258,8 @@ pub mod sys {
         Selector::new("druid-builtin.menu-file-open");
 
     /// Sent when the user cancels an open file panel.
-    pub const OPEN_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.open-panel-cancelled");
+    pub const OPEN_PANEL_CANCELLED: Selector =
+        Selector::new("druid-builtin.open-panel-cancelled@@can-ignore");
 
     /// Open a path, must be handled by the application.
     ///
@@ -271,7 +275,8 @@ pub mod sys {
         Selector::new("druid-builtin.menu-file-save-as");
 
     /// Sent when the user cancels a save file panel.
-    pub const SAVE_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.save-panel-cancelled");
+    pub const SAVE_PANEL_CANCELLED: Selector =
+        Selector::new("druid-builtin.save-panel-cancelled@@can-ignore");
 
     /// Save the current path.
     ///
@@ -317,7 +322,7 @@ pub mod sys {
 
 impl Selector<()> {
     /// A selector that does nothing.
-    pub const NOOP: Selector = Selector::new("");
+    pub const NOOP: Selector = Selector::new("druid-builtin.noop@@can-ignore");
 
     /// Turns this into a command with the specified [`Target`].
     ///
@@ -382,6 +387,11 @@ impl Command {
             target,
         }
         .default_to(Target::Global)
+    }
+
+    /// Give the selector symbol
+    pub(crate) fn selector_symbol(&self) -> SelectorSymbol {
+        self.symbol
     }
 
     /// A helper method for creating a `Notification` from a `Command`.
