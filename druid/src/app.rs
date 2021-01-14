@@ -39,7 +39,10 @@ pub struct AppLauncher<T> {
 /// Defines how a windows size should be determined
 #[derive(Copy, Clone, Debug)]
 pub enum WindowSizePolicy {
-    /// Use the content of the window to determine the size
+    /// Use the content of the window to determine the size.
+    ///
+    /// If you use this option, your root widget will be passed infinite constraints;
+    /// you are responsible for ensuring that your content picks an appropriate size.
     Content,
     /// Use the provided window size
     User,
