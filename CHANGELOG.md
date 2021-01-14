@@ -16,6 +16,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Shell: get_content_insets and mac implementation ([#1532] by [@rjwittams])
 - Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#1532] by [@rjwittams])
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
+- Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 
 ### Changed
 
@@ -600,8 +601,9 @@ Last release without a changelog :(
 [#1452]: https://github.com/linebender/druid/pull/1452
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
-[#1526]: https://github.com/linebender/druid/pull/1523
+[#1526]: https://github.com/linebender/druid/pull/1526
 [#1532]: https://github.com/linebender/druid/pull/1532
+[#1534]: https://github.com/linebender/druid/pull/1534
 [#1254]: https://github.com/linebender/druid/pull/1254
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
