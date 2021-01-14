@@ -191,8 +191,9 @@ impl_context_method!(
             self.widget_state.window_origin()
         }
 
-        /// Takes a point in widget coordinates and transforms it to
-        /// window coordinates (relative to the content area, excluding chrome)
+        /// Convert a point from the widget's coordinate space to the window's.
+        ///
+        /// The returned point is relative to the content area; it excludes window chrome.
         pub fn to_window(&self, widget_point: Point) -> Point {
             self.window_origin() + widget_point.to_vec2()
         }
