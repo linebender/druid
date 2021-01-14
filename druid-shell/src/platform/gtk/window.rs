@@ -818,8 +818,8 @@ impl WindowHandle {
         }
     }
 
-    pub fn get_content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::get_content_insets unimplemented for GTK platforms.");
+    pub fn content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
         Insets::ZERO
     }
 

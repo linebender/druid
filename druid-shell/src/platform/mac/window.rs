@@ -785,8 +785,6 @@ fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size)
 
 fn set_position_deferred(this: &mut Object, _view_state: &mut ViewState, position: Point) {
     unsafe {
-
-
         let window: id = msg_send![this, window];
         let frame: NSRect = msg_send![window, frame];
 
@@ -1071,7 +1069,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn get_content_insets(&self) -> Insets {
+    pub fn content_insets(&self) -> Insets {
         unsafe {
             let screen_height = crate::Screen::get_display_rect().height();
 

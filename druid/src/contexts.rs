@@ -186,7 +186,8 @@ impl_context_method!(
             self.widget_state.size()
         }
 
-        /// The origin of the widget in window coordinates.
+        /// The origin of the widget in window coordinates, relative to the top left corner of the
+        /// content area.
         pub fn window_origin(&self) -> Point {
             self.widget_state.window_origin()
         }
@@ -199,8 +200,11 @@ impl_context_method!(
         }
 
         /// Convert a point from the widget's coordinate space to the screen's.
+        /// See the [`Screen`] module
+        ///
+        /// [`Screen`]: crate::shell::Screen
         pub fn to_screen(&self, widget_point: Point) -> Point {
-            let insets = self.window().get_content_insets();
+            let insets = self.window().content_insets();
             let content_origin = self.window().get_position() + Vec2::new(insets.x0, insets.y0);
             content_origin + self.to_window(widget_point).to_vec2()
         }

@@ -1404,8 +1404,8 @@ impl WindowHandle {
         Point::new(0.0, 0.0)
     }
 
-    pub fn get_content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::get_content_insets unimplemented for X11 platforms.");
+    pub fn content_insets(&self) -> Insets {
+        log::warn!("WindowHandle::content_insets unimplemented for X11 platforms.");
         Insets::ZERO
     }
 

@@ -384,7 +384,7 @@ impl<T: Data> Window<T> {
         };
         let content_size = self.root.layout(&mut layout_ctx, &bc, data, env);
         if let WindowSizePolicy::Content = self.size_policy {
-            let insets = self.handle.get_content_insets();
+            let insets = self.handle.content_insets();
             let full_size = (content_size.to_rect() + insets).size();
             if self.size != full_size {
                 self.size = full_size;
