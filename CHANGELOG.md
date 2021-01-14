@@ -16,6 +16,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Changed
 
+- Warn on unhandled Commands ([#1533] by [@Maan2003])
+
 ### Deprecated
 
 ### Removed
@@ -598,6 +600,7 @@ Last release without a changelog :(
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
 [#1526]: https://github.com/linebender/druid/pull/1523
+[#1533]: https://github.com/linebender/druid/pull/1533
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
