@@ -174,6 +174,7 @@ impl_data_simple!(std::net::SocketAddrV6);
 impl_data_simple!(std::net::IpAddr);
 impl_data_simple!(std::net::SocketAddr);
 impl_data_simple!(std::ops::RangeFull);
+impl_data_simple!(druid::piet::InterpolationMode);
 //TODO: remove me!?
 impl_data_simple!(String);
 
