@@ -135,6 +135,8 @@ macro_rules! impl_data_simple {
     };
 }
 
+// Standard library impls
+
 impl_data_simple!(i8);
 impl_data_simple!(i16);
 impl_data_simple!(i32);
@@ -161,6 +163,17 @@ impl_data_simple!(std::num::NonZeroU32);
 impl_data_simple!(std::num::NonZeroU64);
 impl_data_simple!(std::num::NonZeroU128);
 impl_data_simple!(std::num::NonZeroUsize);
+impl_data_simple!(std::time::SystemTime);
+impl_data_simple!(std::time::Instant);
+impl_data_simple!(std::time::Duration);
+impl_data_simple!(std::io::ErrorKind);
+impl_data_simple!(std::net::Ipv4Addr);
+impl_data_simple!(std::net::Ipv6Addr);
+impl_data_simple!(std::net::SocketAddrV4);
+impl_data_simple!(std::net::SocketAddrV6);
+impl_data_simple!(std::net::IpAddr);
+impl_data_simple!(std::net::SocketAddr);
+impl_data_simple!(std::ops::RangeFull);
 //TODO: remove me!?
 impl_data_simple!(String);
 
@@ -188,9 +201,21 @@ impl<T: ?Sized + 'static> Data for Arc<T> {
     }
 }
 
+impl<T: ?Sized + 'static> Data for std::sync::Weak<T> {
+    fn same(&self, other: &Self) -> bool {
+        std::sync::Weak::ptr_eq(self, other)
+    }
+}
+
 impl<T: ?Sized + 'static> Data for Rc<T> {
     fn same(&self, other: &Self) -> bool {
         Rc::ptr_eq(self, other)
+    }
+}
+
+impl<T: ?Sized + 'static> Data for std::rc::Weak<T> {
+    fn same(&self, other: &Self) -> bool {
+        std::rc::Weak::ptr_eq(self, other)
     }
 }
 
@@ -267,6 +292,89 @@ impl<T0: Data, T1: Data, T2: Data, T3: Data, T4: Data, T5: Data> Data for (T0, T
             && self.5.same(&other.5)
     }
 }
+
+impl<T: 'static + ?Sized> Data for *const T {
+    fn same(&self, other: &Self) -> bool {
+        // This Does not dereference the pointer, only the reference to the pointer.
+        ptr::eq(*self, *other)
+    }
+}
+
+impl<T: 'static + ?Sized> Data for *mut T {
+    fn same(&self, other: &Self) -> bool {
+        // This Does not dereference the pointer, only the reference to the pointer.
+        ptr::eq(*self, *other)
+    }
+}
+
+impl<T: 'static + ?Sized> Data for std::marker::PhantomData<T> {
+    fn same(&self, _other: &Self) -> bool {
+        // zero-sized types
+        true
+    }
+}
+
+impl<T: 'static> Data for std::mem::Discriminant<T> {
+    fn same(&self, other: &Self) -> bool {
+        *self == *other
+    }
+}
+
+impl<T: 'static + ?Sized + Data> Data for std::mem::ManuallyDrop<T> {
+    fn same(&self, other: &Self) -> bool {
+        (&**self).same(&**other)
+    }
+}
+
+impl<T: Data> Data for std::num::Wrapping<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.0.same(&other.0)
+    }
+}
+
+impl<T: Data> Data for std::ops::Range<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.start.same(&other.start) && self.end.same(&other.end)
+    }
+}
+
+impl<T: Data> Data for std::ops::RangeFrom<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.start.same(&other.start)
+    }
+}
+
+impl<T: Data> Data for std::ops::RangeInclusive<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.start().same(other.start()) && self.end().same(other.end())
+    }
+}
+
+impl<T: Data> Data for std::ops::RangeTo<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.end.same(&other.end)
+    }
+}
+
+impl<T: Data> Data for std::ops::RangeToInclusive<T> {
+    fn same(&self, other: &Self) -> bool {
+        self.end.same(&other.end)
+    }
+}
+
+impl<T: Data> Data for std::ops::Bound<T> {
+    fn same(&self, other: &Self) -> bool {
+        use std::ops::Bound::*;
+        match (self, other) {
+            (Included(t1), Included(t2)) if t1.same(t2) => true,
+            (Excluded(t1), Excluded(t2)) if t1.same(t2) => true,
+            (Unbounded, Unbounded) => true,
+            _ => false,
+        }
+    }
+}
+
+// druid & deps impls
 
 impl Data for Scale {
     fn same(&self, other: &Self) -> bool {
