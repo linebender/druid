@@ -19,21 +19,22 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use crate::kurbo::Size;
+use crate::kurbo::{Point, Size};
 use crate::piet::Piet;
 use crate::shell::{
     Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region, Scale, WinHandler,
     WindowHandle,
 };
 
+use crate::app::NativeWindowLayoutDesc;
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
-use crate::window::Window;
+use crate::window::{ChildWindow, Window};
 use crate::{
-    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Selector,
-    Target, TimerToken, WindowDesc, WindowId,
+    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, NativeWindowDesc,
+    NativeWindowHandle, PlatformError, Selector, Target, TimerToken, WindowDesc, WindowId,
 };
 
 use crate::app::{PendingWindow, WindowConfig};
@@ -56,6 +57,10 @@ pub struct DruidHandler<T> {
     app_state: AppState<T>,
     /// The id for the current window.
     window_id: WindowId,
+    /// The id for the parent window, if any. If set, this indicates the current
+    /// native window must be created as a child window of the specified parent
+    /// native window.
+    parent_window_id: Option<WindowId>,
 }
 
 /// The top level event handler.
@@ -100,11 +105,22 @@ struct Inner<T> {
 
 /// All active windows.
 struct Windows<T> {
+    /// Top-level windows pending creation. Once created, the id is moved to the `windows` map
+    /// alongside the `Window<T>` newly created using the `PendingWindow<T>` info.
     pending: HashMap<WindowId, PendingWindow<T>>,
+    /// The top-level windows, which generally have a title bar and a menu, represent actual
+    /// "windows" in the UI sense, and can contain native child windows.
     windows: HashMap<WindowId, Window<T>>,
+    /// The native child windows, which are not proper "windows" in the UI sense but instead
+    /// OS handles (HWND) of objects parented to a native top-level window. The `Window<T>`
+    /// top-level windows have a set of all the ids of their children, which can be queried
+    /// using this map.
+    child_windows: HashMap<WindowId, ChildWindow>,
 }
 
 impl<T> Windows<T> {
+    /// Connect a window id to its newly-created native handle, removing it from the pending
+    /// map and adding it to the (fully created) windows map.
     fn connect(&mut self, id: WindowId, handle: WindowHandle, ext_handle: ExtEventSink) {
         if let Some(pending) = self.pending.remove(&id) {
             let win = Window::new(id, handle, pending, ext_handle);
@@ -118,9 +134,36 @@ impl<T> Windows<T> {
         assert!(self.pending.insert(id, win).is_none(), "duplicate pending");
     }
 
+    fn add_child(&mut self, id: WindowId, handle: WindowHandle, parent_id: WindowId) {
+        if let Some(parent_win) = self.windows.get_mut(&parent_id) {
+            let child_win = ChildWindow { handle };
+            assert!(
+                self.child_windows.insert(id, child_win).is_none(),
+                "duplicate child window"
+            );
+            assert!(parent_win.children.insert(id), "duplicate child window");
+        } else if let Some(_) = self.pending.get(&parent_id) {
+            log::error!(
+                "parent window with id {:?} is not yet created, cannot attach native child id {:?}",
+                parent_id,
+                id
+            );
+        } else {
+            log::error!(
+                "no parent window with id {:?} for attaching native child id {:?}",
+                parent_id,
+                id
+            );
+        }
+    }
+
     fn remove(&mut self, id: WindowId) -> Option<Window<T>> {
         self.windows.remove(&id)
     }
+
+    // fn remove_child(&mut self, id: WindowId) -> Option<WindowId> {
+    //     self.children.remove(&id)
+    // }
 
     fn iter_mut(&mut self) -> impl Iterator<Item = &'_ mut Window<T>> {
         self.windows.values_mut()
@@ -317,6 +360,16 @@ impl<T: Data> Inner<T> {
         }
     }
 
+    /// Set the position and/or size of the native window owned by the widget.
+    fn set_native_layout(&mut self, id: WindowId, origin: Option<Point>, size: Option<Size>) {
+        // Note: query only child windows; set_native_layout() is not designed to set top-level window position/size.
+        if let Some(win) = self.windows.child_windows.get_mut(&id) {
+            win.handle.set_native_layout(origin, size);
+        } else {
+            log::debug!("Failed to find native window with id={:?}", id);
+        }
+    }
+
     fn prepare_paint(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
             win.prepare_paint(&mut self.command_queue, &mut self.data, &self.env);
@@ -333,6 +386,25 @@ impl<T: Data> Inner<T> {
                 &self.data,
                 &self.env,
             );
+        }
+    }
+
+    fn post_render(&mut self, window_id: WindowId) {
+        // Pre-order traversal, so that children render on top of parents
+        if let Some(win) = self.windows.get_mut(window_id) {
+            // Render self first
+            win.do_post_render();
+
+            // Render children next
+            let mut child_ids = vec![];
+            for child_id in &win.children {
+                child_ids.push(child_id.clone());
+            }
+            for child_id in child_ids {
+                if let Some(child_win) = self.windows.get_mut(child_id) {
+                    child_win.do_post_render();
+                }
+            }
         }
     }
 
@@ -494,10 +566,15 @@ impl<T: Data> Inner<T> {
 impl<T: Data> DruidHandler<T> {
     /// Note: the root widget doesn't go in here, because it gets added to the
     /// app state.
-    pub(crate) fn new_shared(app_state: AppState<T>, window_id: WindowId) -> DruidHandler<T> {
+    pub(crate) fn new_shared(
+        app_state: AppState<T>,
+        window_id: WindowId,
+        parent_window_id: Option<WindowId>,
+    ) -> DruidHandler<T> {
         DruidHandler {
             app_state,
             window_id,
+            parent_window_id,
         }
     }
 }
@@ -513,6 +590,13 @@ impl<T: Data> AppState<T> {
 
     pub(crate) fn add_window(&self, id: WindowId, window: PendingWindow<T>) {
         self.inner.borrow_mut().windows.add(id, window);
+    }
+
+    pub(crate) fn add_child_window(&self, id: WindowId, handle: WindowHandle, parent_id: WindowId) {
+        self.inner
+            .borrow_mut()
+            .windows
+            .add_child(id, handle, parent_id);
     }
 
     fn connect_window(&mut self, window_id: WindowId, handle: WindowHandle) {
@@ -546,6 +630,10 @@ impl<T: Data> AppState<T> {
 
     fn paint_window(&mut self, window_id: WindowId, piet: &mut Piet, invalid: &Region) {
         self.inner.borrow_mut().paint(window_id, piet, invalid);
+    }
+
+    fn post_render(&mut self, window_id: WindowId) {
+        self.inner.borrow_mut().post_render(window_id);
     }
 
     fn idle(&mut self, token: IdleToken) {
@@ -621,6 +709,16 @@ impl<T: Data> AppState<T> {
             _ if cmd.is(sys_cmd::NEW_SUB_WINDOW) => {
                 if let Err(e) = self.new_sub_window(cmd) {
                     log::error!("failed to create sub window: '{}'", e);
+                }
+            }
+            _ if cmd.is(sys_cmd::NEW_NATIVE_CHILD_WINDOW) => {
+                if let Err(e) = self.new_native_child_window(cmd) {
+                    log::error!("failed to create native child window: '{}'", e);
+                }
+            }
+            _ if cmd.is(sys_cmd::SET_NATIVE_WINDOW_LAYOUT) => {
+                if let Err(e) = self.set_native_windows_layout(cmd) {
+                    log::error!("failed to set native window layout: '{}'", e);
                 }
             }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
@@ -747,6 +845,34 @@ impl<T: Data> AppState<T> {
         }
     }
 
+    fn new_native_child_window(&mut self, cmd: Command) -> Result<(), Box<dyn std::error::Error>> {
+        let desc = cmd.get_unchecked(sys_cmd::NEW_NATIVE_CHILD_WINDOW);
+        // The NEW_NATIVE_CHILD_WINDOW command is private and only druid can receive it by normal means,
+        // thus unwrapping can be considered safe and deserves a panic.
+        let desc = desc.take().unwrap().downcast::<NativeWindowDesc>().unwrap();
+        let window = desc.build_native(self)?;
+        window.show();
+        Ok(())
+    }
+
+    fn set_native_windows_layout(
+        &mut self,
+        cmd: Command,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let desc = cmd.get_unchecked(sys_cmd::SET_NATIVE_WINDOW_LAYOUT);
+        // The SET_NATIVE_WINDOW_POSITION command is private and only druid can receive it by normal means,
+        // thus unwrapping can be considered safe and deserves a panic.
+        let desc = desc
+            .take()
+            .unwrap()
+            .downcast::<NativeWindowLayoutDesc>()
+            .unwrap();
+        self.inner
+            .borrow_mut()
+            .set_native_layout(desc.id, desc.origin, desc.size);
+        Ok(())
+    }
+
     fn request_close_window(&mut self, id: WindowId) {
         self.inner.borrow_mut().request_close_window(id);
     }
@@ -808,11 +934,39 @@ impl<T: Data> AppState<T> {
             builder.set_menu(menu);
         }
 
-        let handler = DruidHandler::new_shared((*self).clone(), id);
+        let handler = DruidHandler::new_shared((*self).clone(), id, None);
         builder.set_handler(Box::new(handler));
 
         self.add_window(id, pending);
         builder.build()
+    }
+
+    pub(crate) fn build_native_child_window(
+        &mut self,
+        id: WindowId,
+        parent: &WindowHandle,
+        parent_id: WindowId,
+        size: Size,
+        position: Option<Point>,
+    ) -> Result<WindowHandle, PlatformError> {
+        let mut builder = WindowBuilder::new(self.app());
+
+        let handler = DruidHandler::new_shared((*self).clone(), id, Some(parent_id));
+        builder.set_handler(Box::new(handler));
+
+        builder.set_min_size(size);
+        builder.set_size(size);
+        if let Some(position) = position {
+            builder.set_position(position);
+        }
+
+        builder.set_title("<native child window>");
+
+        builder.set_parent(parent);
+
+        let handle = builder.build()?;
+        self.add_child_window(id, handle.clone(), parent_id);
+        Ok(handle)
     }
 }
 
@@ -824,11 +978,17 @@ impl<T: Data> crate::shell::AppHandler for AppHandler<T> {
 
 impl<T: Data> WinHandler for DruidHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
-        self.app_state
-            .connect_window(self.window_id, handle.clone());
-
-        let event = Event::WindowConnected;
-        self.app_state.do_window_event(event, self.window_id);
+        if let Some(parent_id) = self.parent_window_id {
+            let event = Event::NativeWindowConnected(NativeWindowHandle(handle.clone()));
+            // Event is dispatched to parent window, because this is the only one that
+            // has a message loop / event handler.
+            self.app_state.do_window_event(event, parent_id);
+        } else {
+            self.app_state
+                .connect_window(self.window_id, handle.clone());
+            let event = Event::WindowConnected;
+            self.app_state.do_window_event(event, self.window_id);
+        }
     }
 
     fn prepare_paint(&mut self) {
@@ -837,6 +997,10 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn paint(&mut self, piet: &mut Piet, region: &Region) {
         self.app_state.paint_window(self.window_id, piet, region);
+    }
+
+    fn post_render(&mut self) {
+        self.app_state.post_render(self.window_id);
     }
 
     fn size(&mut self, size: Size) {
@@ -936,6 +1100,7 @@ impl<T> Default for Windows<T> {
         Windows {
             windows: HashMap::new(),
             pending: HashMap::new(),
+            child_windows: HashMap::new(),
         }
     }
 }

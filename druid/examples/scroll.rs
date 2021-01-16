@@ -64,4 +64,6 @@ impl<T: Data> Widget<T> for OverPainter {
         ctx.fill(circle, &grad);
         ctx.stroke(rect, &color, 2.0);
     }
+
+    fn post_render(&mut self) {}
 }

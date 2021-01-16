@@ -122,6 +122,8 @@ impl Widget<Color> for ColorWell {
         let rect = ctx.size().to_rounded_rect(5.0);
         ctx.fill(rect, data);
     }
+
+    fn post_render(&mut self) {}
 }
 
 fn make_ui() -> impl Widget<Color> {

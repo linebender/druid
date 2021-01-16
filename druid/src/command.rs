@@ -188,6 +188,14 @@ pub mod sys {
     pub(crate) const NEW_WINDOW: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.new-window");
 
+    /// The selector for a command to create a new native child window for the current widget.
+    pub(crate) const NEW_NATIVE_CHILD_WINDOW: Selector<SingleUse<Box<dyn Any>>> =
+        Selector::new("druid-builtin.new-native-child-window");
+
+    /// The selector for a command to set the position and/or size of a native child window.
+    pub(crate) const SET_NATIVE_WINDOW_LAYOUT: Selector<SingleUse<Box<dyn Any>>> =
+        Selector::new("druid-builtin.set-native-window-layout");
+
     /// The selector for a command to close a window.
     ///
     /// The command must target a specific window.

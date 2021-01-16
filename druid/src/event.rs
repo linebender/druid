@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, WidgetId};
+use crate::{Command, NativeWindowHandle, Notification, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -74,6 +74,19 @@ pub enum Event {
     /// This event means the window *will* go away; it is safe to dispose of resources and
     /// do any other cleanup.
     WindowDisconnected,
+    /// Sent to a widget which requested its own native window when that window is
+    /// first intantiated.
+    ///
+    /// A widget can request a native window to be instantiated by calling
+    /// [`LifeCycleCtx::new_native_window()`]. This is typically done while handling
+    /// the [`LifeCycle::WidgetAdded`] event, to ensure the native parent window is
+    /// already instantiated.
+    ///
+    /// Most widgets do not need their own native window. Only special cases like wgpu
+    /// integration require a native window per widget.
+    ///
+    /// [`LifeCycleCtx::new_native_window`]: struct.LifeCycleCtx.html#method.new_native_window
+    NativeWindowConnected(NativeWindowHandle),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -371,6 +384,7 @@ impl Event {
             Event::WindowConnected
             | Event::WindowCloseRequested
             | Event::WindowDisconnected
+            | Event::NativeWindowConnected(_)
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)

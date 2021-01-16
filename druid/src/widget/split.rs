@@ -438,6 +438,11 @@ impl<T: Data> Widget<T> for Split<T> {
         self.child1.paint(ctx, &data, env);
         self.child2.paint(ctx, &data, env);
     }
+
+    fn post_render(&mut self) {
+        self.child1.post_render();
+        self.child2.post_render();
+    }
 }
 
 // Move to std lib clamp as soon as https://github.com/rust-lang/rust/issues/44095 lands

@@ -156,6 +156,10 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
         self.child.paint_raw(ctx, &self.data, &self.env);
     }
 
+    fn post_render(&mut self) {
+        self.child.post_render();
+    }
+
     fn id(&self) -> Option<WidgetId> {
         Some(self.id)
     }

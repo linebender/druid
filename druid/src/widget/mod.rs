@@ -55,6 +55,8 @@ mod switch;
 mod tabs;
 mod textbox;
 mod view_switcher;
+#[cfg(feature = "wgpu_view")]
+mod wgpu_view;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
@@ -94,6 +96,8 @@ pub use switch::Switch;
 pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::{TextBox, TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
+#[cfg(feature = "wgpu_view")]
+pub use wgpu_view::{WgpuRenderer, WgpuView};
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
 #[doc(hidden)]

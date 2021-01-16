@@ -80,6 +80,8 @@ impl Widget<u32> for TimerWidget {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &u32, env: &Env) {
         self.simple_box.paint(ctx, data, env);
     }
+
+    fn post_render(&mut self) {}
 }
 
 struct SimpleBox;
@@ -113,6 +115,8 @@ impl Widget<u32> for SimpleBox {
         };
         background.paint(ctx, data, env);
     }
+
+    fn post_render(&mut self) {}
 }
 
 pub fn main() {

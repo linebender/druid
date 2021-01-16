@@ -273,4 +273,6 @@ impl Widget<bool> for Switch {
         // paint on/off label
         self.paint_labels(ctx, env, switch_width);
     }
+
+    fn post_render(&mut self) {}
 }

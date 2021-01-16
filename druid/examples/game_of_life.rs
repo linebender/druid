@@ -319,6 +319,8 @@ impl Widget<AppData> for GameOfLifeWidget {
             }
         }
     }
+
+    fn post_render(&mut self) {}
 }
 
 // gives back positions of a glider pattern

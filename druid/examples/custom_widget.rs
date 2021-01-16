@@ -148,6 +148,8 @@ impl Widget<String> for CustomWidget {
         // The image is automatically scaled to fit the rect you pass to draw_image
         ctx.draw_image(&image, size.to_rect(), InterpolationMode::Bilinear);
     }
+
+    fn post_render(&mut self) {}
 }
 
 pub fn main() {

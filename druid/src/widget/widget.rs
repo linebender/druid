@@ -184,6 +184,16 @@ pub trait Widget<T> {
     /// [`RenderContext`]: trait.RenderContext.html
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env);
 
+    /// Utility callback invoked after all painting is done and submitted, to perform
+    /// post-painting actions.
+    ///
+    /// This is typically for advanced use only. Most widgets have no use for this. This
+    /// is currently only used for wgpu integration, to allow wgpu-based rendering to
+    /// reliably occur after all druid native rendering finished, to avoid non-deterministic
+    /// out-of-order rendering (parent covering child) between those two unsynchronized
+    /// rendering pipelines.
+    fn post_render(&mut self);
+
     #[doc(hidden)]
     /// Get the identity of the widget; this is basically only implemented by
     /// `IdentityWrapper`. Widgets should not implement this on their own.
@@ -253,6 +263,10 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.deref_mut().paint(ctx, data, env);
+    }
+
+    fn post_render(&mut self) {
+        self.deref_mut().post_render();
     }
 
     fn id(&self) -> Option<WidgetId> {

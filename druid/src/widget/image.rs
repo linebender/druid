@@ -238,6 +238,8 @@ impl<T: Data> Widget<T> for Image {
             }
         });
     }
+
+    fn post_render(&mut self) {}
 }
 
 #[cfg(not(target_arch = "wasm32"))]

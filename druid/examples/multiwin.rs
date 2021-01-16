@@ -127,6 +127,8 @@ impl<W: Widget<State>> Widget<State> for Glow<W> {
         }
         self.inner.paint(ctx, data, env);
     }
+
+    fn post_render(&mut self) {}
 }
 
 struct ContextMenuController;

@@ -133,6 +133,10 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
     }
+
+    fn post_render(&mut self) {
+        self.widget.post_render();
+    }
 }
 
 impl<W, C> WidgetWrapper for ControllerHost<W, C> {

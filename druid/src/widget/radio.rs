@@ -144,4 +144,8 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         // Paint the text label
         self.child_label.draw_at(ctx, (size + x_padding, 0.0));
     }
+
+    fn post_render(&mut self) {
+        self.child_label.post_render();
+    }
 }

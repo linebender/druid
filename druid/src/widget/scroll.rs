@@ -166,6 +166,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.scroll_component
             .draw_bars(ctx, &self.clip.viewport(), env);
     }
+
+    fn post_render(&mut self) {
+        self.clip.post_render();
+    }
 }
 
 fn log_size_warnings(size: Size) {

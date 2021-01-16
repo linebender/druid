@@ -67,4 +67,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for DebugInvalidation<T, W> {
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
     }
+
+    fn post_render(&mut self) {
+        self.inner.post_render();
+    }
 }

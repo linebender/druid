@@ -136,6 +136,7 @@ impl<T: Data> Widget<T> for Painter<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         (self.0)(ctx, data, env)
     }
+    fn post_render(&mut self) {}
 }
 
 impl<T> From<Color> for BackgroundBrush<T> {

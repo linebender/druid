@@ -87,6 +87,10 @@ impl<T: Data> Widget<T> for Either<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.current_widget().paint(ctx, data, env)
     }
+
+    fn post_render(&mut self) {
+        self.current_widget().post_render();
+    }
 }
 
 impl<T> Either<T> {

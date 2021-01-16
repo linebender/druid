@@ -81,4 +81,8 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
     }
+
+    fn post_render(&mut self) {
+        self.widget.post_render();
+    }
 }

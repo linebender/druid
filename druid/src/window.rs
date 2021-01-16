@@ -14,7 +14,7 @@
 
 //! Management of multiple windows.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::mem;
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
@@ -39,6 +39,15 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct WindowId(u64);
 
+/// Native child window inside a `Window<T>` top-level window.
+///
+/// The native child window has only a platform handle, and does not have all the abstraction
+/// boilerplate of a `Window<T>` top-level window. Is is for special use cases where the widget
+/// requires a native platform window for its implement (e.g. `WgpuView`).
+pub struct ChildWindow {
+    pub(crate) handle: WindowHandle,
+}
+
 /// Per-window state not owned by user code.
 pub struct Window<T> {
     pub(crate) id: WindowId,
@@ -56,6 +65,8 @@ pub struct Window<T> {
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
     ext_handle: ExtEventSink,
+    /// Native windows which are direct children of this one.
+    pub(crate) children: HashSet<WindowId>,
     // delegate?
 }
 
@@ -81,6 +92,7 @@ impl<T> Window<T> {
             handle,
             timers: HashMap::new(),
             ext_handle,
+            children: HashSet::new(),
         }
     }
 }
@@ -369,6 +381,11 @@ impl<T: Data> Window<T> {
         self.paint(piet, invalid, queue, data, env);
     }
 
+    pub(crate) fn do_post_render(&mut self) {
+        self.root.post_render();
+    }
+
+    /// Start of widget traversal for layout.
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state =
@@ -427,6 +444,7 @@ impl<T: Data> Window<T> {
             widget_state: &widget_state,
             z_ops: Vec::new(),
             region: invalid.clone(),
+            native_origin: Point::ORIGIN,
             depth: 0,
         };
 

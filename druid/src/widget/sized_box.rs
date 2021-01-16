@@ -171,6 +171,12 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         }
     }
 
+    fn post_render(&mut self) {
+        if let Some(ref mut inner) = self.inner {
+            inner.post_render();
+        }
+    }
+
     fn id(&self) -> Option<WidgetId> {
         self.inner.as_ref().and_then(|inner| inner.id())
     }

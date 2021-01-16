@@ -21,14 +21,15 @@ use std::{
     time::Duration,
 };
 
-use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
+use crate::core::{CommandQueue, CursorChange, FocusChange, NativeWidgetState, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    Data, Env, ExtEventSink, Insets, MenuDesc, NativeWindowDesc, Notification, Point, Rect,
+    SingleUse, Size, Target, TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle,
+    WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -134,6 +135,8 @@ pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) region: Region,
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
+    /// The origin of the widget relative to the containing native window.
+    pub(crate) native_origin: Point,
 }
 
 // methods on everyone
@@ -658,6 +661,65 @@ impl LifeCycleCtx<'_, '_> {
     /// the `WidgetPod`.
     pub fn register_child(&mut self, child_id: WidgetId) {
         self.widget_state.children.add(&child_id);
+        // TODO: register parent?
+        //self.app_state.windows.get_mut(child_id).parent = self.id()
+    }
+
+    /// Request that a native window be created for this widget.
+    ///
+    /// This should only be called in response to a `LifeCycle::WidgetAdded` event.
+    ///
+    /// In general, you should not need to call this method; native child windows are
+    /// only used in very specific advanced cases when the widget requires its own
+    /// native window (e.g. wgpu integration).
+    pub fn request_native_window(&mut self, min_size: Size) {
+        // auto-generated
+        let window_id = WindowId::next();
+        // FIXME: The old behavior of state.window_id was to be the (only) top-level window, and
+        // after adding native child window support it is still that, so this below only works
+        // for 1st-gen children (child of root window), but recursive children are not supported.
+        // To fix this, LifeCycleCtx::state should use the current child-most window that contains
+        // the current widget the event is sent to.
+        let parent_window_id = self.state.window_id.clone();
+        // Mark widget as native.
+        let native_state = NativeWidgetState {
+            window_id: window_id.clone(),
+            // FIXME: The old behavior of state.window_id was to be the (only) top-level window, and
+            // after adding native child window support it is still that, so this below only works
+            // for 1st-gen children (child of root window), but recursive children are not supported.
+            // To fix this, LifeCycleCtx::state should use the current child-most window that contains
+            // the current widget the event is sent to.
+            parent_window_id: parent_window_id.clone(),
+            native_position: Point::new(0.0, 0.0),
+        };
+        self.widget_state.native_state = Some(native_state);
+
+        // Send a command to the native parent window to create a child window
+        let parent = self.state.window;
+        let mut size = self.widget_state.size();
+        if min_size.width > size.width {
+            size.width = min_size.width;
+        }
+        if min_size.height > size.height {
+            size.height = min_size.height;
+        }
+        let desc = NativeWindowDesc::new(
+            window_id,
+            parent,
+            parent_window_id.clone(),
+            self.widget_state.id,
+            size,
+            // FIXME - No simple way to get native origin (== relative to native platform parent window),
+            //         self.widget_state only has origin from parent widget, not window.
+            //         Instead we lazily move the window to its place when descending the widget hierarchy
+            //         during a paint operation.
+            None,
+        );
+        self.submit_command(
+            commands::NEW_NATIVE_CHILD_WINDOW
+                .with(SingleUse::new(Box::new(desc)))
+                .to(Target::Window(parent_window_id)),
+        );
     }
 
     /// Register this widget to be eligile to accept focus automatically.
@@ -737,6 +799,7 @@ impl PaintCtx<'_, '_, '_> {
             z_ops: Vec::new(),
             region: region.into(),
             depth: self.depth + 1,
+            native_origin: self.native_origin,
         };
         f(&mut child_ctx);
         self.z_ops.append(&mut child_ctx.z_ops);
