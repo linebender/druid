@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! This is a very small example of how to setup a druid application.
-//! It does the almost bare minimum while still being usefull.
+//! It does the almost bare minimum while still being useful.
 
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
