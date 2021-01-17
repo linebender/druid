@@ -1275,7 +1275,7 @@ mod tests {
     use super::*;
     use crate::ext_event::ExtEventHost;
     use crate::text::format::ParseFormatter;
-    use crate::widget::{Flex, Scroll, SizedBox, Split, TextBox};
+    use crate::widget::{Flex, FocusScope, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
 
     const ID_1: WidgetId = WidgetId::reserved(0);
@@ -1285,13 +1285,30 @@ mod tests {
     #[test]
     fn register_children() {
         fn make_widgets() -> impl Widget<u32> {
-            Split::columns(
-                Flex::<Option<u32>>::row()
-                    .with_child(SizedBox::empty().with_id(ID_1).parse())
-                    .with_child(SizedBox::empty().with_id(ID_2).parse())
-                    .with_child(SizedBox::empty().with_id(ID_3).parse()),
-                Scroll::new(SizedBox::empty().parse()),
-            )
+            FocusScope::new(Split::columns(
+                // Flex::<Option<u32>>::row()
+                //     .with_child(SizedBox::empty().with_id(ID_1))
+                //     .with_child(SizedBox::empty().with_id(ID_2))
+                //     .with_child(SizedBox::empty().with_id(ID_3)),
+                // Scroll::new(SizedBox::empty()),
+                Flex::<u32>::row()
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_1),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_2),
+                    )
+                    .with_child(
+                        TextBox::new()
+                            .with_formatter(ParseFormatter::new())
+                            .with_id(ID_3),
+                    ),
+                Scroll::new(TextBox::new().with_formatter(ParseFormatter::new())),
+            ))
         }
 
         let widget = make_widgets();
@@ -1321,6 +1338,6 @@ mod tests {
         assert!(ctx.widget_state.children.may_contain(&ID_1));
         assert!(ctx.widget_state.children.may_contain(&ID_2));
         assert!(ctx.widget_state.children.may_contain(&ID_3));
-        assert_eq!(ctx.widget_state.children.entry_count(), 7);
+        assert_eq!(ctx.widget_state.children.entry_count(), 8);
     }
 }
