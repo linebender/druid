@@ -22,9 +22,6 @@ use crate::{Data, Point, WidgetPod};
 /// If you want to display a widget in the `None` case, wrap this in an `Either` widget.
 pub struct Optional<T> {
     inner: WidgetPod<T, Box<dyn Widget<T>>>,
-    /// Keep track of whether we've done 'WidgetAdded'. We can't do this until we get `Some` data
-    /// for the first time.
-    init: bool,
 }
 
 impl<T> Optional<T> {
@@ -32,12 +29,11 @@ impl<T> Optional<T> {
     pub fn new(inner: impl Widget<T> + 'static) -> Optional<T> {
         Optional {
             inner: WidgetPod::new(inner).boxed(),
-            init: false,
         }
     }
 }
 
-impl<T: Data> Widget<Option<T>> for Optional<T> {
+impl<T: Data + Default> Widget<Option<T>> for Optional<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
         if let Some(data) = data.as_mut() {
             self.inner.event(ctx, event, data, env);
@@ -53,6 +49,8 @@ impl<T: Data> Widget<Option<T>> for Optional<T> {
     ) {
         if let Some(data) = data.as_ref() {
             self.inner.lifecycle(ctx, event, data, env);
+        } else {
+            self.inner.lifecycle(ctx, event, &Default::default(), env);
         }
     }
 
