@@ -21,7 +21,9 @@ use std::{
     time::Duration,
 };
 
-use crate::core::{CommandQueue, CursorChange, FocusChange, FocusNode, FocusScopeNode, WidgetState};
+use crate::core::{
+    CommandQueue, CursorChange, FocusChange, FocusNode, FocusScopeNode, WidgetState,
+};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;

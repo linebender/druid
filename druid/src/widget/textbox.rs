@@ -16,9 +16,8 @@
 
 use std::time::Duration;
 
-use crate::piet::PietText;
 use super::focus::FocusController;
-use crate::kurbo::Vec2;
+use crate::piet::PietText;
 use crate::text::{
     format::{Formatter, ValidationError},
     BasicTextInput, EditAction, EditableText, Editor, LayoutMetrics, Selection, TextInput,
@@ -26,8 +25,8 @@ use crate::text::{
 };
 use crate::widget::prelude::*;
 use crate::{
-    commands, theme, Affine, Color, Cursor, Data, FontDescriptor, HotKey, KbKey, KeyOrValue, Point, Selector,
-    SysMods, TextAlignment, TimerToken, Vec2,
+    commands, theme, Affine, Color, Cursor, Data, FontDescriptor, HotKey, KbKey, KeyOrValue, Point,
+    Selector, SysMods, TextAlignment, TimerToken, Vec2,
 };
 
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
@@ -126,7 +125,7 @@ pub enum TextBoxEvent {
     Cancel,
 }
 
-impl TextBox<()> {
+impl TextBox<String> {
     /// Perform an `EditAction`.
     ///
     /// You can send a [`Command`] to a textbox containing an [`EditAction`]
@@ -135,6 +134,21 @@ impl TextBox<()> {
     /// [`Command`]: crate::Command
     pub const PERFORM_EDIT: Selector<EditAction> =
         Selector::new("druid-builtin.textbox.perform-edit");
+
+    /// Turn this `TextBox` into a [`ValueTextBox`], using the [`Formatter`] to
+    /// manage the value.
+    ///
+    /// For simple value formatting, you can use the [`ParseFormatter`].
+    ///
+    /// [`ValueTextBox`]: ValueTextBox
+    /// [`Formatter`]: crate::text::format::Formatter
+    /// [`ParseFormatter`]: crate::text::format::ParseFormatter
+    pub fn with_formatter<T: Data>(
+        self,
+        formatter: impl Formatter<T> + 'static,
+    ) -> ValueTextBox<T> {
+        ValueTextBox::new(self, formatter)
+    }
 }
 
 impl<T> TextBox<T> {
@@ -490,8 +504,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 _ => (),
             }
+
+            self.focus_controller.event(ctx, event);
         });
-        self.focus_controller.event(ctx, event);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
@@ -546,11 +561,11 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.editor.layout().layout_metrics()
             };
 
-        let height = text_metrics.size.height + text_insets.y_value();
-        let size = bc.constrain((width, height));
-        // if we have a non-left text-alignment, we need to manually adjust our position.
-        self.update_alignment_adjustment(size.width - text_insets.x_value(), &text_metrics);
-        self.text_pos = Point::new(text_insets.x0 + self.alignment_offset, text_insets.y0);
+            let height = text_metrics.size.height + text_insets.y_value();
+            let size = bc.constrain((width, height));
+            // if we have a non-left text-alignment, we need to manually adjust our position.
+            self.update_alignment_adjustment(size.width - text_insets.x_value(), &text_metrics);
+            self.text_pos = Point::new(text_insets.x0 + self.alignment_offset, text_insets.y0);
 
             let bottom_padding = (size.height - text_metrics.size.height) / 2.0;
             let baseline_off =

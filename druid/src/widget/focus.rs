@@ -46,9 +46,6 @@ impl FocusController {
     /// Handle focus events like focus_next or focus_prev and handle focus commands.
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event) {
         match event {
-            Event::MouseDown(_) => {
-                ctx.request_focus();
-            }
             Event::KeyDown(key_event) if !ctx.is_handled => {
                 match key_event {
                     // Tab and shift+tab
@@ -164,6 +161,10 @@ impl<T: Data> Focus<T> {
 impl<T: Data> Widget<T> for Focus<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         ctx.with_focus_node(self.focus_controller.focus_node(), |ctx| {
+            if let Event::MouseDown(_) = event {
+                ctx.request_focus();
+            }
+
             self.child.event(ctx, event, data, env);
             self.focus_controller.event(ctx, event);
         });

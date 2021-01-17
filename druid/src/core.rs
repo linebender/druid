@@ -31,14 +31,16 @@ use crate::{
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<Command>;
 
-/// A type that depicts the current [`Focus`] widget state for its descendants.
+/// A type that depicts the current [`crate::widget::Focus`] widget state for its descendants.
 ///
-/// This type can be retrieved from any descendants of [`Focus`].
+/// This type can be retrieved from any descendants of [`crate::widget::Focus`].
 /// For example, this type can be used to draw focus decoration by reading the current is_focused
-/// value that shows if [`Focus`] widget is_focused. Unlike ctx.is_focused, ctx.focus_node().is_focused
-/// will be true even if the current widget is not focused and if the parent [`Focus`] has focus.
+/// value that shows if [`crate::widget::Focus`] widget is_focused.
+/// Unlike ctx.is_focused, ctx.focus_node().is_focused will be true even if the current widget
+/// is not focused and if the parent [`crate::widget::Focus`] has focus.
 ///
-/// This type also allows descendants to receive keyboard events if the parent [`Focus`] widget has focus.
+/// This type also allows descendants to receive keyboard events
+/// if the parent [`crate::widget::Focus`] widget has focus.
 #[derive(Debug, Clone, Copy)]
 pub struct FocusNode {
     /// id of the widget that owns the FocusNode

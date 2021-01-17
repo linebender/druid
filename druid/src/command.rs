@@ -314,9 +314,9 @@ pub mod sys {
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
 
-    /// Notify descendants that a [`FocusNode`] has changed focus.
+    /// Notify descendants that a [`crate::core::FocusNode`] has changed focus.
     ///
-    /// [`FocusNode`]: FocusNode
+    /// [`crate::core::FocusNode`]
     /// The payload indicates wheter the focus_node in the context is focused or not.
     pub const FOCUS_NODE_FOCUS_CHANGED: Selector<bool> =
         Selector::new("druid-builtin.focus_node_focus_changed");
@@ -324,10 +324,10 @@ pub mod sys {
     /// Request focus for the widget
     pub const REQUEST_FOCUS: Selector<WidgetId> = Selector::new("druid-builtin.request_focus");
 
-    /// Request that focus change to the next widget in the current [`FocusScope`].
+    /// Request that focus change to the next widget in the current [`crate::widget::FocusScope`].
     pub const NEXT_FOCUS: Selector = Selector::new("druid-builtin.next_focus");
 
-    /// Request that focus change to the previous widget in the current [`FocusScope`].
+    /// Request that focus change to the previous widget in the current [`crate::widget::FocusScope`].
     pub const PREV_FOCUS: Selector = Selector::new("druid-builtin.prev_focus");
 }
 
