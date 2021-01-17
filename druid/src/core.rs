@@ -1286,11 +1286,6 @@ mod tests {
     fn register_children() {
         fn make_widgets() -> impl Widget<u32> {
             FocusScope::new(Split::columns(
-                // Flex::<Option<u32>>::row()
-                //     .with_child(SizedBox::empty().with_id(ID_1))
-                //     .with_child(SizedBox::empty().with_id(ID_2))
-                //     .with_child(SizedBox::empty().with_id(ID_3)),
-                // Scroll::new(SizedBox::empty()),
                 Flex::<u32>::row()
                     .with_child(
                         TextBox::new()
