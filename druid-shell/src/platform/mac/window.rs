@@ -163,7 +163,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
-            size: Size::new(0., 0.),
+            size: Size::new(500., 400.),
             min_size: None,
             position: None,
             level: None,

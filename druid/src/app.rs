@@ -328,6 +328,8 @@ impl WindowConfig {
 
         if let Some(size) = self.size {
             builder.set_size(size);
+        } else if let WindowSizePolicy::Content = self.size_policy {
+            builder.set_size(Size::new(0., 0.));
         }
 
         if let Some(position) = self.position {
