@@ -16,6 +16,7 @@
 
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
+use std::any::{Any, TypeId};
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -127,6 +128,10 @@ impl<T: Data> Widget<T> for Align<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.child.widget().augmentation_raw(type_id)
     }
 }
 

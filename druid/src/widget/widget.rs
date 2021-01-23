@@ -16,6 +16,7 @@ use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
+use std::any::{Any, TypeId};
 
 /// A unique identifier for a single [`Widget`].
 ///
@@ -197,6 +198,16 @@ pub trait Widget<T> {
     fn type_name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
+
+    #[doc(hidden)]
+    /// Get a reference to an augmentation of the given type.
+    /// This is implemented in terms of Any in order to maintain object safety.
+    /// User code should use augmentation on WidgetExt.
+    /// Single widget wrappers should delegate this to their children.
+    #[allow(unused_variables)]
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        None
+    }
 }
 
 impl WidgetId {
@@ -261,5 +272,9 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn type_name(&self) -> &'static str {
         self.deref().type_name()
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.deref().augmentation_raw(type_id)
     }
 }

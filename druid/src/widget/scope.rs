@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Lens, Point, WidgetPod};
+use std::any::{Any, TypeId};
 
 /// A policy that controls how a [`Scope`] will interact with its surrounding
 /// application data. Specifically, how to create an initial State from the
@@ -300,6 +301,10 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.paint_raw(ctx, state, env));
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.inner.widget().augmentation_raw(type_id)
     }
 }
 

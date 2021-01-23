@@ -17,6 +17,7 @@
 use super::BackgroundBrush;
 use crate::widget::prelude::*;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
+use std::any::{Any, TypeId};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -190,5 +191,9 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.inner.paint(ctx, data, env);
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.inner.widget().augmentation_raw(type_id)
     }
 }

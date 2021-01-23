@@ -17,6 +17,7 @@
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Point, WidgetPod};
+use std::any::{Any, TypeId};
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {
@@ -93,6 +94,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         (self.f)(&mut new_env, &data);
 
         self.child.paint(ctx, data, &new_env);
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.child.widget().augmentation_raw(type_id)
     }
 }
 

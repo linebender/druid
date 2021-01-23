@@ -18,6 +18,7 @@ use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::Data;
+use std::any::{Any, TypeId};
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
 pub struct IdentityWrapper<W> {
@@ -55,6 +56,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
 
     fn id(&self) -> Option<WidgetId> {
         Some(self.id)
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.inner.augmentation_raw(type_id)
     }
 }
 

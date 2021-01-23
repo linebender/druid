@@ -18,6 +18,7 @@ use std::f64::INFINITY;
 
 use crate::widget::prelude::*;
 use crate::Data;
+use std::any::{Any, TypeId};
 
 /// A widget with predefined size.
 ///
@@ -174,6 +175,12 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn id(&self) -> Option<WidgetId> {
         self.inner.as_ref().and_then(|inner| inner.id())
     }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.inner
+            .as_ref()
+            .and_then(|inner| inner.augmentation_raw(type_id))
+    }
 }
 
 #[cfg(test)]
@@ -186,7 +193,7 @@ mod tests {
         let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
-        assert_eq!(child_bc.min(), Size::new(400., 400.,));
+        assert_eq!(child_bc.min(), Size::new(400., 400.));
     }
 
     #[test]
@@ -194,7 +201,7 @@ mod tests {
         let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
-        assert_eq!(child_bc.min(), Size::new(0., 200.,));
-        assert_eq!(child_bc.max(), Size::new(400., 200.,));
+        assert_eq!(child_bc.min(), Size::new(0., 200.));
+        assert_eq!(child_bc.max(), Size::new(400., 200.));
     }
 }

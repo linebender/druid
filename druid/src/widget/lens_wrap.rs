@@ -23,6 +23,7 @@ use std::marker::PhantomData;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Lens};
+use std::any::{Any, TypeId};
 
 /// A wrapper for its widget subtree to have access to a part
 /// of its parent's data.
@@ -113,6 +114,10 @@ where
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.inner.augmentation_raw(type_id)
     }
 }
 
