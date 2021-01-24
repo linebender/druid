@@ -306,6 +306,9 @@ pub enum CrossAxisAlignment {
     ///
     /// The calculated baseline is the maximum baseline offset of the children.
     Baseline,
+    /// Fill the available space.
+    ///
+    Fill,
 }
 
 /// Arrangement of children on the main axis.
@@ -712,6 +715,15 @@ impl<T: Data> Widget<T> for Flex<T> {
                     let child_above_baseline = child_size.height - child_baseline;
                     extra_height + (max_above_baseline - child_above_baseline)
                 }
+                CrossAxisAlignment::Fill => {
+                    let fill_size: Size = self
+                        .direction
+                        .pack(self.direction.major(child_size), minor_dim)
+                        .into();
+                    let child_bc = BoxConstraints::tight(fill_size);
+                    child.widget.layout(ctx, &child_bc, data, env);
+                    0.0
+                }
                 _ => {
                     let extra_minor = minor_dim - self.direction.minor(child_size);
                     alignment.align(extra_minor)
@@ -793,6 +805,7 @@ impl CrossAxisAlignment {
             // in vertical layout, baseline is equivalent to center
             CrossAxisAlignment::Center | CrossAxisAlignment::Baseline => (val / 2.0).round(),
             CrossAxisAlignment::End => val,
+            CrossAxisAlignment::Fill => 0.0,
         }
     }
 }
