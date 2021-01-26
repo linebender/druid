@@ -308,6 +308,8 @@ pub enum CrossAxisAlignment {
     Baseline,
     /// Fill the available space.
     ///
+    /// The size on this axis is the size of the largest widget;
+    /// other widgets must fill that space.
     Fill,
 }
 
