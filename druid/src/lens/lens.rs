@@ -570,9 +570,9 @@ impl<A, B: Clone> Lens<A, B> for Constant<B> {
 
 /// A lens that combines two lenses into a tuple.
 #[derive(Debug, Copy, Clone)]
-pub struct Tuple<L1, L2>(pub L1, pub L2);
+pub struct Tuple2<L1, L2>(pub L1, pub L2);
 
-impl<A, L1B, L2B, L1, L2> Lens<A, (L1B, L2B)> for Tuple<L1, L2>
+impl<A, L1B, L2B, L1, L2> Lens<A, (L1B, L2B)> for Tuple2<L1, L2>
 where
     L1B: Clone,
     L2B: Clone,

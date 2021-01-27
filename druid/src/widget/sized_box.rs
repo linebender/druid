@@ -49,6 +49,7 @@ impl<T> SizedBox<T> {
     /// If the widget is unchanged, it will do nothing, which can be useful if you want to draw a
     /// widget some of the time (for example, it is used to implement
     /// [`Maybe`][crate::widget::Maybe]).
+    #[doc(alias = "null")]
     pub fn empty() -> Self {
         Self {
             inner: None,
