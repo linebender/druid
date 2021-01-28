@@ -644,7 +644,7 @@ impl<T: Data> AppState<T> {
             }
             _ => {
                 let handled = self.inner.borrow_mut().dispatch_cmd(cmd.clone());
-                if !handled.is_handled() && !cmd.selector_symbol().contains("@@can-ignore") {
+                if !handled.is_handled() && cmd.is_must_use() {
                     log::warn!("{:?} was not handled.", cmd);
                 }
             }

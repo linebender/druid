@@ -25,16 +25,17 @@ use crate::{WidgetId, WindowId};
 /// The identity of a [`Selector`].
 ///
 /// [`Selector`]: struct.Selector.html
-pub(crate) type SelectorSymbol = &'static str;
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct SelectorSymbol {
+    str: &'static str,
+    must_use: bool,
+}
 
 /// An identifier for a particular command.
 ///
 /// This should be a unique string identifier.
 /// Having multiple selectors with the same identifier but different payload
 /// types is not allowed and can cause [`Command::get`] and [`get_unchecked`] to panic.
-///
-/// To stop commands from loging error if they are not used,
-/// include "@@can-ignore" in the selector.
 ///
 /// The type parameter `T` specifies the command's payload type.
 /// See [`Command`] for more information.
@@ -258,8 +259,7 @@ pub mod sys {
         Selector::new("druid-builtin.menu-file-open");
 
     /// Sent when the user cancels an open file panel.
-    pub const OPEN_PANEL_CANCELLED: Selector =
-        Selector::new("druid-builtin.open-panel-cancelled@@can-ignore");
+    pub const OPEN_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.open-panel-cancelled");
 
     /// Open a path, must be handled by the application.
     ///
@@ -275,8 +275,7 @@ pub mod sys {
         Selector::new("druid-builtin.menu-file-save-as");
 
     /// Sent when the user cancels a save file panel.
-    pub const SAVE_PANEL_CANCELLED: Selector =
-        Selector::new("druid-builtin.save-panel-cancelled@@can-ignore");
+    pub const SAVE_PANEL_CANCELLED: Selector = Selector::new("druid-builtin.save-panel-cancelled");
 
     /// Save the current path.
     ///
@@ -322,7 +321,7 @@ pub mod sys {
 
 impl Selector<()> {
     /// A selector that does nothing.
-    pub const NOOP: Selector = Selector::new("druid-builtin.noop@@can-ignore");
+    pub const NOOP: Selector = Selector::new("");
 
     /// Turns this into a command with the specified [`Target`].
     ///
@@ -334,8 +333,25 @@ impl Selector<()> {
 
 impl<T> Selector<T> {
     /// Create a new `Selector` with the given string.
-    pub const fn new(s: &'static str) -> Selector<T> {
-        Selector(s, PhantomData)
+    pub const fn new(str: &'static str) -> Selector<T> {
+        Selector(
+            SelectorSymbol {
+                str,
+                must_use: false,
+            },
+            PhantomData,
+        )
+    }
+
+    /// Create a `Selector` that must be used.
+    pub const fn must_use(str: &'static str) -> Selector<T> {
+        Selector(
+            SelectorSymbol {
+                str,
+                must_use: true,
+            },
+            PhantomData,
+        )
     }
 
     /// Returns the `SelectorSymbol` identifying this `Selector`.
@@ -389,9 +405,9 @@ impl Command {
         .default_to(Target::Global)
     }
 
-    /// Give the selector symbol
-    pub(crate) fn selector_symbol(&self) -> SelectorSymbol {
-        self.symbol
+    /// Checks if this command must be used.
+    pub fn is_must_use(&self) -> bool {
+        self.symbol.must_use
     }
 
     /// A helper method for creating a `Notification` from a `Command`.
@@ -415,6 +431,14 @@ impl Command {
     /// [`Target`]: enum.Target.html
     pub fn to(mut self, target: impl Into<Target>) -> Self {
         self.target = target.into();
+        self
+    }
+
+    /// Make the `Command` must use.
+    ///
+    /// this will log warning if this `Command` is not handled.
+    pub fn must_use(mut self, must_use: bool) -> Self {
+        self.symbol.must_use = must_use;
         self
     }
 
@@ -457,7 +481,7 @@ impl Command {
             Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
                     "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
-                    selector.symbol()
+                    selector.symbol().str
                 );
             }))
         } else {
@@ -483,8 +507,8 @@ impl Command {
         self.get(selector).unwrap_or_else(|| {
             panic!(
                 "Expected selector \"{}\" but the command was \"{}\".",
-                selector.symbol(),
-                self.symbol
+                selector.symbol().str,
+                self.symbol.str
             )
         })
     }
@@ -511,7 +535,7 @@ impl Notification {
                 panic!(
                     "The selector \"{}\" exists twice with different types. \
                     See druid::Command::get for more information",
-                    selector.symbol()
+                    selector.symbol().str
                 );
             }))
         } else {
@@ -551,7 +575,7 @@ impl From<Selector> for Command {
 
 impl<T> std::fmt::Display for Selector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Selector(\"{}\", {})", self.0, any::type_name::<T>())
+        write!(f, "Selector(\"{}\", {})", self.0.str, any::type_name::<T>())
     }
 }
 
@@ -602,7 +626,7 @@ impl std::fmt::Debug for Notification {
         write!(
             f,
             "Notification: Selector {} from {:?}",
-            self.symbol, self.source
+            self.symbol.str, self.source
         )
     }
 }
