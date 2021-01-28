@@ -183,7 +183,7 @@ pub trait LensExt<A: ?Sized, B: ?Sized>: Lens<A, B> {
         B: ops::Index<I> + ops::IndexMut<I>,
         Self: Sized,
     {
-        self.then(Index::new(index))
+        self.then(Index(index))
     }
 
     /// Adapt to operate on the contents of an `Arc` with efficient copy-on-write semantics
@@ -429,16 +429,14 @@ where
 
 /// `Lens` for indexing containers
 #[derive(Debug, Copy, Clone)]
-pub struct Index<I> {
-    index: I,
-}
+pub struct Index<I>(pub I);
 
 impl<I> Index<I> {
     /// Construct a lens that accesses a particular index
     ///
     /// See also `LensExt::index`.
     pub fn new(index: I) -> Self {
-        Self { index }
+        Self(index)
     }
 }
 
@@ -448,10 +446,10 @@ where
     I: Clone,
 {
     fn with<V, F: FnOnce(&T::Output) -> V>(&self, data: &T, f: F) -> V {
-        f(&data[self.index.clone()])
+        f(&data[self.0.clone()])
     }
     fn with_mut<V, F: FnOnce(&mut T::Output) -> V>(&self, data: &mut T, f: F) -> V {
-        f(&mut data[self.index.clone()])
+        f(&mut data[self.0.clone()])
     }
 }
 
