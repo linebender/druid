@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Usage of file open and saving.
+
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,

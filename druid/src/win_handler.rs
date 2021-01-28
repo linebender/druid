@@ -799,6 +799,7 @@ impl<T: Data> AppState<T> {
         let data = self.data();
         let env = self.env();
 
+        pending.size_policy = config.size_policy;
         pending.title.resolve(&data, &env);
         builder.set_title(pending.title.display_text().to_string());
 

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This example shows basic usage of Lens
+
 use druid::widget::Slider;
 use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};

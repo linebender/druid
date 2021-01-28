@@ -20,7 +20,7 @@ use druid::widget::{
 use druid::{
     theme, Affine, AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens,
     LensExt, LifeCycle, LifeCycleCtx, LocalizedString, PaintCtx, Point, Rect, RenderContext, Size,
-    TimerToken, UpdateCtx, Widget, WidgetExt, WindowConfig, WindowDesc, WindowId,
+    TimerToken, UpdateCtx, Widget, WidgetExt, WindowConfig, WindowDesc, WindowId, WindowSizePolicy,
 };
 use druid_shell::piet::Text;
 use druid_shell::{Screen, WindowLevel};
@@ -141,7 +141,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                         let win_id = ctx.new_sub_window(
                             WindowConfig::default()
                                 .show_titlebar(false)
-                                .window_size(Size::new(100.0, 23.0))
+                                .window_size_policy(WindowSizePolicy::Content)
                                 .set_level(WindowLevel::Tooltip)
                                 .set_position(
                                     ctx.window().get_position()
