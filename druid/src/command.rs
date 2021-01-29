@@ -513,9 +513,9 @@ impl Command {
     pub fn get_unchecked<T: Any>(&self, selector: Selector<T>) -> &T {
         self.get(selector).unwrap_or_else(|| {
             panic!(
-                "Expected selector \"{}\" but the command was \"{}\".",
-                selector.symbol().str,
-                self.symbol.str
+                "Expected selector {:?} but the command was {:?}.",
+                selector.symbol(),
+                self.symbol
             )
         })
     }
