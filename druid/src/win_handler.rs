@@ -644,7 +644,7 @@ impl<T: Data> AppState<T> {
             }
             _ => {
                 let handled = self.inner.borrow_mut().dispatch_cmd(cmd.clone());
-                if !handled.is_handled() && cmd.is_must_use() {
+                if !handled.is_handled() && cmd.must_be_used() {
                     log::warn!("{:?} was not handled.", cmd);
                 }
             }

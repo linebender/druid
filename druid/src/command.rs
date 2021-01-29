@@ -25,10 +25,17 @@ use crate::{WidgetId, WindowId};
 /// The identity of a [`Selector`].
 ///
 /// [`Selector`]: struct.Selector.html
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub(crate) struct SelectorSymbol {
     str: &'static str,
     must_use: bool,
+}
+
+impl std::fmt::Debug for SelectorSymbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let must_use = if self.must_use { " (must_use)" } else { "" };
+        write!(f, "{}{}", self.str, must_use)
+    }
 }
 
 /// An identifier for a particular command.
@@ -406,7 +413,7 @@ impl Command {
     }
 
     /// Checks if this command must be used.
-    pub fn is_must_use(&self) -> bool {
+    pub fn must_be_used(&self) -> bool {
         self.symbol.must_use
     }
 
@@ -480,8 +487,8 @@ impl Command {
         if self.symbol == selector.symbol() {
             Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
-                    "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
-                    selector.symbol().str
+                    "The selector {:?} exists twice with different types. See druid::Command::get for more information",
+                    selector.symbol()
                 );
             }))
         } else {
@@ -533,9 +540,9 @@ impl Notification {
         if self.symbol == selector.symbol() {
             Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
-                    "The selector \"{}\" exists twice with different types. \
+                    "The selector {:?} exists twice with different types. \
                     See druid::Command::get for more information",
-                    selector.symbol().str
+                    selector.symbol()
                 );
             }))
         } else {
@@ -575,7 +582,7 @@ impl From<Selector> for Command {
 
 impl<T> std::fmt::Display for Selector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Selector(\"{}\", {})", self.0.str, any::type_name::<T>())
+        write!(f, "Selector({:?}, {})", self.0, any::type_name::<T>())
     }
 }
 
@@ -625,8 +632,8 @@ impl std::fmt::Debug for Notification {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Notification: Selector {} from {:?}",
-            self.symbol.str, self.source
+            "Notification: Selector {:?} from {:?}",
+            self.symbol, self.source
         )
     }
 }
