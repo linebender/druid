@@ -74,8 +74,8 @@ impl<T: Data> Container<T> {
         self.background = Some(brush.into());
     }
 
-    /// Removes background.
-    pub fn remove_background(&mut self) {
+    /// Clears background.
+    pub fn clear_background(&mut self) {
         self.background = None;
     }
 
@@ -111,8 +111,8 @@ impl<T: Data> Container<T> {
         });
     }
 
-    /// Removes border.
-    pub fn remove_border(&mut self) {
+    /// Clears border.
+    pub fn clear_border(&mut self) {
         self.border = None;
     }
 
