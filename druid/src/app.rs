@@ -380,10 +380,7 @@ impl WindowConfig {
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a function that will generate the root
-    /// [`Widget`] for this window.
-    ///
-    /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
+    /// Create a new `WindowDesc`, taking the root [`Widget`] for this window.
     ///
     /// [`Widget`]: trait.Widget.html
     pub fn new<W>(root: W) -> WindowDesc<T>
