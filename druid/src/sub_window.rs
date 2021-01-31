@@ -72,7 +72,7 @@ impl SubWindowDesc {
         app_state: &mut AppState<T>,
     ) -> Result<WindowHandle, Error> {
         let sub_window_root = self.sub_window_root;
-        let pending = PendingWindow::new(|| sub_window_root.lens(Unit::default()));
+        let pending = PendingWindow::new(sub_window_root.lens(Unit::default()));
         app_state.build_native_window(self.window_id, pending, self.window_config)
     }
 }

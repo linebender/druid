@@ -148,7 +148,7 @@ impl<T: Data> Harness<'_, T> {
         {
             let piet = target.0.as_mut().unwrap().render_context();
 
-            let pending = PendingWindow::new(|| root);
+            let pending = PendingWindow::new(root);
             let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
             let inner = Inner {

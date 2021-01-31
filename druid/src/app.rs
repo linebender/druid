@@ -86,14 +86,13 @@ pub struct PendingWindow<T> {
 
 impl<T: Data> PendingWindow<T> {
     /// Create a pending window from any widget.
-    pub fn new<W, F>(root: F) -> PendingWindow<T>
+    pub fn new<W>(root: W) -> PendingWindow<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         // This just makes our API slightly cleaner; callers don't need to explicitly box.
         PendingWindow {
-            root: Box::new(root()),
+            root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
             menu: MenuDesc::platform_default(),
             size_policy: WindowSizePolicy::User,
@@ -387,10 +386,9 @@ impl<T: Data> WindowDesc<T> {
     /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
     ///
     /// [`Widget`]: trait.Widget.html
-    pub fn new<W, F>(root: F) -> WindowDesc<T>
+    pub fn new<W>(root: W) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         WindowDesc {
             pending: PendingWindow::new(root),

@@ -23,7 +23,7 @@ use druid::{
 struct Delegate;
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("open-save-demo").with_placeholder("Opening/Saving Demo"));
     let data = "Type here.".to_owned();
     AppLauncher::with_window(main_window)

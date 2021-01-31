@@ -204,7 +204,7 @@ fn make_ui() -> impl Widget<AppState> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(make_ui)
+    let main_window = WindowDesc::new(make_ui())
         .window_size((650., 450.))
         .title("Flex Container Options");
 

@@ -19,7 +19,7 @@ use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("lens-demo-window-title").with_placeholder("Lens Demo"));
     let data = MyComplexState {
         term: "hello".into(),

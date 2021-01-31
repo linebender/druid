@@ -72,7 +72,7 @@ struct AppState {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Tabs")
         .window_size((700.0, 400.0));
 

@@ -322,7 +322,7 @@ fn make_list_item() -> impl Widget<LoggedEvent> {
 
 pub fn main() {
     //describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Event Viewer")
         .window_size((760.0, 680.0));
 

@@ -116,7 +116,7 @@ impl Widget<u32> for SimpleBox {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| TimerWidget {
+    let window = WindowDesc::new(TimerWidget {
         timer_id: TimerToken::INVALID,
         simple_box: WidgetPod::new(SimpleBox),
         pos: Point::ZERO,

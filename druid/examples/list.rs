@@ -30,7 +30,7 @@ struct AppData {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
     let left = vector![1, 2];
