@@ -74,6 +74,11 @@ impl<T: Data> Container<T> {
         self.background = Some(brush.into());
     }
 
+    /// Clears background.
+    pub fn clear_background(&mut self) {
+        self.background = None;
+    }
+
     /// Builder-style method for painting a border around the widget with a color and width.
     ///
     /// Arguments can be either concrete values, or a [`Key`] of the respective
@@ -104,6 +109,11 @@ impl<T: Data> Container<T> {
             color: color.into(),
             width: width.into(),
         });
+    }
+
+    /// Clears border.
+    pub fn clear_border(&mut self) {
+        self.border = None;
     }
 
     /// Builder style method for rounding off corners of this container by setting a corner radius
