@@ -277,6 +277,20 @@ impl<T: Data> Harness<'_, T> {
         self.inner.paint_region(&mut self.piet, &invalid);
     }
 
+    /// Get focus chain
+    pub fn focus_chain(&mut self) -> Vec<WidgetId> {
+        self.window()
+            .focus_chain()
+            .map(|chain| -> Vec<WidgetId> {
+                chain
+                    .iter()
+                    .filter(|node| node.widget_id.is_some())
+                    .map(|node| node.widget_id.unwrap())
+                    .collect()
+            })
+            .unwrap()
+    }
+
     /// Paints the entire window and resets the invalid region.
     #[allow(dead_code)]
     pub fn paint(&mut self) {

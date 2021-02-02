@@ -19,7 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, WidgetId};
+use crate::{Command, FocusNode, Notification, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -294,10 +294,10 @@ pub enum InternalLifeCycle {
     RouteWidgetAdded,
     /// Used to route the `FocusChanged` event.
     RouteFocusChanged {
-        /// the widget that is losing focus, if any
-        old: Option<WidgetId>,
-        /// the widget that is gaining focus, if any
-        new: Option<WidgetId>,
+        /// the focus node that is losing focus, if any
+        old: FocusNode,
+        /// the focus node that is gaining focus, if any
+        new: FocusNode,
     },
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,

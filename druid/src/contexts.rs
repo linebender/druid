@@ -21,7 +21,9 @@ use std::{
     time::Duration,
 };
 
-use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
+use crate::core::{
+    CommandQueue, CursorChange, FocusChange, FocusNode, FocusScopeNode, WidgetState,
+};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
@@ -55,6 +57,8 @@ pub(crate) struct ContextState<'a> {
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
+    pub(crate) focus_scope: FocusScopeNode,
+    pub(crate) focus_node: FocusNode,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -149,6 +153,16 @@ impl_context_method!(
             self.widget_state.id
         }
 
+        /// get the `FocusNode` of the current widget.
+        pub fn focus_node(&self) -> FocusNode {
+            self.state.focus_node
+        }
+
+        /// get the `FocusScopeNode` of the current widget.
+        pub fn focus_scope(&self) -> FocusScopeNode {
+            self.state.focus_scope
+        }
+
         /// Returns a reference to the current `WindowHandle`.
         pub fn window(&self) -> &WindowHandle {
             &self.state.window
@@ -162,6 +176,15 @@ impl_context_method!(
         /// Get an object which can create text layouts.
         pub fn text(&mut self) -> &mut PietText {
             &mut self.state.text
+        }
+
+        pub(crate) fn set_focus_node(&mut self, focus_node: FocusNode) {
+            self.state.focus_node = focus_node;
+            self.state.focus_node.focus_scope = self.state.focus_scope;
+        }
+
+        pub(crate) fn set_focus_scope_node(&mut self, focus_scope: FocusScopeNode) {
+            self.state.focus_scope = focus_scope;
         }
     }
 );
@@ -272,6 +295,22 @@ impl_context_method!(
         /// [`is_focused`]: #method.is_focused
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus
+        }
+
+        /// Pass the focus node to the context.
+        pub fn with_focus_node(&mut self, focus_node: FocusNode, f: impl FnOnce(&mut Self)) {
+            let current_focus_node = self.focus_node();
+            self.set_focus_node(focus_node);
+            f(self);
+            self.set_focus_node(current_focus_node);
+        }
+
+        /// Pass the focus scope node to the context.
+        pub fn with_focus_scope(&mut self, focus_scope: FocusScopeNode, f: impl FnOnce(&mut Self)) {
+            let current_focus_scope = self.focus_scope();
+            self.set_focus_scope_node(focus_scope);
+            f(self);
+            self.set_focus_scope_node(current_focus_scope);
         }
     }
 );
@@ -535,8 +574,8 @@ impl EventCtx<'_, '_> {
         // because we may have a sibling widget that already requested focus
         // and we have no way of knowing that yet. We need to override that
         // to deliver on the "last focus request wins" promise.
-        let id = self.widget_id();
-        self.widget_state.request_focus = Some(FocusChange::Focus(id));
+        let node = self.focus_node();
+        self.widget_state.request_focus = Some(FocusChange::Focus(node));
     }
 
     /// Transfer focus to the widget with the given `WidgetId`.
@@ -545,7 +584,8 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn set_focus(&mut self, target: WidgetId) {
-        self.widget_state.request_focus = Some(FocusChange::Focus(target));
+        self.widget_state.request_focus =
+            Some(FocusChange::Focus(FocusNode::from_widget_id(target)));
     }
 
     /// Transfer focus to the next focusable widget.
@@ -659,18 +699,6 @@ impl LifeCycleCtx<'_, '_> {
     pub fn register_child(&mut self, child_id: WidgetId) {
         self.widget_state.children.add(&child_id);
     }
-
-    /// Register this widget to be eligile to accept focus automatically.
-    ///
-    /// This should only be called in response to a [`LifeCycle::WidgetAdded`] event.
-    ///
-    /// See [`EventCtx::is_focused`] for more information about focus.
-    ///
-    /// [`LifeCycle::WidgetAdded`]: enum.Lifecycle.html#variant.WidgetAdded
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn register_for_focus(&mut self) {
-        self.widget_state.focus_chain.push(self.widget_id());
-    }
 }
 
 impl LayoutCtx<'_, '_> {
@@ -700,6 +728,32 @@ impl LayoutCtx<'_, '_> {
     /// widget to the baseline.
     pub fn set_baseline_offset(&mut self, baseline: f64) {
         self.widget_state.baseline_offset = baseline
+    }
+
+    /// Pass the focus node to the context.
+    pub fn with_focus_node(
+        &mut self,
+        focus_node: FocusNode,
+        f: impl FnOnce(&mut Self) -> Size,
+    ) -> Size {
+        let current_focus_node = self.focus_node();
+        self.set_focus_node(focus_node);
+        let size = f(self);
+        self.set_focus_node(current_focus_node);
+        size
+    }
+
+    /// Pass the focus scope node to the context.
+    pub fn with_focus_scope(
+        &mut self,
+        focus_scope: FocusScopeNode,
+        f: impl FnOnce(&mut Self) -> Size,
+    ) -> Size {
+        let current_focus_scope = self.focus_scope();
+        self.set_focus_scope_node(focus_scope);
+        let size = f(self);
+        self.set_focus_scope_node(current_focus_scope);
+        size
     }
 }
 
@@ -809,6 +863,8 @@ impl<'a> ContextState<'a> {
             focus_widget,
             text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
+            focus_scope: FocusScopeNode::empty(),
+            focus_node: FocusNode::empty(),
         }
     }
 

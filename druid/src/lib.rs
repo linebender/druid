@@ -191,7 +191,7 @@ pub use shell::{
     WindowHandle, WindowLevel, WindowState,
 };
 
-pub use crate::core::WidgetPod;
+pub use crate::core::{FocusNode, FocusScopeNode, WidgetPod};
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;

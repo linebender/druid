@@ -17,7 +17,7 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::{Point, Size};
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle, WindowLevel};
-use crate::widget::LabelText;
+use crate::widget::{FocusScope, LabelText};
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
 use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
@@ -93,7 +93,7 @@ impl<T: Data> PendingWindow<T> {
     {
         // This just makes our API slightly cleaner; callers don't need to explicitly box.
         PendingWindow {
-            root: Box::new(root()),
+            root: Box::new(FocusScope::new(root())),
             title: LocalizedString::new("app-name").into(),
             menu: MenuDesc::platform_default(),
             size_policy: WindowSizePolicy::User,
