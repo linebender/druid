@@ -24,7 +24,7 @@ use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Point, WidgetExt, W
 use instant::Instant;
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget).title(
+    let window = WindowDesc::new(build_widget()).title(
         LocalizedString::new("invalidate-demo-window-title").with_placeholder("Invalidate demo"),
     );
     let state = AppState {

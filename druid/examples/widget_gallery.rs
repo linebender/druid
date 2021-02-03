@@ -48,7 +48,7 @@ enum MyRadio {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Widget Gallery");
+    let main_window = WindowDesc::new(ui_builder()).title("Widget Gallery");
     // Set our initial data
     let data = AppData {
         label_data: "test".into(),

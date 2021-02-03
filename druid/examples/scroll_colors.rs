@@ -42,7 +42,7 @@ fn build_app() -> impl Widget<u32> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(build_app).title(
+    let main_window = WindowDesc::new(build_app()).title(
         LocalizedString::new("scroll-colors-demo-window-title").with_placeholder("Rainbows!"),
     );
     let data = 0_u32;

@@ -416,7 +416,7 @@ fn make_widget() -> impl Widget<AppData> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(make_widget)
+    let window = WindowDesc::new(make_widget())
         .window_size(Size {
             width: 800.0,
             height: 800.0,

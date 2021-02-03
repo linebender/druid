@@ -24,7 +24,7 @@ struct AppState {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(make_ui).title(LocalizedString::new("View Switcher"));
+    let main_window = WindowDesc::new(make_ui()).title(LocalizedString::new("View Switcher"));
     let data = AppState {
         current_view: 0,
         current_text: "Edit me!".to_string(),

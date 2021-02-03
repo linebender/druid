@@ -39,7 +39,7 @@ struct State {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .menu(make_menu(&State::default()))
         .title(
             LocalizedString::new("multiwin-demo-window-title").with_placeholder("Many windows!"),
@@ -157,7 +157,7 @@ impl AppDelegate<State> for Delegate {
     ) -> Handled {
         match cmd {
             _ if cmd.is(sys_cmds::NEW_FILE) => {
-                let new_win = WindowDesc::new(ui_builder)
+                let new_win = WindowDesc::new(ui_builder())
                     .menu(make_menu(data))
                     .window_size((data.selected as f64 * 100.0 + 300.0, 500.0));
                 ctx.new_window(new_win);

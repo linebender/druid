@@ -64,7 +64,7 @@ impl<W: Widget<AppState>> Controller<AppState, W> for RichTextRebuilder {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title(WINDOW_TITLE)
         .menu(make_menu())
         .window_size((700.0, 600.0));

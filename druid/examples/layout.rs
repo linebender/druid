@@ -66,7 +66,7 @@ fn build_app() -> impl Widget<u32> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_app).title("Very flexible");
+    let window = WindowDesc::new(build_app()).title("Very flexible");
 
     AppLauncher::with_window(window)
         .use_simple_logger()

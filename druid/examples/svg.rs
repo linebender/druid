@@ -22,7 +22,7 @@ use druid::{
 };
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("svg-demo-window-title").with_placeholder("Rawr!"));
     let data = 0_u32;
     AppLauncher::with_window(main_window)

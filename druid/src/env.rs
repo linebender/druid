@@ -75,7 +75,7 @@ struct EnvImpl {
 /// }
 ///
 /// fn main() {
-///     let main_window = WindowDesc::new(important_label);
+///     let main_window = WindowDesc::new(important_label());
 ///
 ///     AppLauncher::with_window(main_window)
 ///         .configure_env(|env, _state| {

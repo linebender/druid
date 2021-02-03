@@ -106,7 +106,8 @@ impl AppState {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
+    let main_window =
+        WindowDesc::new(ui_builder()).title(LocalizedString::new("Blocking functions"));
     let cursor_image = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
     // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
     // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
