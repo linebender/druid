@@ -1,8 +1,5 @@
 ## Rust
-/target/
-/druid-derive/target/
-/druid-shell/target/
-/druid/target/
+target/
 Cargo.lock
 
 ## Intellij Idea
