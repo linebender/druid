@@ -128,7 +128,7 @@ impl Application {
                 let res = GetMessageW(msg.as_mut_ptr(), ptr::null_mut(), 0, 0);
                 if res <= 0 {
                     if res == -1 {
-                        log::error!(
+                        tracing::error!(
                             "GetMessageW failed: {}",
                             Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                         );
@@ -158,7 +158,7 @@ impl Application {
                     // and an eventual error code exit for the process.
                     for hwnd in &state.windows {
                         if PostMessageW(*hwnd, DS_REQUEST_DESTROY, 0, 0) == FALSE {
-                            log::warn!(
+                            tracing::warn!(
                                 "PostMessageW DS_REQUEST_DESTROY failed: {}",
                                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                             );
@@ -171,7 +171,7 @@ impl Application {
                 }
             }
         } else {
-            log::warn!("Application state already borrowed");
+            tracing::warn!("Application state already borrowed");
         }
     }
 

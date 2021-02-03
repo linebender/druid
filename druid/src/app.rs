@@ -153,6 +153,8 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
+    #[cfg(feature = "default-logger")]
+    #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         simple_logger::SimpleLogger::new()
@@ -160,6 +162,40 @@ impl<T: Data> AppLauncher<T> {
             .expect("Failed to initialize logger.");
         #[cfg(target_arch = "wasm32")]
         console_log::init_with_level(log::Level::Trace).expect("Failed to initialize logger.");
+        self
+    }
+
+    /// Initialize a minimal tracing subscriber for printing logs out to stderr, controlled by
+    /// ENV variables.
+    ///
+    /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
+    /// it's probably better to implement it yourself.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the subscriber fails to initialize.
+    #[cfg(feature = "default-logger")]
+    pub fn use_env_tracing(self) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use tracing_subscriber::prelude::*;
+            let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
+            let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+                .or_else(|_| tracing_subscriber::EnvFilter::try_new("warn"))
+                .expect("Failed to initialize tracing subscriber");
+
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(fmt_layer)
+                .init();
+        }
+        // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
+        // because wasm targets will virtually always be browsers.
+        #[cfg(target_arch = "wasm32")]
+        {
+            console_error_panic_hook::set_once();
+            tracing_wasm::set_as_global_default();
+        }
         self
     }
 

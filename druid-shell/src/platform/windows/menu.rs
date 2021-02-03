@@ -176,7 +176,7 @@ fn convert_hotkey(id: u32, key: &HotKey) -> Option<ACCEL> {
         }
         vk_code & 0x00ff
     } else {
-        log::error!("Failed to convert key {:?} into virtual key code", key.key);
+        tracing::error!("Failed to convert key {:?} into virtual key code", key.key);
         return None;
     };
 

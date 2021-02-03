@@ -179,6 +179,8 @@ impl HotKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
+
     #[test]
     fn strip_access() {
         assert_eq!(strip_access_key("&Exit").as_str(), "Exit");

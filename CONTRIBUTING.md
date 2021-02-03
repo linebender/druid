@@ -37,7 +37,7 @@ cargo fmt --all -- --check
 echo "cargo clippy druid-shell"
 cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
 echo "cargo clippy druid"
-cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,default-logger -- -D warnings
 echo "cargo clippy druid (wasm)"
 cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 echo "cargo clippy druid-derive"

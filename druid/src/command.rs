@@ -641,6 +641,7 @@ impl std::fmt::Debug for Notification {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn get_payload() {

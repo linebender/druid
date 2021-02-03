@@ -20,12 +20,13 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [features]
-default = ["gtk"]
+default = ["gtk", "default-logger"]
 gtk = ["druid-shell/gtk"]
 image = ["druid-shell/image"]
 svg = ["usvg", "harfbuzz-sys"]
 x11 = ["druid-shell/x11"]
 crochet = []
+default-logger = ["simple_logger", "tracing-subscriber", "log", "console_log", "tracing-wasm", "console_error_panic_hook"]
 serde = ["im/serde"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -52,8 +53,7 @@ image-all = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "
 druid-shell = { version = "0.7.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
-log = "0.4.11"
-simple_logger = { version = "1.9.0", default-features = false }
+tracing = "0.1.22"
 fluent-bundle = "0.12.0"
 fluent-langneg = "0.13.0"
 fluent-syntax = "0.9.3"
@@ -66,12 +66,17 @@ instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 # Optional dependencies
 im = { version = "15.0.0", optional = true }
 usvg = { version = "0.12.0", optional = true }
+log = { version = "0.4.11", optional = true }
+simple_logger = { version = "1.9.0", default-features = false, optional = true }
+tracing-subscriber = { version = "0.2.15", optional = true }
 # We don't depend directly on harfbuzz-sys, it comes through usvg. But we need to pin
 # the version, because the latest release of harfbuzz_rs is broken with harfbuzz-sys 0.5.
 harfbuzz-sys = { version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-console_log = "0.2.0"
+console_log = { version = "0.2.0", optional = true }
+tracing-wasm = { version = "0.1.0", optional = true }
+console_error_panic_hook = { version = "0.1.6", optional = true }
 
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
@@ -79,10 +84,59 @@ float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "=3.1.0"
 piet-common = { version = "=0.3.2", features = ["png"] }
 pulldown-cmark = { version = "0.8", default-features = false }
+test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
+tracing-subscriber = { version = "0.2.15" }
+
+[target.'cfg(target_arch="linux")'.dev-dependencies]
+druid-shell = { version = "*", features = ["gtk"], path = "../druid-shell" }
+
+[[example]]
+name = "anim"
+required-features = ["default-logger"]
+
+[[example]]
+name = "async_event"
+required-features = ["default-logger"]
+
+[[example]]
+name = "blocking_function"
+required-features = ["default-logger"]
+
+[[example]]
+name = "calc"
+required-features = ["default-logger"]
 
 [[example]]
 name = "cursor"
 required-features = ["image", "png"]
+
+[[example]]
+name = "custom_widget"
+required-features = ["default-logger"]
+
+[[example]]
+name = "either"
+required-features = ["default-logger"]
+
+[[example]]
+name = "event_viewer"
+required-features = ["default-logger"]
+
+[[example]]
+name = "flex"
+required-features = ["default-logger"]
+
+[[example]]
+name = "game_of_life"
+required-features = ["default-logger"]
+
+[[example]]
+name = "hello"
+required-features = ["default-logger"]
+
+[[example]]
+name = "identity"
+required-features = ["default-logger"]
 
 [[example]]
 name = "image"
@@ -93,16 +147,76 @@ name = "invalidation"
 required-features = ["im"]
 
 [[example]]
+name = "layout"
+required-features = ["default-logger"]
+
+[[example]]
+name = "lens"
+required-features = ["default-logger"]
+
+[[example]]
 name = "list"
 required-features = ["im"]
+
+[[example]]
+name = "markdown_preview"
+required-features = ["default-logger"]
+
+[[example]]
+name = "multiwin"
+required-features = ["default-logger"]
+
+[[example]]
+name = "open_save"
+required-features = ["default-logger"]
+
+[[example]]
+name = "panels"
+required-features = ["default-logger"]
+
+[[example]]
+name = "scroll_colors"
+required-features = ["default-logger"]
+
+[[example]]
+name = "scroll"
+required-features = ["default-logger"]
+
+[[example]]
+name = "split_demo"
+required-features = ["default-logger"]
+
+[[example]]
+name = "styled_text"
+required-features = ["default-logger"]
+
+[[example]]
+name = "sub_window"
+required-features = ["default-logger"]
 
 [[example]]
 name = "svg"
 required-features = ["svg"]
 
 [[example]]
+name = "switches"
+required-features = ["default-logger"]
+
+[[example]]
 name = "tabs"
 required-features = ["im"]
+
+[[example]]
+name = "text"
+required-features = ["default-logger"]
+
+[[example]]
+name = "timer"
+required-features = ["default-logger"]
+
+[[example]]
+name = "view_switcher"
+required-features = ["default-logger"]
 
 [[example]]
 name = "widget_gallery"

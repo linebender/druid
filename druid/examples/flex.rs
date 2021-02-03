@@ -341,7 +341,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(AppState { demo_state, params })
         .expect("Failed to launch application");
 }

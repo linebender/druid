@@ -26,6 +26,7 @@ use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
+use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
@@ -117,28 +118,28 @@ impl WindowBuilder {
     }
 
     pub fn set_min_size(&mut self, min_size: Size) {
-        log::warn!("WindowBuilder::set_min_size is implemented, but the setting is currently unused for X11 platforms.");
+        warn!("WindowBuilder::set_min_size is implemented, but the setting is currently unused for X11 platforms.");
         self.min_size = min_size;
     }
 
     pub fn resizable(&mut self, _resizable: bool) {
-        log::warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
     }
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
-        log::warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_position(&mut self, _position: Point) {
-        log::warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_level(&mut self, _level: window::WindowLevel) {
-        log::warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
-        log::warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -274,7 +275,7 @@ impl WindowBuilder {
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
             Err(e) => {
-                log::info!("Failed to initialize present extension: {}", e);
+                info!("Failed to initialize present extension: {}", e);
                 None
             }
         };
@@ -547,7 +548,7 @@ impl Window {
             || self.present_data.try_borrow_mut().is_err()
             || self.buffers.try_borrow_mut().is_err()
         {
-            log::error!("other RefCells were borrowed when calling into the handler");
+            error!("other RefCells were borrowed when calling into the handler");
             return None;
         }
 
@@ -562,7 +563,7 @@ impl Window {
         match self.handler.try_borrow_mut() {
             Ok(mut h) => Some(f(&mut **h)),
             Err(_) => {
-                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                error!("failed to borrow WinHandler at {}", Location::caller());
                 None
             }
         }
@@ -583,7 +584,7 @@ impl Window {
         if !self.destroyed() {
             match borrow_mut!(self.state) {
                 Ok(mut state) => state.destroyed = true,
-                Err(e) => log::error!("Failed to set destroyed flag: {}", e),
+                Err(e) => error!("Failed to set destroyed flag: {}", e),
             }
             log_x11!(self.app.connection().destroy_window(self.id));
         }
@@ -636,7 +637,7 @@ impl Window {
         let pixmap = if let Some(p) = buffers.idle_pixmaps.last() {
             *p
         } else {
-            log::info!("ran out of idle pixmaps, creating a new one");
+            info!("ran out of idle pixmaps, creating a new one");
             buffers.create_pixmap(self.app.connection(), self.id)?
         };
 
@@ -731,12 +732,12 @@ impl Window {
 
     /// Set whether the window should be resizable
     fn resizable(&self, _resizable: bool) {
-        log::warn!("Window::resizeable is currently unimplemented for X11 platforms.");
+        warn!("Window::resizeable is currently unimplemented for X11 platforms.");
     }
 
     /// Set whether the window should show titlebar
     fn show_titlebar(&self, _show_titlebar: bool) {
-        log::warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -781,7 +782,7 @@ impl Window {
     fn request_anim_frame(&self) {
         if let Ok(true) = self.waiting_on_present() {
             if let Err(e) = self.set_needs_present(true) {
-                log::error!(
+                error!(
                     "Window::request_anim_frame - failed to schedule present: {}",
                     e
                 );
@@ -798,13 +799,13 @@ impl Window {
     fn invalidate(&self) {
         match self.size() {
             Ok(size) => self.invalidate_rect(size.to_rect()),
-            Err(err) => log::error!("Window::invalidate - failed to get size: {}", err),
+            Err(err) => error!("Window::invalidate - failed to get size: {}", err),
         }
     }
 
     fn invalidate_rect(&self, rect: Rect) {
         if let Err(err) = self.add_invalid_rect(rect) {
-            log::error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
+            error!("Window::invalidate_rect - failed to enlarge rect: {}", err);
         }
 
         self.request_anim_frame();
@@ -980,23 +981,22 @@ impl Window {
             // one present request in flight, so we should only get notified about the request
             // that we're waiting for.
             if present.waiting_on != Some(event.serial) {
-                log::warn!(
+                warn!(
                     "Got a notify for serial {}, but waiting on {:?}",
-                    event.serial,
-                    present.waiting_on
+                    event.serial, present.waiting_on
                 );
             }
 
             // Check whether we missed presenting on any frames.
             if let Some(last_msc) = present.last_msc {
                 if last_msc.wrapping_add(1) != event.msc {
-                    log::debug!(
+                    tracing::debug!(
                         "missed a present: msc went from {} to {}",
                         last_msc,
                         event.msc
                     );
                     if let Some(last_ust) = present.last_ust {
-                        log::debug!("ust went from {} to {}", last_ust, event.ust);
+                        tracing::debug!("ust went from {} to {}", last_ust, event.ust);
                     }
                 }
             }
@@ -1078,7 +1078,7 @@ impl Window {
 
         if needs_redraw {
             if let Err(e) = self.redraw_now() {
-                log::error!("Error redrawing: {}", e);
+                error!("Error redrawing: {}", e);
             }
         }
     }
@@ -1251,7 +1251,7 @@ fn mouse_button(button: u8) -> MouseButton {
         8 => MouseButton::X1,
         9 => MouseButton::X2,
         _ => {
-            log::warn!("unknown mouse button code {}", button);
+            warn!("unknown mouse button code {}", button);
             MouseButton::None
         }
     }
@@ -1320,7 +1320,7 @@ impl IdleHandle {
                 Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
                 Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {}
                 Err(e) => {
-                    log::error!("Failed to write to idle pipe: {}", e);
+                    error!("Failed to write to idle pipe: {}", e);
                     break;
                 }
                 Ok(_) => {
@@ -1367,7 +1367,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.show();
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1375,7 +1375,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.close();
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1383,7 +1383,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.resizable(resizable);
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1391,55 +1391,55 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.show_titlebar(show_titlebar);
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
     pub fn set_position(&self, _position: Point) {
-        log::warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_position(&self) -> Point {
-        log::warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
         Point::new(0.0, 0.0)
     }
 
     pub fn content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::content_insets unimplemented for X11 platforms.");
+        warn!("WindowHandle::content_insets unimplemented for X11 platforms.");
         Insets::ZERO
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        log::warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
     }
 
     pub fn set_size(&self, _size: Size) {
-        log::warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_size(&self) -> Size {
-        log::warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
         Size::new(0.0, 0.0)
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
-        log::warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        log::warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
         window::WindowState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
     }
 
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1447,7 +1447,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.request_anim_frame();
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1455,7 +1455,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.invalidate();
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1463,7 +1463,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.invalidate_rect(rect);
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1471,7 +1471,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.set_title(title);
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1479,7 +1479,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             w.set_menu(menu);
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
         }
     }
 
@@ -1502,25 +1502,25 @@ impl WindowHandle {
     }
 
     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        log::warn!("Custom cursors are not yet supported in the X11 backend");
+        warn!("Custom cursors are not yet supported in the X11 backend");
         None
     }
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file
-        log::warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
         None
     }
 
     pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as
-        log::warn!("WindowHandle::save_as is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::save_as is currently unimplemented for X11 platforms.");
         None
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
-        log::warn!("WindowHandle::show_context_menu is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::show_context_menu is currently unimplemented for X11 platforms.");
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
@@ -1538,7 +1538,7 @@ impl WindowHandle {
         if let Some(w) = self.window.upgrade() {
             Ok(w.get_scale()?)
         } else {
-            log::error!("Window {} has already been dropped", self.id);
+            error!("Window {} has already been dropped", self.id);
             Ok(Scale::new(1.0, 1.0))
         }
     }

@@ -243,9 +243,9 @@ impl<T: Data> Widget<T> for Image {
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
-    use crate::piet::ImageFormat;
-
     use super::*;
+    use crate::piet::ImageFormat;
+    use test_env_log::test;
 
     /// Painting an empty image shouldn't crash druid.
     #[test]

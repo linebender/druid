@@ -97,7 +97,7 @@ impl Application {
                 }
             }
         } else {
-            log::warn!("Application state already borrowed");
+            tracing::warn!("Application state already borrowed");
         }
     }
 
