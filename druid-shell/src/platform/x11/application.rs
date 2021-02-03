@@ -115,7 +115,7 @@ impl Application {
             match Application::query_present_opcode(&connection) {
                 Ok(p) => p,
                 Err(e) => {
-                    log::info!("failed to find Present extension: {}", e);
+                    tracing::info!("failed to find Present extension: {}", e);
                     None
                 }
             }
@@ -152,7 +152,7 @@ impl Application {
             .present_query_version(1, 0)?
             .reply()
             .context("query Present version")?;
-        log::info!(
+        tracing::info!(
             "X server supports Present version {}.{}",
             version.major_version,
             version.minor_version,
@@ -166,7 +166,7 @@ impl Application {
             .xfixes_query_version(5, 0)?
             .reply()
             .context("query XFIXES version")?;
-        log::info!(
+        tracing::info!(
             "X server supports XFIXES version {}.{}",
             version.major_version,
             version.minor_version,
@@ -383,7 +383,7 @@ impl Application {
                     .filter_map(|w| w.next_timeout())
                     .min()
             } else {
-                log::error!("Getting next timeout, application state already borrowed");
+                tracing::error!("Getting next timeout, application state already borrowed");
                 None
             };
             let next_idle_time = last_idle_time + timeout;
@@ -413,7 +413,7 @@ impl Application {
                         }
                     }
                     Err(e) => {
-                        log::error!("Error handling event: {:#}", e);
+                        tracing::error!("Error handling event: {:#}", e);
                     }
                 }
                 event = self.connection.poll_for_event()?;
@@ -427,7 +427,7 @@ impl Application {
                             w.run_timers(now);
                         }
                     } else {
-                        log::error!("In timer loop, application state already borrowed");
+                        tracing::error!("In timer loop, application state already borrowed");
                     }
                 }
             }
@@ -440,7 +440,7 @@ impl Application {
                         w.run_idle();
                     }
                 } else {
-                    log::error!("In idle loop, application state already borrowed");
+                    tracing::error!("In idle loop, application state already borrowed");
                 }
             }
         }
@@ -448,7 +448,7 @@ impl Application {
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
         if let Err(e) = self.run_inner() {
-            log::error!("{}", e);
+            tracing::error!("{}", e);
         }
     }
 
@@ -468,29 +468,29 @@ impl Application {
                 }
             }
         } else {
-            log::error!("Application state already borrowed");
+            tracing::error!("Application state already borrowed");
         }
     }
 
     fn finalize_quit(&self) {
         log_x11!(self.connection.destroy_window(self.window_id));
         if let Err(e) = nix::unistd::close(self.idle_read) {
-            log::error!("Error closing idle_read: {}", e);
+            tracing::error!("Error closing idle_read: {}", e);
         }
         if let Err(e) = nix::unistd::close(self.idle_write) {
-            log::error!("Error closing idle_write: {}", e);
+            tracing::error!("Error closing idle_write: {}", e);
         }
     }
 
     pub fn clipboard(&self) -> Clipboard {
         // TODO(x11/clipboard): implement Application::clipboard
-        log::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
+        tracing::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
         Clipboard {}
     }
 
     pub fn get_locale() -> String {
         // TODO(x11/locales): implement Application::get_locale
-        log::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
+        tracing::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
         "en-US".into()
     }
 

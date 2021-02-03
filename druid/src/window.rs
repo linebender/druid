@@ -165,7 +165,7 @@ impl<T: Data> Window<T> {
             if let Some(mut handle) = self.handle.get_idle_handle() {
                 handle.schedule_idle(RUN_COMMANDS_TOKEN);
             } else {
-                log::error!("failed to get idle handle");
+                tracing::error!("failed to get idle handle");
             }
         }
     }
@@ -191,7 +191,7 @@ impl<T: Data> Window<T> {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
-                    log::error!("No widget found for timer {:?}", token);
+                    tracing::error!("No widget found for timer {:?}", token);
                     return Handled::No;
                 }
             }
@@ -223,9 +223,9 @@ impl<T: Data> Window<T> {
 
             self.root.event(&mut ctx, &event, data, env);
             if !ctx.notifications.is_empty() {
-                log::info!("{} unhandled notifications:", ctx.notifications.len());
+                tracing::info!("{} unhandled notifications:", ctx.notifications.len());
                 for (i, n) in ctx.notifications.iter().enumerate() {
-                    log::info!("{}: {:?}", i, n);
+                    tracing::info!("{}: {:?}", i, n);
                 }
             }
             Handled::from(ctx.is_handled)

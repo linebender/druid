@@ -46,7 +46,7 @@ pub fn main() {
         counter_two: 0,
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

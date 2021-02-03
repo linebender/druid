@@ -160,11 +160,11 @@ impl<T: Data> Widget<T> for SizedBox<T> {
         };
 
         if size.width.is_infinite() {
-            log::warn!("SizedBox is returning an infinite width.");
+            tracing::warn!("SizedBox is returning an infinite width.");
         }
 
         if size.height.is_infinite() {
-            log::warn!("SizedBox is returning an infinite height.");
+            tracing::warn!("SizedBox is returning an infinite height.");
         }
 
         size
@@ -185,6 +185,7 @@ impl<T: Data> Widget<T> for SizedBox<T> {
 mod tests {
     use super::*;
     use crate::widget::Label;
+    use test_env_log::test;
 
     #[test]
     fn expand() {

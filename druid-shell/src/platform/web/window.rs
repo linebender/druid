@@ -21,7 +21,7 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 
 use instant::Instant;
-
+use tracing::{error, warn};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -115,10 +115,10 @@ impl WindowState {
             self.handler.borrow_mut().paint(&mut ctx, &invalid);
             Ok(())
         }) {
-            log::error!("piet error on render: {:?}", e);
+            error!("piet error on render: {:?}", e);
         }
         if let Err(e) = piet_ctx.finish() {
-            log::error!("piet error finishing render: {:?}", e);
+            error!("piet error finishing render: {:?}", e);
         }
         self.invalid.borrow_mut().clear();
     }
@@ -238,7 +238,7 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
                 Vec2::new(size_dp.width * dx, size_dp.height * dy)
             }
             _ => {
-                log::warn!("Invalid deltaMode in WheelEvent: {}", delta_mode);
+                warn!("Invalid deltaMode in WheelEvent: {}", delta_mode);
                 return;
             }
         };
@@ -448,51 +448,51 @@ impl WindowHandle {
     }
 
     pub fn resizable(&self, _resizable: bool) {
-        log::warn!("resizable unimplemented for web");
+        warn!("resizable unimplemented for web");
     }
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
-        log::warn!("show_titlebar unimplemented for web");
+        warn!("show_titlebar unimplemented for web");
     }
 
     pub fn set_position(&self, _position: Point) {
-        log::warn!("WindowHandle::set_position unimplemented for web");
+        warn!("WindowHandle::set_position unimplemented for web");
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        log::warn!("WindowHandle::set_level  is currently unimplemented for web.");
+        warn!("WindowHandle::set_level  is currently unimplemented for web.");
     }
 
     pub fn get_position(&self) -> Point {
-        log::warn!("WindowHandle::get_position unimplemented for web.");
+        warn!("WindowHandle::get_position unimplemented for web.");
         Point::new(0.0, 0.0)
     }
 
     pub fn set_size(&self, _size: Size) {
-        log::warn!("WindowHandle::set_size unimplemented for web.");
+        warn!("WindowHandle::set_size unimplemented for web.");
     }
 
     pub fn get_size(&self) -> Size {
-        log::warn!("WindowHandle::get_size unimplemented for web.");
+        warn!("WindowHandle::get_size unimplemented for web.");
         Size::new(0.0, 0.0)
     }
 
     pub fn content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::content_insets unimplemented for web.");
+        warn!("WindowHandle::content_insets unimplemented for web.");
         Insets::ZERO
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
-        log::warn!("WindowHandle::set_window_state unimplemented for web.");
+        warn!("WindowHandle::set_window_state unimplemented for web.");
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        log::warn!("WindowHandle::get_window_state unimplemented for web.");
+        warn!("WindowHandle::get_window_state unimplemented for web.");
         window::WindowState::RESTORED
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        log::warn!("WindowHandle::handle_titlebar unimplemented for web.");
+        warn!("WindowHandle::handle_titlebar unimplemented for web.");
     }
 
     pub fn close(&self) {
@@ -500,7 +500,7 @@ impl WindowHandle {
     }
 
     pub fn bring_to_front_and_focus(&self) {
-        log::warn!("bring_to_frontand_focus unimplemented for web");
+        warn!("bring_to_frontand_focus unimplemented for web");
     }
 
     pub fn request_anim_frame(&self) {
@@ -538,7 +538,7 @@ impl WindowHandle {
         let interval = match i32::try_from(interval) {
             Ok(iv) => iv,
             Err(_) => {
-                log::warn!("Timer duration exceeds 32 bit integer max");
+                warn!("Timer duration exceeds 32 bit integer max");
                 i32::max_value()
             }
         };
@@ -570,17 +570,17 @@ impl WindowHandle {
     }
 
     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        log::warn!("Custom cursors are not yet supported in the web backend");
+        warn!("Custom cursors are not yet supported in the web backend");
         None
     }
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        log::warn!("open_file is currently unimplemented for web.");
+        warn!("open_file is currently unimplemented for web.");
         None
     }
 
     pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        log::warn!("save_as is currently unimplemented for web.");
+        warn!("save_as is currently unimplemented for web.");
         None
     }
 
@@ -621,11 +621,11 @@ impl WindowHandle {
     }
 
     pub fn set_menu(&self, _menu: Menu) {
-        log::warn!("set_menu unimplemented for web");
+        warn!("set_menu unimplemented for web");
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
-        log::warn!("show_context_menu unimplemented for web");
+        warn!("show_context_menu unimplemented for web");
     }
 
     pub fn set_title(&self, title: impl Into<String>) {
@@ -723,5 +723,5 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
                 Cursor::Custom(_) => "default",
             },
         )
-        .unwrap_or_else(|_| log::warn!("Failed to set cursor"));
+        .unwrap_or_else(|_| warn!("Failed to set cursor"));
 }

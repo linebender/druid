@@ -25,7 +25,7 @@ pub fn main() {
     let window = WindowDesc::new(build_widget())
         .title(LocalizedString::new("scroll-demo-window-title").with_placeholder("Scroll demo"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(0u32)
         .expect("launch failed");
 }

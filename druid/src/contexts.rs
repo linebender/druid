@@ -559,7 +559,7 @@ impl EventCtx<'_, '_> {
         if self.is_focused() {
             self.widget_state.request_focus = Some(FocusChange::Next);
         } else {
-            log::warn!("focus_next can only be called by the currently focused widget");
+            tracing::warn!("focus_next can only be called by the currently focused widget");
         }
     }
 
@@ -574,7 +574,7 @@ impl EventCtx<'_, '_> {
         if self.is_focused() {
             self.widget_state.request_focus = Some(FocusChange::Previous);
         } else {
-            log::warn!("focus_prev can only be called by the currently focused widget");
+            tracing::warn!("focus_prev can only be called by the currently focused widget");
         }
     }
 
@@ -589,7 +589,7 @@ impl EventCtx<'_, '_> {
         if self.is_focused() {
             self.widget_state.request_focus = Some(FocusChange::Resign);
         } else {
-            log::warn!(
+            tracing::warn!(
                 "resign_focus can only be called by the currently focused widget ({:?})",
                 self.widget_id()
             );
@@ -765,14 +765,14 @@ impl PaintCtx<'_, '_, '_> {
     /// ```
     pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx)) {
         if let Err(e) = self.render_ctx.save() {
-            log::error!("Failed to save RenderContext: '{}'", e);
+            tracing::error!("Failed to save RenderContext: '{}'", e);
             return;
         }
 
         f(self);
 
         if let Err(e) = self.render_ctx.restore() {
-            log::error!("Failed to restore RenderContext: '{}'", e);
+            tracing::error!("Failed to restore RenderContext: '{}'", e);
         }
     }
 

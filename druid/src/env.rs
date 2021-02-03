@@ -621,6 +621,7 @@ impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn string_key_or_value() {

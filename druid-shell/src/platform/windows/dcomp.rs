@@ -19,7 +19,7 @@
 
 use std::ptr::{null, null_mut};
 
-use log::error;
+use tracing::error;
 
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::d3d11::*;

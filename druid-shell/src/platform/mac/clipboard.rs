@@ -39,7 +39,7 @@ impl Clipboard {
                 let result: BOOL =
                     msg_send![pasteboard, setString: nsstring forType: NSPasteboardTypeString];
                 if result != YES {
-                    log::warn!("failed to set clipboard");
+                    tracing::warn!("failed to set clipboard");
                 }
             }
         }
@@ -61,7 +61,7 @@ impl Clipboard {
                 let data_type = idents[i];
                 let result: BOOL = msg_send![pasteboard, setData: data forType: data_type];
                 if result != YES {
-                    log::warn!(
+                    tracing::warn!(
                         "failed to set clipboard contents for type '{}'",
                         format.identifier
                     );
@@ -100,7 +100,7 @@ impl Clipboard {
                 let idx: NSUInteger = msg_send![array, indexOfObject: available];
                 let idx = idx as usize;
                 if idx > formats.len() {
-                    log::error!("clipboard object not found");
+                    tracing::error!("clipboard object not found");
                     None
                 } else {
                     Some(formats[idx])

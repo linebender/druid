@@ -170,10 +170,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
 fn log_size_warnings(size: Size) {
     if size.width.is_infinite() {
-        log::warn!("Scroll widget's child has an infinite width.");
+        tracing::warn!("Scroll widget's child has an infinite width.");
     }
 
     if size.height.is_infinite() {
-        log::warn!("Scroll widget's child has an infinite height.");
+        tracing::warn!("Scroll widget's child has an infinite height.");
     }
 }
