@@ -45,7 +45,7 @@ impl Application {
         };
 
         gtk_app.connect_activate(|_app| {
-            log::info!("gtk: Activated application");
+            tracing::info!("gtk: Activated application");
         });
 
         if let Err(err) = gtk_app.register(None as Option<&Cancellable>) {

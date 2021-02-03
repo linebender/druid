@@ -504,7 +504,7 @@ impl<T: Data> Widget<T> for Label<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         if self.text_should_be_updated {
-            log::warn!("Label text changed without call to update. See LabelAdapter::set_text for information.");
+            tracing::warn!("Label text changed without call to update. See LabelAdapter::set_text for information.");
         }
         self.label.paint(ctx, &self.current_text, env)
     }

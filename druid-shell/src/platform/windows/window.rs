@@ -25,8 +25,8 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use log::{debug, error, warn};
 use scopeguard::defer;
+use tracing::{debug, error, warn};
 use winapi::ctypes::{c_int, c_void};
 use winapi::shared::dxgi::*;
 use winapi::shared::dxgi1_2::*;
@@ -433,7 +433,7 @@ impl MyWndProc {
                 None
             }
         } else {
-            log::error!("failed to borrow WndState at {}", Location::caller());
+            error!("failed to borrow WndState at {}", Location::caller());
             None
         };
         if ret.is_some() {
@@ -864,7 +864,7 @@ impl WndProc for MyWndProc {
                     }
                     if SUCCEEDED(res) {
                         if let Err(e) = s.rebuild_render_target(&self.d2d_factory, scale) {
-                            log::error!("error building render target: {}", e);
+                            error!("error building render target: {}", e);
                         }
                         s.render(
                             &self.d2d_factory,
@@ -946,7 +946,7 @@ impl WndProc for MyWndProc {
                     };
                     unsafe {
                         if ScreenToClient(hwnd, &mut p) == FALSE {
-                            log::warn!(
+                            warn!(
                                 "ScreenToClient failed: {}",
                                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                             );
@@ -1042,7 +1042,7 @@ impl WndProc for MyWndProc {
                             XBUTTON2 => Some(MouseButton::X2),
                             w => {
                                 // Should never happen with current Windows
-                                log::warn!("Received an unknown XBUTTON event ({})", w);
+                                warn!("Received an unknown XBUTTON event ({})", w);
                                 None
                             }
                         }
@@ -1218,7 +1218,7 @@ impl WindowBuilder {
     }
 
     pub fn set_level(&mut self, _level: WindowLevel) {
-        log::warn!("WindowBuilder::set_level  is currently unimplemented for Windows platforms.");
+        warn!("WindowBuilder::set_level  is currently unimplemented for Windows platforms.");
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1561,7 +1561,7 @@ impl WindowHandle {
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         //FIXME: implementation goes here
-        log::warn!("bring_to_front_and_focus not yet implemented on windows");
+        warn!("bring_to_front_and_focus not yet implemented on windows");
     }
 
     pub fn request_anim_frame(&self) {
@@ -1572,7 +1572,7 @@ impl WindowHandle {
                 // invalidating anything. We do this because we won't know the final invalidated region
                 // until after calling prepare_paint.
                 if RedrawWindow(hwnd, null(), null_mut(), RDW_INTERNALPAINT) == 0 {
-                    log::warn!(
+                    warn!(
                         "RedrawWindow failed: {}",
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                     );
@@ -1659,7 +1659,7 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::content_insets unimplemented for windows.");
+        warn!("WindowHandle::content_insets unimplemented for windows.");
         Insets::ZERO
     }
 

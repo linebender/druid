@@ -16,7 +16,7 @@
 
 use std::borrow::Borrow;
 
-use log::warn;
+use tracing::warn;
 
 use crate::{IntoKey, KbKey, KeyEvent, Modifiers};
 

@@ -324,6 +324,7 @@ impl<T> Default for SpanSet<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn smoke_test_spans() {

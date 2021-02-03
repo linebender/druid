@@ -53,13 +53,16 @@ impl Clipboard {
                 let format_id = match get_format_id(&format.identifier) {
                     Some(id) => id,
                     None => {
-                        log::warn!("failed to register clipboard format {}", &format.identifier);
+                        tracing::warn!(
+                            "failed to register clipboard format {}",
+                            &format.identifier
+                        );
                         continue;
                     }
                 };
                 let result = SetClipboardData(format_id, handle);
                 if result.is_null() {
-                    log::warn!(
+                    tracing::warn!(
                         "failed to set clipboard for fmt {}, error: {}",
                         &format.identifier,
                         GetLastError()
@@ -116,7 +119,7 @@ impl Clipboard {
             let format_id = match get_format_id(&format) {
                 Some(id) => id,
                 None => {
-                    log::warn!("failed to register clipboard format {}", &format);
+                    tracing::warn!("failed to register clipboard format {}", &format);
                     return None;
                 }
             };
@@ -196,7 +199,7 @@ fn register_identifier(ident: &str) -> Option<UINT> {
         Ok(s) => s,
         Err(_) => {
             // granted this should happen _never_, but unwrap feels bad
-            log::warn!("Null byte in clipboard identifier '{}'", ident);
+            tracing::warn!("Null byte in clipboard identifier '{}'", ident);
             return None;
         }
     };
@@ -204,7 +207,7 @@ fn register_identifier(ident: &str) -> Option<UINT> {
         let pb_format = RegisterClipboardFormatA(cstr.as_ptr());
         if pb_format == 0 {
             let err = GetLastError();
-            log::warn!(
+            tracing::warn!(
                 "failed to register clipboard format '{}'; error {}.",
                 ident,
                 err
@@ -236,7 +239,10 @@ fn iter_clipboard_types() -> impl Iterator<Item = UINT> {
                         match GetLastError() {
                             ERROR_SUCCESS => (),
                             other => {
-                                log::error!("iterating clipboard formats failed, error={}", other)
+                                tracing::error!(
+                                    "iterating clipboard formats failed, error={}",
+                                    other
+                                )
                             }
                         }
                         None
@@ -273,7 +279,7 @@ fn get_format_name(format: UINT) -> String {
             if err == 87 {
                 String::from("Unknown Format")
             } else {
-                log::warn!(
+                tracing::warn!(
                     "error getting clipboard format name for format {}, errno {}",
                     format,
                     err
