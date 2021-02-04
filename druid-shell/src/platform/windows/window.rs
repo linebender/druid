@@ -330,7 +330,7 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
         } else {
             style |= WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED;
         }
-        if SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize) == 0 {
+        if SetWindowLongPtrW(hwnd, GWL_STYLE, style as _) == 0 {
             warn!(
                 "failed to set the window style: {}",
                 Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
