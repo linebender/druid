@@ -15,7 +15,7 @@ This example shows how to make a simple animation using `Event::AnimFrame`.
 ```
 cargo run --example async_event
 ```
-Having a long function running in the background feeding in new data is important to not block the UI from running. This is similair to [blocking function](##Blocking Function) but here the function runs for the lifetime of the program. 
+Demonstrates receiving data from some outside source, and updating the UI in response. This is similar to [blocking function](##Blocking Function) but here the data source is fully independent, and runs for the lifetime of the program.
 
 ## Blocking Functions
 ```
