@@ -1,7 +1,9 @@
 # Examples
 
 There are some diferent kind of examples, some specifically show of one 
-part of druid, and others show off more complete examples of how to tie everything together. The later are listed seperatly under [showcases](##Showcases)  
+Druid concept, some are tools used for testing and debugging, and
+others are more complete examples of how to tie everything together.
+The later are listed separately under [showcases](##Showcases).
 
 ## Anim
 ```
