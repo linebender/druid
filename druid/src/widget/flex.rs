@@ -586,8 +586,11 @@ impl<T: Data> Flex<T> {
     ///
     /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
-        match (self.children.last_mut(), len.into()){
-            (Some(last_child), value) =>{
+        let value = len.into();
+        
+        //TODO: this can probably made cleaner since the match is only one variable and only 2 branches
+        match self.children.last_mut(){
+            Some(last_child) =>{
                 if let KeyOrValue::Concrete(last_concrete) = &mut last_child.post_fix_spacer{
                     if *last_concrete == 0.0{
                         last_child.post_fix_spacer = value;
@@ -604,7 +607,7 @@ impl<T: Data> Flex<T> {
                     self.children.push(new_child);
                 }
             },
-            (_, value) => {
+            _ => {
                 let mut new_child = ChildWidget::new(SizedBox::empty(),FlexParams::from(0.0));
                 new_child.post_fix_spacer = value;
                 self.children.push(new_child);
