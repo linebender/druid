@@ -19,6 +19,8 @@ use crate::widget::prelude::*;
 use crate::widget::SizedBox;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
 
+use super::sized_box;
+
 /// A container with either horizontal or vertical layout.
 ///
 /// This widget is the foundation of most layouts, and is highly configurable.
@@ -146,12 +148,10 @@ pub struct Flex<T> {
 struct ChildWidget<T> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
     params: FlexParams,
-}
-
-/// A dummy widget we use to do spacing.
-struct Spacer {
-    axis: Axis,
-    len: KeyOrValue<f64>,
+    post_fix_spacer: KeyOrValue<f64>,
+    post_flex_spacer: FlexParams,
+    //since the flex size isnt stored in the WidgetPod anymore, we store it here.
+    post_flex_calculated_size: f64,
 }
 
 /// Optional parameters for an item in a [`Flex`] container (row or column).
@@ -366,6 +366,9 @@ impl<T> ChildWidget<T> {
         ChildWidget {
             widget: WidgetPod::new(Box::new(child)),
             params,
+            post_fix_spacer:KeyOrValue::Concrete(0.0),
+            post_flex_spacer:FlexParams::from(0.0),
+            post_flex_calculated_size:0.0,
         }
     }
 }
@@ -583,20 +586,44 @@ impl<T: Data> Flex<T> {
     ///
     /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
-        let spacer = Spacer {
-            axis: self.direction,
-            len: len.into(),
-        };
-        self.add_flex_child(spacer, 0.0);
+        match (self.children.last_mut(), len.into()){
+            (Some(last_child), value) =>{
+                if let KeyOrValue::Concrete(last_concrete) = &mut last_child.post_fix_spacer{
+                    if *last_concrete == 0.0{
+                        last_child.post_fix_spacer = value;
+                    }else if let KeyOrValue::Concrete(value_concrete) = value{
+                        *last_concrete += value_concrete;
+                    }else{
+                        let mut new_child = ChildWidget::new(SizedBox::empty(),FlexParams::from(0.0));
+                        new_child.post_fix_spacer = value;
+                        self.children.push(new_child);
+                    }
+                }else{
+                    let mut new_child = ChildWidget::new(SizedBox::empty(),FlexParams::from(0.0));
+                    new_child.post_fix_spacer = value;
+                    self.children.push(new_child);
+                }
+            },
+            (_, value) => {
+                let mut new_child = ChildWidget::new(SizedBox::empty(),FlexParams::from(0.0));
+                new_child.post_fix_spacer = value;
+                self.children.push(new_child);
+            }
+        }
     }
 
     /// Add an empty spacer widget with a specific `flex` factor.
     pub fn add_flex_spacer(&mut self, flex: f64) {
-        let child = match self.direction {
-            Axis::Vertical => SizedBox::empty().expand_height(),
-            Axis::Horizontal => SizedBox::empty().expand_width(),
-        };
-        self.add_flex_child(child, flex);
+        match self.children.last_mut(){
+            Some(last_child) =>{
+                last_child.post_flex_spacer.flex += flex;
+            },
+            _ => {
+                let mut new_child = ChildWidget::new(SizedBox::empty(),FlexParams::from(0.0));
+                new_child.post_flex_spacer = FlexParams::from(0.0);
+                self.children.push(new_child);
+            }
+        }
     }
 }
 
@@ -656,14 +683,16 @@ impl<T: Data> Widget<T> for Flex<T> {
                 max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
                 max_below_baseline = max_below_baseline.max(baseline_offset);
             }
+
+            child.post_flex_calculated_size = child.post_fix_spacer.resolve(env);
+            major_non_flex +=  child.post_flex_calculated_size;
         }
 
         let total_major = self.direction.major(bc.max());
         let remaining = (total_major - major_non_flex).max(0.0);
         let mut remainder: f64 = 0.0;
-        let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
+        let flex_sum: f64 = self.children.iter().map(|child| child.params.flex+ child.post_flex_spacer.flex).sum();
         let mut major_flex: f64 = 0.0;
-
         // Measure flex children.
         for child in &mut self.children {
             if child.params.flex != 0.0 {
@@ -682,6 +711,13 @@ impl<T: Data> Widget<T> for Flex<T> {
                 minor = minor.max(self.direction.minor(child_size).expand());
                 max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
                 max_below_baseline = max_below_baseline.max(baseline_offset);
+            }
+            if child.post_flex_spacer.flex != 0.0 {
+                let desired_major = remaining * child.post_flex_spacer.flex / flex_sum + remainder;
+                let actual_major = desired_major.round();
+                remainder = desired_major - actual_major;
+                major_flex += actual_major;
+                child.post_flex_calculated_size += actual_major;
             }
         }
 
@@ -737,8 +773,9 @@ impl<T: Data> Widget<T> for Flex<T> {
             child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
             major += self.direction.major(child_size).expand();
             major += spacing.next().unwrap_or(0.);
+            major += child.post_flex_calculated_size;
         }
-
+        
         if flex_sum > 0.0 && total_major.is_infinite() {
             log::warn!("A child of Flex is flex, but Flex is unbounded.")
         }
@@ -905,17 +942,6 @@ impl Iterator for Spacing {
         self.index += 1;
         Some(result)
     }
-}
-
-impl<T: Data> Widget<T> for Spacer {
-    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
-    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
-    fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
-    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &T, env: &Env) -> Size {
-        let major = self.len.resolve(env);
-        self.axis.pack(major, 0.0).into()
-    }
-    fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
 }
 
 impl From<f64> for FlexParams {
