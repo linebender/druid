@@ -176,7 +176,7 @@ This is a showcase of a simple calculator. There are better ways to implement th
 cargo run --example event_viewer
 ```
 
-This shows you how to capture most events and you can see what gives which event with what data. You can compare mouse clicks to keyboard typing and see how modifiers, like shift and ctrl, are handled.
+Used as a debugging tool, this prints out mouse and keyboard events as they are received by Druid.
 
 ### Flex
 ```
