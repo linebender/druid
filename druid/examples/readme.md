@@ -1,6 +1,6 @@
 # Examples
 
-There are some diferent kind of examples, some specifically show of one 
+There are several different kind of examples, some demonstrate one particular
 Druid concept, some are tools used for testing and debugging, and
 others are more complete examples of how to tie everything together.
 The later are listed separately under [showcases](##Showcases).
