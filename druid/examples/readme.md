@@ -25,7 +25,7 @@ Sometimes you need to fetch some data from disk or from the internet, but you sh
 ```
 cargo run --example cursor
 ```
-Setting the cursor gives a lot of context to the user. Like the cursor is diferent when selcting text compared to hovering over a button. The way to handle cursors is a bit finicky at the moment, you have to set it every mousemove event and when you want to set it.
+This example demonstrates how to set the cursor icon, and how to use a custom cursor.
 
 ## Custom Widget
 ```
