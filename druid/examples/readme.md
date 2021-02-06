@@ -31,13 +31,15 @@ Setting the cursor gives a lot of context to the user. Like the cursor is difere
 ```
 cargo run --example custom_widget
 ```
-This shows how to use all of the methods on `PaintCtx` used for drawing on a canvas. You can use this to draw everything from text to images to curves.
-
+This shows how to use all of the methods on `PaintCtx` used for drawing on a canvas.
+You can use this to draw everything from text to images to curves.
 ## Either
 ```
 cargo run --example either
 ```
-It is very usefull to hide some UI based on a condition. This widget hides one of the 2 children. This can be usefull for loading screens or a click-to-reveal like feature. 
+This example shows how to use the `Either` widget, which shows one of two children based on some predicate.
+This can be useful for loading screens, error messages, and other situations where you want to show one of
+two possible widgets.
 
 ## Hello
 ```
