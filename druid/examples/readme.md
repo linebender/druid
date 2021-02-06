@@ -21,7 +21,11 @@ Demonstrates receiving data from some outside source, and updating the UI in res
 ```
 cargo run --example blocking_functions
 ```
-Sometimes you need to fetch some data from disk or from the internet, but you should never block the UI thread with long running operations! Instead you should spawn of a new thread (or something liks async functions) and have it send you the data back like here. This is very similair to [async event](##Async Event) except the lifetime of the thread is shorter here.
+Sometimes you need to fetch some data from disk or from the internet,
+but you should never block the UI thread with long running operations!
+Instead you should run this task in a separate thread, and have it send
+you the data as it arrives. This is very similair to [async event](##Async Event)
+ except the event is initiated by the main thread.
 
 ## Cursor
 ```
