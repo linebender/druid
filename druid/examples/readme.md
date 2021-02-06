@@ -88,6 +88,72 @@ cargo run --example multiwin
 ```
 Having multiple windows is a super nice tool to have when developing applications. This shows you the basic setup you need for a second window.
 
+## Open Save
+```
+cargo run --example open_save
+```
+Opening and saving files is crucial for a lot of applications. This shows you how to get opening and saving files working cross platform.
+
+## Panels
+```
+cargo run --example panels
+```
+Very similair to [layout](##Layout) but it splits the screen into 2 segments
+
+## Parse
+```
+cargo run --example parse
+```
+Druid doesnt have numeric specific texboxes, instead you have to parse the input as if it ware a numeric value. 
+
+## Scroll
+```
+cargo run --example scroll
+```
+Scrolling is a great way to show more content then can be displayed on the screen at a time. This is an example showing you how to use them.
+
+## Split
+```
+cargo run --example split_demo
+```
+An example of how to split a widget in 2 in various ways. This also includes having the user drag the border!! 
+
+## Styled_text
+```
+cargo run --example styled_text
+```
+Not all text should look the same. You are able to change a lot of things, color, size, and monospace. This example shows how ot change these propperties.
+
+## Svg
+```
+cargo run --example svg
+```
+This shows you how to display an SVG as a widget.
+
+## Switches
+```
+cargo run --example switches
+```
+Switches are usefullin many ways, this example shows how to use the druid built-in ones. This includes on/off and up/down for incrementing numeric values.
+
+## Tabs
+```
+cargo run --example tabs
+```
+Tabs allow you to seperate diferent portions of the UI. This example shows you how to use them in druid. Similair to [view switcher](##View Switcher) but with with a diferent purpose.
+
+## Timers
+```
+cargo run --example timers
+```
+Timers allow you to send events to your widgets at a certain points inthe future. This example shows how to use them.
+
+## View Switcher
+```
+cargo run --example view_switcher
+```
+Very smilair to [tabs](##Tabs) but this allows you to have more controll over it. This allows you to switch out widgets on the fly.
+
 ## Showcases
 
 ### Calc
@@ -126,3 +192,17 @@ cargo run --example image
 Image shows off all the knobs you can turn on images. You can play with them with real time results, which you to fogure out what settings are best for you.
 
 Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in druid, you will still see this because thats how the image actually looks.
+
+### Scroll Colors
+```
+cargo run --example scroll_colors
+```
+
+This is a showcase is scrolling through an image gradient square. The square is devided into smaller squares each with a unique color. There are other ways to to this like one big widget with an image for example.
+
+### Widget Gallery
+```
+cargo run --example widget_gallery
+```
+
+This is a showcase of some simple widgets with their default styling. These are interactive, but you cannot change any of their styling.
