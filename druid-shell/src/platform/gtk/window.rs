@@ -545,7 +545,7 @@ impl WindowBuilder {
                             Some(Vec2::new(delta_x, delta_y))
                         }
                         e => {
-                            eprintln!(
+                            warn!(
                                 "Warning: the Druid widget got some whacky scroll direction {:?}",
                                 e
                             );

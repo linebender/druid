@@ -18,6 +18,7 @@ use crate::kurbo::common::FloatExt;
 use crate::widget::prelude::*;
 use crate::widget::SizedBox;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
+use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.
 ///
@@ -601,24 +602,28 @@ impl<T: Data> Flex<T> {
 }
 
 impl<T: Data> Widget<T> for Flex<T> {
+    #[instrument(skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in &mut self.children {
             child.widget.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.lifecycle(ctx, event, data, env);
         }
     }
 
+    #[instrument(skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.update(ctx, data, env);
         }
     }
 
+    #[instrument(skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Flex");
         // we loosen our constraints when passing to children.
@@ -778,9 +783,15 @@ impl<T: Data> Widget<T> for Flex<T> {
         };
 
         ctx.set_baseline_offset(baseline_offset);
+        trace!(
+            "Computed layout: size={}, baseline_offset={}",
+            my_size,
+            baseline_offset
+        );
         my_size
     }
 
+    #[instrument(skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             child.widget.paint(ctx, data, env);
@@ -911,9 +922,12 @@ impl<T: Data> Widget<T> for Spacer {
     fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
     fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
-    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &T, env: &Env) -> Size {
+    #[instrument(skip(self, ctx, env))]
+    fn layout(&mut self, ctx: &mut LayoutCtx, _: &BoxConstraints, _: &T, env: &Env) -> Size {
         let major = self.len.resolve(env);
-        self.axis.pack(major, 0.0).into()
+        let size = self.axis.pack(major, 0.0).into();
+        tracing::trace!("spacer {:?} has size: {}", ctx.widget_id(), size);
+        size
     }
     fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
 }

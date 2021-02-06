@@ -20,6 +20,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
+use tracing::{instrument, trace};
 
 use crate::kurbo::{Circle, Line};
 use crate::widget::prelude::*;
@@ -338,6 +339,7 @@ impl<TP: TabsPolicy> TabBar<TP> {
 }
 
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
+    #[instrument(skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         match event {
             Event::MouseDown(e) => {
@@ -364,6 +366,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, event, data, env))]
     fn lifecycle(
         &mut self,
         ctx: &mut LifeCycleCtx,
@@ -382,6 +385,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, old_data, data, env))]
     fn update(
         &mut self,
         ctx: &mut UpdateCtx,
@@ -402,6 +406,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, bc, data, env))]
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -418,9 +423,12 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
             minor = minor.max(self.axis.minor(size));
         }
         let wanted = self.axis.pack(major.max(self.axis.major(bc.max())), minor);
-        bc.constrain(wanted)
+        let size = bc.constrain(wanted);
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TabsState<TP>, env: &Env) {
         let hl_thickness = 2.;
         let highlight = env.get(theme::PRIMARY_LIGHT);
@@ -574,6 +582,7 @@ impl<TP: TabsPolicy> TabsBody<TP> {
 }
 
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
+    #[instrument(skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         if event.should_propagate_to_hidden() {
             for child in self.child_pods() {
@@ -594,6 +603,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, event, data, env))]
     fn lifecycle(
         &mut self,
         ctx: &mut LifeCycleCtx,
@@ -617,6 +627,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, old_data, data, env))]
     fn update(
         &mut self,
         ctx: &mut UpdateCtx,
@@ -657,6 +668,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, bc, data, env))]
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -674,6 +686,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         bc.max()
     }
 
+    #[instrument(skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TabsState<TP>, env: &Env) {
         if let Some(trans) = &self.transition_state {
             let axis = self.axis;
@@ -943,12 +956,14 @@ impl<TP: TabsPolicy> Tabs<TP> {
 }
 
 impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
+    #[instrument(skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TP::Input, env: &Env) {
         if let TabsContent::Running { scope } = &mut self.content {
             scope.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(skip(self, ctx, event, data, env))]
     fn lifecycle(
         &mut self,
         ctx: &mut LifeCycleCtx,
@@ -980,12 +995,14 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &TP::Input, data: &TP::Input, env: &Env) {
         if let TabsContent::Running { scope } = &mut self.content {
             scope.update(ctx, data, env);
         }
     }
 
+    #[instrument(skip(self, ctx, bc, data, env))]
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -1002,6 +1019,7 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
         }
     }
 
+    #[instrument(skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &TP::Input, env: &Env) {
         if let TabsContent::Running { scope } = &mut self.content {
             scope.paint(ctx, data, env)
