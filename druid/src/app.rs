@@ -187,10 +187,10 @@ impl<T: Data> AppLauncher<T> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
-            let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
-            let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-                .or_else(|_| tracing_subscriber::EnvFilter::try_new("debug"))
-                .expect("Failed to initialize tracing subscriber");
+            let filter_layer = tracing_subscriber::filter::LevelFilter::DEBUG;
+            let fmt_layer = tracing_subscriber::fmt::layer()
+                // Display target (eg "my_crate::some_mod::submod") with logs
+                .with_target(false);
 
             tracing_subscriber::registry()
                 .with(filter_layer)

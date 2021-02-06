@@ -19,6 +19,8 @@ use std::collections::VecDeque;
 use std::f64;
 use std::sync::Arc;
 
+use tracing::{instrument, trace};
+
 #[cfg(feature = "im")]
 use crate::im::{OrdMap, Vector};
 
@@ -319,6 +321,7 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<VecDeque<T>>) {
 }
 
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
+    #[instrument(name = "Widget", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each_mut(|child_data, _| {
@@ -328,6 +331,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
+    #[instrument(name = "Widget", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             if self.update_child_count(data, env) {
@@ -343,6 +347,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
+    #[instrument(
+        name = "Widget",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         // we send update to children first, before adding or removing children;
         // this way we avoid sending update to newly added children, at the cost
@@ -359,6 +368,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         }
     }
 
+    #[instrument(name = "Widget", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let axis = self.axis;
         let spacing = self.spacing.resolve(env);
@@ -388,9 +398,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let my_size = bc.constrain(Size::from(axis.pack(major_pos, minor)));
         let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, insets);
         my_size
     }
 
+    #[instrument(name = "Widget", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {

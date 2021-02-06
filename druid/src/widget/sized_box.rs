@@ -15,6 +15,7 @@
 //! A widget with predefined size.
 
 use std::f64::INFINITY;
+use tracing::{instrument, trace, warn};
 
 use crate::widget::prelude::*;
 use crate::Data;
@@ -132,24 +133,32 @@ impl<T> SizedBox<T> {
 }
 
 impl<T: Data> Widget<T> for SizedBox<T> {
+    #[instrument(name = "SizedBox", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(name = "SizedBox", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.lifecycle(ctx, event, data, env)
         }
     }
 
+    #[instrument(
+        name = "SizedBox",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.update(ctx, old_data, data, env);
         }
     }
 
+    #[instrument(name = "SizedBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("SizedBox");
 
@@ -159,17 +168,19 @@ impl<T: Data> Widget<T> for SizedBox<T> {
             None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
         };
 
+        trace!("Computed size: {}", size);
         if size.width.is_infinite() {
-            tracing::warn!("SizedBox is returning an infinite width.");
+            warn!("SizedBox is returning an infinite width.");
         }
 
         if size.height.is_infinite() {
-            tracing::warn!("SizedBox is returning an infinite height.");
+            warn!("SizedBox is returning an infinite height.");
         }
 
         size
     }
 
+    #[instrument(name = "SizedBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.paint(ctx, data, env);

@@ -16,6 +16,7 @@ use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
+use tracing::{instrument, trace};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -301,24 +302,32 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
-    fn event(&mut self, ctx: &mut EventCtx, ev: &Event, data: &mut T, env: &Env) {
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let viewport = ctx.size().to_rect();
         let force_event = self.child.is_hot() || self.child.has_active();
         if let Some(child_event) =
-            ev.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
+            event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
         {
             self.child.event(ctx, &child_event, data, env);
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, ev: &LifeCycle, data: &T, env: &Env) {
-        self.child.lifecycle(ctx, ev, data, env);
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child.lifecycle(ctx, event, data, env);
     }
 
+    #[instrument(
+        name = "ClipBox",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("ClipBox");
 
@@ -343,9 +352,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         self.port.rect = self.port.rect.with_size(bc.constrain(content_size));
         let new_offset = self.port.clamp_view_origin(self.viewport_origin());
         self.pan_to(new_offset);
+        trace!("Computed sized: {}", self.viewport_size());
         self.viewport_size()
     }
 
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let viewport = ctx.size().to_rect();
         let offset = self.viewport_origin().to_vec2();

@@ -19,6 +19,7 @@
 
 use crate::widget::Controller;
 use crate::{Data, Env, LifeCycleCtx, Widget};
+use tracing::{instrument, trace};
 
 /// This [`Controller`] widget responds to [`LifeCycle::WidgetAdded`] event
 /// with the provided closure. Pass this and a child widget to [`ControllerHost`]
@@ -46,6 +47,11 @@ impl<T: Data, W: Widget<T>> Added<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Controller<T, W> for Added<T, W> {
+    #[instrument(
+        name = "Added",
+        level = "trace",
+        skip(self, child, ctx, event, data, env)
+    )]
     fn lifecycle(
         &mut self,
         child: &mut W,
@@ -55,6 +61,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Added<T, W> {
         env: &Env,
     ) {
         if let crate::LifeCycle::WidgetAdded = event {
+            trace!("Widget added");
             (self.action)(child, ctx, data, env);
         }
         child.lifecycle(ctx, event, data, env)
