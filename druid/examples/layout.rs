@@ -60,7 +60,6 @@ fn build_app() -> impl Widget<u32> {
             weight,
         );
     }
-    // This method asks druid to draw colored rectangles around our widgets,
     // so we can visually inspect their layout rectangles.
     col.debug_paint_layout()
 }
