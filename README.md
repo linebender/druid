@@ -90,7 +90,9 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, Druid requires gtk+3; see [GTK installation page].
+On Linux, Druid requires gtk+3; see [GTK installation page]. 
+(On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
+
 
 Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
