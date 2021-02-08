@@ -153,7 +153,7 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[cfg(feature = "default-logger")]
+    //#[cfg(feature = "default-logger")]
     #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
@@ -174,7 +174,7 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the subscriber fails to initialize.
-    #[cfg(feature = "default-logger")]
+    //#[cfg(feature = "default-logger")]
     pub fn use_env_tracing(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
