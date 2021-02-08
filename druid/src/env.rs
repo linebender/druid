@@ -87,7 +87,7 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Data)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -132,6 +132,16 @@ pub enum KeyOrValue<T> {
     /// [`Key<T>`]: struct.Key.html
     /// [`Env`]: struct.Env.html
     Key(Key<T>),
+}
+
+impl<T: Data> Data for KeyOrValue<T> {
+    fn same(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Concrete(a), Self::Concrete(b)) => a.same(b),
+            (Self::Key(a), Self::Key(b)) => a.same(b),
+            _ => false,
+        }
+    }
 }
 
 /// A trait for anything that can resolve a value of some type from the [`Env`].
