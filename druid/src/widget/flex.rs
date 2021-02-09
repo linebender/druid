@@ -622,6 +622,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
+        let mut flex_sum = 0.0;
         for child in &mut self.children {
             match  child {
                 Child::Fixed(widget,alignment)=>{
@@ -629,7 +630,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
                     let child_bc = self
                     .direction
-                    .constraints(&loosened_bc, 0., std::f64::INFINITY);
+                    .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
                     let child_size = widget.layout(ctx, &child_bc, data, env);
                     let baseline_offset = widget.baseline_offset();
 
@@ -650,32 +651,27 @@ impl<T: Data> Widget<T> for Flex<T> {
                     *calculated_siz = kv.resolve(env);
                     major_non_flex += *calculated_siz;
                 },
-                _ => {},
+                Child::Flex(_,_,flex)|Child::FlexedSpacer(flex, _)=>flex_sum+=*flex,
             }
         }
 
         let total_major = self.direction.major(bc.max());
         let remaining = (total_major - major_non_flex).max(0.0);
         let mut remainder: f64 = 0.0;
-        let flex_sum: f64 = self.children.iter().map(|child| match child {
-                Child::Flex(_,_,flex)|Child::FlexedSpacer(flex, _)=>*flex,
-                _ => 0.0,
-            }).sum();
 
         let mut major_flex: f64 = 0.0;
+        let px_per_flex =remaining/flex_sum;
         // Measure flex children.
         for child in &mut self.children {
-            match  child {
+            match child {
                 Child::Flex(widget,_,flex)=>{
-                    let desired_major = remaining * (*flex) / flex_sum + remainder;
+                    let desired_major = (*flex) *px_per_flex + remainder;
                     let actual_major = desired_major.round();
                     remainder = desired_major - actual_major;
-                    let min_major = 0.0;
-
 
                     let child_bc = self
                         .direction
-                        .constraints(&loosened_bc, min_major, actual_major);
+                        .constraints(&loosened_bc, 0.0, actual_major);
                     let child_size = widget.layout(ctx, &child_bc, data, env);
                     let baseline_offset = widget.baseline_offset();
     
@@ -683,13 +679,13 @@ impl<T: Data> Widget<T> for Flex<T> {
                     minor = minor.max(self.direction.minor(child_size).expand());
                     max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
                     max_below_baseline = max_below_baseline.max(baseline_offset);
-                    },
+                },
                 Child::FlexedSpacer(flex, calculated_size) =>{
-                    let desired_major = remaining * *flex / flex_sum + remainder;
+                    let desired_major = (*flex) *px_per_flex + remainder;
                     *calculated_size = desired_major.round();
                     remainder = desired_major - *calculated_size;
                     major_flex += *calculated_size;
-                    },
+                },
                 _ => {},
             }
         }
@@ -712,8 +708,11 @@ impl<T: Data> Widget<T> for Flex<T> {
             _ => minor,
         };
 
+        let extra_height = minor - minor_dim.min(minor);
+
         let mut major = spacing.next().unwrap_or(0.);
         let mut child_paint_rect = Rect::ZERO;
+
         for child in &mut self.children {
             match child {
                 Child::Fixed(widget,alignment)|Child::Flex(widget,alignment,_)=>{
@@ -723,7 +722,6 @@ impl<T: Data> Widget<T> for Flex<T> {
                         // This will ignore baseline alignment if it is overridden on children,
                         // but is not the default for the container. Is this okay?
                         CrossAxisAlignment::Baseline if matches!(self.direction, Axis::Horizontal) => {
-                            let extra_height = minor - minor_dim.min(minor);
                             let child_baseline = widget.baseline_offset();
                             let child_above_baseline = child_size.height - child_baseline;
                             extra_height + (max_above_baseline - child_above_baseline)

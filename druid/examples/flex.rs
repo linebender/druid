@@ -24,7 +24,7 @@ use druid::widget::{
     SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{AppLauncher, Selector, Target, Color, Data, Lens, WidgetId, WindowDesc};
-use cpuprofiler::PROFILER;
+
 use std::time::{Duration, Instant};
 use std::thread;
 const CHANGE_SIZE: Selector<f64> = Selector::new("event-example.change_size");
