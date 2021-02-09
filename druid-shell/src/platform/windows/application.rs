@@ -62,6 +62,7 @@ impl Application {
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
     // TODO: Report back an error instead of panicking
+    #[allow(clippy::unnecessary_wraps)]
     fn init() -> Result<(), Error> {
         util::attach_console();
         if let Some(func) = OPTIONAL_FUNCTIONS.SetProcessDpiAwarenessContext {
