@@ -610,6 +610,8 @@ impl KeyboardState {
                     let code = scan_to_code(scan_code);
                     let key = if self.stash_utf16.is_empty() && wparam < 0x20 {
                         vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods))
+                    } else if wparam == 0x7f {
+                        KbKey::Backspace
                     } else {
                         self.stash_utf16.push(wparam as u16);
                         if let Ok(s) = String::from_utf16(&self.stash_utf16) {
