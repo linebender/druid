@@ -780,7 +780,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         let insets = child_paint_rect - my_bounds;
         ctx.set_paint_insets(insets);
 
-        /* let baseline_offset = match self.direction {
+        let baseline_offset = match self.direction {
             Axis::Horizontal => max_below_baseline,
             Axis::Vertical => self
                 .children
@@ -799,14 +799,14 @@ impl<T: Data> Widget<T> for Flex<T> {
                 .unwrap_or(0.0),
         };
 
-        ctx.set_baseline_offset(baseline_offset); */
+        ctx.set_baseline_offset(baseline_offset);
         my_size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in &mut self.children {
             match  child {
-                Child::Fixed(widget,_)|Child::Flex(widget,_,_) =>widget.paint(ctx, data, env),
+                Child::Fixed(widget,_)|Child::Flex(widget,_,_) => widget.paint(ctx, data, env),
                 _=>{}
             }
         }

@@ -24,7 +24,7 @@ use druid::widget::{
     SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
 use druid::{AppLauncher, Selector, Target, Color, Data, Lens, WidgetId, WindowDesc};
-
+use cpuprofiler::PROFILER;
 use std::time::{Duration, Instant};
 use std::thread;
 const CHANGE_SIZE: Selector<f64> = Selector::new("event-example.change_size");
@@ -168,12 +168,23 @@ impl Widget<AppState> for Rebuilder {
         data: &AppState,
         env: &Env,
     ) -> Size {
+        // PROFILER.lock().unwrap().start("./my-prof.profile");
+        // let x = self.inner.layout(ctx, bc, data, env);
+        // for _ in 0..1000000 {
+        //     self.inner.layout(ctx, bc, data, env);
+        // }        
+        // PROFILER.lock().unwrap().stop();
+        // x 
         let now = Instant::now();
         let x = self.inner.layout(ctx, bc, data, env);
+        for _ in 0..1000 {
+            self.inner.layout(ctx, bc, data, env);
+        }        
         let new_now = Instant::now();
-        self.total_time += new_now.duration_since(now).as_micros();
-        self.count += 1;
-        println!("{:?}", Duration::from_micros((self.total_time/(self.count as u128)) as u64));
+        self.total_time += new_now.duration_since(now).as_nanos();
+        self.count += 1000;
+
+        println!("{:?}", Duration::from_nanos((self.total_time/(self.count as u128)) as u64));
         x
     }
 
