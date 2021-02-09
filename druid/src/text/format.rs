@@ -93,7 +93,7 @@ pub struct Validation {
 ///
 /// This implements [`source`] so you can access the inner error type.
 ///
-/// [`source`]: std::Error::source;
+/// [`source`]: std::error::Error::source
 // This is currently just a wrapper around the inner error; in the future
 // it may grow to contain information such as invalid spans?
 // TODO: the fact that this uses `Arc` to work with `Data` is a bit inefficient;

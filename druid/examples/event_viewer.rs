@@ -240,8 +240,13 @@ fn interactive_area() -> impl Widget<AppState> {
         .rounded(5.0)
         .border(INTERACTIVE_AREA_BORDER, 1.0)
         .controller(EventLogger {
-            filter: |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
-		});
+            filter: |event| {
+                matches!(
+                    event,
+                    Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)
+                )
+            },
+        });
 
     Flex::row()
         .with_flex_spacer(1.0)
