@@ -22,8 +22,8 @@ use crate::Data;
 /// A widget with predefined size.
 ///
 /// If given a child, this widget forces its child to have a specific width and/or height
-/// (assuming values are permitted by this widget's parent). If either the width or height is not set,
-/// this widget will size itself to match the child's size in that dimension.
+/// (assuming values are permitted by this widget's parent). If either the width or height is not
+/// set, this widget will size itself to match the child's size in that dimension.
 ///
 /// If not given a child, SizedBox will try to size itself as close to the specified height
 /// and width as possible given the parent's constraints. If height or width is not set,
@@ -45,6 +45,11 @@ impl<T> SizedBox<T> {
     }
 
     /// Construct container without child, and both width and height not set.
+    ///
+    /// If the widget is unchanged, it will do nothing, which can be useful if you want to draw a
+    /// widget some of the time (for example, it is used to implement
+    /// [`Maybe`][crate::widget::Maybe]).
+    #[doc(alias = "null")]
     pub fn empty() -> Self {
         Self {
             inner: None,

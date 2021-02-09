@@ -567,3 +567,31 @@ impl<A, B: Clone> Lens<A, B> for Constant<B> {
         f(&mut tmp)
     }
 }
+
+/// A lens that combines two lenses into a tuple.
+#[derive(Debug, Copy, Clone)]
+pub struct Tuple2<L1, L2>(pub L1, pub L2);
+
+impl<A, L1B, L2B, L1, L2> Lens<A, (L1B, L2B)> for Tuple2<L1, L2>
+where
+    L1B: Clone,
+    L2B: Clone,
+    L1: Lens<A, L1B>,
+    L2: Lens<A, L2B>,
+{
+    fn with<V, F: FnOnce(&(L1B, L2B)) -> V>(&self, data: &A, f: F) -> V {
+        let l1b = self.0.with(data, |v| v.clone());
+        let l2b = self.1.with(data, |v| v.clone());
+        f(&(l1b, l2b))
+    }
+    fn with_mut<V, F: FnOnce(&mut (L1B, L2B)) -> V>(&self, data: &mut A, f: F) -> V {
+        let l1b = self.0.with(data, |v| v.clone());
+        let l2b = self.1.with(data, |v| v.clone());
+        let mut tuple = (l1b, l2b);
+        let out = f(&mut tuple);
+        let (l1b, l2b) = tuple;
+        self.0.with_mut(data, |v| *v = l1b);
+        self.1.with_mut(data, |v| *v = l2b);
+        out
+    }
+}
