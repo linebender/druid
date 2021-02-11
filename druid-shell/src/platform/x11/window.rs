@@ -94,6 +94,9 @@ pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     size: Size,
+
+    // TODO: implement min_size for X11
+    #[allow(dead_code)]
     min_size: Size,
 }
 
