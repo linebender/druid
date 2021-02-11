@@ -3,7 +3,7 @@
 There are several different kind of examples, some demonstrate one particular
 Druid concept, some are tools used for testing and debugging, and
 others are more complete examples of how to tie everything together.
-The later are listed separately under [showcases](##Showcases).
+The latter are listed separately under [showcases](##Showcases).
 
 ## Anim
 ```
@@ -24,7 +24,7 @@ cargo run --example blocking_functions
 Sometimes you need to fetch some data from disk or from the internet,
 but you should never block the UI thread with long running operations!
 Instead you should run this task in a separate thread, and have it send
-you the data as it arrives. This is very similair to [async event](##Async Event)
+you the data as it arrives. This is very similar to [async event](##Async Event)
  except the event is initiated by the main thread.
 
 ## Cursor
@@ -64,13 +64,13 @@ This is an example of how to get almost any druid application can be used on the
 ```
 cargo run --example identity
 ```
-In druid identity is used to send specific widgets commands. Instead of a command going to all the widgets, you can send them to just the one you need. This example has some colorwels and some buttons that interact with them. All of them are identical, except the identity, which makes it possible for the buttons to only affect a single colorwel.
+In druid identity is used to send specific widgets commands. Instead of a command going to all the widgets, you can send them to just the one you need. This example has some colorwells and some buttons that interact with them. All of them are identical, except the identity, which makes it possible for the buttons to only affect a single colorwell.
 
 ## Invalidation
 ```
 cargo run --example invalidation --features="im"
 ```
-A demonstration how to use debug invalidation regeons in your own widgets, including some examples of builtin widgets.
+A demonstration how to use debug invalidation regions in your own widgets, including some examples of builtin widgets.
 
 ## Layout
 ```
@@ -90,7 +90,7 @@ cargo run --example list --features="im"
 ```
 This shows you how you could, for example, add items to lists and delete them. 
 
-## Multiwine
+## Multiple Windows
 ```
 cargo run --example multiwin
 ```
@@ -106,13 +106,13 @@ Opening and saving files is crucial for a lot of applications. This shows you ho
 ```
 cargo run --example panels
 ```
-Very similair to [layout](##Layout) but it splits the screen into 2 segments
+Very similar to [layout](##Layout) but it splits the screen into 2 segments
 
 ## Parse
 ```
 cargo run --example parse
 ```
-Druid doesnt have numeric specific texboxes, instead you have to parse the input as if it ware a numeric value. 
+Druid doesnt have numeric specific texboxes, instead you have to parse the input as if it were a numeric value. 
 
 ## Scroll
 ```
@@ -130,7 +130,7 @@ An example of how to split a widget in 2 in various ways. This also includes hav
 ```
 cargo run --example styled_text
 ```
-Not all text should look the same. You are able to change a lot of things, color, size, and monospace. This example shows how ot change these propperties.
+Not all text should look the same. You are able to change a lot of things, color, size, and monospace. This example shows how to change these propperties.
 
 ## Svg
 ```
@@ -142,13 +142,13 @@ This shows you how to display an SVG as a widget.
 ```
 cargo run --example switches
 ```
-Switches are usefullin many ways, this example shows how to use the druid built-in ones. This includes on/off and up/down for incrementing numeric values.
+Switches are useful in many ways, this example shows how to use the druid built-in ones. This includes on/off and up/down for incrementing numeric values.
 
 ## Tabs
 ```
 cargo run --example tabs
 ```
-Tabs allow you to seperate diferent portions of the UI. This example shows you how to use them in druid. Similair to [view switcher](##View Switcher) but with with a diferent purpose.
+Tabs allow you to seperate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](##View Switcher) but with with a different purpose.
 
 ## Timers
 ```
@@ -160,7 +160,7 @@ Timers allow you to send events to your widgets at a certain points inthe future
 ```
 cargo run --example view_switcher
 ```
-Very smilair to [tabs](##Tabs) but this allows you to have more controll over it. This allows you to switch out widgets on the fly.
+Very similar to [tabs](##Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
 
 ## Showcases
 
@@ -169,7 +169,7 @@ Very smilair to [tabs](##Tabs) but this allows you to have more controll over it
 cargo run --example calc
 ```
 
-This is a showcase of a simple calculator. There are better ways to implement the calculator logic, but it provides all the standard operations like adition devision multiplication C and CE.
+This is a showcase of a simple calculator. There are better ways to implement the calculator logic, but it provides all the standard operations like addition division multiplication C and CE.
 
 ### Event Viewer
 ```
@@ -190,16 +190,16 @@ Flex shows off all the things you can do with flex elements. You can play with a
 cargo run --example game_of_life
 ```
 
-A simple implementation of conway's game of life. You can change the evolution speed, and pauze so you can take your time making your own creations!
+A simple implementation of Conway's game of life. You can change the evolution speed, and pauze so you can take your time making your own creations!
 
 ### Image
 ```
 cargo run --example image
 ```
 
-Image shows off all the knobs you can turn on images. You can play with them with real time results, which you to fogure out what settings are best for you.
+Image shows off all the knobs you can turn on images. You can play with them with real time results, which you to figure out what settings are best for you.
 
-Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in druid, you will still see this because thats how the image actually looks.
+Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in druid, you will still see this because that's how the image actually looks.
 
 ### Scroll Colors
 ```
