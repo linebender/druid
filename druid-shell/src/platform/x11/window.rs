@@ -841,6 +841,7 @@ impl Window {
         // TODO(x11/menus): implement Window::set_menu (currently a no-op)
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn get_scale(&self) -> Result<Scale, Error> {
         // TODO(x11/dpi_scaling): figure out DPI scaling
         Ok(Scale::new(1.0, 1.0))
