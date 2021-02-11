@@ -159,7 +159,8 @@ impl<T: Data> AppLauncher<T> {
             .init()
             .expect("Failed to initialize logger.");
         #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(tracing::Level::Trace).expect("Failed to initialize logger.");
+        console_log::init_with_level(tracing::log::Level::Trace)
+            .expect("Failed to initialize logger.");
         self
     }
 
