@@ -43,7 +43,7 @@ impl DynamicTabData {
 
     fn remove_tab(&mut self, idx: usize) {
         if idx >= self.tab_labels.len() {
-            log::warn!("Attempt to remove non existent tab at index {}", idx)
+            tracing::warn!("Attempt to remove non existent tab at index {}", idx)
         } else {
             self.removed_tabs += 1;
             self.tab_labels.remove(idx);

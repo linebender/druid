@@ -14,7 +14,7 @@
 
 //! This example shows how to draw an SVG.
 
-use log::error;
+use tracing::error;
 
 use druid::{
     widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},

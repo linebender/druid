@@ -337,12 +337,12 @@ impl<T: Data> Widget<T> for Split<T> {
         match self.split_axis {
             Axis::Horizontal => {
                 if !bc.is_width_bounded() {
-                    log::warn!("A Split widget was given an unbounded width to split.")
+                    tracing::warn!("A Split widget was given an unbounded width to split.")
                 }
             }
             Axis::Vertical => {
                 if !bc.is_height_bounded() {
-                    log::warn!("A Split widget was given an unbounded height to split.")
+                    tracing::warn!("A Split widget was given an unbounded height to split.")
                 }
             }
         }

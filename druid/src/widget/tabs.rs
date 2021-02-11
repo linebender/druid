@@ -911,7 +911,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         if let TabsContent::Building { tabs } = &mut self.content {
             TP::add_tab(tabs, name, child)
         } else {
-            log::warn!("Can't add static tabs to a running or complete tabs instance!")
+            tracing::warn!("Can't add static tabs to a running or complete tabs instance!")
         }
     }
 

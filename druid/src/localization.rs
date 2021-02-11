@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
 
-use log::{debug, error, warn};
+use tracing::{debug, error, warn};
 
 use crate::{Application, ArcStr, Env};
 

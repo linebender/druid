@@ -146,7 +146,7 @@ impl SvgData {
                 Rect::new(r.left(), r.top(), r.right(), r.bottom())
             }
             _ => {
-                log::error!(
+                tracing::error!(
                     "this SVG has no viewbox. It is expected that usvg always adds a viewbox"
                 );
                 Rect::ZERO
@@ -165,7 +165,7 @@ impl SvgData {
                 Size::new(s.width(), s.height())
             }
             _ => {
-                log::error!("this SVG has no size. It is expected that usvg always adds a size");
+                tracing::error!("this SVG has no size. It is expected that usvg always adds a size");
                 Size::ZERO
             }
         };
@@ -221,7 +221,7 @@ impl SvgRenderer {
                         usvg::NodeKind::LinearGradient(linear_gradient) => {
                             self.linear_gradient_def(linear_gradient, ctx);
                         }
-                        other => log::error!("unsupported element: {:?}", other),
+                        other => tracing::error!("unsupported element: {:?}", other),
                     }
                 }
             }
@@ -234,7 +234,7 @@ impl SvgRenderer {
             }
             _ => {
                 // TODO: handle more of the SVG spec.
-                log::error!("{:?} is unimplemented", n.clone());
+                tracing::error!("{:?} is unimplemented", n.clone());
             }
         }
     }

@@ -15,7 +15,7 @@
 //! Windows Monitors and Screen information.
 
 use super::error::Error;
-use log::warn;
+use tracing::warn;
 use std::mem::size_of;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::*;

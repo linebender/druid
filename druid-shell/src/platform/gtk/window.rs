@@ -354,7 +354,7 @@ impl WindowBuilder {
                     let size_dp = area.size_dp();
                     state.area.set(area);
                     if let Err(e) = state.resize_surface(extents.width, extents.height) {
-                        log::error!("Failed to resize surface: {}", e);
+                        tracing::error!("Failed to resize surface: {}", e);
                     }
                     state.with_handler(|h| h.size(size_dp));
                     state.invalidate_rect(size_dp.to_rect());
@@ -365,7 +365,7 @@ impl WindowBuilder {
                 let invalid = match state.invalid.try_borrow_mut() {
                     Ok(mut invalid) => std::mem::replace(&mut *invalid, Region::EMPTY),
                     Err(_) => {
-                        log::error!("invalid region borrowed while drawing");
+                        tracing::error!("invalid region borrowed while drawing");
                         Region::EMPTY
                     }
                 };
@@ -389,7 +389,7 @@ impl WindowBuilder {
                         let mut piet_context = Piet::new(&surface_context);
                         handler.paint(&mut piet_context, &invalid);
                         if let Err(e) = piet_context.finish() {
-                            log::error!("piet error on render: {:?}", e);
+                            tracing::error!("piet error on render: {:?}", e);
                         }
 
                         // Copy the entire surface to the drawing area (not just the invalid
@@ -401,7 +401,7 @@ impl WindowBuilder {
                         context.fill();
                     });
                 } else {
-                    log::warn!("Drawing was skipped because there was no surface");
+                    tracing::warn!("Drawing was skipped because there was no surface");
                 }
             }
 
@@ -666,7 +666,7 @@ impl WindowState {
     #[track_caller]
     fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
         if self.invalid.try_borrow_mut().is_err() || self.surface.try_borrow_mut().is_err() {
-            log::error!("other RefCells were borrowed when calling into the handler");
+            tracing::error!("other RefCells were borrowed when calling into the handler");
             return None;
         }
 
@@ -684,7 +684,7 @@ impl WindowState {
         match self.handler.try_borrow_mut() {
             Ok(mut h) => Some(f(&mut **h)),
             Err(_) => {
-                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                tracing::error!("failed to borrow WinHandler at {}", Location::caller());
                 None
             }
         }
@@ -737,7 +737,7 @@ impl WindowState {
             region.add_rect(rect);
             self.window.queue_draw();
         } else {
-            log::warn!("Not invalidating rect because region already borrowed");
+            tracing::warn!("Not invalidating rect because region already borrowed");
         }
     }
 
@@ -819,7 +819,7 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
+        tracing::warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
         Insets::ZERO
     }
 
@@ -847,7 +847,7 @@ impl WindowHandle {
             let (x, y) = state.window.get_size();
             Size::new(x as f64, y as f64)
         } else {
-            log::warn!("Could not get size for GTK window");
+            tracing::warn!("Could not get size for GTK window");
             Size::new(0., 0.)
         }
     }
@@ -885,7 +885,7 @@ impl WindowHandle {
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
+        tracing::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
     }
 
     /// Close the window.
@@ -939,7 +939,7 @@ impl WindowHandle {
         let interval = match u32::try_from(interval) {
             Ok(iv) => iv,
             Err(_) => {
-                log::warn!("timer duration exceeds gtk max of 2^32 millis");
+                tracing::warn!("timer duration exceeds gtk max of 2^32 millis");
                 u32::max_value()
             }
         };
@@ -1125,7 +1125,7 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     });
 
     if result.is_none() {
-        log::warn!("Delaying idle callbacks because the handler is borrowed.");
+        tracing::warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
         // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
         // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
@@ -1198,7 +1198,7 @@ fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
         gdk::EventType::TripleButtonPress => 3,
         gdk::EventType::ButtonRelease => 0,
         _ => {
-            log::warn!("Unexpected mouse click event type: {:?}", event_type);
+            tracing::warn!("Unexpected mouse click event type: {:?}", event_type);
             0
         }
     }

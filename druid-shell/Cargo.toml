@@ -41,7 +41,7 @@ hdr = ["piet-common/hdr"]
 piet-common = "=0.3.2"
 kurbo = "0.7.1"
 
-log = "0.4.11"
+tracing = {version = "0.1.23", features = ["log"]}
 lazy_static = "1.4.0"
 time = "0.2.16"
 cfg-if = "1.0.0"
