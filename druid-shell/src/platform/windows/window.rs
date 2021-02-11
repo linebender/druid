@@ -95,6 +95,7 @@ pub(crate) struct WindowBuilder {
 /// It's very tricky to get smooth dynamics (especially resizing) and
 /// good performance on Windows. This setting lets clients experiment
 /// with different strategies.
+#[allow(dead_code)]
 pub enum PresentStrategy {
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_SEQUENTIAL. It
     /// is compatible with GDI (such as menus), but is not the best in

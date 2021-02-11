@@ -616,15 +616,15 @@ impl From<WidgetId> for Target {
     }
 }
 
-impl Into<Option<Target>> for WindowId {
-    fn into(self) -> Option<Target> {
-        Some(Target::Window(self))
+impl From<WindowId> for Option<Target> {
+    fn from(id: WindowId) -> Self {
+        Some(Target::Window(id))
     }
 }
 
-impl Into<Option<Target>> for WidgetId {
-    fn into(self) -> Option<Target> {
-        Some(Target::Widget(self))
+impl From<WidgetId> for Option<Target> {
+    fn from(id: WidgetId) -> Self {
+        Some(Target::Widget(id))
     }
 }
 
