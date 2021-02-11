@@ -196,8 +196,8 @@ impl<T> Split<T> {
     fn update_split_point(&mut self, size: Size, mouse_pos: Point) {
         let (min_limit, max_limit) = self.split_side_limits(size);
         self.split_point_chosen = match self.split_axis {
-            Axis::Horizontal => clamp(mouse_pos.x, min_limit, max_limit) / size.width,
-            Axis::Vertical => clamp(mouse_pos.y, min_limit, max_limit) / size.height,
+            Axis::Horizontal => mouse_pos.x.clamp(min_limit, max_limit) / size.width,
+            Axis::Vertical => mouse_pos.y.clamp(min_limit, max_limit) / size.height,
         }
     }
 
@@ -361,11 +361,8 @@ impl<T: Data> Widget<T> for Split<T> {
             if reduced_axis_size.is_infinite() || reduced_axis_size <= std::f64::EPSILON {
                 0.5
             } else {
-                clamp(
-                    self.split_point_chosen,
-                    min_limit / reduced_axis_size,
-                    max_limit / reduced_axis_size,
-                )
+                self.split_point_chosen
+                    .clamp(min_limit / reduced_axis_size, max_limit / reduced_axis_size)
             }
         };
 
@@ -438,16 +435,4 @@ impl<T: Data> Widget<T> for Split<T> {
         self.child1.paint(ctx, &data, env);
         self.child2.paint(ctx, &data, env);
     }
-}
-
-// Move to std lib clamp as soon as https://github.com/rust-lang/rust/issues/44095 lands
-fn clamp(mut x: f64, min: f64, max: f64) -> f64 {
-    assert!(min <= max);
-    if x < min {
-        x = min;
-    }
-    if x > max {
-        x = max;
-    }
-    x
 }
