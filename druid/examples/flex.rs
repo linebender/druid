@@ -23,7 +23,7 @@ use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, MainAxisAlignment, ProgressBar, RadioGroup,
     SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
-use druid::{AppLauncher, Selector, Color, Data, Lens, WidgetId, WindowDesc};
+use druid::{AppLauncher, Color, Data, Lens, WidgetId, WindowDesc};
 
 const DEFAULT_SPACER_SIZE: f64 = 8.;
 const SPACER_OPTIONS: [(&str, Spacers); 4] = [
