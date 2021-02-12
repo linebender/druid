@@ -293,9 +293,14 @@ pub enum InternalLifeCycle {
     /// Used to route the `WidgetAdded` event to the required widgets.
     RouteWidgetAdded,
     /// Used to route the `FocusChanged` event.
+    TraverseFocus {
+        /// the next auto focus widget will get focused
+        forward: bool,
+        /// the id of the widget which contains the to focus widget
+        target: WidgetId,
+    },
+    /// Used to route the `FocusChanged` event.
     RouteFocusChanged {
-        /// the widget that is losing focus, if any
-        old: Option<WidgetId>,
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },

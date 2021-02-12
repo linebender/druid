@@ -52,8 +52,6 @@ pub(crate) struct ContextState<'a> {
     pub(crate) window_id: WindowId,
     pub(crate) window: &'a WindowHandle,
     pub(crate) text: PietText,
-    /// The id of the widget that currently has focus.
-    pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
 }
 
@@ -261,7 +259,7 @@ impl_context_method!(
         /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
         /// [`has_focus`]: #method.has_focus
         pub fn is_focused(&self) -> bool {
-            self.state.focus_widget == Some(self.widget_id())
+            self.widget_state.is_focused
         }
 
         /// The (tree) focus status of a widget.
@@ -271,7 +269,7 @@ impl_context_method!(
         ///
         /// [`is_focused`]: #method.is_focused
         pub fn has_focus(&self) -> bool {
-            self.widget_state.has_focus
+            self.widget_state.has_focus()
         }
     }
 );
@@ -669,7 +667,7 @@ impl LifeCycleCtx<'_, '_> {
     /// [`LifeCycle::WidgetAdded`]: enum.Lifecycle.html#variant.WidgetAdded
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn register_for_focus(&mut self) {
-        self.widget_state.focus_chain.push(self.widget_id());
+        self.widget_state.can_auto_focus = true;
     }
 }
 
@@ -799,14 +797,12 @@ impl<'a> ContextState<'a> {
         ext_handle: &'a ExtEventSink,
         window: &'a WindowHandle,
         window_id: WindowId,
-        focus_widget: Option<WidgetId>,
     ) -> Self {
         ContextState {
             command_queue,
             ext_handle,
             window,
             window_id,
-            focus_widget,
             text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
