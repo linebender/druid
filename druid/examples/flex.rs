@@ -23,30 +23,11 @@ use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, MainAxisAlignment, ProgressBar, RadioGroup,
     SizedBox, Slider, Stepper, Switch, TextBox, WidgetExt,
 };
-use druid::{AppLauncher, Selector, Target, Color, Data, Lens, WidgetId, WindowDesc};
+use druid::{AppLauncher, Selector, Color, Data, Lens, WidgetId, WindowDesc};
 
 use std::time::{Duration, Instant};
 use std::thread;
 const CHANGE_SIZE: Selector<f64> = Selector::new("event-example.change_size");
-
-fn generate_colors(event_sink: druid::ExtEventSink) {
-    // This function is called in a separate thread, and runs until the program ends.
-    // We take an `ExtEventSink` as an argument, we can use this event sink to send
-    // commands to the main thread. Every time we generate a new colour we send it
-    // to the main thread.
-    let mut size = 0.0;
-
-    loop {
-        size += 1.0;
-        if event_sink
-            .submit_command(CHANGE_SIZE, size, Target::Auto)
-            .is_err()
-        {
-            break;
-        }
-        thread::sleep(Duration::from_millis(20));
-    }
-}
 
 const DEFAULT_SPACER_SIZE: f64 = 8.;
 const SPACER_OPTIONS: [(&str, Spacers); 4] = [
@@ -391,13 +372,8 @@ pub fn main() {
         fill_major_axis: false,
     };
 
-    let launcher = AppLauncher::with_window(main_window);
-    let event_sink = launcher.get_external_handle();
-    thread::spawn(move || generate_colors(event_sink));
-       
-    launcher.use_simple_logger()
+    AppLauncher::with_window(main_window)
+        .use_simple_logger()
         .launch(AppState { demo_state, params })
         .expect("Failed to launch application");
-
-
 }
