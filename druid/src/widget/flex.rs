@@ -795,6 +795,12 @@ impl<T: Data> Widget<T> for Flex<T> {
             ctx.stroke_styled(line, &color, 1.0, &stroke_style);
         }
     }
+
+    fn post_render(&mut self) {
+        for child in &mut self.children {
+            child.widget.post_render();
+        }
+    }
 }
 
 impl CrossAxisAlignment {
@@ -916,6 +922,7 @@ impl<T: Data> Widget<T> for Spacer {
         self.axis.pack(major, 0.0).into()
     }
     fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
+    fn post_render(&mut self) {}
 }
 
 impl From<f64> for FlexParams {

@@ -101,4 +101,10 @@ impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
             child.paint_raw(ctx, data, env);
         }
     }
+
+    fn post_render(&mut self) {
+        if let Some(ref mut child) = self.active_child {
+            child.post_render();
+        }
+    }
 }

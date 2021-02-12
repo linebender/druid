@@ -128,6 +128,10 @@ impl<T: Data> Widget<T> for Align<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
     }
+
+    fn post_render(&mut self) {
+        self.child.post_render();
+    }
 }
 
 fn log_size_warnings(size: Size) {

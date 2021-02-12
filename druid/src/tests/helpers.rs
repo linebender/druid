@@ -187,6 +187,8 @@ impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
             f(&mut self.state, ctx, data, env)
         }
     }
+
+    fn post_render(&mut self) {}
 }
 
 impl<T: Data> ReplaceChild<T> {
@@ -227,6 +229,8 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint_raw(ctx, data, env)
     }
+
+    fn post_render(&mut self) {}
 }
 
 #[allow(dead_code)]
@@ -301,6 +305,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
         self.inner.paint(ctx, data, env);
         self.recording.push(Record::Paint)
     }
+
+    fn post_render(&mut self) {}
 }
 
 // easily make a bunch of WidgetIds

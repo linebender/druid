@@ -330,6 +330,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
         });
     }
+
+    fn post_render(&mut self) {
+        self.child.post_render();
+    }
 }
 
 #[cfg(test)]

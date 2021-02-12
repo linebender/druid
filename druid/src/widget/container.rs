@@ -201,4 +201,8 @@ impl<T: Data> Widget<T> for Container<T> {
 
         self.inner.paint(ctx, data, env);
     }
+
+    fn post_render(&mut self) {
+        self.inner.post_render();
+    }
 }

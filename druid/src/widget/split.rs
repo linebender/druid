@@ -435,4 +435,9 @@ impl<T: Data> Widget<T> for Split<T> {
         self.child1.paint(ctx, &data, env);
         self.child2.paint(ctx, &data, env);
     }
+
+    fn post_render(&mut self) {
+        self.child1.post_render();
+        self.child2.post_render();
+    }
 }

@@ -196,4 +196,8 @@ impl<T: Data> Widget<T> for Button<T> {
             self.label.paint(ctx, data, env);
         });
     }
+
+    fn post_render(&mut self) {
+        self.label.post_render();
+    }
 }

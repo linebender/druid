@@ -144,6 +144,8 @@ impl Widget<AppState> for Rebuilder {
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
     }
+
+    fn post_render(&mut self) {}
 }
 
 fn make_control_row() -> impl Widget<AppState> {

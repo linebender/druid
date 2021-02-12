@@ -238,4 +238,6 @@ impl Widget<f64> for Stepper {
             ctx.request_paint();
         }
     }
+
+    fn post_render(&mut self) {}
 }

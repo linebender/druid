@@ -305,6 +305,8 @@ impl Widget<()> for ScreenThing {
             }
         }
     }
+
+    fn post_render(&mut self) {}
 }
 
 struct CancelClose;

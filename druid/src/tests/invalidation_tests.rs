@@ -85,6 +85,8 @@ fn invalidate_scroll() {
             approx_eq!(f64, rect.y1, 50.);
             self.invalid = false;
         }
+
+        fn post_render(&mut self) {}
     }
 
     let id = WidgetId::next();

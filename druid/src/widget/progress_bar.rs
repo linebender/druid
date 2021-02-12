@@ -96,4 +96,6 @@ impl Widget<f64> for ProgressBar {
         );
         ctx.fill(rounded_rect, &bar_gradient);
     }
+
+    fn post_render(&mut self) {}
 }

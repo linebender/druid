@@ -199,4 +199,6 @@ impl Widget<f64> for Slider {
         //Actually paint the knob
         ctx.fill(knob_circle, &knob_gradient);
     }
+
+    fn post_render(&mut self) {}
 }

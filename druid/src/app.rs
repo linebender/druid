@@ -20,7 +20,7 @@ use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHan
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
+use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget, WidgetId};
 
 use druid_shell::WindowState;
 
@@ -71,6 +71,57 @@ pub struct WindowDesc<T> {
     /// This can be used to track a window from when it is launched and when
     /// it actually connects.
     pub id: WindowId,
+}
+
+/// A description of a native window to be instatiated for a widget
+/// which needs its own, instead of using the top-level one. This is
+/// only needed for special cases like wgpu integration.
+#[derive(Clone)]
+pub struct NativeWindowDesc {
+    /// Window id of the new window to create.
+    pub id: WindowId,
+    /// Handle to the parent window.
+    pub parent: WindowHandle,
+    /// Window id of the parent window. This needs to be provided manually because there is
+    /// currently no internal mapping (as in, inside druid-shell) between native child windows
+    /// and their window id.
+    pub parent_id: WindowId,
+    /// Widget id of the widget the new window is for. The widget will receive a
+    /// NATIVE_WINDOW_CONNECTED event once the child window is created.
+    pub widget_id: WidgetId,
+    /// The size of the child window. This is mandatory, because the OS generally doesn't allow
+    /// auto-placement of child windows (unlike top-level ones, where a default position can be
+    /// requested to the OS and computed by its window manager).
+    pub size: Size,
+    /// The position of the child window inside the client area of its parent window. If `None`,
+    /// the child window is created at the origin (0,0) of the parent's client area (top left corner).
+    pub position: Option<Point>,
+}
+
+/// A description of a native window layout change, deferred to its internal message loop
+/// to be processed by the native platform.
+#[derive(Clone)]
+pub struct NativeWindowLayoutDesc {
+    pub id: WindowId,
+    /// Optional origin to move the window to, or `None` to keep the current platform window position.
+    pub origin: Option<Point>,
+    /// Optional size to resize the window, or `None` to keep the current platform window size.
+    pub size: Option<Size>,
+}
+
+/// Handle to a native child window created by [`LifeCycleCtx::new_native_window()`].
+///
+/// Native child windows do not have an associated `Window<T>` representation. They are only
+/// used internally for advanced purpose (e.g. wgpu integration). This is exposed to allow
+/// adding new widgets which require a native window, but is typically only used by those and
+/// never by the user.
+#[derive(Clone)]
+pub struct NativeWindowHandle(pub WindowHandle);
+
+impl std::fmt::Debug for NativeWindowHandle {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        Ok(())
+    }
 }
 
 /// The parts of a window, pending construction, that are dependent on top level app state
@@ -495,5 +546,40 @@ impl<T: Data> WindowDesc<T> {
         state: &mut AppState<T>,
     ) -> Result<WindowHandle, PlatformError> {
         state.build_native_window(self.id, self.pending, self.config)
+    }
+}
+
+impl NativeWindowDesc {
+    pub(crate) fn new(
+        id: WindowId,
+        parent: &WindowHandle,
+        parent_id: WindowId,
+        widget_id: WidgetId,
+        size: Size,
+        position: Option<Point>,
+    ) -> Self {
+        NativeWindowDesc {
+            id,
+            parent: parent.clone(),
+            parent_id,
+            widget_id,
+            size,
+            position,
+        }
+    }
+
+    /// Attempt to create a platform window from this `NativeWindowDesc`.
+    pub(crate) fn build_native<T: Data>(
+        self,
+        state: &mut AppState<T>,
+    ) -> Result<WindowHandle, PlatformError> {
+        let child_window = state.build_native_child_window(
+            self.id,
+            &self.parent,
+            self.parent_id,
+            self.size,
+            self.position,
+        )?;
+        Ok(child_window)
     }
 }

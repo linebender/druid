@@ -78,6 +78,8 @@ impl Widget<()> for AnimWidget {
 
         ctx.fill(Circle::new(center, 50.0), &Color::BLACK);
     }
+
+    fn post_render(&mut self) {}
 }
 
 pub fn main() {

@@ -129,4 +129,6 @@ impl<T: Data> Widget<T> for Spinner {
             );
         }
     }
+
+    fn post_render(&mut self) {}
 }

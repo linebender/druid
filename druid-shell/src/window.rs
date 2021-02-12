@@ -29,6 +29,8 @@ use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
 use piet_common::PietText;
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -224,6 +226,13 @@ impl WindowHandle {
         self.0.get_size()
     }
 
+    /// Set the position and/or size of the native platform window that this window manages.
+    /// This is only valid if the window is a child window. Do not use this to move a top-level
+    /// window `Window<T>`.
+    pub fn set_native_layout(&self, position: Option<Point>, size: Option<Size>) {
+        self.0.set_native_layout(position, size);
+    }
+
     /// Sets the [`WindowLevel`](crate::WindowLevel), the z-order in the Window system / compositor
     ///
     /// We do not currently have a getter method, mostly because the system's levels aren't a
@@ -338,6 +347,25 @@ impl WindowHandle {
     }
 }
 
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        if let Some(hwnd) = self.0.get_hwnd() {
+            let handle = raw_window_handle::windows::WindowsHandle {
+                hwnd: hwnd as *mut libc::c_void,
+                hinstance: unsafe {
+                    winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
+                        as *mut libc::c_void
+                },
+                ..raw_window_handle::windows::WindowsHandle::empty()
+            };
+            RawWindowHandle::Windows(handle)
+        } else {
+            panic!("Cannot retrieved HWMD for window.");
+        }
+    }
+}
+
 /// A builder type for creating new windows.
 pub struct WindowBuilder(platform::WindowBuilder);
 
@@ -414,6 +442,11 @@ impl WindowBuilder {
         self.0.set_window_state(state);
     }
 
+    /// Sets the initial window parent. Advanced use only.
+    pub fn set_parent(&mut self, parent: &WindowHandle) {
+        self.0.set_parent(&parent.0);
+    }
+
     /// Attempt to construct the platform window.
     ///
     /// If this fails, your application should exit.
@@ -458,6 +491,11 @@ pub trait WinHandler {
     /// points](crate::Scale) that needs to be repainted; painting outside the invalid region will
     /// have no effect.
     fn paint(&mut self, piet: &mut piet_common::Piet, invalid: &Region);
+
+    /// Called after paint completed for the entire widget hierarchy and the render commands for
+    /// the layout have been submitted to the underlying backend. This allows submitting extra commands
+    /// to GPU without the risk of race condition with the paint commands. Advanced use only.
+    fn post_render(&mut self);
 
     /// Called when the resources need to be rebuilt.
     ///

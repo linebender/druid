@@ -297,4 +297,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             }
         });
     }
+
+    fn post_render(&mut self) {
+        let mut children = self.children.iter_mut();
+        while let Some(child) = children.next() {
+            child.post_render();
+        }
+    }
 }

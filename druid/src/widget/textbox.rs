@@ -625,6 +625,8 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         // Paint the border
         ctx.stroke(clip_rect, &border_color, border_width);
     }
+
+    fn post_render(&mut self) {}
 }
 
 impl<T: Data> ValueTextBox<T> {
@@ -882,6 +884,10 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         self.inner.paint(ctx, &self.buffer, env);
+    }
+
+    fn post_render(&mut self) {
+        self.inner.post_render();
     }
 }
 

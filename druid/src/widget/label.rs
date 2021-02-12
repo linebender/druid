@@ -508,6 +508,10 @@ impl<T: Data> Widget<T> for Label<T> {
         }
         self.label.paint(ctx, &self.current_text, env)
     }
+
+    fn post_render(&mut self) {
+        self.label.post_render();
+    }
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
@@ -556,6 +560,8 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
         self.draw_at(ctx, origin)
     }
+
+    fn post_render(&mut self) {}
 }
 
 impl<T: TextStorage> Default for RawLabel<T> {
