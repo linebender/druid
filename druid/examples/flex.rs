@@ -25,10 +25,6 @@ use druid::widget::{
 };
 use druid::{AppLauncher, Selector, Color, Data, Lens, WidgetId, WindowDesc};
 
-use std::time::{Duration, Instant};
-use std::thread;
-const CHANGE_SIZE: Selector<f64> = Selector::new("event-example.change_size");
-
 const DEFAULT_SPACER_SIZE: f64 = 8.;
 const SPACER_OPTIONS: [(&str, Spacers); 4] = [
     ("None", Spacers::None),
@@ -96,16 +92,12 @@ enum FlexType {
 /// builds a child Flex widget from some paramaters.
 struct Rebuilder {
     inner: Box<dyn Widget<AppState>>,
-    total_time: u128,
-    count: u32,
 }
 
 impl Rebuilder {
     fn new() -> Rebuilder {
         Rebuilder {
             inner: SizedBox::empty().boxed(),
-            total_time: 0,
-            count: 0,
         }
     }
 
@@ -116,13 +108,6 @@ impl Rebuilder {
 
 impl Widget<AppState> for Rebuilder {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
-        match event {
-            // This is where we handle our command.
-            Event::Command(cmd) if cmd.is(CHANGE_SIZE) => {
-                data.params.spacer_size = *cmd.get_unchecked(CHANGE_SIZE);
-            }
-            _ => (),
-        }
         self.inner.event(ctx, event, data, env)
     }
 
@@ -149,24 +134,7 @@ impl Widget<AppState> for Rebuilder {
         data: &AppState,
         env: &Env,
     ) -> Size {
-        // PROFILER.lock().unwrap().start("./my-prof.profile");
-        // let x = self.inner.layout(ctx, bc, data, env);
-        // for _ in 0..1000000 {
-        //     self.inner.layout(ctx, bc, data, env);
-        // }        
-        // PROFILER.lock().unwrap().stop();
-        // x 
-        let now = Instant::now();
-        let x = self.inner.layout(ctx, bc, data, env);
-        for _ in 0..1000 {
-            self.inner.layout(ctx, bc, data, env);
-        }        
-        let new_now = Instant::now();
-        self.total_time += new_now.duration_since(now).as_nanos();
-        self.count += 1000;
-
-        println!("{:?}", Duration::from_nanos((self.total_time/(self.count as u128)) as u64));
-        x
+        self.inner.layout(ctx, bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
