@@ -16,12 +16,13 @@
 
 use super::invalidation::DebugInvalidation;
 use super::{
-    Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
-    IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
+    Added, Align, Augmented, BackgroundBrush, Click, Container, Controller, ControllerHost,
+    EnvScope, IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
+use std::any::{Any, TypeId};
 
 /// A trait that provides extra methods for combining `Widget`s.
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
@@ -261,6 +262,17 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a `Box`.
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
+    }
+
+    /// Get an augmentation from this widget if any of the appropriate type is present
+    fn augmentation<Aug: 'static>(&self) -> Option<&Aug> {
+        self.augmentation_raw(TypeId::of::<Aug>())
+            .and_then(Any::downcast_ref)
+    }
+
+    /// Augment this widget with the provided argument
+    fn augment<Aug: 'static>(self, aug: Aug) -> Augmented<Self, Aug> {
+        Augmented::new(self, aug)
     }
 }
 

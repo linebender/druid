@@ -16,6 +16,7 @@
 
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
+use std::any::{Any, TypeId};
 
 /// A trait for types that modify behaviour of a child widget.
 ///
@@ -132,6 +133,10 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
 
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
+    }
+
+    fn augmentation_raw(&self, type_id: TypeId) -> Option<&dyn Any> {
+        self.widget.augmentation_raw(type_id)
     }
 }
 
