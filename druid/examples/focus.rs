@@ -53,7 +53,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for FocusWrapper<T, W> {
         if ctx.is_focused() {
             let rect = ctx.size().to_rounded_rect(4.0);
             let brush = ctx.solid_brush(Color::AQUA);
-            ctx.stroke(rect, &brush, 2.0);
+            ctx.stroke(rect, &brush, 1.0);
         }
     }
 }

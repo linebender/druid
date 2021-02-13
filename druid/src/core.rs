@@ -126,8 +126,9 @@ pub(crate) struct WidgetState {
     pub(crate) can_auto_focus: bool,
 
     /// This widgets children can get focused automatically
+    //TODO: keep this value up to date! Maybe remove it and calculate on the fly (if there is a next...)
+    // also keep first and last up to date!
     pub(crate) children_can_auto_focus: bool,
-
 
     pub(crate) has_focus: bool,
     pub(crate) next_focusing_child: Option<WidgetId>,
@@ -896,7 +897,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         // in the case of an internal routing event, if we are at our target
         // we may send an extra event after the actual event
-        let mut extra_event = None;
+        let mut extra_events = Vec::new();
 
         let recurse = match event {
             LifeCycle::Internal(internal) => match internal {
@@ -930,11 +931,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         println!("traverse to {:?}", self.state.id);
 
                         if (forward == true && !had_focus && self.state.can_auto_focus) ||
-                            (forward == false && self.state.previous_focusing_child.is_none())
+                            (forward == false && (self.state.previous_focusing_child.is_none() && had_focus || self.state.last_focus.is_none()))
                         {
                             //Focus this widget
                             self.state.is_focused = true;
-                            extra_event = Some(LifeCycle::FocusChanged(true));
+                            self.state.has_focus = true;
+                            extra_events.push(LifeCycle::FocusChanged(true));
+                            extra_events.push(LifeCycle::Internal(
+                                InternalLifeCycle::TraverseFocus {forward, target: self.state.id/*none of the widgets will get focused*/}
+                            ));
 
                             self.state.next_focusing_child = self.state.first_focus;
 
@@ -948,9 +953,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                             };
                             //Focus children
                             self.state.is_focused = false;
-                            //TODO: send focus changed!
-
-                            extra_event = Some(LifeCycle::Internal(InternalLifeCycle::TraverseFocus {forward, target: child_id}));
+                            extra_events.push(LifeCycle::FocusChanged(false));
+                            extra_events.push(LifeCycle::Internal(InternalLifeCycle::TraverseFocus {forward, target: child_id}));
                         }
 
                     } else {
@@ -959,9 +963,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                             println!("removed from {:?}", self.state.id);
 
                             self.state.is_focused = false;
-                            extra_event = Some(LifeCycle::FocusChanged(false));
-                        } else {
-                            extra_event = Some(LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged {new: None}))
+                            extra_events.push(LifeCycle::FocusChanged(false));
+                        } else if had_focus {
+                            extra_events.push(LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged {new: None}))
                         }
                     }
 
@@ -992,7 +996,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if let Some(change) = this_changed {
                         self.state.is_focused = change;
                         self.state.has_focus = change;
-                        extra_event = Some(LifeCycle::FocusChanged(change));
+                        extra_events.push(LifeCycle::FocusChanged(change));
                     }
 
                     // Recurse when the target widgets could be our descendants.
@@ -1063,7 +1067,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
-        if let Some(event) = extra_event.as_ref() {
+        for event in extra_events.iter() {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
@@ -1076,12 +1080,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 ctx.widget_state.children = ctx.widget_state.children.union(self.state.children);
                 ctx.register_child(self.id());
 
+                self.state.next_focusing_child = self.state.first_focus;
+                self.state.previous_focusing_child = self.state.last_focus;
+
                 ctx.widget_state.children_can_auto_focus |= self.state.can_auto_focus;
                 if ctx.widget_state.first_focus.is_none() {
                     ctx.widget_state.first_focus = Some(self.state.id);
                 }
                 ctx.widget_state.last_focus = Some(self.state.id);
-
             }
             LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged {..}) |
                 LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) =>
@@ -1095,22 +1101,21 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         // If the focused widget has a previous widget (or we can auto focus), our
                         // parent should focus us again when focusing previous
                         ctx.widget_state.previous_focusing_child = Some(self.state.id);
+                        println!("widget {:?} has prev {:?}", ctx.widget_state.id, self.state.id);
                     }
                     if self.state.next_focusing_child.is_some() {
                         // If the focused widget has a next widget, our
                         // parent should focus us again when focusing previous
                         ctx.widget_state.next_focusing_child = Some(self.state.id);
-                        println!("widget {:?} has next {:?}", ctx.widget_state.id, self.state.id);
                     }
                 } else if self.state.can_auto_focus || self.state.children_can_auto_focus {
                     if !ctx.widget_state.has_focus {
                         //We might be the the previous widget otherwise the value will get overwritten by the next
                         ctx.widget_state.previous_focusing_child = Some(self.state.id);
-
+                        println!("widget {:?} has prev {:?}", ctx.widget_state.id, self.state.id);
                     } else if ctx.widget_state.next_focusing_child.is_none() {
                         //We are the first widget after the focused!
                         ctx.widget_state.next_focusing_child = Some(self.state.id);
-                        println!("widget {:?} has next {:?}", ctx.widget_state.id, self.state.id);
                     }
                 }
             }
@@ -1243,7 +1248,7 @@ impl WidgetState {
     }
 
     pub(crate) fn has_focus(&self) -> bool {
-        self.is_focused || self.has_focus
+        self.has_focus
     }
 
     /// Update to incorporate state changes from a child.

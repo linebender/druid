@@ -233,6 +233,8 @@ impl<T: Data> Window<T> {
 
         if let Some(focus_req) = widget_state.request_focus.take() {
             let event = LifeCycle::Internal(self.widget_for_focus_request(focus_req));
+
+            println!("\n ------- focus! ------- \n");
             self.lifecycle(queue, &event, data, env, false);
         }
 
