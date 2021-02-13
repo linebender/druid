@@ -44,6 +44,9 @@ use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{windows::WindowsHandle, HasRawWindowHandle, RawWindowHandle};
+
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
@@ -157,6 +160,25 @@ enum DeferredOp {
 pub struct WindowHandle {
     dwrite_factory: DwriteFactory,
     state: Weak<WindowState>,
+}
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        if let Some(hwnd) = self.get_hwnd() {
+            let handle = WindowsHandle {
+                hwnd: hwnd as *mut libc::c_void,
+                hinstance: unsafe {
+                    winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
+                        as *mut libc::c_void
+                },
+                ..WindowsHandle::empty()
+            };
+            RawWindowHandle::Windows(handle)
+        } else {
+            panic!("Cannot retrieved HWMD for window.");
+        }
+    }
 }
 
 /// A handle that can get used to schedule an idle handler. Note that

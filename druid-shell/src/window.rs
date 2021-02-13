@@ -29,6 +29,8 @@ use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
 use piet_common::PietText;
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -335,6 +337,13 @@ impl WindowHandle {
     /// only guaranteed to be valid for the current pass of the runloop.
     pub fn get_scale(&self) -> Result<Scale, Error> {
         self.0.get_scale().map_err(Into::into)
+    }
+}
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        self.0.raw_window_handle()
     }
 }
 
