@@ -176,7 +176,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
             };
             RawWindowHandle::Windows(handle)
         } else {
-            panic!("Cannot retrieved HWMD for window.");
+            panic!("Cannot retrieved HWND for window.");
         }
     }
 }
