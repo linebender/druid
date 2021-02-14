@@ -46,6 +46,7 @@ pub(crate) unsafe fn create_render_target_dxgi(
     d2d_factory: &D2DFactory,
     swap_chain: *mut IDXGISwapChain1,
     scale: Scale,
+    transparent: bool,
 ) -> Result<DxgiSurfaceRenderTarget, Error> {
     let mut buffer: *mut IDXGISurface = null_mut();
     as_result((*swap_chain).GetBuffer(
@@ -57,7 +58,11 @@ pub(crate) unsafe fn create_render_target_dxgi(
         _type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
         pixelFormat: D2D1_PIXEL_FORMAT {
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
-            alphaMode: D2D1_ALPHA_MODE_IGNORE,
+            alphaMode: if transparent {
+                D2D1_ALPHA_MODE_PREMULTIPLIED
+            } else {
+                D2D1_ALPHA_MODE_IGNORE
+            },
         },
         dpiX: (scale.x() * SCALE_TARGET_DPI) as f32,
         dpiY: (scale.y() * SCALE_TARGET_DPI) as f32,

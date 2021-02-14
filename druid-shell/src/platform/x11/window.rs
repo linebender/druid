@@ -133,6 +133,10 @@ impl WindowBuilder {
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
+    pub fn set_transparent(&mut self, _transparent: bool) {
+        // Ignored
+    }
+
     pub fn set_position(&mut self, _position: Point) {
         warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
     }

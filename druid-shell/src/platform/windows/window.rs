@@ -35,6 +35,11 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
+use winapi::um::d2d1_1::ID2D1DeviceContext;
+use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
+use winapi::um::dcomp::{
+    DCompositionCreateDevice, IDCompositionDevice, IDCompositionTarget, IDCompositionVisual,
+};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
@@ -43,12 +48,14 @@ use winapi::um::uxtheme::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
 use winapi::um::winuser::*;
+use winapi::Interface;
+use wio::com::ComPtr;
 
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::piet::{Color, Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -86,6 +93,7 @@ pub(crate) struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     size: Option<Size>,
+    transparent: bool,
     min_size: Option<Size>,
     position: Option<Point>,
     state: window::WindowState,
@@ -188,6 +196,7 @@ struct WindowState {
     timers: Arc<Mutex<TimerSlots>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
     has_titlebar: Cell<bool>,
+    is_transparent: Cell<bool>,
     // For resizable borders, window can still be resized with code.
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
@@ -225,6 +234,7 @@ struct WndState {
     // capture. When the first mouse button is down on our window we enter
     // capture, and we hold it until the last mouse button is up.
     captured_mouse_buttons: MouseButtons,
+    transparent: bool,
     // Is this window the topmost window under the mouse cursor
     has_mouse_focus: bool,
     //TODO: track surrogate orphan
@@ -236,6 +246,14 @@ struct WndState {
 /// State for DXGI swapchains.
 struct DxgiState {
     swap_chain: *mut IDXGISwapChain1,
+
+    // These ComPtrs must live as long as the window
+    #[allow(dead_code)]
+    composition_device: Option<ComPtr<IDCompositionDevice>>,
+    #[allow(dead_code)]
+    composition_target: Option<ComPtr<IDCompositionTarget>>,
+    #[allow(dead_code)]
+    composition_visual: Option<ComPtr<IDCompositionVisual>>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -254,6 +272,9 @@ impl Drop for HCursor {
 
 /// Message indicating there are idle tasks to run.
 const DS_RUN_IDLE: UINT = WM_USER;
+
+/// Transparent bg clearing color
+const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// Message relaying a request to destroy the window.
 ///
@@ -359,7 +380,7 @@ impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) -> Result<(), Error> {
         unsafe {
             let swap_chain = self.dxgi_state.as_ref().unwrap().swap_chain;
-            match paint::create_render_target_dxgi(d2d, swap_chain, scale) {
+            match paint::create_render_target_dxgi(d2d, swap_chain, scale, self.transparent) {
                 Ok(rt) => {
                     self.render_target =
                         Some(rt.as_device_context().expect("TODO remove this expect"));
@@ -373,9 +394,38 @@ impl WndState {
     // Renders but does not present.
     fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, invalid: &Region) {
         let rt = self.render_target.as_mut().unwrap();
+
         rt.begin_draw();
         {
+            // Piet is missing alpha blending setting, so we have to call
+            // ID2D1DeviceContext::SetPrimitiveBlend() manually to clear just
+            // the required pixels
+            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> = if self.transparent {
+                Some(unsafe {
+                    (rt as *mut _ as *mut ComPtr<ID2D1DeviceContext>)
+                        .as_ref()
+                        .unwrap()
+                })
+            } else {
+                None
+            };
+
             let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
+
+            // Clear the background if transparency DC is found
+            if let Some(dc) = dc_for_transparency {
+                let current_blend = unsafe { dc.GetPrimitiveBlend() };
+                unsafe {
+                    dc.SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+                }
+                for r in invalid.rects().iter() {
+                    piet_ctx.fill(r, &TRANSPARENT);
+                }
+                unsafe {
+                    dc.SetPrimitiveBlend(current_blend);
+                }
+            }
+
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
             piet_ctx.clip(invalid.to_bez_path());
@@ -475,6 +525,10 @@ impl MyWndProc {
 
     fn resizable(&self) -> bool {
         self.with_window_state(|state| state.is_resizable.get())
+    }
+
+    fn is_transparent(&self) -> bool {
+        self.with_window_state(|state| state.is_transparent.get())
     }
 
     fn handle_deferred_queue(&self) {
@@ -655,10 +709,11 @@ impl WndProc for MyWndProc {
                 }
                 if let Some(state) = self.state.borrow_mut().as_mut() {
                     let dxgi_state = unsafe {
-                        create_dxgi_state(self.present_strategy, hwnd).unwrap_or_else(|e| {
-                            error!("Creating swapchain failed: {:?}", e);
-                            None
-                        })
+                        create_dxgi_state(self.present_strategy, hwnd, self.is_transparent())
+                            .unwrap_or_else(|e| {
+                                error!("Creating swapchain failed: {:?}", e);
+                                None
+                            })
                     };
                     state.dxgi_state = dxgi_state;
 
@@ -670,7 +725,7 @@ impl WndProc for MyWndProc {
             WM_ACTIVATE => {
                 if LOWORD(wparam as u32) as u32 != 0 {
                     unsafe {
-                        if !self.has_titlebar() {
+                        if !self.has_titlebar() && !self.is_transparent() {
                             // This makes windows paint the dropshadow around the window
                             // since we give it a "1 pixel frame" that we paint over anyway.
                             // From my testing top seems to be the best option when it comes to avoiding resize artifacts.
@@ -1172,6 +1227,7 @@ impl WindowBuilder {
             menu: None,
             resizable: true,
             show_titlebar: true,
+            transparent: false,
             present_strategy: Default::default(),
             size: None,
             min_size: None,
@@ -1199,6 +1255,11 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.present_strategy = PresentStrategy::Flip;
+        self.transparent = transparent;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -1271,6 +1332,7 @@ impl WindowBuilder {
                 deferred_queue: RefCell::new(Vec::new()),
                 has_titlebar: Cell::new(self.show_titlebar),
                 is_resizable: Cell::new(self.resizable),
+                is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
             };
             let win = Rc::new(window);
@@ -1287,6 +1349,7 @@ impl WindowBuilder {
                 keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
+                transparent: self.transparent,
                 last_click_time: Instant::now(),
                 last_click_pos: (0, 0),
                 click_count: 0,
@@ -1398,6 +1461,7 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
 unsafe fn create_dxgi_state(
     present_strategy: PresentStrategy,
     hwnd: HWND,
+    transparent: bool,
 ) -> Result<Option<DxgiState>, Error> {
     let mut factory: *mut IDXGIFactory2 = null_mut();
     as_result(CreateDXGIFactory1(
@@ -1416,6 +1480,7 @@ unsafe fn create_dxgi_state(
             (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, 2)
         }
     };
+
     let desc = DXGI_SWAP_CHAIN_DESC1 {
         Width: 1024,
         Height: 768,
@@ -1429,21 +1494,79 @@ unsafe fn create_dxgi_state(
         BufferCount: bufs,
         Scaling: DXGI_SCALING_STRETCH,
         SwapEffect: swap_effect,
-        AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+        AlphaMode: if transparent {
+            DXGI_ALPHA_MODE_PREMULTIPLIED
+        } else {
+            DXGI_ALPHA_MODE_IGNORE
+        },
         Flags: 0,
     };
     let mut swap_chain: *mut IDXGISwapChain1 = null_mut();
-    let res = (*factory).CreateSwapChainForHwnd(
-        d3d11_device.raw_ptr() as *mut IUnknown,
-        hwnd,
-        &desc,
-        null_mut(),
-        null_mut(),
-        &mut swap_chain,
+    let swap_chain_res = if transparent {
+        (*factory).CreateSwapChainForComposition(
+            d3d11_device.raw_ptr() as *mut IUnknown,
+            &desc,
+            null_mut(),
+            &mut swap_chain,
+        )
+    } else {
+        (*factory).CreateSwapChainForHwnd(
+            d3d11_device.raw_ptr() as *mut IUnknown,
+            hwnd,
+            &desc,
+            null_mut(),
+            null_mut(),
+            &mut swap_chain,
+        )
+    };
+    debug!(
+        "swap chain res = 0x{:x}, pointer = {:?}",
+        swap_chain_res, swap_chain
     );
-    debug!("swap chain res = 0x{:x}, pointer = {:?}", res, swap_chain);
 
-    Ok(Some(DxgiState { swap_chain }))
+    let (composition_device, composition_target, composition_visual) = if transparent {
+        // Following resources are created according to this tutorial:
+        // https://docs.microsoft.com/en-us/archive/msdn-magazine/2014/june/windows-with-c-high-performance-window-layering-using-the-windows-composition-engine
+
+        // Create IDCompositionDevice
+        let mut ptr: *mut c_void = null_mut();
+        DCompositionCreateDevice(
+            d3d11_device.raw_ptr() as *mut IDXGIDevice,
+            &IDCompositionDevice::uuidof(),
+            &mut ptr,
+        );
+        let composition_device = ComPtr::<IDCompositionDevice>::from_raw(ptr as _);
+
+        // Create IDCompositionTarget for the window
+        let mut ptr: *mut IDCompositionTarget = null_mut();
+        composition_device.CreateTargetForHwnd(hwnd as _, 1, &mut ptr);
+        let composition_target = ComPtr::from_raw(ptr);
+
+        // Create IDCompositionVisual and assign to swap chain
+        let mut ptr: *mut IDCompositionVisual = null_mut();
+        composition_device.CreateVisual(&mut ptr);
+        let composition_visual = ComPtr::from_raw(ptr);
+        composition_visual.SetContent(swap_chain as *mut IUnknown);
+
+        // Set the root as composition target and commit
+        composition_target.SetRoot(composition_visual.as_raw());
+        composition_device.Commit();
+
+        (
+            Some(composition_device),
+            Some(composition_target),
+            Some(composition_visual),
+        )
+    } else {
+        (None, None, None)
+    };
+
+    Ok(Some(DxgiState {
+        swap_chain,
+        composition_device,
+        composition_target,
+        composition_visual,
+    }))
 }
 
 #[cfg(target_arch = "x86_64")]
