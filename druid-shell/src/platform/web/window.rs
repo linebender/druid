@@ -357,6 +357,10 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_transparent(&mut self, _transparent: bool) {
+        // Ignored
+    }
+
     pub fn set_position(&mut self, _position: Point) {
         // Ignored
     }
