@@ -62,6 +62,23 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             "Lens implementations can only be derived from CamelCase types",
         ));
     };
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let mut lens_ty_idents = Vec::new();
+    let mut phantom_decls = Vec::new();
+    let mut phantom_inits = Vec::new();
+
+    for gp in input.generics.params.iter() {
+        if let GenericParam::Type(TypeParam { ident, .. }) = gp {
+            lens_ty_idents.push(quote! {#ident});
+            phantom_decls.push(quote! {std::marker::PhantomData<*const #ident>});
+            phantom_inits.push(quote! {std::marker::PhantomData});
+        }
+    }
+
+    let lens_ty_generics = quote! {
+        <#(#lens_ty_idents),*>
+    };
 
     // Define lens types for each field
     let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
@@ -70,14 +87,20 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
             "Lens for the field `{}` on [`{1}`](super::{1})",
             field_name, ty
         );
+
         quote! {
             #[doc = #docs]
             #[allow(non_camel_case_types)]
             #[derive(Debug, Copy, Clone)]
-            pub struct #field_name;
+            pub struct #field_name#lens_ty_generics(#(#phantom_decls),*);
+
+            impl #lens_ty_generics #field_name#lens_ty_generics{
+                pub const fn new()->Self{
+                    Self(#(#phantom_inits),*)
+                }
+            }
         }
     });
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let used_params: HashSet<String> = input
         .generics
@@ -107,7 +130,8 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         let field_ty = &f.ty;
 
         quote! {
-            impl #impl_generics druid::Lens<#ty#ty_generics, #field_ty> for #twizzled_name::#field_name #where_clause {
+
+            impl #impl_generics druid::Lens<#ty#ty_generics, #field_ty> for #twizzled_name::#field_name#lens_ty_generics #where_clause {
                 fn with<#val_ty_par, #func_ty_par: FnOnce(&#field_ty) -> #val_ty_par>(&self, data: &#ty#ty_generics, f: #func_ty_par) -> #val_ty_par {
                     f(&data.#field_name)
                 }
@@ -125,7 +149,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
 
         quote! {
             /// Lens for the corresponding field
-            pub const #lens_field_name: #twizzled_name::#field_name = #twizzled_name::#field_name;
+            pub const #lens_field_name: #twizzled_name::#field_name#lens_ty_generics = #twizzled_name::#field_name::new();
         }
     });
 
