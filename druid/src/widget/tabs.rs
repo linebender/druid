@@ -279,10 +279,7 @@ impl<TP: TabsPolicy> TabBar<TP> {
             let label = data
                 .policy
                 .tab_label(key.clone(), info, &data.inner)
-                // TODO: Type inference fails here because both sides of the lens are dependent on
-                // associated types of the policy. Needs changes to lens derivation to embed PhantomData of the (relevant?) type params)
-                // of the lensed types into the lens, so type inference has something to grab hold of
-                .lens::<TabsState<TP>, tabs_state_derived_lenses::inner>(TabsState::<TP>::inner)
+                .lens(TabsState::<TP>::inner)
                 .padding(Insets::uniform_xy(9., 5.));
 
             if can_close {
@@ -718,7 +715,7 @@ impl<TP> TabsScopePolicy<TP> {
 impl<TP: TabsPolicy> ScopePolicy for TabsScopePolicy<TP> {
     type In = TP::Input;
     type State = TabsState<TP>;
-    type Transfer = LensScopeTransfer<tabs_state_derived_lenses::inner, Self::In, Self::State>;
+    type Transfer = LensScopeTransfer<tabs_state_derived_lenses::inner<TP>, Self::In, Self::State>;
 
     fn create(self, inner: &Self::In) -> (Self::State, Self::Transfer) {
         (
