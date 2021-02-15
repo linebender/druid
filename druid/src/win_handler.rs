@@ -29,11 +29,11 @@ use crate::shell::{
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::{ExtEventHost, ExtEventSink};
-use crate::menu::ContextMenu;
+use crate::menu::{ContextMenu, MenuItemId, MenuManager};
 use crate::window::{ImeUpdateFn, Window};
 use crate::{
-    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Selector,
-    Target, TimerToken, WidgetId, WindowDesc, WindowId,
+    Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, PlatformError, Selector, Target,
+    TimerToken, WidgetId, WindowDesc, WindowId,
 };
 
 use crate::app::{PendingWindow, WindowConfig};
@@ -93,7 +93,10 @@ struct Inner<T> {
     windows: Windows<T>,
     /// the application-level menu, only set on macos and only if there
     /// are no open windows.
-    root_menu: Option<MenuDesc<T>>,
+    root_menu: Option<MenuManager<T>>,
+    /// The id of the most-recently-focused window that has a menu. On macOS, this
+    /// is the window that's currently in charge of the app menu.
+    menu_window: Option<WindowId>,
     pub(crate) env: Env,
     pub(crate) data: T,
     ime_focus_change: Option<Box<dyn Fn()>>,
@@ -160,6 +163,7 @@ impl<T> AppState<T> {
             command_queue: VecDeque::new(),
             file_dialogs: HashMap::new(),
             root_menu: None,
+            menu_window: None,
             ext_event_host,
             data,
             env,
@@ -176,14 +180,20 @@ impl<T> AppState<T> {
 }
 
 impl<T: Data> Inner<T> {
-    fn get_menu_cmd(&self, window_id: Option<WindowId>, cmd_id: u32) -> Option<Command> {
+    fn handle_menu_cmd(&mut self, cmd_id: MenuItemId, window_id: Option<WindowId>) {
+        let queue = &mut self.command_queue;
+        let data = &mut self.data;
+        let env = &self.env;
         match window_id {
-            Some(id) => self.windows.get(id).and_then(|w| w.get_menu_cmd(cmd_id)),
+            Some(id) => self
+                .windows
+                .get_mut(id)
+                .map(|w| w.menu_cmd(queue, cmd_id, data, env)),
             None => self
                 .root_menu
-                .as_ref()
-                .and_then(|m| m.command_for_id(cmd_id)),
-        }
+                .as_mut()
+                .map(|m| m.event(queue, None, cmd_id, data, env)),
+        };
     }
 
     fn append_command(&mut self, cmd: Command) {
@@ -347,11 +357,6 @@ impl<T: Data> Inner<T> {
 
         match cmd.target() {
             Target::Window(id) => {
-                // first handle special window-level events
-                if cmd.is(sys_cmd::SET_MENU) {
-                    self.set_menu(id, &cmd);
-                    return Handled::Yes;
-                }
                 if cmd.is(sys_cmd::SHOW_CONTEXT_MENU) {
                     self.show_context_menu(id, &cmd);
                     return Handled::Yes;
@@ -433,29 +438,15 @@ impl<T: Data> Inner<T> {
         }
     }
 
-    fn set_menu(&mut self, window_id: WindowId, cmd: &Command) {
-        if let Some(win) = self.windows.get_mut(window_id) {
-            match cmd
-                .get_unchecked(sys_cmd::SET_MENU)
-                .downcast_ref::<MenuDesc<T>>()
-            {
-                Some(menu) => win.set_menu(menu.clone(), &self.data, &self.env),
-                None => panic!(
-                    "{} command must carry a MenuDesc<application state>.",
-                    sys_cmd::SET_MENU
-                ),
-            }
-        }
-    }
-
     fn show_context_menu(&mut self, window_id: WindowId, cmd: &Command) {
         if let Some(win) = self.windows.get_mut(window_id) {
             match cmd
                 .get_unchecked(sys_cmd::SHOW_CONTEXT_MENU)
-                .downcast_ref::<ContextMenu<T>>()
+                .take()
+                .and_then(|b| b.downcast::<ContextMenu<T>>().ok())
             {
-                Some(ContextMenu { menu, location }) => {
-                    win.show_context_menu(menu.to_owned(), *location, &self.data, &self.env)
+                Some(menu) => {
+                    win.show_context_menu(menu.build, menu.location, &self.data, &self.env)
                 }
                 None => panic!(
                     "{} command must carry a ContextMenu<application state>.",
@@ -476,6 +467,22 @@ impl<T: Data> Inner<T> {
                 let handle = window.handle.clone();
                 let f = Box::new(move || handle.set_focused_text_field(focus_change));
                 self.ime_focus_change = Some(f);
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            window.update_menu(&self.data, &self.env);
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let windows = &mut self.windows;
+            let window = self.menu_window.and_then(|w| windows.get_mut(w));
+            if let Some(window) = window {
+                window.update_menu(&self.data, &self.env);
+            } else if let Some(root_menu) = &mut self.root_menu {
+                if let Some(new_menu) = root_menu.update(None, &self.data, &self.env) {
+                    self.app.set_menu(new_menu);
+                }
             }
         }
         self.invalidate_and_finalize();
@@ -517,14 +524,16 @@ impl<T: Data> Inner<T> {
             .release_ime_lock(token)
     }
 
-    #[cfg(target_os = "macos")]
     fn window_got_focus(&mut self, window_id: WindowId) {
         if let Some(win) = self.windows.get_mut(window_id) {
+            if win.menu.is_some() {
+                self.menu_window = Some(window_id);
+            }
+
+            #[cfg(target_os = "macos")]
             win.macos_update_app_menu(&self.data, &self.env)
         }
     }
-    #[cfg(not(target_os = "macos"))]
-    fn window_got_focus(&mut self, _: WindowId) {}
 }
 
 impl<T: Data> DruidHandler<T> {
@@ -630,16 +639,9 @@ impl<T: Data> AppState<T> {
     /// the `window_id` will be `Some(_)`, otherwise (such as if no window
     /// is open but a menu exists, as on macOS) it will be `None`.
     fn handle_system_cmd(&mut self, cmd_id: u32, window_id: Option<WindowId>) {
-        let cmd = self.inner.borrow().get_menu_cmd(window_id, cmd_id);
-        match cmd {
-            Some(cmd) => {
-                let default_target = window_id.map(Into::into).unwrap_or(Target::Global);
-                self.inner
-                    .borrow_mut()
-                    .append_command(cmd.default_to(default_target))
-            }
-            None => tracing::warn!("No command for menu id {}", cmd_id),
-        }
+        self.inner
+            .borrow_mut()
+            .handle_menu_cmd(MenuItemId::new(cmd_id), window_id);
         self.process_commands();
         self.inner.borrow_mut().do_update();
     }
@@ -863,7 +865,7 @@ impl<T: Data> AppState<T> {
         let platform_menu = pending
             .menu
             .as_mut()
-            .map(|m| m.build_window_menu(&data, &env));
+            .map(|m| m.initialize(Some(id), &data, &env));
         if let Some(menu) = platform_menu {
             builder.set_menu(menu);
         }

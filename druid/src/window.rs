@@ -27,14 +27,15 @@ use crate::shell::{text::InputHandler, Counter, Cursor, Region, TextFieldToken, 
 use crate::app::{PendingWindow, WindowSizePolicy};
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
-    TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
 /// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
@@ -54,8 +55,8 @@ pub struct Window<T> {
     size_policy: WindowSizePolicy,
     size: Size,
     invalid: Region,
-    pub(crate) menu: Option<MenuDesc<T>>,
-    pub(crate) context_menu: Option<MenuDesc<T>>,
+    pub(crate) menu: Option<MenuManager<T>>,
+    pub(crate) context_menu: Option<(MenuManager<T>, Point)>,
     // This will be `Some` whenever the most recently displayed frame was an animation frame.
     pub(crate) last_anim: Option<Instant>,
     pub(crate) last_mouse_pos: Option<Point>,
@@ -115,30 +116,40 @@ impl<T: Data> Window<T> {
         widget_id == self.root.id() || self.root.state().children.may_contain(&widget_id)
     }
 
-    pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
-        let platform_menu = menu.build_window_menu(data, env);
-        self.handle.set_menu(platform_menu);
-        self.menu = Some(menu);
+    pub(crate) fn menu_cmd(
+        &mut self,
+        queue: &mut CommandQueue,
+        cmd_id: MenuItemId,
+        data: &mut T,
+        env: &Env,
+    ) {
+        if let Some(menu) = &mut self.menu {
+            menu.event(queue, Some(self.id), cmd_id, data, env);
+        }
+        if let Some((menu, _)) = &mut self.context_menu {
+            menu.event(queue, Some(self.id), cmd_id, data, env);
+        }
     }
 
     pub(crate) fn show_context_menu(
         &mut self,
-        mut menu: MenuDesc<T>,
+        menu: impl FnMut(&T, &Env) -> Menu<T> + 'static,
         point: Point,
         data: &T,
         env: &Env,
     ) {
-        let platform_menu = menu.build_popup_menu(data, env);
-        self.handle.show_context_menu(platform_menu, point);
-        self.context_menu = Some(menu);
+        let mut manager = MenuManager::new_for_popup(menu);
+        self.handle
+            .show_context_menu(manager.initialize(Some(self.id), data, env), point);
+        self.context_menu = Some((manager, point));
     }
 
     /// On macos we need to update the global application menu to be the menu
     /// for the current window.
     #[cfg(target_os = "macos")]
     pub(crate) fn macos_update_app_menu(&mut self, data: &T, env: &Env) {
-        if let Some(menu) = self.menu.as_mut().map(|m| m.build_window_menu(data, env)) {
-            self.handle.set_menu(menu);
+        if let Some(menu) = self.menu.as_mut() {
+            self.handle.set_menu(menu.refresh(data, env));
         }
     }
 
@@ -542,11 +553,17 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub(crate) fn get_menu_cmd(&self, cmd_id: u32) -> Option<Command> {
-        self.context_menu
-            .as_ref()
-            .and_then(|m| m.command_for_id(cmd_id))
-            .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
+    pub(crate) fn update_menu(&mut self, data: &T, env: &Env) {
+        if let Some(menu) = &mut self.menu {
+            if let Some(new_menu) = menu.update(Some(self.id), data, env) {
+                self.handle.set_menu(new_menu);
+            }
+        }
+        if let Some((menu, point)) = &mut self.context_menu {
+            if let Some(new_menu) = menu.update(Some(self.id), data, env) {
+                self.handle.show_context_menu(new_menu, *point);
+            }
+        }
     }
 
     pub(crate) fn get_ime_handler(
