@@ -273,6 +273,9 @@ pub enum LifeCycle {
     ///
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
+    /// Called when the disabled status changes
+    ///
+    DisabledChanged(bool),
     /// Internal druid lifecycle event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -399,7 +402,7 @@ impl LifeCycle {
     /// (for example the hidden tabs in a tabs widget).
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
+            LifeCycle::WidgetAdded | LifeCycle::Internal(_) | LifeCycle::DisabledChanged(_) => true,
             LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
         }
     }

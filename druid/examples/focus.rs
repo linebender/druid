@@ -14,18 +14,18 @@ impl<T: Data, W: Widget<T>> FocusWrapper<T, W> {
     }
 }
 
-impl<T: Data, W: Widget<T>> Widget<T> for FocusWrapper<T, W> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, env: &Env) {
         if let Event::KeyDown(ke) = event {
             if HotKey::new(None, KbKey::Tab).matches(ke) && ctx.is_focused() {
-                ctx.focus_next();
+                ctx.focus_prev();
             }
         }
         self.inner.event(ctx, event, data, env)
 
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppData, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             ctx.register_for_focus();
         }
@@ -34,20 +34,30 @@ impl<T: Data, W: Widget<T>> Widget<T> for FocusWrapper<T, W> {
             ctx.request_paint();
         }
 
+        if let LifeCycle::DisabledChanged(disabled) = event {
+            println!("disabled: {} for {:?}", disabled, ctx.widget_id());
+        }
+
         self.inner.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, data: &AppData, env: &Env) {
+        if data.text1.len() == 0 {
+            ctx.set_disabled(true);
+        } else {
+            ctx.set_disabled(false);
+        }
+
         self.inner.update(ctx, data, env)
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppData, env: &Env) -> Size {
         let size = self.inner.layout(ctx, &bc.shrink((8.0, 8.0)), data, env);
         self.inner.set_origin(ctx, data, env, Point::new(4.0, 4.0));
         size + Size::new(8.0, 8.0)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppData, env: &Env) {
         self.inner.paint(ctx, data, env);
 
         if ctx.is_focused() {

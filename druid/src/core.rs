@@ -113,6 +113,16 @@ pub(crate) struct WidgetState {
     /// Any descendant is active.
     has_active: bool,
 
+    /// The new state of disable
+    /// is_disabled() changes after writing this value in set_disabled DisabledChanged is fired
+    pub(crate) change_disable: bool,
+
+    /// The widget itself set its state to disabled
+    pub(crate) set_disabled: bool,
+
+    /// The widget is disabled because its parent is disabled
+    pub(crate) parent_disabled: bool,
+
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
 
@@ -602,6 +612,28 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
+    fn update_disabled(&mut self, state: &mut ContextState, data: &T, env: &Env) {
+        let was_disabled = self.state.is_disabled();
+        self.state.set_disabled = self.state.change_disable;
+
+        if was_disabled != self.state.is_disabled() {
+            let event = LifeCycle::DisabledChanged(self.state.is_disabled());
+
+            if self.has_focus() {
+                self.state.request_focus = Some(FocusChange::Resign);
+            }
+
+            let mut child_ctx = LifeCycleCtx {
+                state,
+                widget_state: &mut self.state,
+            };
+
+            self.inner.lifecycle(&mut child_ctx, &event, data, env);
+
+            //We dont need to merge the state since this method is called only in methods which do this already
+        }
+    }
+
     /// Execute the closure with this widgets `EventCtx`.
     #[cfg(feature = "crochet")]
     pub fn with_event_context<F>(&mut self, parent_ctx: &mut EventCtx, mut fun: F)
@@ -721,7 +753,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if had_active || self.state.is_hot {
+                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseDown(mouse_event));
@@ -740,7 +772,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if had_active || self.state.is_hot {
+                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseUp(mouse_event));
@@ -762,7 +794,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // MouseMove is recursed even if the widget is not active and not hot,
                 // but was hot previously. This is to allow the widget to respond to the movement,
                 // e.g. drag functionality where the widget wants to follow the mouse.
-                if had_active || self.state.is_hot || hot_changed {
+                if !self.state.is_disabled() && (had_active || self.state.is_hot || hot_changed) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseMove(mouse_event));
@@ -781,7 +813,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if had_active || self.state.is_hot {
+                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::Wheel(mouse_event));
@@ -793,6 +825,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::AnimFrame(_) => {
                 let r = self.state.request_anim;
                 self.state.request_anim = false;
+                //TODO: should a disabled widget receive animation Frames
                 r
             }
             Event::KeyDown(_) => self.state.has_focus(),
@@ -800,7 +833,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Paste(_) => self.state.has_focus(),
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
-            Event::Command(_) => true,
+            Event::Command(_) => true,//TODO: should a disabled widget receive commands
             Event::Notification(_) => false,
         };
 
@@ -831,8 +864,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
+
+                    self.update_disabled(ctx.state, data, env);
                 }
             }
+
+
 
             // we try to handle the notifications that occured below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
@@ -919,6 +956,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
 
                 InternalLifeCycle::TraverseFocus { forward, target } => {
+                    println!("traverse to {:?}", self.state.id);
                     let forward = *forward;
                     let target = *target;
 
@@ -928,7 +966,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.state.has_focus = false;
 
                     if target == self.state.id {
-                        println!("traverse to {:?}", self.state.id);
 
                         if (forward == true && !had_focus && self.state.can_auto_focus) ||
                             (forward == false && (self.state.previous_focusing_child.is_none() && had_focus || self.state.last_focus.is_none()))
@@ -1056,6 +1093,20 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // Descendants don't inherit focus, so don't recurse.
                 false
             }
+            LifeCycle::DisabledChanged(disabled) => {
+                let was_disabled = self.state.is_disabled();
+                self.state.parent_disabled = *disabled;
+
+                //We dont need to update focus or hot or active here
+                // disabled -> enabled
+                // enabled -> disabled
+
+                if was_disabled != self.state.is_disabled() {
+                    true
+                } else {
+                    false
+                }
+            }
         };
 
         let mut child_ctx = LifeCycleCtx {
@@ -1180,6 +1231,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
+        self.update_disabled(ctx.state, data, env);
+
         self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
     }
@@ -1223,6 +1276,9 @@ impl WidgetState {
             needs_layout: false,
             is_active: false,
             has_active: false,
+            change_disable: false,
+            set_disabled: false,
+            parent_disabled: false,
             request_anim: false,
             request_update: false,
             is_focused: false,
@@ -1245,6 +1301,14 @@ impl WidgetState {
 
     pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
         self.timers.insert(timer_token, self.id);
+    }
+
+    pub(crate) fn is_enabled(&self) -> bool {
+        !self.is_disabled()
+    }
+
+    pub(crate) fn is_disabled(&self) -> bool {
+        self.set_disabled | self.parent_disabled
     }
 
     pub(crate) fn has_focus(&self) -> bool {

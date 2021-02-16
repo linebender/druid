@@ -271,6 +271,14 @@ impl_context_method!(
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus()
         }
+
+        /// The (tree) disabled status of a widget.
+        ///
+        /// Returns `true` if either this widget or any of ist descendants is set disabled
+        ///
+        pub fn is_disabled(&self) -> bool {
+        self.widget_state.is_disabled()
+        }
     }
 );
 
@@ -313,6 +321,11 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     pub fn clear_cursor(&mut self) {
         self.widget_state.cursor_change = CursorChange::Default;
     }
+
+    ///
+    pub fn set_disabled(&mut self, disabled: bool) {
+        self.widget_state.change_disable = disabled;
+    }
 });
 
 // methods on event, update, and lifecycle
@@ -353,7 +366,9 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
 
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
-        self.widget_state.request_anim = true;
+        if self.widget_state.is_enabled() {
+            self.widget_state.request_anim = true;
+        }
     }
 
     /// Indicate that your children have changed.
@@ -470,7 +485,9 @@ impl EventCtx<'_, '_> {
     ///
     /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active).
     pub fn set_active(&mut self, active: bool) {
-        self.widget_state.is_active = active;
+        if self.widget_state.is_enabled() {
+            self.widget_state.is_active = active;
+        }
         // TODO: plumb mouse grab through to platform (through druid-shell)
     }
 
@@ -533,8 +550,10 @@ impl EventCtx<'_, '_> {
         // because we may have a sibling widget that already requested focus
         // and we have no way of knowing that yet. We need to override that
         // to deliver on the "last focus request wins" promise.
-        let id = self.widget_id();
-        self.widget_state.request_focus = Some(FocusChange::Focus(id));
+        if self.widget_state.is_enabled() {
+            let id = self.widget_id();
+            self.widget_state.request_focus = Some(FocusChange::Focus(id));
+        }
     }
 
     /// Transfer focus to the widget with the given `WidgetId`.
@@ -543,7 +562,9 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn set_focus(&mut self, target: WidgetId) {
-        self.widget_state.request_focus = Some(FocusChange::Focus(target));
+        if self.widget_state.is_enabled() {
+            self.widget_state.request_focus = Some(FocusChange::Focus(target));
+        }
     }
 
     /// Transfer focus to the next focusable widget.

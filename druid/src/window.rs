@@ -236,6 +236,13 @@ impl<T: Data> Window<T> {
 
             println!("\n ------- focus! ------- \n");
             self.lifecycle(queue, &event, data, env, false);
+
+            if !self.root.has_focus() {
+                if let LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) = &event {
+                    //Maybe we reached the end or beginning start from the other side!
+                    self.lifecycle(queue, &event, data, env, false);
+                }
+            }
         }
 
         if let Some(cursor) = &widget_state.cursor {
