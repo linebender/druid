@@ -318,8 +318,8 @@ impl<T: Data> Window<T> {
             for rect in self.invalid.rects() {
                 self.handle.invalidate_rect(*rect);
             }
-            self.invalid.clear();
         }
+        self.invalid.clear();
     }
 
     #[cfg(test)]
