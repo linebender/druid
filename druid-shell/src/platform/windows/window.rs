@@ -37,9 +37,7 @@ use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::d2d1_1::ID2D1DeviceContext;
 use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
-use winapi::um::dcomp::{
-    DCompositionCreateDevice, IDCompositionDevice, IDCompositionTarget, IDCompositionVisual,
-};
+use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
@@ -1258,8 +1256,16 @@ impl WindowBuilder {
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
-        self.present_strategy = PresentStrategy::Flip;
-        self.transparent = transparent;
+        // Transparency and Flip is only supported on Windows 8 and newer and
+        // require DComposition
+        if transparent {
+            if OPTIONAL_FUNCTIONS.DCompositionCreateDevice.is_some() {
+                self.present_strategy = PresentStrategy::Flip;
+                self.transparent = true;
+            } else {
+                tracing::warn!("Transparency requires Windows 8 or newer");
+            }
+        }
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -1525,8 +1531,12 @@ unsafe fn create_dxgi_state(
     );
 
     let (composition_device, composition_target, composition_visual) = if transparent {
+        // This behavior is only supported on windows 8 and newer where
+        // composition is available
+
         // Following resources are created according to this tutorial:
         // https://docs.microsoft.com/en-us/archive/msdn-magazine/2014/june/windows-with-c-high-performance-window-layering-using-the-windows-composition-engine
+        let DCompositionCreateDevice = OPTIONAL_FUNCTIONS.DCompositionCreateDevice.unwrap();
 
         // Create IDCompositionDevice
         let mut ptr: *mut c_void = null_mut();

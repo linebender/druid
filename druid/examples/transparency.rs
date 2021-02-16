@@ -82,7 +82,7 @@ pub fn main() {
         .title("Transparent background");
 
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch("Druid + Piet".to_string())
         .expect("launch failed");
 }
