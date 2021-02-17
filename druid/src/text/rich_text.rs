@@ -138,6 +138,7 @@ impl RichTextBuilder {
     /// Glue for usage of the write! macro.
     ///
     /// This method should generally not be invoked manually, but rather through the write! macro itself.
+    #[doc(hidden)]
     pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder {
         use std::fmt::Write;
         let start = self.buffer.len();
