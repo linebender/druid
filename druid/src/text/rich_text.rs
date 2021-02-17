@@ -101,13 +101,13 @@ impl TextStorage for RichText {
 /// # Example
 /// ```
 /// # use druid::text::{Attribute, RichTextBuilder};
-/// # use druid::FontWeight;
+/// # use druid::{FontWeight, Color};
 /// let mut builder = RichTextBuilder::new();
 /// builder.push("Hello ");
 /// builder.push("World!").weight(FontWeight::BOLD);
 ///
 /// // Can also use write!
-/// write!(builder, "Here is your number: {}", 1).underline(true).color(Color::RED);
+/// write!(builder, "Here is your number: {}", 1).underline(true).text_color(Color::RED);
 ///
 /// let rich_text = builder.build();
 /// ```
