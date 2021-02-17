@@ -26,7 +26,7 @@ pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
     Some(match raw {
         Escape => Key::Escape,
         BackSpace => Key::Backspace,
-        Tab => Key::Tab,
+        Tab | ISO_Left_Tab => Key::Tab,
         Return => Key::Enter,
         Control_L | Control_R => Key::Control,
         Alt_L | Alt_R => Key::Alt,
