@@ -1659,7 +1659,32 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        warn!("WindowHandle::content_insets unimplemented for windows.");
+        if let Some(w) = self.state.upgrade() {
+            let hwnd = w.hwnd.get();
+            unsafe {
+                let mut info: WINDOWINFO = mem::zeroed();
+                info.cbSize = mem::size_of::<WINDOWINFO>() as u32;
+
+                if GetWindowInfo(hwnd, &mut info) == 0 {
+                    warn!(
+                        "failed to get window info: {}",
+                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                    );
+                };
+
+                let window_frame = Rect::from_points(
+                    (info.rcWindow.left as f64, info.rcWindow.top as f64),
+                    (info.rcWindow.right as f64, info.rcWindow.bottom as f64),
+                );
+                let content_frame = Rect::from_points(
+                    (info.rcClient.left as f64, info.rcClient.top as f64),
+                    (info.rcClient.right as f64, info.rcClient.bottom as f64),
+                );
+
+                return window_frame - content_frame;
+            }
+        }
+
         Insets::ZERO
     }
 
