@@ -141,7 +141,9 @@ impl RichTextBuilder {
     pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder {
         use std::fmt::Write;
         let start = self.buffer.len();
-        self.buffer.write_fmt(fmt);
+        self.buffer
+            .write_fmt(fmt)
+            .expect("a formatting trait implementation returned an error");
         self.add_attributes_for_range(start..self.buffer.len())
     }
     /// Get an [`AttributesAdder`] for the given range.
