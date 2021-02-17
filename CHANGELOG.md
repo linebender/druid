@@ -18,6 +18,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#1532] by [@rjwittams])
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
+- Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 
 ### Changed
 
@@ -416,6 +417,7 @@ Last release without a changelog :(
 [@MaximilianKoestler]: https://github.com/MaximilianKoestler
 [@lassipulkkinen]: https://github.com/lassipulkkinen
 [@Poignardazur]: https://github.com/PoignardAzur
+[@HoNile]: https://github.com/HoNile
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -615,6 +617,7 @@ Last release without a changelog :(
 [#1254]: https://github.com/linebender/druid/pull/1254
 [#1559]: https://github.com/linebender/druid/pull/1559
 [#1562]: https://github.com/linebender/druid/pull/1562
+[#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
