@@ -110,7 +110,7 @@ impl<T> Windows<T> {
             let win = Window::new(id, handle, pending, ext_handle);
             assert!(self.windows.insert(id, win).is_none(), "duplicate window");
         } else {
-            log::error!("no window for connecting handle {:?}", id);
+            tracing::error!("no window for connecting handle {:?}", id);
         }
     }
 
@@ -404,7 +404,7 @@ impl<T: Data> Inner<T> {
                 }
             }
             Target::Auto => {
-                log::error!("{:?} reached window handler with `Target::Auto`", cmd);
+                tracing::error!("{:?} reached window handler with `Target::Auto`", cmd);
             }
         }
         Handled::No
@@ -559,7 +559,7 @@ impl<T: Data> AppState<T> {
                 self.process_commands();
                 self.inner.borrow_mut().do_update();
             }
-            other => log::warn!("unexpected idle token {:?}", other),
+            other => tracing::warn!("unexpected idle token {:?}", other),
         }
     }
 
@@ -598,7 +598,7 @@ impl<T: Data> AppState<T> {
                     .borrow_mut()
                     .append_command(cmd.default_to(default_target))
             }
-            None => log::warn!("No command for menu id {}", cmd_id),
+            None => tracing::warn!("No command for menu id {}", cmd_id),
         }
         self.process_commands();
         self.inner.borrow_mut().do_update();
@@ -615,12 +615,12 @@ impl<T: Data> AppState<T> {
             _ if cmd.is(sys_cmd::HIDE_OTHERS) => self.hide_others(),
             _ if cmd.is(sys_cmd::NEW_WINDOW) => {
                 if let Err(e) = self.new_window(cmd) {
-                    log::error!("failed to create window: '{}'", e);
+                    tracing::error!("failed to create window: '{}'", e);
                 }
             }
             _ if cmd.is(sys_cmd::NEW_SUB_WINDOW) => {
                 if let Err(e) = self.new_sub_window(cmd) {
-                    log::error!("failed to create sub window: '{}'", e);
+                    tracing::error!("failed to create sub window: '{}'", e);
                 }
             }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
@@ -637,15 +637,15 @@ impl<T: Data> AppState<T> {
             T::Window(id) if cmd.is(sys_cmd::SHOW_WINDOW) => self.show_window(id),
             T::Window(id) if cmd.is(sys_cmd::PASTE) => self.do_paste(id),
             _ if cmd.is(sys_cmd::CLOSE_WINDOW) => {
-                log::warn!("CLOSE_WINDOW command must target a window.")
+                tracing::warn!("CLOSE_WINDOW command must target a window.")
             }
             _ if cmd.is(sys_cmd::SHOW_WINDOW) => {
-                log::warn!("SHOW_WINDOW command must target a window.")
+                tracing::warn!("SHOW_WINDOW command must target a window.")
             }
             _ => {
                 let handled = self.inner.borrow_mut().dispatch_cmd(cmd.clone());
                 if !handled.is_handled() && cmd.must_be_used() {
-                    log::warn!("{:?} was not handled.", cmd);
+                    tracing::warn!("{:?} was not handled.", cmd);
                 }
             }
         }
@@ -712,7 +712,7 @@ impl<T: Data> AppState<T> {
             };
             inner.append_command(cmd);
         } else {
-            log::error!("unknown dialog token");
+            tracing::error!("unknown dialog token");
         }
 
         std::mem::drop(inner);

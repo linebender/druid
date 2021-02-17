@@ -149,7 +149,7 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
             if let Some(gdk_key) = keycodes::key_to_raw_key(k) {
                 *gdk_key
             } else {
-                log::warn!("Cannot map key {:?}", k);
+                tracing::warn!("Cannot map key {:?}", k);
                 return;
             }
         }

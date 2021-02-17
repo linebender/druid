@@ -121,7 +121,7 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
                 }
             }
             if !present {
-                log::warn!("The default type {:?} is not present in allowed types.", dt);
+                tracing::warn!("The default type {:?} is not present in allowed types.", dt);
             }
         }
 

@@ -174,7 +174,7 @@ fn load_optional_functions() -> OptionalFunctions {
             let function_ptr = unsafe { GetProcAddress($lib, cstr.as_ptr()) };
 
             if function_ptr.is_null() {
-                log::info!(
+                tracing::info!(
                     "Could not load `{}`. Windows {} or later is needed",
                     name,
                     $min_windows_version
@@ -210,14 +210,14 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut GetSystemMetricsForDpi = None;
 
     if shcore.is_null() {
-        log::info!("No shcore.dll");
+        tracing::info!("No shcore.dll");
     } else {
         load_function!(shcore, SetProcessDpiAwareness, "8.1");
         load_function!(shcore, GetDpiForMonitor, "8.1");
     }
 
     if user32.is_null() {
-        log::info!("No user32.dll");
+        tracing::info!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
         load_function!(user32, GetDpiForWindow, "10");

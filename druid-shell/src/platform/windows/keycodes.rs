@@ -214,6 +214,7 @@ map_keys! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn win_vk() {

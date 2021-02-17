@@ -53,7 +53,9 @@ druid-shell = { version = "0.7.0", default-features = false, path = "../druid-sh
 druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
 log = "0.4.11"
+tracing = { version = "0.1.22", features = ["log"] }
 simple_logger = { version = "1.9.0", default-features = false }
+tracing-subscriber = { version = "0.2.15" }
 fluent-bundle = "0.12.0"
 fluent-langneg = "0.13.0"
 fluent-syntax = "0.9.3"
@@ -71,7 +73,9 @@ usvg = { version = "0.12.0", optional = true }
 harfbuzz-sys = { version = "0.4.0", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-console_log = "0.2.0"
+console_log = { version = "0.2.0" }
+tracing-wasm = { version = "0.1.0" }
+console_error_panic_hook = { version = "0.1.6" }
 
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
@@ -79,6 +83,7 @@ float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "=3.1.0"
 piet-common = { version = "=0.3.2", features = ["png"] }
 pulldown-cmark = { version = "0.8", default-features = false }
+test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
 
 [[example]]
 name = "cursor"

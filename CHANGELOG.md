@@ -23,6 +23,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
 - `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
+- Switch to trace-based logging ([#1562] by [@PoignardAzur])
 
 ### Deprecated
 
@@ -414,6 +415,7 @@ Last release without a changelog :(
 [@derekdreery]: https://github.com/derekdreery
 [@MaximilianKoestler]: https://github.com/MaximilianKoestler
 [@lassipulkkinen]: https://github.com/lassipulkkinen
+[@Poignardazur]: https://github.com/PoignardAzur
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -612,6 +614,7 @@ Last release without a changelog :(
 [#1534]: https://github.com/linebender/druid/pull/1534
 [#1254]: https://github.com/linebender/druid/pull/1254
 [#1559]: https://github.com/linebender/druid/pull/1559
+[#1562]: https://github.com/linebender/druid/pull/1562
 [#1596]: https://github.com/linebender/druid/pull/1596
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master

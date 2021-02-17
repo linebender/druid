@@ -55,7 +55,9 @@ pub fn claim_main_thread() {
     match old_thread_id {
         Ok(0) => (),
         Ok(_) => unreachable!(), // not possible per the docs
-        Err(0) => log::warn!("The main thread status was already claimed by the current thread."),
+        Err(0) => {
+            tracing::warn!("The main thread status was already claimed by the current thread.")
+        }
         Err(k) => panic!(
             "The main thread status has already been claimed by thread {}",
             k
@@ -75,7 +77,7 @@ pub fn release_main_thread() {
     match old_thread_id {
         Ok(n) if n == thread_id => (),
         Ok(_) => unreachable!(), // not possible per the docs
-        Err(0) => log::warn!("The main thread status was already vacant."),
+        Err(0) => tracing::warn!("The main thread status was already vacant."),
         Err(k) => panic!(
             "The main thread status has already been claimed by thread {}",
             k

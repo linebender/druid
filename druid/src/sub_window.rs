@@ -107,7 +107,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                         self.data = dc.deref().clone();
                         ctx.request_update();
                     } else {
-                        log::warn!("Received a sub window parent to host command that could not be unwrapped. \
+                        tracing::warn!("Received a sub window parent to host command that could not be unwrapped. \
                         This could mean that the sub window you requested and the enclosing widget pod that you opened it from do not share a common data type. \
                         Make sure you have a widget pod between your requesting widget and any lenses." )
                     }

@@ -40,7 +40,7 @@ impl Clipboard {
         // to move it into the closure. :/
         let formats = formats.to_owned();
         let success = clipboard.set_with_data(&entries, move |_, sel, idx| {
-            log::info!("got paste callback {}", idx);
+            tracing::info!("got paste callback {}", idx);
             let idx = idx as usize;
             if idx < formats.len() {
                 let item = &formats[idx];
@@ -54,7 +54,7 @@ impl Clipboard {
             }
         });
         if !success {
-            log::warn!("failed to set clipboard data.");
+            tracing::warn!("failed to set clipboard data.");
         }
     }
 
