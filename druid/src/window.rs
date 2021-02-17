@@ -35,6 +35,7 @@ use crate::{
     TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
+/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
 const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// A unique identifier for a window.

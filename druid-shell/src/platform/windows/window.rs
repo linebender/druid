@@ -272,6 +272,8 @@ impl Drop for HCursor {
 const DS_RUN_IDLE: UINT = WM_USER;
 
 /// Transparent bg clearing color
+///
+/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
 const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// Message relaying a request to destroy the window.
@@ -398,15 +400,12 @@ impl WndState {
             // Piet is missing alpha blending setting, so we have to call
             // ID2D1DeviceContext::SetPrimitiveBlend() manually to clear just
             // the required pixels
-            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> = if self.transparent {
-                Some(unsafe {
+            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> =
+                self.transparent.then(|| unsafe {
                     (rt as *mut _ as *mut ComPtr<ID2D1DeviceContext>)
                         .as_ref()
                         .unwrap()
-                })
-            } else {
-                None
-            };
+                });
 
             let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
 

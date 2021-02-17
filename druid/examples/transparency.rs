@@ -17,39 +17,12 @@
 
 use druid::kurbo::Circle;
 use druid::widget::prelude::*;
-use druid::widget::{Button, Flex};
+use druid::widget::{Button, Flex, Painter, WidgetExt};
 use druid::{AppLauncher, Color, Rect, WindowDesc};
 
-struct CustomWidget;
-
-impl Widget<String> for CustomWidget {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut String, _env: &Env) {}
-
-    fn lifecycle(
-        &mut self,
-        _ctx: &mut LifeCycleCtx,
-        _event: &LifeCycle,
-        _data: &String,
-        _env: &Env,
-    ) {
-    }
-
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &String, _data: &String, _env: &Env) {}
-
-    fn layout(
-        &mut self,
-        _layout_ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        _data: &String,
-        _env: &Env,
-    ) -> Size {
-        bc.max()
-    }
-
-    // The paint method gets called last, after an event flow.
-    // It goes event -> update -> layout -> paint, and each method can influence the next.
-    // Basically, anything that changes the appearance of a widget causes a paint.
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &String, _env: &Env) {
+pub fn main() {
+    // Draw red circle, and two semi-transparent rectangles
+    let circle_and_rects = Painter::new(|ctx, _data, _env| {
         let boundaries = ctx.size().to_rect();
         let center = (boundaries.width() / 2., boundaries.height() / 2.);
         let circle = Circle::new(center, center.0.min(center.1));
@@ -65,15 +38,15 @@ impl Widget<String> for CustomWidget {
             boundaries.height(),
         );
         ctx.fill(rect2, &Color::rgba8(0x0, 0x0, 0xff, 125));
-    }
-}
+    });
 
-pub fn main() {
     let btn = Button::new("Example button on transparent bg");
-    let example = Flex::column()
-        .with_flex_child(CustomWidget {}, 10.0)
+
+    let root_widget = Flex::column()
+        .with_flex_child(circle_and_rects.expand(), 10.0)
         .with_flex_child(btn, 1.0);
-    let window = WindowDesc::new(example)
+
+    let window = WindowDesc::new(root_widget)
         .show_titlebar(false)
         .set_position((50., 50.))
         .window_size((823., 823.))
