@@ -8,6 +8,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Highlights
 
 ### Added
+- `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
 - WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
 - RichTextBuilder ([#1520] by [@Maan2003])
@@ -617,6 +618,7 @@ Last release without a changelog :(
 [#1559]: https://github.com/linebender/druid/pull/1559
 [#1562]: https://github.com/linebender/druid/pull/1562
 [#1592]: https://github.com/linebender/druid/pull/1592
+[#1596]: https://github.com/linebender/druid/pull/1596
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.6.0...master
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
