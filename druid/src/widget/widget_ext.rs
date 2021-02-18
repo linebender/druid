@@ -19,6 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
+use crate::widget::Scroll;
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
@@ -261,6 +262,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a `Box`.
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
+    }
+
+    /// Wrap this widget in a [`Scroll`] widget.
+    ///
+    /// [`Scroll`]: widget/struct.Scroll.html
+    fn scroll(self) -> Scroll<T, Self> {
+        Scroll::new(self)
     }
 }
 
