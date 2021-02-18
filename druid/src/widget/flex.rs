@@ -595,7 +595,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
-            child.lifecycle(ctx, event, data, env)
+            child.lifecycle(ctx, event, data, env);
         }
     }
 
@@ -804,7 +804,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
-            child.paint(ctx, data, env)
+            child.paint(ctx, data, env);
         }
 
         // paint the baseline if we're debugging layout
