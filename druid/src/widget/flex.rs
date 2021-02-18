@@ -601,7 +601,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
-            child.update(ctx, data, env)
+            child.update(ctx, data, env);
         }
     }
 
