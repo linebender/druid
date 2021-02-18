@@ -388,6 +388,11 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
+    /// Set whether the window background should be transparent
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.0.set_transparent(transparent)
+    }
+
     /// Sets the initial window position in [pixels](crate::Scale), relative to the origin of the
     /// virtual screen.
     pub fn set_position(&mut self, position: Point) {

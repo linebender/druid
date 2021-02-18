@@ -19,6 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
+use crate::widget::Scroll;
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
@@ -262,6 +263,13 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     fn boxed(self) -> Box<dyn Widget<T>> {
         Box::new(self)
     }
+
+    /// Wrap this widget in a [`Scroll`] widget.
+    ///
+    /// [`Scroll`]: widget/struct.Scroll.html
+    fn scroll(self) -> Scroll<T, Self> {
+        Scroll::new(self)
+    }
 }
 
 impl<T: Data, W: Widget<T> + 'static> WidgetExt<T> for W {}
@@ -306,6 +314,7 @@ mod tests {
     use super::*;
     use crate::widget::Slider;
     use crate::Color;
+    use test_env_log::test;
 
     #[test]
     fn container_reuse() {

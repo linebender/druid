@@ -255,7 +255,7 @@ impl<T: Data> MenuDesc<T> {
         return None;
 
         // we want to explicitly handle all platforms; log if a platform is missing.
-        log::warn!("MenuDesc::platform_default is not implemented for this platform.");
+        tracing::warn!("MenuDesc::platform_default is not implemented for this platform.");
         None
     }
 

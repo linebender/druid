@@ -189,7 +189,7 @@ impl<T: TextStorage + EditableText> Editor<T> {
     /// Perform an [`EditAction`](enum.EditAction.html).
     pub fn do_edit(&mut self, edit: EditAction, data: &mut T) {
         if self.data_is_stale(data) {
-            log::warn!("editor data changed externally, skipping event {:?}", &edit);
+            tracing::warn!("editor data changed externally, skipping event {:?}", &edit);
             return;
         }
         match edit {
@@ -301,6 +301,7 @@ impl<T> Default for Editor<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     /// Devanagari codepoints are 3 utf-8 code units each.
     #[test]

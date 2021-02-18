@@ -259,7 +259,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`set_origin`]: WidgetPod::set_origin
     pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
         if layout_rect.size() != self.state.size {
-            log::warn!("set_layout_rect passed different size than returned by layout method");
+            tracing::warn!("set_layout_rect passed different size than returned by layout method");
         }
         self.set_origin(ctx, data, env, layout_rect.origin());
     }
@@ -315,7 +315,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// be set by the parent widget whenever it modifies the position of its child
     /// while painting it and propagating events. As a rule of thumb, you need this
     /// if and only if you `Affine::translate` the paint context before painting
-    /// your child. For an example, see the implentation of [`Scroll`].
+    /// your child. For an example, see the implementation of [`Scroll`].
     ///
     /// [`Scroll`]: widget/struct.Scroll.html
     pub fn set_viewport_offset(&mut self, offset: Vec2) {
@@ -604,11 +604,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     fn log_layout_issues(&self, size: Size) {
         if size.width.is_infinite() {
             let name = self.widget().type_name();
-            log::warn!("Widget `{}` has an infinite width.", name);
+            tracing::warn!("Widget `{}` has an infinite width.", name);
         }
         if size.height.is_infinite() {
             let name = self.widget().type_name();
-            log::warn!("Widget `{}` has an infinite height.", name);
+            tracing::warn!("Widget `{}` has an infinite height.", name);
         }
     }
 
@@ -670,7 +670,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // log if we seem not to be laid out when we should be
         if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
-            log::warn!(
+            tracing::warn!(
                 "{:?} received an event ({:?}) without having been laid out. \
                 This likely indicates a missed call to set_layout_rect.",
                 ctx.widget_id(),
@@ -921,7 +921,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         if !inner_ctx.notifications.is_empty() {
-            log::warn!(
+            tracing::warn!(
                 "A Notification was submitted while handling another \
             notification; the submitted notification will be ignored."
             );
@@ -1412,6 +1412,7 @@ mod tests {
     use crate::text::format::ParseFormatter;
     use crate::widget::{Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
+    use test_env_log::test;
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);
