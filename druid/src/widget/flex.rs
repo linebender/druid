@@ -589,7 +589,7 @@ impl<T: Data> Flex<T> {
 impl<T: Data> Widget<T> for Flex<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
-            child.event(ctx, event, data, env)
+            child.event(ctx, event, data, env);
         }
     }
 
