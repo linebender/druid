@@ -24,7 +24,7 @@ use druid::{
     DelegateCtx, Handled, LocalizedString, MenuDesc, MenuItem, Selector, Target, WindowDesc,
     WindowId,
 };
-use log::info;
+use tracing::info;
 
 const MENU_COUNT_ACTION: Selector<usize> = Selector::new("menu-count-action");
 const MENU_INCREMENT_ACTION: Selector = Selector::new("menu-increment-action");
@@ -48,7 +48,7 @@ pub fn main() {
         .delegate(Delegate {
             windows: Vec::new(),
         })
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(State::default())
         .expect("launch failed");
 }

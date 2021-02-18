@@ -32,7 +32,7 @@ pub fn main() {
         circles: Vector::new(),
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(state)
         .expect("launch failed");
 }

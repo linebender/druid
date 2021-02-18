@@ -74,6 +74,7 @@ mod test {
     use crate::platform::mac::screen::transform_coords;
     use crate::Monitor;
     use kurbo::Rect;
+    use test_env_log::test;
 
     fn pair(rect: Rect) -> (Rect, Rect) {
         (rect, rect)

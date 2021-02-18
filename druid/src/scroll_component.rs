@@ -42,10 +42,12 @@ pub enum ScrollbarsEnabled {
 
 impl ScrollbarsEnabled {
     fn is_enabled(self, axis: Axis) -> bool {
-        matches!((self, axis),
-             (ScrollbarsEnabled::Both, _) |
-             (ScrollbarsEnabled::Horizontal, Axis::Horizontal) |
-             (ScrollbarsEnabled::Vertical, Axis::Vertical))
+        matches!(
+            (self, axis),
+            (ScrollbarsEnabled::Both, _)
+                | (ScrollbarsEnabled::Horizontal, Axis::Horizontal)
+                | (ScrollbarsEnabled::Vertical, Axis::Vertical)
+        )
     }
 
     fn is_none(self) -> bool {
