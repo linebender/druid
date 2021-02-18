@@ -116,6 +116,7 @@ pub(crate) struct WindowBuilder {
     min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
+    transparent: bool,
 }
 
 #[derive(Clone)]
@@ -137,6 +138,7 @@ pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    is_transparent: Cell<bool>,
     /// Used to determine whether to honor close requests from the system: we inhibit them unless
     /// this is true, and this gets set to true when our client requests a close.
     closing: Cell<bool>,
@@ -180,6 +182,7 @@ impl WindowBuilder {
             min_size: None,
             resizable: true,
             show_titlebar: true,
+            transparent: false,
         }
     }
 
@@ -201,6 +204,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -232,7 +239,16 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
+        window.set_app_paintable(true);
         window.set_decorated(self.show_titlebar);
+        let mut can_transparent = false;
+        if self.transparent {
+            if let Some(screen) = window.get_screen() {
+                let visual = screen.get_rgba_visual();
+                can_transparent = visual.is_some();
+                window.set_visual(visual.as_ref());
+            }
+        }
 
         // Get the scale factor based on the GTK reported DPI
         let scale_factor =
@@ -254,6 +270,7 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
+            is_transparent: Cell::new(self.transparent & can_transparent),
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
@@ -408,6 +425,19 @@ impl WindowBuilder {
 
             Inhibit(false)
         }));
+
+        win_state.drawing_area.connect_screen_changed(
+            clone!(handle => move |widget, _prev_screen| {
+                if let Some(state) = handle.state.upgrade() {
+
+                    if let Some(screen) = widget.get_screen(){
+                        let visual = screen.get_rgba_visual();
+                        state.is_transparent.set(visual.is_some());
+                        widget.set_visual(visual.as_ref());
+                    }
+                }
+            }),
+        );
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
@@ -712,7 +742,11 @@ impl WindowState {
             *surface = None;
 
             if let Some(w) = self.drawing_area.get_window() {
-                *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                if self.is_transparent.get() {
+                    *surface = w.create_similar_surface(cairo::Content::ColorAlpha, width, height);
+                } else {
+                    *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                }
                 if surface.is_none() {
                     return Err(anyhow!("create_similar_surface failed"));
                 }

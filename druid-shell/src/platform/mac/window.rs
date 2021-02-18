@@ -24,8 +24,8 @@ use std::time::Instant;
 
 use block::ConcreteBlock;
 use cocoa::appkit::{
-    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
-    NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSColor,
+    NSEvent, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
@@ -119,6 +119,7 @@ pub(crate) struct WindowBuilder {
     window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
+    transparent: bool,
 }
 
 #[derive(Clone)]
@@ -170,6 +171,7 @@ impl WindowBuilder {
             window_state: None,
             resizable: true,
             show_titlebar: true,
+            transparent: false,
         }
     }
 
@@ -191,6 +193,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
@@ -244,6 +250,11 @@ impl WindowBuilder {
             if let Some(min_size) = self.min_size {
                 let size = NSSize::new(min_size.width, min_size.height);
                 window.setContentMinSize_(size);
+            }
+
+            if self.transparent {
+                window.setOpaque_(NO);
+                window.setBackgroundColor_(NSColor::clearColor(nil));
             }
 
             window.setTitle_(make_nsstring(&self.title));
