@@ -2,7 +2,7 @@ use druid::{WindowDesc, AppLauncher, Widget, WidgetExt, Data, Lens, WidgetPod, E
 use druid::widget::{Flex, TextBox};
 use piet_common::{UnitPoint, Color};
 use piet_common::kurbo::{Size, Point};
-use druid_shell::{HotKey, KbKey};
+use druid_shell::{HotKey, KbKey, SysMods};
 
 struct FocusWrapper<T, W: Widget<T>> {
     inner: WidgetPod<T, W>,
@@ -18,6 +18,9 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppData, env: &Env) {
         if let Event::KeyDown(ke) = event {
             if HotKey::new(None, KbKey::Tab).matches(ke) && ctx.is_focused() {
+                ctx.focus_next();
+            }
+            if HotKey::new(SysMods::Shift, KbKey::Tab).matches(ke) && ctx.is_focused() {
                 ctx.focus_prev();
             }
         }

@@ -470,7 +470,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             Event::KeyDown(key_event) => {
                 match key_event {
                     // Tab and shift+tab
-                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
+                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => ctx.focus_next(),
                     k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => ctx.focus_prev(),
                     k_e => {
                         if let Some(edit) = self.input_handler.handle_event(k_e) {

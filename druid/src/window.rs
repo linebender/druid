@@ -151,6 +151,20 @@ impl<T: Data> Window<T> {
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
 
+        if let Some(focus_req) = widget_state.request_focus.take() {
+            let event = LifeCycle::Internal(self.event_for_focus_request(focus_req));
+
+            println!("\n ------- focus! ------- \n");
+            self.lifecycle(queue, &event, data, env, false);
+
+            if !self.root.has_focus() {
+                if let LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) = &event {
+                    //Maybe we reached the end or beginning start from the other side!
+                    self.lifecycle(queue, &event, data, env, false);
+                }
+            }
+        }
+
         // If we need a new paint pass, make sure druid-shell knows it.
         if self.wants_animation_frame() {
             self.handle.request_anim_frame();
@@ -234,20 +248,6 @@ impl<T: Data> Window<T> {
         // because the token may be reused and re-added in a lifecycle pass below.
         if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
             self.timers.remove(&token);
-        }
-
-        if let Some(focus_req) = widget_state.request_focus.take() {
-            let event = LifeCycle::Internal(self.widget_for_focus_request(focus_req));
-
-            println!("\n ------- focus! ------- \n");
-            self.lifecycle(queue, &event, data, env, false);
-
-            if !self.root.has_focus() {
-                if let LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) = &event {
-                    //Maybe we reached the end or beginning start from the other side!
-                    self.lifecycle(queue, &event, data, env, false);
-                }
-            }
         }
 
         if let Some(cursor) = &widget_state.cursor {
@@ -468,7 +468,8 @@ impl<T: Data> Window<T> {
             .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
     }
 
-    fn widget_for_focus_request(&self, focus: FocusChange) -> InternalLifeCycle {
+    fn event_for_focus_request(&self, focus: FocusChange) -> InternalLifeCycle {
+        println!("update focus!");
         match focus {
             FocusChange::Resign => InternalLifeCycle::RouteFocusChanged {new: None},
             FocusChange::Focus(id) => InternalLifeCycle::RouteFocusChanged {new: Some(id)},

@@ -617,9 +617,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.set_disabled = self.state.change_disable;
 
         if was_disabled != self.state.is_disabled() {
+            println!("update disabled for {:?} to {}", self.state.id, self.state.is_disabled());
             let event = LifeCycle::DisabledChanged(self.state.is_disabled());
 
             if self.has_focus() {
+                println!("resign focus!");
                 self.state.request_focus = Some(FocusChange::Resign);
             }
 
@@ -753,7 +755,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
+                if self.state.is_enabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseDown(mouse_event));
@@ -772,7 +774,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
+                if self.state.is_enabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseUp(mouse_event));
@@ -794,7 +796,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // MouseMove is recursed even if the widget is not active and not hot,
                 // but was hot previously. This is to allow the widget to respond to the movement,
                 // e.g. drag functionality where the widget wants to follow the mouse.
-                if !self.state.is_disabled() && (had_active || self.state.is_hot || hot_changed) {
+                if self.state.is_enabled() && (had_active || self.state.is_hot || hot_changed) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::MouseMove(mouse_event));
@@ -813,7 +815,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
-                if !self.state.is_disabled() && (had_active || self.state.is_hot) {
+                if self.state.is_enabled() && (had_active || self.state.is_hot) {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= rect.origin().to_vec2();
                     modified_event = Some(Event::Wheel(mouse_event));
@@ -956,7 +958,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
 
                 InternalLifeCycle::TraverseFocus { forward, target } => {
-                    println!("traverse to {:?}", self.state.id);
                     let forward = *forward;
                     let target = *target;
 
@@ -997,7 +998,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         // Remove focus
                         if self.is_focused() {
-                            println!("removed from {:?}", self.state.id);
 
                             self.state.is_focused = false;
                             extra_events.push(LifeCycle::FocusChanged(false));
@@ -1023,6 +1023,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         None
                     };
+
+                    println!("Try focus change for widget {}: {:?}", self.state.id.to_raw(), this_changed);
 
                     let had_focus = self.has_focus();
 
@@ -1152,7 +1154,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         // If the focused widget has a previous widget (or we can auto focus), our
                         // parent should focus us again when focusing previous
                         ctx.widget_state.previous_focusing_child = Some(self.state.id);
-                        println!("widget {:?} has prev {:?}", ctx.widget_state.id, self.state.id);
                     }
                     if self.state.next_focusing_child.is_some() {
                         // If the focused widget has a next widget, our
@@ -1163,7 +1164,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if !ctx.widget_state.has_focus {
                         //We might be the the previous widget otherwise the value will get overwritten by the next
                         ctx.widget_state.previous_focusing_child = Some(self.state.id);
-                        println!("widget {:?} has prev {:?}", ctx.widget_state.id, self.state.id);
                     } else if ctx.widget_state.next_focusing_child.is_none() {
                         //We are the first widget after the focused!
                         ctx.widget_state.next_focusing_child = Some(self.state.id);
