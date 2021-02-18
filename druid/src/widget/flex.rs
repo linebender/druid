@@ -803,7 +803,7 @@ impl<T: Data> Widget<T> for Flex<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        for child in self.children.filter_map().map(|x| x.widget_mut()) {
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
             child.paint(ctx, data, env)
         }
 
