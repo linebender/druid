@@ -588,26 +588,20 @@ impl<T: Data> Flex<T> {
 
 impl<T: Data> Widget<T> for Flex<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
-            if let Some(widget) = child {
-                widget.event(ctx, event, data, env)
-            }
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.event(ctx, event, data, env)
         }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
-            if let Some(widget) = child {
-                widget.lifecycle(ctx, event, data, env)
-            }
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.lifecycle(ctx, event, data, env)
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
-            if let Some(widget) = child {
-                widget.update(ctx, data, env)
-            }
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.update(ctx, data, env)
         }
     }
 
@@ -655,12 +649,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                     *calculated_siz = kv.resolve(env);
                     major_non_flex += *calculated_siz;
                 }
-                Child::Flex {
-                    widget: _,
-                    alignment: _,
-                    flex,
-                }
-                | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
+                Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
             }
         }
 
@@ -673,11 +662,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         // Measure flex children.
         for child in &mut self.children {
             match child {
-                Child::Flex {
-                    widget,
-                    alignment: _,
-                    flex,
-                } => {
+                Child::Flex { widget, flex, .. } => {
                     let desired_major = (*flex) * px_per_flex + remainder;
                     let actual_major = desired_major.round();
                     remainder = desired_major - actual_major;
@@ -729,9 +714,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             match child {
                 Child::Fixed { widget, alignment }
                 | Child::Flex {
-                    widget,
-                    alignment,
-                    flex: _,
+                    widget, alignment, ..
                 } => {
                     let child_size = widget.layout_rect().size();
                     let alignment = alignment.unwrap_or(self.cross_alignment);
@@ -820,10 +803,8 @@ impl<T: Data> Widget<T> for Flex<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
-            if let Some(widget) = child {
-                widget.paint(ctx, data, env)
-            }
+        for child in self.children.filter_map().map(|x| x.widget_mut()) {
+            child.paint(ctx, data, env)
         }
 
         // paint the baseline if we're debugging layout
@@ -973,29 +954,13 @@ enum Child<T> {
 impl<T> Child<T> {
     fn widget_mut(&mut self) -> Option<&mut WidgetPod<T, Box<dyn Widget<T>>>> {
         match self {
-            Child::Fixed {
-                widget,
-                alignment: _,
-            }
-            | Child::Flex {
-                widget,
-                alignment: _,
-                flex: _,
-            } => Some(widget),
+            Child::Fixed { widget, .. } | Child::Flex { widget, .. } => Some(widget),
             _ => None,
         }
     }
     fn widget(&self) -> Option<&WidgetPod<T, Box<dyn Widget<T>>>> {
         match self {
-            Child::Fixed {
-                widget,
-                alignment: _,
-            }
-            | Child::Flex {
-                widget,
-                alignment: _,
-                flex: _,
-            } => Some(widget),
+            Child::Fixed { widget, .. } | Child::Flex { widget, .. } => Some(widget),
             _ => None,
         }
     }
