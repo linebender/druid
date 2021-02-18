@@ -31,6 +31,7 @@ use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowT
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
+use tracing::{error, warn};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -115,6 +116,7 @@ pub(crate) struct WindowBuilder {
     min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
+    transparent: bool,
 }
 
 #[derive(Clone)]
@@ -136,6 +138,7 @@ pub(crate) struct WindowState {
     window: ApplicationWindow,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
+    is_transparent: Cell<bool>,
     /// Used to determine whether to honor close requests from the system: we inhibit them unless
     /// this is true, and this gets set to true when our client requests a close.
     closing: Cell<bool>,
@@ -179,6 +182,7 @@ impl WindowBuilder {
             min_size: None,
             resizable: true,
             show_titlebar: true,
+            transparent: false,
         }
     }
 
@@ -200,6 +204,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -231,7 +239,16 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
+        window.set_app_paintable(true);
         window.set_decorated(self.show_titlebar);
+        let mut can_transparent = false;
+        if self.transparent {
+            if let Some(screen) = window.get_screen() {
+                let visual = screen.get_rgba_visual();
+                can_transparent = visual.is_some();
+                window.set_visual(visual.as_ref());
+            }
+        }
 
         // Get the scale factor based on the GTK reported DPI
         let scale_factor =
@@ -253,6 +270,7 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
+            is_transparent: Cell::new(self.transparent & can_transparent),
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
@@ -354,7 +372,7 @@ impl WindowBuilder {
                     let size_dp = area.size_dp();
                     state.area.set(area);
                     if let Err(e) = state.resize_surface(extents.width, extents.height) {
-                        log::error!("Failed to resize surface: {}", e);
+                        error!("Failed to resize surface: {}", e);
                     }
                     state.with_handler(|h| h.size(size_dp));
                     state.invalidate_rect(size_dp.to_rect());
@@ -365,7 +383,7 @@ impl WindowBuilder {
                 let invalid = match state.invalid.try_borrow_mut() {
                     Ok(mut invalid) => std::mem::replace(&mut *invalid, Region::EMPTY),
                     Err(_) => {
-                        log::error!("invalid region borrowed while drawing");
+                        error!("invalid region borrowed while drawing");
                         Region::EMPTY
                     }
                 };
@@ -389,7 +407,7 @@ impl WindowBuilder {
                         let mut piet_context = Piet::new(&surface_context);
                         handler.paint(&mut piet_context, &invalid);
                         if let Err(e) = piet_context.finish() {
-                            log::error!("piet error on render: {:?}", e);
+                            error!("piet error on render: {:?}", e);
                         }
 
                         // Copy the entire surface to the drawing area (not just the invalid
@@ -401,12 +419,25 @@ impl WindowBuilder {
                         context.fill();
                     });
                 } else {
-                    log::warn!("Drawing was skipped because there was no surface");
+                    warn!("Drawing was skipped because there was no surface");
                 }
             }
 
             Inhibit(false)
         }));
+
+        win_state.drawing_area.connect_screen_changed(
+            clone!(handle => move |widget, _prev_screen| {
+                if let Some(state) = handle.state.upgrade() {
+
+                    if let Some(screen) = widget.get_screen(){
+                        let visual = screen.get_rgba_visual();
+                        state.is_transparent.set(visual.is_some());
+                        widget.set_visual(visual.as_ref());
+                    }
+                }
+            }),
+        );
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
@@ -666,7 +697,7 @@ impl WindowState {
     #[track_caller]
     fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
         if self.invalid.try_borrow_mut().is_err() || self.surface.try_borrow_mut().is_err() {
-            log::error!("other RefCells were borrowed when calling into the handler");
+            error!("other RefCells were borrowed when calling into the handler");
             return None;
         }
 
@@ -684,7 +715,7 @@ impl WindowState {
         match self.handler.try_borrow_mut() {
             Ok(mut h) => Some(f(&mut **h)),
             Err(_) => {
-                log::error!("failed to borrow WinHandler at {}", Location::caller());
+                error!("failed to borrow WinHandler at {}", Location::caller());
                 None
             }
         }
@@ -711,7 +742,11 @@ impl WindowState {
             *surface = None;
 
             if let Some(w) = self.drawing_area.get_window() {
-                *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                if self.is_transparent.get() {
+                    *surface = w.create_similar_surface(cairo::Content::ColorAlpha, width, height);
+                } else {
+                    *surface = w.create_similar_surface(cairo::Content::Color, width, height);
+                }
                 if surface.is_none() {
                     return Err(anyhow!("create_similar_surface failed"));
                 }
@@ -737,7 +772,7 @@ impl WindowState {
             region.add_rect(rect);
             self.window.queue_draw();
         } else {
-            log::warn!("Not invalidating rect because region already borrowed");
+            warn!("Not invalidating rect because region already borrowed");
         }
     }
 
@@ -819,7 +854,7 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        log::warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
+        warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
         Insets::ZERO
     }
 
@@ -847,7 +882,7 @@ impl WindowHandle {
             let (x, y) = state.window.get_size();
             Size::new(x as f64, y as f64)
         } else {
-            log::warn!("Could not get size for GTK window");
+            warn!("Could not get size for GTK window");
             Size::new(0., 0.)
         }
     }
@@ -885,7 +920,7 @@ impl WindowHandle {
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
     }
 
     /// Close the window.
@@ -939,7 +974,7 @@ impl WindowHandle {
         let interval = match u32::try_from(interval) {
             Ok(iv) => iv,
             Err(_) => {
-                log::warn!("timer duration exceeds gtk max of 2^32 millis");
+                warn!("timer duration exceeds gtk max of 2^32 millis");
                 u32::max_value()
             }
         };
@@ -1125,7 +1160,7 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     });
 
     if result.is_none() {
-        log::warn!("Delaying idle callbacks because the handler is borrowed.");
+        warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
         // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
         // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
@@ -1198,7 +1233,7 @@ fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
         gdk::EventType::TripleButtonPress => 3,
         gdk::EventType::ButtonRelease => 0,
         _ => {
-            log::warn!("Unexpected mouse click event type: {:?}", event_type);
+            warn!("Unexpected mouse click event type: {:?}", event_type);
             0
         }
     }

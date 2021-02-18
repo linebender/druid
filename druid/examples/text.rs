@@ -100,7 +100,7 @@ pub fn main() {
 
     // start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

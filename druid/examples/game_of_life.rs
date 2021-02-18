@@ -434,7 +434,7 @@ pub fn main() {
     }
 
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(AppData {
             grid,
             drawing: false,

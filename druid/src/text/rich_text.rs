@@ -101,10 +101,14 @@ impl TextStorage for RichText {
 /// # Example
 /// ```
 /// # use druid::text::{Attribute, RichTextBuilder};
-/// # use druid::FontWeight;
+/// # use druid::{FontWeight, Color};
 /// let mut builder = RichTextBuilder::new();
 /// builder.push("Hello ");
 /// builder.push("World!").weight(FontWeight::BOLD);
+///
+/// // Can also use write!
+/// write!(builder, "Here is your number: {}", 1).underline(true).text_color(Color::RED);
+///
 /// let rich_text = builder.build();
 /// ```
 ///
@@ -131,6 +135,18 @@ impl RichTextBuilder {
         self.add_attributes_for_range(range)
     }
 
+    /// Glue for usage of the write! macro.
+    ///
+    /// This method should generally not be invoked manually, but rather through the write! macro itself.
+    #[doc(hidden)]
+    pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder {
+        use std::fmt::Write;
+        let start = self.buffer.len();
+        self.buffer
+            .write_fmt(fmt)
+            .expect("a formatting trait implementation returned an error");
+        self.add_attributes_for_range(start..self.buffer.len())
+    }
     /// Get an [`AttributesAdder`] for the given range.
     ///
     /// This can be used to modify styles for a given range after it has been added.

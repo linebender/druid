@@ -318,7 +318,7 @@ impl<T> Drop for Harness<'_, T> {
         // We need to call finish even if a test assert failed
         if let Err(err) = self.piet.finish() {
             // We can't panic, because we might already be panicking
-            log::error!("piet finish failed: {}", err);
+            tracing::error!("piet finish failed: {}", err);
         }
     }
 }

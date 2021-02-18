@@ -132,10 +132,10 @@ impl<T: Data> Widget<T> for Align<T> {
 
 fn log_size_warnings(size: Size) {
     if size.width.is_infinite() {
-        log::warn!("Align widget's child has an infinite width.");
+        tracing::warn!("Align widget's child has an infinite width.");
     }
 
     if size.height.is_infinite() {
-        log::warn!("Align widget's child has an infinite height.");
+        tracing::warn!("Align widget's child has an infinite height.");
     }
 }

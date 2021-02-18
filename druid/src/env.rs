@@ -430,7 +430,7 @@ impl Value {
         use Value::*;
         matches!(
             (self, other),
-            (Point(_) , Point(_))
+            (Point(_), Point(_))
                 | (Size(_), Size(_))
                 | (Rect(_), Rect(_))
                 | (Insets(_), Insets(_))
@@ -574,9 +574,9 @@ macro_rules! impl_value_type {
             }
         }
 
-        impl Into<Value> for $ty {
-            fn into(self) -> Value {
-                Value::$var(self)
+        impl From<$ty> for Value {
+            fn from(val: $ty) -> Value {
+                Value::$var(val)
             }
         }
     };
@@ -621,6 +621,7 @@ impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn string_key_or_value() {

@@ -157,7 +157,7 @@ pub(crate) unsafe fn get_file_dialog_path(
             &IShellItem::uuidof(),
             &mut item as *mut *mut IShellItem as *mut *mut c_void,
         )) {
-            log::warn!("Failed to convert path: {}", err.to_string());
+            tracing::warn!("Failed to convert path: {}", err.to_string());
         } else {
             as_result(file_dialog.SetDefaultFolder(item))?;
         }

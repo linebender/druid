@@ -61,7 +61,7 @@ pub fn refresh_rate(conn: &Rc<XCBConnection>, window_id: Window) -> Option<f64> 
 
     match try_refresh_rate() {
         Err(e) => {
-            log::error!("failed to find refresh rate: {}", e);
+            tracing::error!("failed to find refresh rate: {}", e);
             None
         }
         Ok(r) => Some(r),
@@ -87,7 +87,7 @@ macro_rules! log_x11 {
             // a context where X11 errors probably just mean that the connection to the X server
             // was lost. In particular, it doesn't represent a druid-shell bug for which we want
             // more context.
-            log::error!("X11 error: {}", e);
+            tracing::error!("X11 error: {}", e);
         }
     };
 }
