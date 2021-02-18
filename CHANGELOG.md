@@ -26,6 +26,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
 - `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
+- Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 
 ### Deprecated
 
