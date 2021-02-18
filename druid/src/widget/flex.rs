@@ -541,13 +541,13 @@ impl<T: Data> Flex<T> {
     ) {
         let params = params.into();
         let child = if params.flex == 0.0 {
-            Child::Fixed(WidgetPod::new(Box::new(child)), params.alignment)
+            Child::Fixed{widget: WidgetPod::new(Box::new(child)), alignment: params.alignment}
         } else {
-            Child::Flex(
-                WidgetPod::new(Box::new(child)),
-                params.alignment,
-                params.flex,
-            )
+            Child::Flex{
+                widget: WidgetPod::new(Box::new(child)),
+                alignment: params.alignment,
+                flex: params.flex,
+            }
         };
         self.children.push(child);
     }
@@ -585,34 +585,25 @@ impl<T: Data> Flex<T> {
 
 impl<T: Data> Widget<T> for Flex<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        for child in &mut self.children {
-            match child {
-                Child::Fixed(widget, _) | Child::Flex(widget, _, _) => {
-                    widget.event(ctx, event, data, env)
-                }
-                _ => {}
+        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
+            if let Some(widget) = child{
+                widget.event(ctx, event, data, env)
             }
         }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        for child in &mut self.children {
-            match child {
-                Child::Fixed(widget, _) | Child::Flex(widget, _, _) => {
-                    widget.lifecycle(ctx, event, data, env)
-                }
-                _ => {}
+        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
+            if let Some(widget) = child{
+                widget.lifecycle(ctx, event, data, env)
             }
         }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        for child in &mut self.children {
-            match child {
-                Child::Fixed(widget, _) | Child::Flex(widget, _, _) => {
-                    widget.update(ctx, data, env)
-                }
-                _ => {}
+        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
+            if let Some(widget) = child{
+                widget.update(ctx, data, env)
             }
         }
     }
@@ -634,7 +625,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         let mut flex_sum = 0.0;
         for child in &mut self.children {
             match child {
-                Child::Fixed(widget, alignment) => {
+                Child::Fixed{widget, alignment} => {
                     any_use_baseline &= *alignment == Some(CrossAxisAlignment::Baseline);
 
                     let child_bc =
@@ -661,7 +652,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                     *calculated_siz = kv.resolve(env);
                     major_non_flex += *calculated_siz;
                 }
-                Child::Flex(_, _, flex) | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
+                Child::Flex{widget: _, alignment: _, flex} | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
             }
         }
 
@@ -674,7 +665,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         // Measure flex children.
         for child in &mut self.children {
             match child {
-                Child::Flex(widget, _, flex) => {
+                Child::Flex{widget, alignment: _, flex} => {
                     let desired_major = (*flex) * px_per_flex + remainder;
                     let actual_major = desired_major.round();
                     remainder = desired_major - actual_major;
@@ -724,7 +715,7 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         for child in &mut self.children {
             match child {
-                Child::Fixed(widget, alignment) | Child::Flex(widget, alignment, _) => {
+                Child::Fixed{widget, alignment} | Child::Flex{widget, alignment, flex: _} => {
                     let child_size = widget.layout_rect().size();
                     let alignment = alignment.unwrap_or(self.cross_alignment);
                     let child_minor_offset = match alignment {
@@ -791,17 +782,18 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         let baseline_offset = match self.direction {
             Axis::Horizontal => max_below_baseline,
-            Axis::Vertical => self
-                .children
+            Axis::Vertical => (&self.children)
                 .last()
-                .map(|last| match last {
-                    Child::Fixed(widget, _) | Child::Flex(widget, _, _) => {
+                .map(|last| {
+                    let child = last.widget();
+                    if let Some(widget) = child{
                         let child_bl = widget.baseline_offset();
                         let child_max_y = widget.layout_rect().max_y();
                         let extra_bottom_padding = my_size.height - child_max_y;
                         child_bl + extra_bottom_padding
+                    }else{
+                        0.0
                     }
-                    _ => 0.0,
                 })
                 .unwrap_or(0.0),
         };
@@ -811,10 +803,9 @@ impl<T: Data> Widget<T> for Flex<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        for child in &mut self.children {
-            match child {
-                Child::Fixed(widget, _) | Child::Flex(widget, _, _) => widget.paint(ctx, data, env),
-                _ => {}
+        for child in self.children.iter_mut().map(|x| x.widget_mut()) {
+            if let Some(widget) = child{
+                widget.paint(ctx, data, env)
             }
         }
 
@@ -949,14 +940,29 @@ impl From<f64> for FlexParams {
 }
 
 enum Child<T> {
-    Fixed(WidgetPod<T, Box<dyn Widget<T>>>, Option<CrossAxisAlignment>),
-    Flex(
-        WidgetPod<T, Box<dyn Widget<T>>>,
-        Option<CrossAxisAlignment>,
-        f64,
-    ),
+    Fixed{widget: WidgetPod<T, Box<dyn Widget<T>>>, alignment: Option<CrossAxisAlignment>},
+    Flex{
+        widget:WidgetPod<T, Box<dyn Widget<T>>>,
+        alignment: Option<CrossAxisAlignment>,
+        flex: f64,
+    },
     FixedSpacer(KeyOrValue<f64>, f64),
     FlexedSpacer(f64, f64),
+}
+
+impl<T> Child<T> {
+    fn widget_mut(&mut self) -> Option<&mut WidgetPod<T, Box<dyn Widget<T>>>>{
+        match self {
+            Child::Fixed{widget, alignment:_} | Child::Flex{widget, alignment:_, flex:_} => Some(widget),
+            _ => None,
+        }
+    }
+    fn widget(&self) -> Option<&WidgetPod<T, Box<dyn Widget<T>>>>{
+        match self {
+            Child::Fixed{widget, alignment:_} | Child::Flex{widget, alignment:_, flex:_} => Some(widget),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
