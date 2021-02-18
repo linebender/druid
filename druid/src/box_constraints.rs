@@ -131,16 +131,16 @@ impl BoxConstraints {
             && self.min.expand() == self.min
             && self.max.expand() == self.max)
         {
-            log::warn!("Bad BoxConstraints passed to {}:", name);
-            log::warn!("{:?}", self);
+            tracing::warn!("Bad BoxConstraints passed to {}:", name);
+            tracing::warn!("{:?}", self);
         }
 
         if self.min.width.is_infinite() {
-            log::warn!("Infinite minimum width constraint passed to {}:", name);
+            tracing::warn!("Infinite minimum width constraint passed to {}:", name);
         }
 
         if self.min.height.is_infinite() {
-            log::warn!("Infinite minimum height constraint passed to {}:", name);
+            tracing::warn!("Infinite minimum height constraint passed to {}:", name);
         }
     }
 
@@ -275,6 +275,7 @@ impl BoxConstraints {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     fn bc(min_width: f64, min_height: f64, max_width: f64, max_height: f64) -> BoxConstraints {
         BoxConstraints::new(

@@ -1,4 +1,4 @@
-use druid::Lens;
+use druid::{Lens, LensExt};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -108,7 +108,8 @@ fn where_clause() {
 
 #[derive(Lens)]
 struct ReservedParams<F, V> {
-    f: F, // We were using V and F as method params
+    f: F,
+    // We were using V and F as method params
     v: V,
 }
 
@@ -120,4 +121,47 @@ fn reserved() {
     };
     let val = ReservedParams::<u64, String>::f.with(&rp, |val| *val);
     assert_eq!(rp.f, val);
+}
+
+#[derive(Lens)]
+struct Outer<T> {
+    middle: Middle,
+    t: T,
+}
+
+#[derive(Lens)]
+struct Middle {
+    internal: usize,
+}
+
+#[test]
+fn then_inference() {
+    let outer = Outer {
+        t: -9i32,
+        middle: Middle { internal: 89 },
+    };
+
+    let lens = Outer::<i32>::middle.then(Middle::internal);
+    let val = lens.with(&outer, |val| *val);
+    assert_eq!(outer.middle.internal, val);
+
+    let outer = Outer {
+        t: Middle { internal: 12 },
+        middle: Middle { internal: 567 },
+    };
+
+    let lens = Outer::<Middle>::t.then(Middle::internal);
+    let val = lens.with(&outer, |val| *val);
+    assert_eq!(outer.t.internal, val);
+
+    let lt_wrapper = LifetimeWrapper {
+        x: Middle { internal: 45 },
+        phantom_a: Default::default(),
+    };
+
+    let lens = LifetimeWrapper::<'static, Middle>::x.then(Middle::internal);
+    let val = lens.with(&lt_wrapper, |val| *val);
+    assert_eq!(lt_wrapper.x.internal, val);
+
+    //let outer = Outer
 }

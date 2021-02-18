@@ -635,11 +635,11 @@ impl<T: Data> Widget<T> for Flex<T> {
                     let baseline_offset = widget.baseline_offset();
 
                     if child_size.width.is_infinite() {
-                        log::warn!("A non-Flex child has an infinite width.");
+                        tracing::warn!("A non-Flex child has an infinite width.");
                     }
 
                     if child_size.height.is_infinite() {
-                        log::warn!("A non-Flex child has an infinite height.");
+                        tracing::warn!("A non-Flex child has an infinite height.");
                     }
 
                     major_non_flex += self.direction.major(child_size).expand();
@@ -757,7 +757,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
 
         if flex_sum > 0.0 && total_major.is_infinite() {
-            log::warn!("A child of Flex is flex, but Flex is unbounded.")
+            tracing::warn!("A child of Flex is flex, but Flex is unbounded.")
         }
 
         if flex_sum > 0.0 {
@@ -968,6 +968,7 @@ impl<T> Child<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     #[allow(clippy::cognitive_complexity)]

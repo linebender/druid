@@ -84,7 +84,7 @@ pub(crate) fn get_file_dialog_path(
 
         if let Some(dt) = &options.default_type {
             if !found_default_filter {
-                log::warn!("The default type {:?} is not present in allowed types.", dt);
+                tracing::warn!("The default type {:?} is not present in allowed types.", dt);
             }
         }
     }
@@ -102,7 +102,7 @@ pub(crate) fn get_file_dialog_path(
         },
         ResponseType::Cancel => Err(anyhow!("Dialog was deleted")),
         _ => {
-            log::warn!("Unhandled dialog result: {:?}", result);
+            tracing::warn!("Unhandled dialog result: {:?}", result);
             Err(anyhow!("Unhandled dialog result"))
         }
     };

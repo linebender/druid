@@ -53,7 +53,7 @@ impl WinHandler for QuitState {
         if self.quit_count >= 5 {
             self.handle.close();
         } else {
-            log::info!("Don't wanna quit");
+            tracing::info!("Don't wanna quit");
         }
     }
 
@@ -67,7 +67,7 @@ impl WinHandler for QuitState {
 }
 
 fn main() {
-    simple_logger::SimpleLogger::new().init().unwrap();
+    tracing_subscriber::fmt().init();
     let app = Application::new().unwrap();
     let mut file_menu = Menu::new();
     file_menu.add_item(

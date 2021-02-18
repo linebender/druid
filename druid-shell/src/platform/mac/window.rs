@@ -24,8 +24,8 @@ use std::time::Instant;
 
 use block::ConcreteBlock;
 use cocoa::appkit::{
-    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSEvent,
-    NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
+    CGFloat, NSApp, NSApplication, NSAutoresizingMaskOptions, NSBackingStoreBuffered, NSColor,
+    NSEvent, NSView, NSViewHeightSizable, NSViewWidthSizable, NSWindow, NSWindowStyleMask,
 };
 use cocoa::base::{id, nil, BOOL, NO, YES};
 use cocoa::foundation::{
@@ -34,11 +34,11 @@ use cocoa::foundation::{
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
-use log::{error, info};
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
+use tracing::{debug, error, info};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -119,6 +119,7 @@ pub(crate) struct WindowBuilder {
     window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
+    transparent: bool,
 }
 
 #[derive(Clone)]
@@ -170,6 +171,7 @@ impl WindowBuilder {
             window_state: None,
             resizable: true,
             show_titlebar: true,
+            transparent: false,
         }
     }
 
@@ -191,6 +193,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
@@ -244,6 +250,11 @@ impl WindowBuilder {
             if let Some(min_size) = self.min_size {
                 let size = NSSize::new(min_size.width, min_size.height);
                 window.setContentMinSize_(size);
+            }
+
+            if self.transparent {
+                window.setOpaque_(NO);
+                window.setBackgroundColor_(NSColor::clearColor(nil));
             }
 
             window.setTitle_(make_nsstring(&self.title));
@@ -799,7 +810,7 @@ fn set_position_deferred(this: &mut Object, _view_state: &mut ViewState, positio
         let screen_height = crate::Screen::get_display_rect().height();
         new_frame.origin.y = screen_height - position.y - frame.size.height; // Flip back
         let () = msg_send![window, setFrame: new_frame display: YES];
-        log::debug!("set_position_deferred {:?}", position);
+        debug!("set_position_deferred {:?}", position);
     }
 }
 
@@ -972,7 +983,7 @@ impl WindowHandle {
     }
 
     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        log::warn!("Custom cursors are not yet supported in the macOS backend");
+        tracing::warn!("Custom cursors are not yet supported in the macOS backend");
         None
     }
 
@@ -1156,7 +1167,7 @@ impl WindowHandle {
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        log::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
+        tracing::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
     }
 
     pub fn resizable(&self, resizable: bool) {

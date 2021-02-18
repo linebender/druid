@@ -272,9 +272,10 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        let should_record = !matches!(event,
-            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. }) |
-            LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_))
+        let should_record = !matches!(
+            event,
+            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. })
+                | LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_))
         );
 
         if should_record {

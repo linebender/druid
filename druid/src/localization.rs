@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
 
-use log::{debug, error, warn};
+use tracing::{debug, error, warn};
 
 use crate::{Application, ArcStr, Env};
 
@@ -387,6 +387,8 @@ impl<'a, T: std::fmt::Display> std::fmt::Display for PrintLocales<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
+
     #[test]
     fn resolve() {
         let en_us: LanguageIdentifier = "en-US".parse().unwrap();
