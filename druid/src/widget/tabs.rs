@@ -581,7 +581,14 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         }
 
         if let (Some(t_state), Event::AnimFrame(interval)) = (&mut self.transition_state, event) {
-            t_state.current_time += *interval;
+            // We can get a high interval on the first frame due to other widgets or old animations.
+            let interval = if t_state.current_time == 0 {
+                1
+            } else {
+                *interval
+            };
+
+            t_state.current_time += interval;
             if t_state.live() {
                 ctx.request_anim_frame();
             } else {
@@ -781,9 +788,11 @@ impl<T: Data> InitialTab<T> {
 enum TabsContent<TP: TabsPolicy> {
     Building {
         tabs: TP::Build,
+        index: TabIndex,
     },
     Complete {
         tabs: TP,
+        index: TabIndex,
     },
     Running {
         scope: WidgetPod<TP::Input, TabsScope<TP>>,
@@ -849,7 +858,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
     /// Create a Tabs widget using the provided policy.
     /// This is useful for tabs derived from data.
     pub fn for_policy(tabs: TP) -> Self {
-        Self::of_content(TabsContent::Complete { tabs })
+        Self::of_content(TabsContent::Complete { tabs, index: 0 })
     }
 
     // This could be public if there is a case for custom policies that support static tabs - ie the AddTab method.
@@ -861,6 +870,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
     {
         Self::of_content(TabsContent::Building {
             tabs: tabs_from_data,
+            index: 0,
         })
     }
 
@@ -896,6 +906,12 @@ impl<TP: TabsPolicy> Tabs<TP> {
         self
     }
 
+    /// Return this Tabs widget with the specified (zero based) tab index
+    pub fn with_tab_index(mut self, idx: TabIndex) -> Self {
+        self.set_tab_index(idx);
+        self
+    }
+
     /// Available when the policy implements AddTab - e.g StaticTabs.
     /// Return this Tabs widget with the named tab added.
     pub fn add_tab(
@@ -905,14 +921,43 @@ impl<TP: TabsPolicy> Tabs<TP> {
     ) where
         TP: AddTab,
     {
-        if let TabsContent::Building { tabs } = &mut self.content {
+        if let TabsContent::Building { tabs, .. } = &mut self.content {
             TP::add_tab(tabs, name, child)
         } else {
             tracing::warn!("Can't add static tabs to a running or complete tabs instance!")
         }
     }
 
-    fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
+    /// Get the currently selected (zero-based) tab index.
+    pub fn tab_index(&self) -> TabIndex {
+        let index = match &self.content {
+            TabsContent::Running { scope, .. } => scope.widget().state().map(|s| s.selected),
+            TabsContent::Building { index, .. } | TabsContent::Complete { index, .. } => {
+                Some(*index)
+            }
+            TabsContent::Swapping => None,
+        };
+        index.unwrap_or(0)
+    }
+
+    /// Set the selected (zero-based) tab index, this tab will become visible if it exists.
+    /// Animated transitions will apply as if clicking the tab bar if they are enabled and the
+    /// Tabs widget is laid out.
+    pub fn set_tab_index(&mut self, idx: TabIndex) {
+        match &mut self.content {
+            TabsContent::Running { scope, .. } => {
+                if let Some(state) = scope.widget_mut().state_mut() {
+                    state.selected = idx
+                }
+            }
+            TabsContent::Building { index, .. } | TabsContent::Complete { index, .. } => {
+                *index = idx;
+            }
+            TabsContent::Swapping => (),
+        }
+    }
+
+    fn make_scope(&self, tabs_from_data: TP, idx: TabIndex) -> WidgetPod<TP::Input, TabsScope<TP>> {
         let (tabs_bar, tabs_body) = (
             (TabBar::new(self.axis, self.edge), 0.0),
             (
@@ -933,7 +978,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         };
 
         WidgetPod::new(Scope::new(
-            TabsScopePolicy::new(tabs_from_data, 0),
+            TabsScopePolicy::new(tabs_from_data, idx),
             Box::new(layout),
         ))
     }
@@ -957,16 +1002,16 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
             let content = std::mem::replace(&mut self.content, TabsContent::Swapping);
 
             self.content = match content {
-                TabsContent::Building { tabs } => {
+                TabsContent::Building { tabs, index } => {
                     ctx.children_changed();
                     TabsContent::Running {
-                        scope: self.make_scope(TP::build(tabs)),
+                        scope: self.make_scope(TP::build(tabs), index),
                     }
                 }
-                TabsContent::Complete { tabs } => {
+                TabsContent::Complete { tabs, index } => {
                     ctx.children_changed();
                     TabsContent::Running {
-                        scope: self.make_scope(tabs),
+                        scope: self.make_scope(tabs, index),
                     }
                 }
                 _ => content,

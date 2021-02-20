@@ -20,6 +20,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
+- Scope: expose scoped state using state() and state_mut() ([#XXXX] by [@rjwittams]
+- Tabs: allow getting and setting the tab index of a Tabs widget ([#XXXX] by [@rjwittams]
 
 ### Changed
 
