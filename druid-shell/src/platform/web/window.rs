@@ -81,7 +81,8 @@ pub struct WindowHandle(Weak<WindowState>);
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
-        panic!("HasRawWindowHandle trait not implemented for wasm.")
+        error!("HasRawWindowHandle trait not implemented for wasm.")
+        RawWindowHandle::Web(WebHandle::empty())
     }
 }
 

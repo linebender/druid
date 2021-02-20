@@ -1554,6 +1554,7 @@ impl WindowHandle {
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
-        panic!("HasRawWindowHandle trait not implemented for x11.")
+        error!("HasRawWindowHandle trait not implemented for x11.")
+        RawWindowHandle::Xcb(XcbHandle::empty())
     }
 }
