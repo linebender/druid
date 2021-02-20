@@ -24,7 +24,7 @@ use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Point, WidgetExt, W
 use instant::Instant;
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget).title(
+    let window = WindowDesc::new(build_widget()).title(
         LocalizedString::new("invalidate-demo-window-title").with_placeholder("Invalidate demo"),
     );
     let state = AppState {
@@ -32,7 +32,7 @@ pub fn main() {
         circles: Vector::new(),
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(state)
         .expect("launch failed");
 }

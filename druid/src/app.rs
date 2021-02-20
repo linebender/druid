@@ -57,6 +57,7 @@ pub struct WindowConfig {
     pub(crate) min_size: Option<Size>,
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
+    pub(crate) transparent: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
     pub(crate) state: Option<WindowState>,
@@ -79,6 +80,7 @@ pub struct WindowDesc<T> {
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
+    pub(crate) transparent: bool,
     pub(crate) menu: Option<MenuDesc<T>>,
     pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
                                               // when the native window is constructed.
@@ -86,16 +88,16 @@ pub struct PendingWindow<T> {
 
 impl<T: Data> PendingWindow<T> {
     /// Create a pending window from any widget.
-    pub fn new<W, F>(root: F) -> PendingWindow<T>
+    pub fn new<W>(root: W) -> PendingWindow<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         // This just makes our API slightly cleaner; callers don't need to explicitly box.
         PendingWindow {
-            root: Box::new(root()),
+            root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
             menu: MenuDesc::platform_default(),
+            transparent: false,
             size_policy: WindowSizePolicy::User,
         }
     }
@@ -108,6 +110,12 @@ impl<T: Data> PendingWindow<T> {
     /// [`LocalizedString`]: struct.LocalizedString.html
     pub fn title(mut self, title: impl Into<LabelText<T>>) -> Self {
         self.title = title.into();
+        self
+    }
+
+    /// Set wether the background should be transparent
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.transparent = transparent;
         self
     }
 
@@ -147,20 +155,57 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
-    /// Initialize a minimal logger for printing logs out to stderr.
+    /// Initialize a minimal logger with DEBUG max level for printing logs out to stderr.
     ///
-    /// Meant for use during development only.
+    /// This is meant for use during development only.
     ///
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
+    #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
     pub fn use_simple_logger(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         simple_logger::SimpleLogger::new()
+            .with_level(log::LevelFilter::Debug)
             .init()
             .expect("Failed to initialize logger.");
         #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Trace).expect("Failed to initialize logger.");
+        console_log::init_with_level(log::Level::Debug).expect("Failed to initialize logger.");
+        self
+    }
+
+    /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
+    /// stderr, controlled by ENV variables.
+    ///
+    /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
+    /// it's probably better to implement it yourself.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the subscriber fails to initialize.
+    pub fn use_env_tracing(self) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use tracing_subscriber::prelude::*;
+            let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
+            let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+                .or_else(|_| tracing_subscriber::EnvFilter::try_new("debug"))
+                .expect("Failed to initialize tracing subscriber");
+
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(fmt_layer)
+                .init();
+        }
+        // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
+        // because wasm targets will virtually always be browsers.
+        #[cfg(target_arch = "wasm32")]
+        {
+            console_error_panic_hook::set_once();
+            // tracing_wasm doesn't let us filter by level, but chrome/firefox devtools can
+            // already do that anyway
+            tracing_wasm::set_as_global_default();
+        }
         self
     }
 
@@ -229,6 +274,7 @@ impl Default for WindowConfig {
             position: None,
             resizable: None,
             show_titlebar: None,
+            transparent: None,
             level: None,
             state: None,
         }
@@ -316,6 +362,12 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the window background should be transparent
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.transparent = Some(transparent);
+        self
+    }
+
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
         if let Some(resizable) = self.resizable {
@@ -334,6 +386,10 @@ impl WindowConfig {
 
         if let Some(position) = self.position {
             builder.set_position(position);
+        }
+
+        if let Some(transparent) = self.transparent {
+            builder.set_transparent(transparent);
         }
 
         if let Some(level) = self.level {
@@ -381,16 +437,12 @@ impl WindowConfig {
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a function that will generate the root
-    /// [`Widget`] for this window.
-    ///
-    /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
+    /// Create a new `WindowDesc`, taking the root [`Widget`] for this window.
     ///
     /// [`Widget`]: trait.Widget.html
-    pub fn new<W, F>(root: F) -> WindowDesc<T>
+    pub fn new<W>(root: W) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         WindowDesc {
             pending: PendingWindow::new(root),
@@ -468,6 +520,14 @@ impl<T: Data> WindowDesc<T> {
     /// Builder-style method to set whether this window's titlebar is visible.
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.config = self.config.show_titlebar(show_titlebar);
+        self
+    }
+
+    /// Builder-style method to set whether this window's background should be
+    /// transparent.
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.config = self.config.transparent(transparent);
+        self.pending = self.pending.transparent(transparent);
         self
     }
 

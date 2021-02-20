@@ -14,7 +14,7 @@
 
 //! This example shows how to draw an SVG.
 
-use log::error;
+use tracing::error;
 
 use druid::{
     widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},
@@ -22,11 +22,11 @@ use druid::{
 };
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("svg-demo-window-title").with_placeholder("Rawr!"));
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

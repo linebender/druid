@@ -37,7 +37,7 @@ pub struct AppData {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Formatting and Validation");
+    let main_window = WindowDesc::new(ui_builder()).title("Formatting and Validation");
 
     let data = AppData {
         dollars: 12.2,
@@ -50,7 +50,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

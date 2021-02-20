@@ -42,12 +42,12 @@ fn build_app() -> impl Widget<u32> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(build_app).title(
+    let main_window = WindowDesc::new(build_app()).title(
         LocalizedString::new("scroll-colors-demo-window-title").with_placeholder("Rainbows!"),
     );
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

@@ -243,7 +243,7 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_calc)
+    let window = WindowDesc::new(build_calc())
         .window_size((223., 300.))
         .resizable(false)
         .title(
@@ -256,7 +256,7 @@ pub fn main() {
         in_num: false,
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(calc_state)
         .expect("launch failed");
 }

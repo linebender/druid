@@ -768,7 +768,7 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
                                 .validate_partial_input(&new_text, &Selection::caret(0))
                                 .is_err()
                             {
-                                log::warn!(
+                                tracing::warn!(
                                     "formatter replacement text does not validate: '{}'",
                                     &new_text
                                 );
@@ -851,7 +851,7 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
                 // editing, and new data arrives, we ignore the new data and keep
                 // editing; the alternative would be to cancel editing, which
                 // could also make sense.
-                log::warn!(
+                tracing::warn!(
                     "ValueTextBox data changed externally, idk: '{}'",
                     self.formatter.format(data)
                 );

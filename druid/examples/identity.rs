@@ -40,13 +40,13 @@ struct OurData {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(make_ui).title("identity example");
+    let window = WindowDesc::new(make_ui()).title("identity example");
     let data = OurData {
         counter_one: 0,
         counter_two: 0,
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

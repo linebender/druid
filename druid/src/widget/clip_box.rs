@@ -335,6 +335,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
+
     #[test]
     fn pan_to_visible() {
         let mut viewport = Viewport {

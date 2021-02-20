@@ -416,7 +416,7 @@ fn make_widget() -> impl Widget<AppData> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(make_widget)
+    let window = WindowDesc::new(make_widget())
         .window_size(Size {
             width: 800.0,
             height: 800.0,
@@ -434,7 +434,7 @@ pub fn main() {
     }
 
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(AppData {
             grid,
             drawing: false,

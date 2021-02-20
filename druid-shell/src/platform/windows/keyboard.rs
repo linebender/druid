@@ -608,7 +608,7 @@ impl KeyboardState {
                     let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;
                     let vk = self.refine_vk(stash_vk.unwrap_or(0), scan_code);
                     let code = scan_to_code(scan_code);
-                    let key = if self.stash_utf16.is_empty() && wparam < 0x20 {
+                    let key = if self.stash_utf16.is_empty() && (wparam < 0x20 || wparam == 0x7f) {
                         vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods))
                     } else {
                         self.stash_utf16.push(wparam as u16);

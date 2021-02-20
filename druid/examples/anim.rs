@@ -81,12 +81,12 @@ impl Widget<()> for AnimWidget {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
+    let window = WindowDesc::new(AnimWidget { t: 0.0 }).title(
         LocalizedString::new("anim-demo-window-title")
             .with_placeholder("You spin me right round..."),
     );
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(())
         .expect("launch failed");
 }

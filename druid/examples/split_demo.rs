@@ -77,10 +77,10 @@ fn build_app() -> impl Widget<u32> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_app)
+    let window = WindowDesc::new(build_app())
         .title(LocalizedString::new("split-demo-window-title").with_placeholder("Split Demo"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(0u32)
         .expect("launch failed");
 }

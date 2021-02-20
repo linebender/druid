@@ -24,6 +24,9 @@ use std::ptr;
 use std::slice;
 
 use lazy_static::lazy_static;
+use winapi::ctypes::c_void;
+use winapi::shared::dxgi::IDXGIDevice;
+use winapi::shared::guiddef::REFIID;
 use winapi::shared::minwindef::{BOOL, HMODULE, UINT};
 use winapi::shared::ntdef::{HRESULT, LPWSTR};
 use winapi::shared::windef::{HMONITOR, HWND, RECT};
@@ -147,6 +150,11 @@ type GetSystemMetricsForDpi =
 // from shcore.dll
 type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
+type DCompositionCreateDevice = unsafe extern "system" fn(
+    dxgiDevice: *const IDXGIDevice,
+    iid: REFIID,
+    dcompositionDevice: *mut *mut c_void,
+) -> HRESULT;
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
@@ -156,6 +164,7 @@ pub struct OptionalFunctions {
     pub GetDpiForMonitor: Option<GetDpiForMonitor>,
     pub SetProcessDpiAwareness: Option<SetProcessDpiAwareness>,
     pub GetSystemMetricsForDpi: Option<GetSystemMetricsForDpi>,
+    pub DCompositionCreateDevice: Option<DCompositionCreateDevice>,
 }
 
 #[allow(non_snake_case)] // For local variables
@@ -174,7 +183,7 @@ fn load_optional_functions() -> OptionalFunctions {
             let function_ptr = unsafe { GetProcAddress($lib, cstr.as_ptr()) };
 
             if function_ptr.is_null() {
-                log::info!(
+                tracing::info!(
                     "Could not load `{}`. Windows {} or later is needed",
                     name,
                     $min_windows_version
@@ -201,6 +210,7 @@ fn load_optional_functions() -> OptionalFunctions {
 
     let shcore = load_library("shcore.dll");
     let user32 = load_library("user32.dll");
+    let dcomp = load_library("dcomp.dll");
 
     let mut GetDpiForSystem = None;
     let mut GetDpiForMonitor = None;
@@ -208,21 +218,28 @@ fn load_optional_functions() -> OptionalFunctions {
     let mut SetProcessDpiAwarenessContext = None;
     let mut SetProcessDpiAwareness = None;
     let mut GetSystemMetricsForDpi = None;
+    let mut DCompositionCreateDevice = None;
 
     if shcore.is_null() {
-        log::info!("No shcore.dll");
+        tracing::info!("No shcore.dll");
     } else {
         load_function!(shcore, SetProcessDpiAwareness, "8.1");
         load_function!(shcore, GetDpiForMonitor, "8.1");
     }
 
     if user32.is_null() {
-        log::info!("No user32.dll");
+        tracing::info!("No user32.dll");
     } else {
         load_function!(user32, GetDpiForSystem, "10");
         load_function!(user32, GetDpiForWindow, "10");
         load_function!(user32, SetProcessDpiAwarenessContext, "10");
         load_function!(user32, GetSystemMetricsForDpi, "10");
+    }
+
+    if dcomp.is_null() {
+        tracing::info!("No dcomp.dll");
+    } else {
+        load_function!(dcomp, DCompositionCreateDevice, "8.1");
     }
 
     OptionalFunctions {
@@ -232,6 +249,7 @@ fn load_optional_functions() -> OptionalFunctions {
         GetDpiForMonitor,
         SetProcessDpiAwareness,
         GetSystemMetricsForDpi,
+        DCompositionCreateDevice,
     }
 }
 

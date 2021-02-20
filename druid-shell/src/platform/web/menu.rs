@@ -36,7 +36,7 @@ impl Menu {
     }
 
     pub fn add_dropdown(&mut self, _menu: Menu, _text: &str, _enabled: bool) {
-        log::warn!("unimplemented");
+        tracing::warn!("unimplemented");
     }
 
     pub fn add_item(
@@ -47,10 +47,10 @@ impl Menu {
         _enabled: bool,
         _selected: bool,
     ) {
-        log::warn!("unimplemented");
+        tracing::warn!("unimplemented");
     }
 
     pub fn add_separator(&mut self) {
-        log::warn!("unimplemented");
+        tracing::warn!("unimplemented");
     }
 }

@@ -100,7 +100,8 @@ impl AppDelegate<AppState> for Delegate {
 }
 
 fn main() {
-    let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
+    let main_window =
+        WindowDesc::new(ui_builder()).title(LocalizedString::new("Blocking functions"));
     AppLauncher::with_window(main_window)
         .delegate(Delegate {})
         .launch(AppState::default())

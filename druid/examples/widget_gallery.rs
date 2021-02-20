@@ -48,7 +48,7 @@ enum MyRadio {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Widget Gallery");
+    let main_window = WindowDesc::new(ui_builder()).title("Widget Gallery");
     // Set our initial data
     let data = AppData {
         label_data: "test".into(),
@@ -61,7 +61,7 @@ pub fn main() {
         editable_text: "edit me!".into(),
     };
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)
         .expect("launch failed");
 }

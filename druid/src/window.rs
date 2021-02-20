@@ -20,7 +20,7 @@ use std::mem;
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
 
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Color, Piet, RenderContext};
 use crate::shell::{Counter, Cursor, Region, WindowHandle};
 
 use crate::app::{PendingWindow, WindowSizePolicy};
@@ -34,6 +34,9 @@ use crate::{
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
     TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
+
+/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
+const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// A unique identifier for a window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -55,6 +58,7 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    pub(crate) transparent: bool,
     ext_handle: ExtEventSink,
     // delegate?
 }
@@ -73,6 +77,7 @@ impl<T> Window<T> {
             size: Size::ZERO,
             invalid: Region::EMPTY,
             title: pending.title,
+            transparent: pending.transparent,
             menu: pending.menu,
             context_menu: None,
             last_anim: None,
@@ -165,7 +170,7 @@ impl<T: Data> Window<T> {
             if let Some(mut handle) = self.handle.get_idle_handle() {
                 handle.schedule_idle(RUN_COMMANDS_TOKEN);
             } else {
-                log::error!("failed to get idle handle");
+                tracing::error!("failed to get idle handle");
             }
         }
     }
@@ -191,7 +196,7 @@ impl<T: Data> Window<T> {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
-                    log::error!("No widget found for timer {:?}", token);
+                    tracing::error!("No widget found for timer {:?}", token);
                     return Handled::No;
                 }
             }
@@ -223,9 +228,9 @@ impl<T: Data> Window<T> {
 
             self.root.event(&mut ctx, &event, data, env);
             if !ctx.notifications.is_empty() {
-                log::info!("{} unhandled notifications:", ctx.notifications.len());
+                tracing::info!("{} unhandled notifications:", ctx.notifications.len());
                 for (i, n) in ctx.notifications.iter().enumerate() {
-                    log::info!("{}: {:?}", i, n);
+                    tracing::info!("{}: {:?}", i, n);
                 }
             }
             Handled::from(ctx.is_handled)
@@ -318,8 +323,8 @@ impl<T: Data> Window<T> {
             for rect in self.invalid.rects() {
                 self.handle.invalidate_rect(*rect);
             }
-            self.invalid.clear();
         }
+        self.invalid.clear();
     }
 
     #[cfg(test)]
@@ -364,7 +369,11 @@ impl<T: Data> Window<T> {
 
         piet.fill(
             invalid.bounding_box(),
-            &env.get(crate::theme::WINDOW_BACKGROUND_COLOR),
+            &(if self.transparent {
+                TRANSPARENT
+            } else {
+                env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
+            }),
         );
         self.paint(piet, invalid, queue, data, env);
     }

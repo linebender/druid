@@ -31,7 +31,7 @@ use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
 pub fn main() {
-    let window = WindowDesc::new(make_ui).title("External Event Demo");
+    let window = WindowDesc::new(make_ui()).title("External Event Demo");
 
     let launcher = AppLauncher::with_window(window);
 
@@ -48,7 +48,7 @@ pub fn main() {
     thread::spawn(move || generate_colors(event_sink));
 
     launcher
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(Color::BLACK)
         .expect("launch failed");
 }

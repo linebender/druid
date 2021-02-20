@@ -240,8 +240,13 @@ fn interactive_area() -> impl Widget<AppState> {
         .rounded(5.0)
         .border(INTERACTIVE_AREA_BORDER, 1.0)
         .controller(EventLogger {
-            filter: |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
-		});
+            filter: |event| {
+                matches!(
+                    event,
+                    Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)
+                )
+            },
+        });
 
     Flex::row()
         .with_flex_spacer(1.0)
@@ -322,13 +327,13 @@ fn make_list_item() -> impl Widget<LoggedEvent> {
 
 pub fn main() {
     //describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Event Viewer")
         .window_size((760.0, 680.0));
 
     //start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
             env.set(theme::LABEL_COLOR, TEXT_COLOR);

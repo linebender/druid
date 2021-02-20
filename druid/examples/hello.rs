@@ -29,7 +29,7 @@ struct HelloState {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Hello World!")
         .window_size((400.0, 400.0));
 
@@ -40,7 +40,7 @@ pub fn main() {
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

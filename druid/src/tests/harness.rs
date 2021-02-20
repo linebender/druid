@@ -148,7 +148,7 @@ impl<T: Data> Harness<'_, T> {
         {
             let piet = target.0.as_mut().unwrap().render_context();
 
-            let pending = PendingWindow::new(|| root);
+            let pending = PendingWindow::new(root);
             let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
             let inner = Inner {
@@ -318,7 +318,7 @@ impl<T> Drop for Harness<'_, T> {
         // We need to call finish even if a test assert failed
         if let Err(err) = self.piet.finish() {
             // We can't panic, because we might already be panicking
-            log::error!("piet finish failed: {}", err);
+            tracing::error!("piet finish failed: {}", err);
         }
     }
 }

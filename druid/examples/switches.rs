@@ -67,10 +67,10 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget)
+    let window = WindowDesc::new(build_widget())
         .title(LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(DemoState {
             value: true,
             stepper_value: 1.0,

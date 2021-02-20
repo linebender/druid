@@ -18,14 +18,14 @@
 use druid::kurbo::Circle;
 use druid::piet::RadialGradient;
 use druid::widget::prelude::*;
-use druid::widget::{Flex, Padding, Scroll};
-use druid::{AppLauncher, Data, Insets, LocalizedString, Rect, WindowDesc};
+use druid::widget::{Flex, Padding};
+use druid::{AppLauncher, Data, Insets, LocalizedString, Rect, WidgetExt, WindowDesc};
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget)
+    let window = WindowDesc::new(build_widget())
         .title(LocalizedString::new("scroll-demo-window-title").with_placeholder("Scroll demo"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(0u32)
         .expect("launch failed");
 }
@@ -35,7 +35,7 @@ fn build_widget() -> impl Widget<u32> {
     for i in 0..30 {
         col.add_child(Padding::new(3.0, OverPainter(i)));
     }
-    Scroll::new(col)
+    col.scroll()
 }
 
 /// A widget that paints outside of its bounds.

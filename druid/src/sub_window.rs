@@ -72,7 +72,7 @@ impl SubWindowDesc {
         app_state: &mut AppState<T>,
     ) -> Result<WindowHandle, Error> {
         let sub_window_root = self.sub_window_root;
-        let pending = PendingWindow::new(|| sub_window_root.lens(Unit::default()));
+        let pending = PendingWindow::new(sub_window_root.lens(Unit::default()));
         app_state.build_native_window(self.window_id, pending, self.window_config)
     }
 }
@@ -107,7 +107,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                         self.data = dc.deref().clone();
                         ctx.request_update();
                     } else {
-                        log::warn!("Received a sub window parent to host command that could not be unwrapped. \
+                        tracing::warn!("Received a sub window parent to host command that could not be unwrapped. \
                         This could mean that the sub window you requested and the enclosing widget pod that you opened it from do not share a common data type. \
                         Make sure you have a widget pod between your requesting widget and any lenses." )
                     }

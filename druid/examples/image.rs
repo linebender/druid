@@ -204,7 +204,7 @@ fn make_ui() -> impl Widget<AppState> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(make_ui)
+    let main_window = WindowDesc::new(make_ui())
         .window_size((650., 450.))
         .title("Flex Container Options");
 
@@ -219,7 +219,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(state)
         .expect("Failed to launch application");
 }

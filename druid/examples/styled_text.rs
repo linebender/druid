@@ -48,7 +48,7 @@ impl Display for AppData {
 }
 
 pub fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(ui_builder).title(
+    let main_window = WindowDesc::new(ui_builder()).title(
         LocalizedString::new("styled-text-demo-window-title").with_placeholder("Type Styler"),
     );
     let data = AppData {
@@ -58,7 +58,7 @@ pub fn main() -> Result<(), PlatformError> {
     };
 
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(data)?;
 
     Ok(())
