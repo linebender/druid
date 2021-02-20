@@ -100,7 +100,7 @@ pub struct WindowHandle {
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
-        error!("HasRawWindowHandle trait not implemented for gtk.")
+        error!("HasRawWindowHandle trait not implemented for gtk.");
         // GTK is not a platform, and there's no empty generic handle. Pick XCB randomly as fallback.
         RawWindowHandle::Xcb(XcbHandle::empty())
     }
