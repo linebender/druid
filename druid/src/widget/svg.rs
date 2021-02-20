@@ -281,7 +281,11 @@ impl SvgRenderer {
         match &p.fill {
             Some(fill) => {
                 let brush = self.brush_from_usvg(&fill.paint, fill.opacity, ctx);
-                ctx.fill(path.clone(), &*brush);
+                if let usvg::FillRule::EvenOdd = fill.rule {
+                    ctx.fill_even_odd(path.clone(), &*brush);
+                } else {
+                    ctx.fill(path.clone(), &*brush);
+                }
             }
             None => {}
         }
