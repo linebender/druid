@@ -61,6 +61,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - `scroll_to_view` and `scroll_area_to_view` methods on `UpdateCtx`, `LifecycleCtx` and `EventCtx` ([#1976] by [@xarvic])
 - `Notification::route` ([#1978] by [@xarvic])
 - Build on OpenBSD ([#1993] by [@klemensn])
+- Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
+- Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
 
 ### Changed
 
