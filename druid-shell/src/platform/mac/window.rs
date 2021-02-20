@@ -40,6 +40,9 @@ use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 use tracing::{debug, error, info};
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
+
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
@@ -1222,6 +1225,18 @@ impl WindowHandle {
     pub fn get_scale(&self) -> Result<Scale, Error> {
         // TODO: Get actual Scale
         Ok(Scale::new(1.0, 1.0))
+    }
+}
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        let nsv = self.nsview.load();
+        let handle = MacOSHandle {
+            ns_view: *nsv as *mut _,
+            ..MacOSHandle::empty()
+        };
+        RawWindowHandle::MacOS(handle)
     }
 }
 

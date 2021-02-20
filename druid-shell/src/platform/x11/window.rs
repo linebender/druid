@@ -38,6 +38,9 @@ use x11rb::protocol::xproto::{
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
@@ -1549,5 +1552,13 @@ impl WindowHandle {
             error!("Window {} has already been dropped", self.id);
             Ok(Scale::new(1.0, 1.0))
         }
+    }
+}
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        error!("HasRawWindowHandle trait not implemented for x11.");
+        RawWindowHandle::Xcb(XcbHandle::empty())
     }
 }
