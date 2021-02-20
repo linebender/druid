@@ -25,6 +25,9 @@ use tracing::{error, warn};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
 use crate::piet::{PietText, RenderContext};
@@ -74,6 +77,14 @@ pub(crate) struct WindowBuilder {
 
 #[derive(Clone, Default)]
 pub struct WindowHandle(Weak<WindowState>);
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        error!("HasRawWindowHandle trait not implemented for wasm.");
+        RawWindowHandle::Web(WebHandle::empty())
+    }
+}
 
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe.
