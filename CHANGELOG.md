@@ -35,6 +35,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Fixed
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 
 ### Visual
 
@@ -420,6 +421,7 @@ Last release without a changelog :(
 [@lassipulkkinen]: https://github.com/lassipulkkinen
 [@Poignardazur]: https://github.com/PoignardAzur
 [@HoNile]: https://github.com/HoNile
+[@SecondFlight]: https://github.com/SecondFlight
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -622,6 +624,7 @@ Last release without a changelog :(
 [#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
 [#1600]: https://github.com/linebender/druid/pull/1600
+[#1606]: https://github.com/linebender/druid/pull/1606
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
