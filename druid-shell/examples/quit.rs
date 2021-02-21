@@ -67,7 +67,7 @@ impl WinHandler for QuitState {
 }
 
 fn main() {
-    let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder().try_init();
     let app = Application::new().unwrap();
     let mut file_menu = Menu::new();
     file_menu.add_item(
