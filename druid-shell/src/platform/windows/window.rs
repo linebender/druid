@@ -1679,7 +1679,10 @@ impl Cursor {
         let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
+            Cursor::Pointer => IDC_HAND,
+            Cursor::Busy => IDC_WAIT,
             Cursor::Crosshair => IDC_CROSS,
+            // not correct, maybe polyfill this
             Cursor::OpenHand => IDC_HAND,
             Cursor::NotAllowed => IDC_NO,
             Cursor::ResizeLeftRight => IDC_SIZEWE,

@@ -973,6 +973,14 @@ impl WindowHandle {
             let cursor: id = match cursor {
                 Cursor::Arrow => msg_send![nscursor, arrowCursor],
                 Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+                Cursor::Pointer => msg_send![nscursor, pointingHandCursor],
+                Cursor::Busy => {
+                    // do nothing because OS X is smarter.
+                    // > There is no NSCursor instance for the wait cursor,
+                    // > because the system automatically displays it at the appropriate times.
+                    // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/CursorMgmt/Tasks/ChangingCursors.html
+                    return;
+                }
                 Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
                 Cursor::OpenHand => msg_send![nscursor, openHandCursor],
                 Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],

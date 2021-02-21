@@ -729,6 +729,8 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
             match cursor {
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
+                Cursor::Pointer => "pointer",
+                Cursor::Busy => "progress",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

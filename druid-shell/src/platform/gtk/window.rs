@@ -1192,6 +1192,8 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
                 // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
+                Cursor::Pointer => "pointer",
+                Cursor::Busy => "progress",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

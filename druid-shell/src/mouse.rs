@@ -254,6 +254,8 @@ pub enum Cursor {
     Arrow,
     /// A vertical I-beam, for indicating insertion points in text.
     IBeam,
+    Pointer,
+    Busy,
     Crosshair,
     OpenHand,
     NotAllowed,
@@ -291,6 +293,8 @@ impl std::fmt::Debug for Cursor {
         match self {
             Cursor::Arrow => write!(f, "Cursor::Arrow"),
             Cursor::IBeam => write!(f, "Cursor::IBeam"),
+            Cursor::Pointer => write!(f, "Cursor::Pointer"),
+            Cursor::Busy => write!(f, "Cursor::Busy"),
             Cursor::Crosshair => write!(f, "Cursor::Crosshair"),
             Cursor::OpenHand => write!(f, "Cursor::OpenHand"),
             Cursor::NotAllowed => write!(f, "Cursor::NotAllowed"),
