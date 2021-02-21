@@ -20,6 +20,7 @@ use druid::{
 };
 
 use druid::widget::SizedBox;
+use tracing::log::warn;
 
 /// A widget that switches between two possible child views, for `Data` that
 /// is `Option<T>`.
@@ -160,7 +161,7 @@ impl<T> MaybeWidget<T> {
         match self {
             Self::Some(widget) => Some(f(widget)),
             Self::None(_) => {
-                log::warn!("`MaybeWidget::with_some` called on `None` value");
+                warn!("`MaybeWidget::with_some` called on `None` value");
                 None
             }
         }
@@ -174,7 +175,7 @@ impl<T> MaybeWidget<T> {
         match self {
             Self::None(widget) => Some(f(widget)),
             Self::Some(_) => {
-                log::warn!("`MaybeWidget::with_none` called on `Some` value");
+                warn!("`MaybeWidget::with_none` called on `Some` value");
                 None
             }
         }

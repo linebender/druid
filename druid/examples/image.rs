@@ -219,7 +219,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(state)
         .expect("Failed to launch application");
 }

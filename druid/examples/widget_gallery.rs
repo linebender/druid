@@ -61,7 +61,7 @@ pub fn main() {
         editable_text: "edit me!".into(),
     };
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }

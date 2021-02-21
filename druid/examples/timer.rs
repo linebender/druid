@@ -125,7 +125,7 @@ pub fn main() {
     .title(LocalizedString::new("timer-demo-window-title").with_placeholder("Look at it go!"));
 
     AppLauncher::with_window(window)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(0u32)
         .expect("launch failed");
 }

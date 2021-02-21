@@ -47,7 +47,7 @@ pub fn main() {
     );
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }

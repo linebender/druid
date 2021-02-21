@@ -48,7 +48,7 @@ pub fn main() {
     thread::spawn(move || generate_colors(event_sink));
 
     launcher
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(Color::BLACK)
         .expect("launch failed");
 }

@@ -28,7 +28,7 @@ pub fn main() {
     let data = "Type here.".to_owned();
     AppLauncher::with_window(main_window)
         .delegate(Delegate)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(data)
         .expect("launch failed");
 }

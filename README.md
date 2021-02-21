@@ -42,7 +42,7 @@ fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(ui_builder());
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .use_simple_logger()
         .launch(data)
 }
 

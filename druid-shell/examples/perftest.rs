@@ -136,7 +136,7 @@ impl WinHandler for PerfTest {
 }
 
 fn main() {
-    tracing_subscriber::fmt().init();
+    let _ = env_logger::builder().is_test(true).try_init();
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
     let perf_test = PerfTest {

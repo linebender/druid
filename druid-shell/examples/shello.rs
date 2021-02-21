@@ -122,7 +122,7 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    tracing_subscriber::fmt().init();
+    let _ = env_logger::builder().is_test(true).try_init();
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,
