@@ -24,7 +24,8 @@ use crate::{
 };
 
 // added padding between the edges of the widget and the text.
-const LABEL_X_PADDING: f64 = 2.0;
+// TODO: change back to 2.0 when we can change origin in TextLayout::event
+const LABEL_X_PADDING: f64 = 0.0;
 
 /// A label that displays static or dynamic text.
 ///
@@ -511,7 +512,10 @@ impl<T: Data> Widget<T> for Label<T> {
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+	data.event(ctx, event, &mut self.layout, env);
+    }
+
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
         if matches!(event, LifeCycle::WidgetAdded) {
             self.layout.set_text(data.to_owned());

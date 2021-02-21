@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use crate::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
-use crate::{Data, Env};
+use crate::{Data, Env, Event, EventCtx, TextLayout};
 
 /// A type that represents text that can be displayed.
 pub trait TextStorage: PietTextStorage + Data {
@@ -27,6 +27,9 @@ pub trait TextStorage: PietTextStorage + Data {
     fn add_attributes(&self, builder: PietTextLayoutBuilder, env: &Env) -> PietTextLayoutBuilder {
         builder
     }
+
+    #[allow(unused_variables)]
+    fn event(&self, ctx: &mut EventCtx, event: &Event, layout: &mut TextLayout<Self>, env: &Env) {}
 }
 
 /// A reference counted string slice.

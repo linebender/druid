@@ -19,16 +19,17 @@ use std::sync::Arc;
 
 use super::{Attribute, AttributeSpans, TextStorage};
 use crate::piet::{
-    util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayoutBuilder,
-    TextStorage as PietTextStorage,
+    util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayout as _,
+    TextLayoutBuilder, TextStorage as PietTextStorage,
 };
-use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue};
+use crate::{ArcStr, Data, Env, Event, EventCtx, FontDescriptor, KeyOrValue, TextLayout};
 
 /// Text with optional style spans.
-#[derive(Debug, Clone, Data)]
+#[derive(Clone, Data)]
 pub struct RichText {
     buffer: ArcStr,
     attrs: Arc<AttributeSpans>,
+    links: Arc<[(Range<usize>, Box<dyn Fn(&mut EventCtx, &Env)>)]>,
 }
 
 impl RichText {
@@ -42,6 +43,7 @@ impl RichText {
         RichText {
             buffer,
             attrs: Arc::new(attributes),
+            links: Arc::new([]),
         }
     }
 
@@ -89,6 +91,39 @@ impl TextStorage for RichText {
         }
         builder
     }
+
+    fn event(&self, ctx: &mut EventCtx, event: &Event, layout: &mut TextLayout<Self>, env: &Env) {
+        // avoid checking hit points if there are no links.
+        if self.links.is_empty() {
+            return;
+        }
+
+        if let Event::MouseUp(m) = event {
+            let pos = m.pos;
+            layout
+                .layout()
+                .as_ref()
+                .map(|l| l.hit_test_point(pos))
+                .filter(|h| h.is_inside)
+                .and_then(|h| self.links.iter().rfind(|(range, _)| range.contains(&h.idx)))
+                .map(|(_, func)| func(ctx, env));
+        } else if let Event::MouseMove(m) = event {
+            let pos = m.pos;
+            let hits = layout
+                .layout()
+                .as_ref()
+                .map(|l| l.hit_test_point(pos))
+                .map_or(false, |h| {
+                    h.is_inside && self.links.iter().any(|(range, _)| range.contains(&h.idx))
+                });
+
+            if hits {
+                ctx.set_cursor(&druid_shell::Cursor::Pointer);
+            } else {
+                ctx.clear_cursor();
+            }
+        }
+    }
 }
 
 /// A builder for creating [`RichText`] objects.
@@ -113,10 +148,11 @@ impl TextStorage for RichText {
 /// ```
 ///
 /// [`RichText`]: RichText
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct RichTextBuilder {
     buffer: String,
     attrs: AttributeSpans,
+    links: Vec<(Range<usize>, Box<dyn Fn(&mut EventCtx, &Env)>)>,
 }
 
 impl RichTextBuilder {
@@ -147,6 +183,7 @@ impl RichTextBuilder {
             .expect("a formatting trait implementation returned an error");
         self.add_attributes_for_range(start..self.buffer.len())
     }
+
     /// Get an [`AttributesAdder`] for the given range.
     ///
     /// This can be used to modify styles for a given range after it has been added.
@@ -160,9 +197,14 @@ impl RichTextBuilder {
 
     /// Build the `RichText`.
     pub fn build(self) -> RichText {
-        RichText::new_with_attributes(self.buffer.into(), self.attrs)
+        RichText {
+            buffer: self.buffer.into(),
+            attrs: self.attrs.into(),
+            links: self.links.into(),
+        }
     }
 }
+
 /// Adds Attributes to the text.
 ///
 /// See also: [`RichTextBuilder`](RichTextBuilder)
@@ -217,6 +259,14 @@ impl AttributesAdder<'_> {
     /// Add a `FontDescriptor` attribute.
     pub fn font_descriptor(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> &mut Self {
         self.add_attr(Attribute::font_descriptor(font));
+        self
+    }
+
+    /// Make this text clickable.
+    pub fn link(&mut self, f: impl Fn(&mut EventCtx, &Env) + 'static) -> &mut Self {
+        self.rich_text_builder
+            .links
+            .push((self.range.clone(), Box::new(f)));
         self
     }
 }
