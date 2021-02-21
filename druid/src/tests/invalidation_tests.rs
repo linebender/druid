@@ -16,7 +16,6 @@
 
 use float_cmp::approx_eq;
 
-
 use super::*;
 
 #[test]
