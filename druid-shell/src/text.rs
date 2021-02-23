@@ -228,7 +228,7 @@ pub trait InputHandler {
 
     /// Returns the contents of some range of the document.
     /// If `range.start` or `range.end` do not fall on a code point sequence boundary, this method may panic.
-    fn slice<'a>(&'a mut self, range: Range<usize>) -> Cow<'a, str>;
+    fn slice(&mut self, range: Range<usize>) -> Cow<str>;
 
     /// Converts the document into UTF-8, looks up the range specified by `utf8_range` (in UTF-8 code units), reencodes
     /// that substring into UTF-16, and then returns the number of UTF-16 code units in that substring.
