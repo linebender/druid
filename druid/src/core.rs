@@ -123,6 +123,9 @@ pub(crate) struct WidgetState {
     /// The widget is disabled because its parent is disabled
     pub(crate) parent_disabled: bool,
 
+    /// the state of a child changed
+    pub(crate) child_state_changed: bool,
+
     /// Any descendant has requested an animation frame.
     pub(crate) request_anim: bool,
 
@@ -612,7 +615,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
     }
 
-    fn update_disabled(&mut self, state: &mut ContextState, data: &T, env: &Env) {
+    fn update_disabled(&mut self, state: &mut ContextState, parent: &mut WidgetState, data: &T, env: &Env) {
         let was_disabled = self.state.is_disabled();
         self.state.set_disabled = self.state.change_disable;
 
@@ -631,6 +634,29 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             };
 
             self.inner.lifecycle(&mut child_ctx, &event, data, env);
+
+            //Register child change
+            println!("register change!");
+            parent.child_state_changed = true;
+
+            //We dont need to merge the state since this method is called only in methods which do this already
+        } else if self.state.child_state_changed {
+            self.state.has_focus = self.state.is_focused;
+            self.state.previous_focusing_child = None;
+            self.state.next_focusing_child = None;
+            self.state.first_focus = None;
+            self.state.last_focus = None;
+
+            let mut child_ctx = LifeCycleCtx {
+                state,
+                widget_state: &mut self.state,
+            };
+
+            self.inner.lifecycle(&mut child_ctx, &LifeCycle::Internal(InternalLifeCycle::WidgetChanged), data, env);
+
+            println!("handle change for {}", self.state.id.to_raw());
+            parent.child_state_changed = true;
+            self.state.child_state_changed = false;
 
             //We dont need to merge the state since this method is called only in methods which do this already
         }
@@ -867,7 +893,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
 
-                    self.update_disabled(ctx.state, data, env);
+                    self.update_disabled(ctx.state, ctx.widget_state, data, env);
                 }
             }
 
@@ -1146,19 +1172,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 ctx.widget_state.last_focus = Some(self.state.id);
             }
             LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged {..}) |
-                LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) =>
+                LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) |
+                LifeCycle::Internal(InternalLifeCycle::WidgetChanged) =>
             {
                 if self.state.is_enabled() && (self.state.can_auto_focus || self.state.children_can_auto_focus)
                 {
-                    if let LifeCycle::Internal(InternalLifeCycle::WidgetChanged) = event {
-                        ctx.widget_state.children_can_auto_focus = true;
-                        //Setting first and last
-                        ctx.widget_state.last_focus = Some(self.state.id);
-                        if ctx.widget_state.first_focus.is_none() {
-                            ctx.widget_state.first_focus = Some(self.state.id);
-                        }
-                    }
-
                     ctx.widget_state.children_can_auto_focus = true;
                     //Setting first and last
                     ctx.widget_state.last_focus = Some(self.state.id);
@@ -1253,7 +1271,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.old_data = Some(data.clone());
         self.env = Some(env.clone());
 
-        self.update_disabled(ctx.state, data, env);
+        self.update_disabled(ctx.state, ctx.widget_state, data, env);
 
         self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
@@ -1301,6 +1319,7 @@ impl WidgetState {
             change_disable: false,
             set_disabled: false,
             parent_disabled: false,
+            child_state_changed: false,
             request_anim: false,
             request_update: false,
             is_focused: false,
