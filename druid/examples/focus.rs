@@ -95,6 +95,7 @@ fn make_widget() -> impl Widget<AppData> {
         .with_child(FocusWrapper::new(row()))
         .with_default_spacer()
         .align_horizontal(UnitPoint::CENTER)
+        .debug_widget_id()
 }
 
 fn main() {
@@ -102,7 +103,7 @@ fn main() {
         .title("Focus Test");
 
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .use_env_tracing()
         .launch(AppData {
             text1: String::new(),
             text2: String::new(),

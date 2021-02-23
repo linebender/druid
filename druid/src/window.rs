@@ -162,6 +162,8 @@ impl<T: Data> Window<T> {
                     //Maybe we reached the end or beginning start from the other side!
                     self.lifecycle(queue, &event, data, env, false);
                 }
+            } else {
+                println!("got focus!");
             }
         }
 

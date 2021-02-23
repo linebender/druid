@@ -295,6 +295,8 @@ pub enum LifeCycle {
 pub enum InternalLifeCycle {
     /// Used to route the `WidgetAdded` event to the required widgets.
     RouteWidgetAdded,
+    ///
+    WidgetChanged,
     /// Used to route the `FocusChanged` event.
     TraverseFocus {
         /// the next auto focus widget will get focused
