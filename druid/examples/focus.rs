@@ -1,8 +1,9 @@
 use druid::{WindowDesc, AppLauncher, Widget, WidgetExt, Data, Lens, WidgetPod, EventCtx, LifeCycle, PaintCtx, LifeCycleCtx, BoxConstraints, LayoutCtx, Event, Env, UpdateCtx, RenderContext};
-use druid::widget::{Flex, TextBox};
+use druid::widget::{Flex, TextBox, Button, Label};
 use piet_common::{UnitPoint, Color};
 use piet_common::kurbo::{Size, Point};
 use druid_shell::{HotKey, KbKey, SysMods};
+use tracing_subscriber::layer::SubscriberExt;
 
 struct FocusWrapper<T, W: Widget<T>> {
     inner: WidgetPod<T, W>,
@@ -75,6 +76,7 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
 struct AppData {
     text1: String,
     text2: String,
+    number: u16,
 }
 
 fn row() -> impl Widget<AppData> {
@@ -85,6 +87,26 @@ fn row() -> impl Widget<AppData> {
 }
 
 fn make_widget() -> impl Widget<AppData> {
+    let counter = Flex::row()
+        .with_child(
+            Button::new("-")
+                .on_click(|_, data: &mut u16, _|*data -= 1)
+                .enable_if(|data: &u16, _|*data > 0u16)
+                .lens(AppData::number)
+        )
+        .with_default_spacer()
+        .with_child(
+            Label::dynamic(|data: &u16, _|data.to_string())
+                .lens(AppData::number)
+        )
+        .with_default_spacer()
+        .with_child(
+            Button::new("+")
+                .on_click(|_, data: &mut u16, _|*data += 1)
+                .enable_if(|data: &u16, _|*data < 20u16)
+                .lens(AppData::number)
+        );
+
     Flex::column()
         .with_child(row())
         .with_default_spacer()
@@ -93,7 +115,9 @@ fn make_widget() -> impl Widget<AppData> {
         .with_child(row())
         .with_default_spacer()
         .with_child(FocusWrapper::new(row()))
-        .with_default_spacer()
+        .with_spacer(30.0)
+        .with_child(counter)
+
         .align_horizontal(UnitPoint::CENTER)
         .debug_widget_id()
 }
@@ -107,6 +131,7 @@ fn main() {
         .launch(AppData {
             text1: String::new(),
             text2: String::new(),
+            number: 1,
         })
         .expect("launch failed");
 }

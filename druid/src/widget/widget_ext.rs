@@ -19,7 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::widget::Scroll;
+use crate::widget::{Scroll, EnableIf};
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
@@ -269,6 +269,14 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Scroll`]: widget/struct.Scroll.html
     fn scroll(self) -> Scroll<T, Self> {
         Scroll::new(self)
+    }
+
+    /// Wraps this widget in a [`EnableIf`] widget, which disables the widget
+    /// if the given closure returns `false`.
+    ///
+    /// [`EnableIf`]: widget/struct.EnableIf.html
+    fn enable_if(self, enable: impl Fn(&T, &Env) -> bool + 'static) -> EnableIf<T, Self> {
+        EnableIf::new(self, enable)
     }
 }
 
