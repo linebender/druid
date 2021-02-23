@@ -118,11 +118,9 @@ pub(crate) struct ZOrderPaintOp {
 
 /// A context passed to paint methods of widgets.
 ///
-/// Widgets paint their appearance by calling methods on the
-/// `render_ctx`, which PaintCtx derefs to for convenience.
-/// This struct is expected to grow, for example to include the
-/// "damage region" indicating that only a subset of the entire
-/// widget hierarchy needs repainting.
+/// In addition to the API below, [`PaintCtx`] derefs to an implemention of
+/// the [`RenderContext`] trait, which defines the basic available drawing
+/// commands.
 pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a WidgetState,
