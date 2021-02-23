@@ -37,7 +37,7 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
             ctx.request_paint();
         }
 
-        if let LifeCycle::DisabledChanged(disabled) = event {
+        if let LifeCycle::EnabledChanged(disabled) = event {
             println!("disabled: {} for {:?}", disabled, ctx.widget_id());
         }
 
@@ -46,9 +46,9 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppData, data: &AppData, env: &Env) {
         if data.text1.len() == 0 {
-            ctx.set_disabled(true);
+            ctx.set_enabled(false);
         } else {
-            ctx.set_disabled(false);
+            ctx.set_enabled(true);
         }
 
         self.inner.update(ctx, data, env)

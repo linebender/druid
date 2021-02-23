@@ -115,13 +115,13 @@ pub(crate) struct WidgetState {
 
     /// The new state of disable
     /// is_disabled() changes after writing this value in set_disabled DisabledChanged is fired
-    pub(crate) change_disable: bool,
+    pub(crate) change_enabled: bool,
 
     /// The widget itself set its state to disabled
-    pub(crate) set_disabled: bool,
+    pub(crate) widget_enabled: bool,
 
     /// The widget is disabled because its parent is disabled
-    pub(crate) parent_disabled: bool,
+    pub(crate) parent_enabled: bool,
 
     /// the state of a child changed
     pub(crate) child_state_changed: bool,
@@ -239,7 +239,12 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
     /// Returns `true` if this widget or any of its children are focused.
     pub fn has_focus(&self) -> bool {
-        self.state.has_focus()
+        self.state.has_focus
+    }
+
+    /// returns `true` if this widget is enabled
+    pub fn is_enabled(&self) -> bool {
+        self.state.is_enabled()
     }
 
     /// Query the "hot" state of the widget.
@@ -616,13 +621,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     fn update_disabled(&mut self, state: &mut ContextState, parent: &mut WidgetState, data: &T, env: &Env) {
-        let was_disabled = self.state.is_disabled();
-        self.state.set_disabled = self.state.change_disable;
+        let was_enabled = self.state.is_enabled();
+        self.state.widget_enabled = self.state.change_enabled;
 
-        if was_disabled != self.state.is_disabled() {
-            let event = LifeCycle::DisabledChanged(self.state.is_disabled());
+        if was_enabled != self.state.is_enabled() {
+            let event = LifeCycle::EnabledChanged(self.state.is_enabled());
 
-            if self.has_focus() {
+            if self.has_focus() && !self.state.is_enabled() {
                 self.state.request_focus = Some(FocusChange::Resign);
             }
 
@@ -852,9 +857,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 //TODO: should a disabled widget receive animation Frames
                 r
             }
-            Event::KeyDown(_) => self.state.has_focus(),
-            Event::KeyUp(_) => self.state.has_focus(),
-            Event::Paste(_) => self.state.has_focus(),
+            Event::KeyDown(_) => self.state.has_focus,
+            Event::KeyUp(_) => self.state.has_focus,
+            Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
             Event::Command(_) => true,//TODO: should a disabled widget receive commands
@@ -1115,15 +1120,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // Descendants don't inherit focus, so don't recurse.
                 false
             }
-            LifeCycle::DisabledChanged(disabled) => {
-                let was_disabled = self.state.is_disabled();
-                self.state.parent_disabled = *disabled;
+            LifeCycle::EnabledChanged(enabled) => {
+                let was_enabled = self.state.is_enabled();
+                self.state.parent_enabled = *enabled;
 
                 //We dont need to update focus or hot or active here
                 // disabled -> enabled
                 // enabled -> disabled
 
-                if was_disabled != self.state.is_disabled() {
+                if was_enabled != self.state.is_enabled() {
                     true
                 } else {
                     false
@@ -1307,9 +1312,9 @@ impl WidgetState {
             needs_layout: false,
             is_active: false,
             has_active: false,
-            change_disable: false,
-            set_disabled: false,
-            parent_disabled: false,
+            change_enabled: true,
+            widget_enabled: true,
+            parent_enabled: true,
             child_state_changed: false,
             request_anim: false,
             request_update: false,
@@ -1336,15 +1341,7 @@ impl WidgetState {
     }
 
     pub(crate) fn is_enabled(&self) -> bool {
-        !self.is_disabled()
-    }
-
-    pub(crate) fn is_disabled(&self) -> bool {
-        self.set_disabled | self.parent_disabled
-    }
-
-    pub(crate) fn has_focus(&self) -> bool {
-        self.has_focus
+        self.widget_enabled && self.parent_enabled
     }
 
     /// Update to incorporate state changes from a child.

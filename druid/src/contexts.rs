@@ -269,15 +269,15 @@ impl_context_method!(
         ///
         /// [`is_focused`]: #method.is_focused
         pub fn has_focus(&self) -> bool {
-            self.widget_state.has_focus()
+            self.widget_state.has_focus
         }
 
         /// The (tree) disabled status of a widget.
         ///
         /// Returns `true` if either this widget or any of ist descendants is set disabled
         ///
-        pub fn is_disabled(&self) -> bool {
-        self.widget_state.is_disabled()
+        pub fn is_enabled(&self) -> bool {
+        self.widget_state.is_enabled()
         }
     }
 );
@@ -323,8 +323,8 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     }
 
     ///
-    pub fn set_disabled(&mut self, disabled: bool) {
-        self.widget_state.change_disable = disabled;
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.widget_state.change_enabled = enabled;
     }
 });
 
