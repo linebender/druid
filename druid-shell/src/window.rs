@@ -303,20 +303,20 @@ impl WindowHandle {
         self.0.text()
     }
 
-    /// Indicates to the platform that there's a new editable text input in the window.
+    /// Register a new text input receiver for this window.
     ///
-    /// This method should be called any time a new editable text field is created inside a window.
-    /// Any text field with a `TextFieldToken` that has not yet been destroyed with `remove_text_field`
-    /// *must* be ready to accept input from the platform via `WinHandler::text_input` at any time, even if
-    /// it is not currently focused.
+    /// This method should be called any time a new editable text field is
+    /// created inside a window.  Any text field with a `TextFieldToken` that
+    /// has not yet been destroyed with `remove_text_field` *must* be ready to
+    /// accept input from the platform via `WinHandler::text_input` at any time,
+    /// even if it is not currently focused.
     ///
     /// Returns the `TextFieldToken` associated with this new text input.
-    // TODO(lord): would `add_text_field` be more clear?
     pub fn add_text_field(&self) -> TextFieldToken {
         self.0.add_text_field()
     }
 
-    /// Indicates to the platform that a text input field has been destroyed.
+    /// Unregister a previously registered text input receiver.
     ///
     /// If `token` is the text field currently focused, the platform automatically
     /// sets the focused field to `None`.
@@ -324,7 +324,7 @@ impl WindowHandle {
         self.0.remove_text_field(token)
     }
 
-    /// Indicates to the platform that the focused text input has changed.
+    /// Notify the platform that the focused text input receiver has changed.
     ///
     /// This must be called any time focus changes to a different text input, or
     /// when focus switches away from a text input.
@@ -332,9 +332,12 @@ impl WindowHandle {
         self.0.set_focused_text_field(active_field)
     }
 
-    /// Indicates some aspect of the text input has updated; the selection, contents, etc.
-    /// This method should *never* be called in response to edits from a `InputHandler`;
-    /// only in response to changes from the application: scrolling, remote edits, etc.
+    /// Notify the platform that some text input state has changed, such as the
+    /// selection, contents, etc.
+    ///
+    /// This method should *never* be called in response to edits from a
+    /// `InputHandler`; only in response to changes from the application:
+    /// scrolling, remote edits, etc.
     pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
         self.0.update_text_field(token, update)
     }
@@ -576,9 +579,11 @@ pub trait WinHandler {
 
     /// Grabs a lock for the text document specified by `token`.
     ///
-    /// If `mutable` is true, the lock should be a write lock, and allow calling mutating methods on InputHandler.
-    /// This method is called from the top level of the event loop and expects to acquire a lock successfully. For
-    /// more information, see [the text input documentation](crate::text).
+    /// If `mutable` is true, the lock should be a write lock, and allow calling
+    /// mutating methods on InputHandler.  This method is called from the top
+    /// level of the event loop and expects to acquire a lock successfully.
+    ///
+    /// For more information, see [the text input documentation](crate::text).
     #[allow(unused_variables)]
     fn text_input(&mut self, token: TextFieldToken, mutable: bool) -> Box<dyn InputHandler> {
         panic!("text_input was called on a WinHandler that did not expect text input.")
