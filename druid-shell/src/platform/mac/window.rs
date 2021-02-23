@@ -497,20 +497,22 @@ lazy_static! {
     };
 }
 
-pub(super) fn get_edit_lock_from_window(
+/// Acquires a lock to an `InputHandler`, passes it to a closure, and releases the lock.
+pub(super) fn with_edit_lock_from_window<R>(
     this: &mut Object,
     mutable: bool,
-) -> Option<Box<dyn InputHandler>> {
+    f: impl FnOnce(Box<dyn InputHandler>) -> R,
+) -> Option<R> {
     let view_state = unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         &mut (*view_state)
     };
-    Some(
-        view_state
-            .handler
-            .text_input(view_state.active_text_input?, mutable),
-    )
+    let input_token = view_state.active_text_input?;
+    let handler = view_state.handler.acquire_input_lock(input_token, mutable);
+    let r = f(handler);
+    view_state.handler.release_input_lock(input_token);
+    Some(r)
 }
 
 fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
@@ -1139,8 +1141,9 @@ impl WindowHandle {
             Event::Reset | Event::SelectionChanged => unsafe {
                 let input_context: id = msg_send![*self.nsview.load(), inputContext];
                 let _: () = msg_send![input_context, discardMarkedText];
-                let mut edit_lock = state.handler.text_input(token, true);
+                let mut edit_lock = state.handler.acquire_input_lock(token, true);
                 edit_lock.set_composition_range(None);
+                state.handler.release_input_lock(token);
             },
         }
     }

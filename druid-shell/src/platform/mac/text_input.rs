@@ -25,7 +25,7 @@ use std::ffi::c_void;
 use std::ops::Range;
 use std::os::raw::c_uchar;
 
-use super::window::get_edit_lock_from_window;
+use super::window::with_edit_lock_from_window;
 use crate::kurbo::Point;
 use crate::text::{
     Action, Affinity, Direction, InputHandler, Movement, Selection, VerticalMovement,
@@ -66,29 +66,29 @@ unsafe impl objc::Encode for NSRange {
 }
 
 pub extern "C" fn has_marked_text(this: &mut Object, _: Sel) -> BOOL {
-    get_edit_lock_from_window(this, false)
-        .map(|mut edit_lock| edit_lock.composition_range().is_some())
-        .unwrap_or(false)
-        .into()
+    with_edit_lock_from_window(this, false, |edit_lock| {
+        edit_lock.composition_range().is_some()
+    })
+    .unwrap_or(false)
+    .into()
 }
 
 pub extern "C" fn marked_range(this: &mut Object, _: Sel) -> NSRange {
-    get_edit_lock_from_window(this, false)
-        .and_then(|mut edit_lock| {
-            edit_lock
-                .composition_range()
-                .map(|range| encode_nsrange(&mut edit_lock, range))
-        })
-        .unwrap_or(NSRange::NONE)
+    with_edit_lock_from_window(this, false, |mut edit_lock| {
+        edit_lock
+            .composition_range()
+            .map(|range| encode_nsrange(&mut edit_lock, range))
+            .unwrap_or(NSRange::NONE)
+    })
+    .unwrap_or(NSRange::NONE)
 }
 
 pub extern "C" fn selected_range(this: &mut Object, _: Sel) -> NSRange {
-    let mut edit_lock = match get_edit_lock_from_window(this, false) {
-        Some(v) => v,
-        None => return NSRange::NONE,
-    };
-    let range = edit_lock.selection().to_range();
-    encode_nsrange(&mut edit_lock, range)
+    with_edit_lock_from_window(this, false, |mut edit_lock| {
+        let range = edit_lock.selection().to_range();
+        encode_nsrange(&mut edit_lock, range)
+    })
+    .unwrap_or(NSRange::NONE)
 }
 
 pub extern "C" fn set_marked_text(
@@ -98,72 +98,68 @@ pub extern "C" fn set_marked_text(
     selected_range: NSRange,
     replacement_range: NSRange,
 ) {
-    let mut edit_lock = match get_edit_lock_from_window(this, false) {
-        Some(v) => v,
-        None => return,
-    };
-    let mut composition_range = edit_lock.composition_range().unwrap_or_else(|| {
-        // no existing composition range? default to replacement range, interpreted in absolute coordinates
-        // undocumented by apple, see
-        // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1144-L1146
-        decode_nsrange(&mut edit_lock, &replacement_range, 0).unwrap_or_else(|| {
-            // no replacement range either? apparently we default to the selection in this case
-            edit_lock.selection().to_range()
-        })
-    });
-
-    let replace_range_offset = edit_lock
-        .composition_range()
-        .map(|range| range.start)
-        .unwrap_or(0);
-
-    let replace_range = decode_nsrange(&mut edit_lock, &replacement_range, replace_range_offset)
-        .unwrap_or_else(|| {
-            // default replacement range is already-exsiting composition range
+    with_edit_lock_from_window(this, false, |mut edit_lock| {
+        let mut composition_range = edit_lock.composition_range().unwrap_or_else(|| {
+            // no existing composition range? default to replacement range, interpreted in absolute coordinates
             // undocumented by apple, see
-            // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1124-L1125
-            composition_range.clone()
+            // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1144-L1146
+            decode_nsrange(&*edit_lock, &replacement_range, 0).unwrap_or_else(|| {
+                // no replacement range either? apparently we default to the selection in this case
+                edit_lock.selection().to_range()
+            })
         });
 
-    let text_string = parse_attributed_string(&text);
-    edit_lock.replace_range(replace_range.clone(), text_string);
+        let replace_range_offset = edit_lock
+            .composition_range()
+            .map(|range| range.start)
+            .unwrap_or(0);
 
-    // Update the composition range
-    composition_range.end -= replace_range.len();
-    composition_range.end += text_string.len();
-    if composition_range.is_empty() {
-        edit_lock.set_composition_range(None);
-    } else {
-        edit_lock.set_composition_range(Some(composition_range));
-    };
+        let replace_range = decode_nsrange(&*edit_lock, &replacement_range, replace_range_offset)
+            .unwrap_or_else(|| {
+                // default replacement range is already-exsiting composition range
+                // undocumented by apple, see
+                // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1124-L1125
+                composition_range.clone()
+            });
 
-    // Update the selection
-    if let Some(selection_range) =
-        decode_nsrange(&mut edit_lock, &selected_range, replace_range.start)
-    {
-        // preserve ordering of anchor and active
-        let existing_selection = edit_lock.selection();
-        let new_selection = if existing_selection.anchor < existing_selection.active {
-            Selection {
-                anchor: selection_range.start,
-                active: selection_range.end,
-            }
+        let text_string = parse_attributed_string(&text);
+        edit_lock.replace_range(replace_range.clone(), text_string);
+
+        // Update the composition range
+        composition_range.end -= replace_range.len();
+        composition_range.end += text_string.len();
+        if composition_range.is_empty() {
+            edit_lock.set_composition_range(None);
         } else {
-            Selection {
-                active: selection_range.start,
-                anchor: selection_range.end,
-            }
+            edit_lock.set_composition_range(Some(composition_range));
         };
-        edit_lock.set_selection(new_selection);
-    }
+
+        // Update the selection
+        if let Some(selection_range) =
+            decode_nsrange(&*edit_lock, &selected_range, replace_range.start)
+        {
+            // preserve ordering of anchor and active
+            let existing_selection = edit_lock.selection();
+            let new_selection = if existing_selection.anchor < existing_selection.active {
+                Selection {
+                    anchor: selection_range.start,
+                    active: selection_range.end,
+                }
+            } else {
+                Selection {
+                    active: selection_range.start,
+                    anchor: selection_range.end,
+                }
+            };
+            edit_lock.set_selection(new_selection);
+        }
+    });
 }
 
 pub extern "C" fn unmark_text(this: &mut Object, _: Sel) {
-    let mut edit_lock = match get_edit_lock_from_window(this, false) {
-        Some(v) => v,
-        None => return,
-    };
-    edit_lock.set_composition_range(None);
+    with_edit_lock_from_window(this, false, |mut edit_lock| {
+        edit_lock.set_composition_range(None)
+    });
 }
 
 pub extern "C" fn valid_attributes_for_marked_text(_this: &mut Object, _: Sel) -> id {
@@ -177,50 +173,47 @@ pub extern "C" fn attributed_substring_for_proposed_range(
     proposed_range: NSRange,
     actual_range: *mut c_void,
 ) -> id {
-    let mut edit_lock = match get_edit_lock_from_window(this, false) {
-        Some(v) => v,
-        None => return nil,
-    };
-    let range = match decode_nsrange(&mut edit_lock, &proposed_range, 0) {
-        Some(v) => v,
-        None => return nil,
-    };
-    if !actual_range.is_null() {
-        let ptr = actual_range as *mut NSRange;
-        let range_utf16 = encode_nsrange(&mut edit_lock, range.clone());
-        unsafe {
-            *ptr = range_utf16;
+    with_edit_lock_from_window(this, false, |mut edit_lock| {
+        let range = match decode_nsrange(&*edit_lock, &proposed_range, 0) {
+            Some(v) => v,
+            None => return nil,
+        };
+        if !actual_range.is_null() {
+            let ptr = actual_range as *mut NSRange;
+            let range_utf16 = encode_nsrange(&mut edit_lock, range.clone());
+            unsafe {
+                *ptr = range_utf16;
+            }
         }
-    }
-    let text = edit_lock.slice(range);
-    unsafe {
-        let ns_string = NSString::alloc(nil).init_str(&text);
-        let attr_string: id = msg_send![class!(NSAttributedString), alloc];
-        msg_send![attr_string, initWithString: ns_string]
-    }
+        let text = edit_lock.slice(range);
+        unsafe {
+            let ns_string = NSString::alloc(nil).init_str(&text);
+            let attr_string: id = msg_send![class!(NSAttributedString), alloc];
+            msg_send![attr_string, initWithString: ns_string]
+        }
+    })
+    .unwrap_or(nil)
 }
 
 pub extern "C" fn insert_text(this: &mut Object, _: Sel, text: id, replacement_range: NSRange) {
-    let mut edit_lock = match get_edit_lock_from_window(this, true) {
-        Some(v) => v,
-        None => return,
-    };
-    let text_string = parse_attributed_string(&text);
+    with_edit_lock_from_window(this, true, |mut edit_lock| {
+        let text_string = parse_attributed_string(&text);
 
-    // yvt notes:
-    // [The null range case] is undocumented, but it seems that it means
-    // the whole marked text or selected text should be finalized
-    // and replaced with the given string.
-    // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1041-L1043
-    let converted_range = decode_nsrange(&mut edit_lock, &replacement_range, 0)
-        .or_else(|| edit_lock.composition_range())
-        .unwrap_or_else(|| edit_lock.selection().to_range());
+        // yvt notes:
+        // [The null range case] is undocumented, but it seems that it means
+        // the whole marked text or selected text should be finalized
+        // and replaced with the given string.
+        // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1041-L1043
+        let converted_range = decode_nsrange(&*edit_lock, &replacement_range, 0)
+            .or_else(|| edit_lock.composition_range())
+            .unwrap_or_else(|| edit_lock.selection().to_range());
 
-    edit_lock.replace_range(converted_range.clone(), text_string);
-    edit_lock.set_composition_range(None);
-    // move the caret next to the inserted text
-    let caret_index = converted_range.start + text_string.len();
-    edit_lock.set_selection(Selection::new_caret(caret_index));
+        edit_lock.replace_range(converted_range.clone(), text_string);
+        edit_lock.set_composition_range(None);
+        // move the caret next to the inserted text
+        let caret_index = converted_range.start + text_string.len();
+        edit_lock.set_selection(Selection::new_caret(caret_index));
+    });
 }
 
 pub extern "C" fn character_index_for_point(
@@ -228,12 +221,11 @@ pub extern "C" fn character_index_for_point(
     _: Sel,
     point: NSPoint,
 ) -> NSUInteger {
-    let edit_lock = match get_edit_lock_from_window(this, true) {
-        Some(v) => v,
-        None => return 0,
-    };
-    let hit_test = edit_lock.hit_test_point(Point::new(point.x, point.y));
-    hit_test.idx as NSUInteger
+    with_edit_lock_from_window(this, true, |edit_lock| {
+        let hit_test = edit_lock.hit_test_point(Point::new(point.x, point.y));
+        hit_test.idx as NSUInteger
+    })
+    .unwrap_or(0)
 }
 
 pub extern "C" fn first_rect_for_character_range(
@@ -242,49 +234,49 @@ pub extern "C" fn first_rect_for_character_range(
     character_range: NSRange,
     actual_range: *mut c_void,
 ) -> NSRect {
-    let mut edit_lock = match get_edit_lock_from_window(this, true) {
-        Some(v) => v,
-        None => return NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(0.0, 0.0)),
-    };
-    let mut range = decode_nsrange(&mut edit_lock, &character_range, 0).unwrap_or(0..0);
-    {
-        let line_range = edit_lock.line_range(range.start, Affinity::Downstream);
-        range.end = usize::min(range.end, line_range.end);
-    }
-    let rect = match edit_lock.slice_bounding_box(range.clone()) {
-        Some(v) => v,
-        None => return NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(0.0, 0.0)),
-    };
-    if !actual_range.is_null() {
-        let ptr = actual_range as *mut NSRange;
-        let range_utf16 = encode_nsrange(&mut edit_lock, range);
-        unsafe {
-            *ptr = range_utf16;
+    let rect = with_edit_lock_from_window(this, true, |mut edit_lock| {
+        let mut range = decode_nsrange(&*edit_lock, &character_range, 0).unwrap_or(0..0);
+        {
+            let line_range = edit_lock.line_range(range.start, Affinity::Downstream);
+            range.end = usize::min(range.end, line_range.end);
         }
-    }
-    let view_space_rect = NSRect::new(
-        NSPoint::new(rect.x0, rect.y0),
-        NSSize::new(rect.width(), rect.height()),
-    );
+        let rect = match edit_lock.slice_bounding_box(range.clone()) {
+            Some(v) => v,
+            None => return NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(0.0, 0.0)),
+        };
+        if !actual_range.is_null() {
+            let ptr = actual_range as *mut NSRange;
+            let range_utf16 = encode_nsrange(&mut edit_lock, range);
+            unsafe {
+                *ptr = range_utf16;
+            }
+        }
+        NSRect::new(
+            NSPoint::new(rect.x0, rect.y0),
+            NSSize::new(rect.width(), rect.height()),
+        )
+    })
+    .unwrap_or_else(|| NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.)));
+
     unsafe {
-        let window_space_rect: NSRect =
-            msg_send![this as *const _, convertRect: view_space_rect toView: nil];
+        let window_space_rect: NSRect = msg_send![this as *const _, convertRect: rect toView: nil];
         let window: id = msg_send![this as *const _, window];
         window.convertRectToScreen_(window_space_rect)
     }
 }
 
 pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
-    let mut edit_lock = match get_edit_lock_from_window(this, true) {
-        Some(v) => v,
-        None => {
-            // we're not a text field, so forward commands to our parent
-            if let Some(superclass) = this.class().superclass() {
-                unsafe { msg_send![superclass, doCommandBySelector: cmd] }
-            }
-            return;
+    if with_edit_lock_from_window(this, true, |lock| do_command_by_selector_impl(lock, cmd))
+        .is_none()
+    {
+        // this is not a text field, so forward command to parent
+        if let Some(superclass) = this.class().superclass() {
+            unsafe { msg_send![superclass, doCommandBySelector: cmd] }
         }
-    };
+    }
+}
+
+fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
     match cmd.name() {
         // see https://developer.apple.com/documentation/appkit/nsstandardkeybindingresponding?language=objc
         // and https://support.apple.com/en-us/HT201236
@@ -623,7 +615,7 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
 /// is absolute instead of relative.
 /// Returns `None` if `range` was invalid; macOS often uses this to indicate some special null value.
 fn decode_nsrange(
-    edit_lock: &Box<dyn InputHandler>,
+    edit_lock: &dyn InputHandler,
     range: &NSRange,
     start_offset: usize,
 ) -> Option<Range<usize>> {

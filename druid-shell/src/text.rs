@@ -410,7 +410,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         Some(v) => v,
         None => return false,
     };
-    let mut input_handler = handler.text_input(token, true);
+    let mut input_handler = handler.acquire_input_lock(token, true);
     match event.key {
         KbKey::Character(c) if !event.mods.ctrl() && !event.mods.meta() && !event.mods.alt() => {
             let selection = input_handler.selection();
@@ -450,8 +450,12 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
                 input_handler.handle_action(Action::Move(movement));
             }
         }
-        _ => return false,
+        _ => {
+            handler.release_input_lock(token);
+            return false;
+        }
     };
+    handler.release_input_lock(token);
     true
 }
 

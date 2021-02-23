@@ -147,12 +147,21 @@ impl WinHandler for AppState {
         false
     }
 
-    fn text_input(&mut self, _token: TextFieldToken, _mutable: bool) -> Box<dyn InputHandler> {
+    fn acquire_input_lock(
+        &mut self,
+        _token: TextFieldToken,
+        _mutable: bool,
+    ) -> Box<dyn InputHandler> {
         Box::new(AppInputHandler {
             state: self.document.clone(),
             window_size: self.size,
             window_handle: self.handle.clone(),
         })
+    }
+
+    fn release_input_lock(&mut self, _token: TextFieldToken) {
+        // no action required; this example is simple enough that this
+        // state is not actually shared.
     }
 
     fn size(&mut self, size: Size) {

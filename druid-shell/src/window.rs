@@ -577,16 +577,33 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn key_up(&mut self, event: KeyEvent) {}
 
-    /// Grabs a lock for the text document specified by `token`.
+    /// Take a lock for the text document specified by `token`.
+    ///
+    /// All calls to this method must be balanced with a call to
+    /// [`release_input_lock`].
     ///
     /// If `mutable` is true, the lock should be a write lock, and allow calling
     /// mutating methods on InputHandler.  This method is called from the top
     /// level of the event loop and expects to acquire a lock successfully.
     ///
     /// For more information, see [the text input documentation](crate::text).
+    ///
+    /// [`release_input_lock`]: WinHandler::release_input_lock
     #[allow(unused_variables)]
-    fn text_input(&mut self, token: TextFieldToken, mutable: bool) -> Box<dyn InputHandler> {
-        panic!("text_input was called on a WinHandler that did not expect text input.")
+    fn acquire_input_lock(
+        &mut self,
+        token: TextFieldToken,
+        mutable: bool,
+    ) -> Box<dyn InputHandler> {
+        panic!("acquire_input_lock was called on a WinHandler that did not expect text input.")
+    }
+
+    /// Release a lock previously acquired by [`acquire_input_lock`].
+    ///
+    /// [`acquire_input_lock`]: WinHandler::acquire_input_lock
+    #[allow(unused_variables)]
+    fn release_input_lock(&mut self, token: TextFieldToken) {
+        panic!("release_input_lock was called on a WinHandler that did not expect text input.")
     }
 
     /// Called on a mouse wheel event.
