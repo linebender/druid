@@ -211,7 +211,7 @@ impl InputHandler for AppInputHandler {
         doc.composition = None;
         self.window_handle.request_anim_frame();
     }
-    fn slice<'a>(&'a mut self, range: Range<usize>) -> Cow<'a, str> {
+    fn slice(&mut self, range: Range<usize>) -> Cow<str> {
         self.state.borrow().text[range].to_string().into()
     }
     fn is_char_boundary(&mut self, i: usize) -> bool {
