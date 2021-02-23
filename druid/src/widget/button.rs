@@ -169,7 +169,10 @@ impl<T: Data> Widget<T> for Button<T> {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BACKGROUND_LIGHT), env.get(theme::BACKGROUND_DARK))
+                (
+                    env.get(theme::BACKGROUND_LIGHT),
+                    env.get(theme::BACKGROUND_DARK),
+                ),
             )
         } else if is_active {
             LinearGradient::new(

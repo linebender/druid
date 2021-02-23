@@ -1,10 +1,13 @@
-use crate::{WidgetPod, Env, Widget, Data, LifeCycle, EventCtx, PaintCtx, BoxConstraints, LifeCycleCtx, LayoutCtx, Event, UpdateCtx};
-use druid::{Size, Point};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    UpdateCtx, Widget, WidgetPod,
+};
+use druid::{Point, Size};
 
 /// A widget which disables the inner widget, if the closure returns `false`
 pub struct EnableIf<T, W> {
     inner: WidgetPod<T, W>,
-    enable_if: Box<dyn Fn(&T, &Env) -> bool>
+    enable_if: Box<dyn Fn(&T, &Env) -> bool>,
 }
 
 impl<T, W: Widget<T>> EnableIf<T, W> {

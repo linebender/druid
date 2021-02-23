@@ -1,8 +1,11 @@
-use druid::{WindowDesc, AppLauncher, Widget, WidgetExt, Data, Lens, WidgetPod, EventCtx, LifeCycle, PaintCtx, LifeCycleCtx, BoxConstraints, LayoutCtx, Event, Env, UpdateCtx, RenderContext};
-use druid::widget::{Flex, TextBox, Button, Label};
-use piet_common::{UnitPoint, Color};
-use piet_common::kurbo::{Size, Point};
+use druid::widget::{Button, Flex, Label, TextBox};
+use druid::{
+    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
+    LifeCycleCtx, PaintCtx, RenderContext, UpdateCtx, Widget, WidgetExt, WidgetPod, WindowDesc,
+};
 use druid_shell::{HotKey, KbKey, SysMods};
+use piet_common::kurbo::{Point, Size};
+use piet_common::{Color, UnitPoint};
 
 struct FocusWrapper<T, W: Widget<T>> {
     inner: WidgetPod<T, W>,
@@ -10,7 +13,9 @@ struct FocusWrapper<T, W: Widget<T>> {
 
 impl<T: Data, W: Widget<T>> FocusWrapper<T, W> {
     pub fn new(widget: W) -> Self {
-        FocusWrapper {inner: WidgetPod::new(widget)}
+        FocusWrapper {
+            inner: WidgetPod::new(widget),
+        }
     }
 }
 
@@ -25,7 +30,6 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
             }
         }
         self.inner.event(ctx, event, data, env)
-
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppData, env: &Env) {
@@ -54,7 +58,13 @@ impl<W: Widget<AppData>> Widget<AppData> for FocusWrapper<AppData, W> {
         self.inner.update(ctx, data, env)
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppData, env: &Env) -> Size {
+    fn layout(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &AppData,
+        env: &Env,
+    ) -> Size {
         let size = self.inner.layout(ctx, &bc.shrink((8.0, 8.0)), data, env);
         self.inner.set_origin(ctx, data, env, Point::new(4.0, 4.0));
         size + Size::new(8.0, 8.0)
@@ -89,21 +99,18 @@ fn make_widget() -> impl Widget<AppData> {
     let counter = Flex::row()
         .with_child(
             Button::new("-")
-                .on_click(|_, data: &mut u16, _|*data -= 1)
-                .enable_if(|data: &u16, _|*data > 0u16)
-                .lens(AppData::number)
+                .on_click(|_, data: &mut u16, _| *data -= 1)
+                .enable_if(|data: &u16, _| *data > 0u16)
+                .lens(AppData::number),
         )
         .with_default_spacer()
-        .with_child(
-            Label::dynamic(|data: &u16, _|data.to_string())
-                .lens(AppData::number)
-        )
+        .with_child(Label::dynamic(|data: &u16, _| data.to_string()).lens(AppData::number))
         .with_default_spacer()
         .with_child(
             Button::new("+")
-                .on_click(|_, data: &mut u16, _|*data += 1)
-                .enable_if(|data: &u16, _|*data < 20u16)
-                .lens(AppData::number)
+                .on_click(|_, data: &mut u16, _| *data += 1)
+                .enable_if(|data: &u16, _| *data < 20u16)
+                .lens(AppData::number),
         );
 
     Flex::column()
@@ -116,13 +123,11 @@ fn make_widget() -> impl Widget<AppData> {
         .with_child(FocusWrapper::new(row()))
         .with_spacer(30.0)
         .with_child(counter)
-
         .align_horizontal(UnitPoint::CENTER)
 }
 
 fn main() {
-    let window = WindowDesc::new(make_widget())
-        .title("Focus Test");
+    let window = WindowDesc::new(make_widget()).title("Focus Test");
 
     AppLauncher::with_window(window)
         .use_env_tracing()

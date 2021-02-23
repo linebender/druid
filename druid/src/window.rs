@@ -157,7 +157,7 @@ impl<T: Data> Window<T> {
             self.lifecycle(queue, &event, data, env, false);
 
             if !self.root.has_focus() {
-                if let LifeCycle::Internal(InternalLifeCycle::TraverseFocus {..}) = &event {
+                if let LifeCycle::Internal(InternalLifeCycle::TraverseFocus { .. }) = &event {
                     //Maybe we reached the end or beginning start from the other side!
                     self.lifecycle(queue, &event, data, env, false);
                 }
@@ -222,8 +222,7 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let is_handled = {
-            let mut state =
-                ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
+            let mut state = ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
             let mut notifications = VecDeque::new();
             let mut ctx = EventCtx {
                 state: &mut state,
@@ -281,8 +280,7 @@ impl<T: Data> Window<T> {
         process_commands: bool,
     ) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -295,8 +293,7 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
@@ -376,8 +373,7 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -424,8 +420,7 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         let widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
+        let mut state = ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id);
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
@@ -469,15 +464,15 @@ impl<T: Data> Window<T> {
 
     fn event_for_focus_request(&self, focus: FocusChange) -> InternalLifeCycle {
         match focus {
-            FocusChange::Resign => InternalLifeCycle::RouteFocusChanged {new: None},
-            FocusChange::Focus(id) => InternalLifeCycle::RouteFocusChanged {new: Some(id)},
+            FocusChange::Resign => InternalLifeCycle::RouteFocusChanged { new: None },
+            FocusChange::Focus(id) => InternalLifeCycle::RouteFocusChanged { new: Some(id) },
             FocusChange::Next => InternalLifeCycle::TraverseFocus {
                 forward: true,
-                target: self.root.state().id
+                target: self.root.state().id,
             },
             FocusChange::Previous => InternalLifeCycle::TraverseFocus {
                 forward: false,
-                target: self.root.state().id
+                target: self.root.state().id,
             },
         }
     }

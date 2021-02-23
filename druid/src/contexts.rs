@@ -277,7 +277,7 @@ impl_context_method!(
         /// Returns `true` if either this widget or any of ist descendants is set disabled
         ///
         pub fn is_enabled(&self) -> bool {
-        self.widget_state.is_enabled()
+            self.widget_state.is_enabled()
         }
     }
 );
