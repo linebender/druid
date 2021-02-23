@@ -8,7 +8,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Highlights
 
 ### Added
-- Contexts: `is_enabled()` and `set_enabled()` (??? by [@xarvic])
+- Contexts: `is_enabled()` and `set_enabled()` ([#1620] by [@xarvic])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
@@ -24,7 +24,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Changed
 
-- Focus behaviour (??? by [@xarvic])
+- Focus behaviour ([#1620] by [@xarvic])
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
 - `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
@@ -624,6 +624,7 @@ Last release without a changelog :(
 [#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
 [#1600]: https://github.com/linebender/druid/pull/1600
+[#1620]: https://github.com/linebender/druid/pull/1620
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
