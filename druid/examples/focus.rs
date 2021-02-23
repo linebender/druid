@@ -3,7 +3,6 @@ use druid::widget::{Flex, TextBox, Button, Label};
 use piet_common::{UnitPoint, Color};
 use piet_common::kurbo::{Size, Point};
 use druid_shell::{HotKey, KbKey, SysMods};
-use tracing_subscriber::layer::SubscriberExt;
 
 struct FocusWrapper<T, W: Widget<T>> {
     inner: WidgetPod<T, W>,
@@ -119,7 +118,6 @@ fn make_widget() -> impl Widget<AppData> {
         .with_child(counter)
 
         .align_horizontal(UnitPoint::CENTER)
-        .debug_widget_id()
 }
 
 fn main() {

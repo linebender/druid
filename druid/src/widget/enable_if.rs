@@ -1,4 +1,4 @@
-use crate::{WidgetPod, Env, Widget, Data, LifeCycle, EventCtx, PaintCtx, BoxConstraints, LifeCycleCtx, LayoutCtx, Event, UpdateCtx, WidgetExt};
+use crate::{WidgetPod, Env, Widget, Data, LifeCycle, EventCtx, PaintCtx, BoxConstraints, LifeCycleCtx, LayoutCtx, Event, UpdateCtx};
 use druid::{Size, Point};
 
 ///
@@ -10,12 +10,15 @@ pub struct EnableIf<T, W> {
 }
 
 impl<T, W: Widget<T>> EnableIf<T, W> {
+    /// creates a new EnableIf which disables the widget, if the closure returns `false`
     pub fn new(widget: W, enable_if: impl Fn(&T, &Env) -> bool + 'static) -> Self {
         EnableIf {
             inner: WidgetPod::new(widget),
             enable_if: Box::new(enable_if),
         }
     }
+
+    /// creates a new EnableIf which disables the widget, if the closure returns `false`
     pub fn boxed(widget: W, enable_if: Box<dyn Fn(&T, &Env) -> bool>) -> Self {
         EnableIf {
             inner: WidgetPod::new(widget),

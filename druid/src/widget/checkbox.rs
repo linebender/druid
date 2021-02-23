@@ -112,7 +112,7 @@ impl Widget<bool> for Checkbox {
 
         ctx.fill(rect, &background_gradient);
 
-        let border_color = if ctx.is_hot() {
+        let border_color = if ctx.is_hot() && ctx.is_enabled() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)

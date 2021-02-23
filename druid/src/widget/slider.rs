@@ -164,27 +164,33 @@ impl Widget<f64> for Slider {
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
         let knob_circle = Circle::new(self.knob_pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
 
-        let normal_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_LIGHT),
-                env.get(theme::FOREGROUND_DARK),
-            ),
-        );
-        let flipped_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_DARK),
-                env.get(theme::FOREGROUND_LIGHT),
-            ),
-        );
-
-        let knob_gradient = if is_active {
-            flipped_knob_gradient
+        let knob_gradient = if !ctx.is_enabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::BACKGROUND_LIGHT),
+                    env.get(theme::BACKGROUND_DARK),
+                ),
+            )
+        } else if is_active {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_LIGHT),
+                    env.get(theme::FOREGROUND_DARK),
+                ),
+            )
         } else {
-            normal_knob_gradient
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_DARK),
+                    env.get(theme::FOREGROUND_LIGHT),
+                ),
+            )
         };
 
         //Paint the border

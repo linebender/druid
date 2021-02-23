@@ -165,7 +165,13 @@ impl<T: Data> Widget<T> for Button<T> {
             .inset(-stroke_width / 2.0)
             .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
 
-        let bg_gradient = if is_active {
+        let bg_gradient = if !ctx.is_enabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (env.get(theme::BACKGROUND_LIGHT), env.get(theme::BACKGROUND_DARK))
+            )
+        } else if is_active {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
@@ -179,7 +185,7 @@ impl<T: Data> Widget<T> for Button<T> {
             )
         };
 
-        let border_color = if is_hot {
+        let border_color = if is_hot && ctx.is_enabled() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
