@@ -620,11 +620,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.set_disabled = self.state.change_disable;
 
         if was_disabled != self.state.is_disabled() {
-            println!("update disabled for {:?} to {}", self.state.id, self.state.is_disabled());
             let event = LifeCycle::DisabledChanged(self.state.is_disabled());
 
             if self.has_focus() {
-                println!("resign focus!");
                 self.state.request_focus = Some(FocusChange::Resign);
             }
 
@@ -636,7 +634,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, &event, data, env);
 
             //Register child change
-            println!("register change!");
             parent.child_state_changed = true;
 
             //We dont need to merge the state since this method is called only in methods which do this already
@@ -654,7 +651,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             self.inner.lifecycle(&mut child_ctx, &LifeCycle::Internal(InternalLifeCycle::WidgetChanged), data, env);
 
-            println!("handle change for {}", self.state.id.to_raw());
             parent.child_state_changed = true;
             self.state.child_state_changed = false;
 
@@ -994,12 +990,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.state.has_focus = false;
 
                     if target == self.state.id {
-                        println!("traverse to {}", self.state.id.to_raw());
-
                         if (forward == true && !had_focus && self.state.can_auto_focus) ||
                             (forward == false && (self.state.previous_focusing_child.is_none() && self.state.can_auto_focus && had_focus || self.state.last_focus.is_none()))
                         {
-                            println!("keep focus!");
                             //Focus this widget
                             self.state.is_focused = true;
                             self.state.has_focus = true;
@@ -1018,7 +1011,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                                 self.state.previous_focusing_child
                                     .unwrap_or(self.state.last_focus.unwrap())
                             };
-                            println!("transfering to {}!", child_id.to_raw());
                             //Focus children
                             self.state.is_focused = false;
                             extra_events.push(LifeCycle::FocusChanged(false));
@@ -1124,7 +1116,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 false
             }
             LifeCycle::DisabledChanged(disabled) => {
-                println!("set disabled for {} to {}", self.state.id.to_raw(), disabled);
                 let was_disabled = self.state.is_disabled();
                 self.state.parent_disabled = *disabled;
 

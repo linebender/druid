@@ -154,7 +154,6 @@ impl<T: Data> Window<T> {
         if let Some(focus_req) = widget_state.request_focus.take() {
             let event = LifeCycle::Internal(self.event_for_focus_request(focus_req));
 
-            println!("\n ------- focus! ------- \n");
             self.lifecycle(queue, &event, data, env, false);
 
             if !self.root.has_focus() {
@@ -162,8 +161,6 @@ impl<T: Data> Window<T> {
                     //Maybe we reached the end or beginning start from the other side!
                     self.lifecycle(queue, &event, data, env, false);
                 }
-            } else {
-                println!("got focus!");
             }
         }
 
@@ -471,7 +468,6 @@ impl<T: Data> Window<T> {
     }
 
     fn event_for_focus_request(&self, focus: FocusChange) -> InternalLifeCycle {
-        println!("update focus!");
         match focus {
             FocusChange::Resign => InternalLifeCycle::RouteFocusChanged {new: None},
             FocusChange::Focus(id) => InternalLifeCycle::RouteFocusChanged {new: Some(id)},
