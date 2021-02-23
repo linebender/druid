@@ -37,7 +37,7 @@ pub struct AppLauncher<T> {
 }
 
 /// Defines how a windows size should be determined
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WindowSizePolicy {
     /// Use the content of the window to determine the size.
     ///
@@ -284,6 +284,15 @@ impl Default for WindowConfig {
 impl WindowConfig {
     /// Set the window size policy.
     pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        #[cfg(windows)]
+        {
+            // On Windows content_insets doesn't work on window with no initial size
+            // so the window size can't be adapted to the content, to fix this a
+            // non null initial size is set here.
+            if size_policy == WindowSizePolicy::Content {
+                self.size = Some(Size::new(1., 1.))
+            }
+        }
         self.size_policy = size_policy;
         self
     }
@@ -470,6 +479,15 @@ impl<T: Data> WindowDesc<T> {
 
     /// Set the window size policy
     pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        #[cfg(windows)]
+        {
+            // On Windows content_insets doesn't work on window with no initial size
+            // so the window size can't be adapted to the content, to fix this a
+            // non null initial size is set here.
+            if size_policy == WindowSizePolicy::Content {
+                self.config.size = Some(Size::new(1., 1.))
+            }
+        }
         self.config.size_policy = size_policy;
         self
     }

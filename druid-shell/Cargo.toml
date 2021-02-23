@@ -17,6 +17,8 @@ default-target = "x86_64-pc-windows-msvc"
 default = ["gtk"]
 gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf"]
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
+# Implement HasRawWindowHandle for WindowHandle 
+raw-win-handle = ["raw-window-handle"]
 
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
@@ -51,6 +53,7 @@ keyboard-types = { version = "0.5.0", default_features = false }
 
 # Optional dependencies
 image = { version = "0.23.12", optional = true, default_features = false }
+raw-window-handle = { version = "0.3.3", optional = true, default_features = false }
 
 [target.'cfg(target_os="windows")'.dependencies]
 scopeguard = "1.1.0"
