@@ -162,16 +162,9 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
+    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::SimpleLogger::new()
-            .with_level(log::LevelFilter::Debug)
-            .init()
-            .expect("Failed to initialize logger.");
-        #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Debug).expect("Failed to initialize logger.");
-        self
+        self.log_to_console()
     }
 
     /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
@@ -183,7 +176,7 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the subscriber fails to initialize.
-    pub fn use_env_tracing(self) -> Self {
+    pub fn log_to_console(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
