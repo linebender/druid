@@ -227,13 +227,13 @@ impl Selection {
 /// All ranges, lengths, and indices are specified in UTF-8 code units, unless
 /// specified otherwise.
 pub trait InputHandler {
-    /// The document's current selection.
+    /// The document's current [`Selection`].
     ///
     /// If the selection is a vertical caret bar, then `range.start == range.end`.
     /// Both `selection.anchor` and `selection.active` must be less than or
     /// equal to the value returned from `InputHandler::len()`, and must land on
     /// a extended grapheme cluster boundary in the document.
-    fn selection(&mut self) -> Selection;
+    fn selection(&self) -> Selection;
 
     /// Set the document's selection.
     ///
@@ -248,15 +248,21 @@ pub trait InputHandler {
     /// Requries a mutable lock.
     fn set_selection(&mut self, selection: Selection);
 
-    /// The range of the document that is the input method's composition
-    /// region.
+    /// The current composition region.
+    ///
+    /// This should be `Some` only if the IME is currently active, in which
+    /// case it represents the range of text that may be modified by the IME.
     ///
     /// Both `range.start` and `range.end` must be less than or equal
     /// to the value returned from `InputHandler::len()`, and must land on a
     /// extended grapheme cluster boundary in the document.
-    fn composition_range(&mut self) -> Option<Range<usize>>;
+    fn composition_range(&self) -> Option<Range<usize>>;
 
-    /// Sets the range of the document that is the input method's composition region.
+    /// Set the composition region.
+    ///
+    /// If this is `Some` it means that the IME is currently active for this
+    /// region of the document. If it is `None` it means that hte IME is not
+    /// currently active.
     ///
     /// Both `range.start` and `range.end` must be less than or equal to the
     /// value returned from `InputHandler::len()`.
@@ -269,16 +275,16 @@ pub trait InputHandler {
     fn set_composition_range(&mut self, range: Option<Range<usize>>);
 
     /// Check if the provided index is the first byte of a UTF-8 code point
-    /// sequence, or is the end of a string.
+    /// sequence, or is the end of the document.
     ///
     /// Equivalent in functionality to [`str::is_char_boundary`].
-    fn is_char_boundary(&mut self, i: usize) -> bool;
+    fn is_char_boundary(&self, i: usize) -> bool;
 
     /// The length of the document in UTF-8 code units.
-    fn len(&mut self) -> usize;
+    fn len(&self) -> usize;
 
     /// Returns `true` if the length of the document is `0`.
-    fn is_empty(&mut self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
@@ -288,7 +294,7 @@ pub trait InputHandler {
     ///
     /// Panics if the start or end of the range do not fall on a code point
     /// boundary.
-    fn slice(&mut self, range: Range<usize>) -> Cow<str>;
+    fn slice(&self, range: Range<usize>) -> Cow<str>;
 
     /// Returns the number of UTF-16 code units in the provided UTF-8 range.
     ///
@@ -304,7 +310,7 @@ pub trait InputHandler {
     ///
     /// Panics if the start or end of the range do not fall on a code point
     /// boundary.
-    fn utf8_to_utf16(&mut self, utf8_range: Range<usize>) -> usize {
+    fn utf8_to_utf16(&self, utf8_range: Range<usize>) -> usize {
         self.slice(utf8_range).encode_utf16().count()
     }
 
@@ -317,7 +323,7 @@ pub trait InputHandler {
     ///
     /// This is automatically implemented, but you can override this if you have
     /// some faster system to determine string length.
-    fn utf16_to_utf8(&mut self, utf16_range: Range<usize>) -> usize {
+    fn utf16_to_utf8(&self, utf16_range: Range<usize>) -> usize {
         if utf16_range.is_empty() {
             return 0;
         }
@@ -355,11 +361,11 @@ pub trait InputHandler {
     fn replace_range(&mut self, range: Range<usize>, text: &str);
 
     /// Given a `Point`, determine the corresponding text position.
-    fn hit_test_point(&mut self, point: Point) -> HitTestPoint;
+    fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
-    /// Returns the range, in UTF-8 code units, of the line (soft- or hard-wrapped) containing the byte
-    /// specified by `_index`.
-    fn line_range(&mut self, index: usize, affinity: Affinity) -> Range<usize>;
+    /// Returns the range, in UTF-8 code units, of the line (soft- or hard-wrapped)
+    /// containing the byte specified by `index`.
+    fn line_range(&self, index: usize, affinity: Affinity) -> Range<usize>;
 
     /// Returns the bounding box, in window coordinates, of the visible text
     /// document.
@@ -367,14 +373,14 @@ pub trait InputHandler {
     /// For instance, a text box's bounding box would be the rectangle
     /// of the border surrounding it, even if the text box is empty.  If the
     /// text document is completely offscreen, return `None`.
-    fn bounding_box(&mut self) -> Option<Rect>;
+    fn bounding_box(&self) -> Option<Rect>;
 
     /// Returns the bounding box, in window coordinates, of the range of text specified by `range`.
     ///
     /// Ranges will always be equal to or a subrange of some line range returned
     /// by `InputHandler::line_range`.  If a range spans multiple lines,
     /// `slice_bounding_box` may panic.
-    fn slice_bounding_box(&mut self, range: Range<usize>) -> Option<Rect>;
+    fn slice_bounding_box(&self, range: Range<usize>) -> Option<Rect>;
 
     /// Applies an [`Action`] to the text field.
     ///

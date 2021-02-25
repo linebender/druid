@@ -228,7 +228,7 @@ pub extern "C" fn character_index_for_point(
     _: Sel,
     point: NSPoint,
 ) -> NSUInteger {
-    let mut edit_lock = match get_edit_lock_from_window(this, true) {
+    let edit_lock = match get_edit_lock_from_window(this, true) {
         Some(v) => v,
         None => return 0,
     };
@@ -623,7 +623,7 @@ pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
 /// is absolute instead of relative.
 /// Returns `None` if `range` was invalid; macOS often uses this to indicate some special null value.
 fn decode_nsrange(
-    edit_lock: &mut Box<dyn InputHandler>,
+    edit_lock: &Box<dyn InputHandler>,
     range: &NSRange,
     start_offset: usize,
 ) -> Option<Range<usize>> {
