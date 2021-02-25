@@ -1193,7 +1193,6 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
                 Cursor::Pointer => "pointer",
-                Cursor::Busy => "progress",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

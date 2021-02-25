@@ -89,8 +89,7 @@ impl AppState {
         self.cursor = match self.cursor {
             Cursor::Arrow => Cursor::IBeam,
             Cursor::IBeam => Cursor::Pointer,
-            Cursor::Pointer => Cursor::Busy,
-            Cursor::Busy => Cursor::Crosshair,
+            Cursor::Pointer => Cursor::Crosshair,
             Cursor::Crosshair => Cursor::OpenHand,
             Cursor::OpenHand => Cursor::NotAllowed,
             Cursor::NotAllowed => Cursor::ResizeLeftRight,
