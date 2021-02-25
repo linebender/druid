@@ -98,7 +98,7 @@ pub extern "C" fn set_marked_text(
     selected_range: NSRange,
     replacement_range: NSRange,
 ) {
-    with_edit_lock_from_window(this, false, |mut edit_lock| {
+    with_edit_lock_from_window(this, true, |mut edit_lock| {
         let mut composition_range = edit_lock.composition_range().unwrap_or_else(|| {
             // no existing composition range? default to replacement range, interpreted in absolute coordinates
             // undocumented by apple, see

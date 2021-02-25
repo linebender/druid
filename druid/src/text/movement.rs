@@ -43,6 +43,31 @@ pub enum Movement {
     EndOfDocument,
 }
 
+impl From<crate::shell::text::Movement> for Movement {
+    fn from(src: crate::shell::text::Movement) -> Movement {
+        use crate::shell::text::{Direction, Movement as SMovemement, VerticalMovement};
+        match src {
+            SMovemement::Grapheme(Direction::Left) | SMovemement::Grapheme(Direction::Upstream) => {
+                Movement::Left
+            }
+            SMovemement::Grapheme(_) => Movement::Right,
+            SMovemement::Word(Direction::Left) => Movement::LeftWord,
+            SMovemement::Word(_) => Movement::RightWord,
+            SMovemement::Line(Direction::Left) | SMovemement::ParagraphStart => {
+                Movement::PrecedingLineBreak
+            }
+            SMovemement::Line(_) | SMovemement::ParagraphEnd => Movement::NextLineBreak,
+            SMovemement::Vertical(VerticalMovement::LineUp)
+            | SMovemement::Vertical(VerticalMovement::PageUp) => Movement::Up,
+            SMovemement::Vertical(VerticalMovement::LineDown)
+            | SMovemement::Vertical(VerticalMovement::PageDown) => Movement::Down,
+            SMovemement::Vertical(VerticalMovement::DocumentStart) => Movement::StartOfDocument,
+            SMovemement::Vertical(VerticalMovement::DocumentEnd) => Movement::EndOfDocument,
+            _ => unreachable!(),
+        }
+    }
+}
+
 /// Compute the result of movement on a selection.
 ///
 /// returns a new selection representing the state after the movement.

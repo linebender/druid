@@ -18,6 +18,7 @@ use std::{
     any::{Any, TypeId},
     collections::VecDeque,
     ops::{Deref, DerefMut},
+    rc::Rc,
     time::Duration,
 };
 use tracing::{error, trace, warn};
@@ -26,6 +27,7 @@ use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
+use crate::text::ImeHandlerRef;
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
     Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
@@ -84,6 +86,27 @@ pub struct EventCtx<'a, 'b> {
 pub struct LifeCycleCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+}
+
+#[derive(Clone)]
+pub(crate) struct TextFieldRegistration {
+    pub widget_id: WidgetId,
+    pub document: Rc<dyn ImeHandlerRef>,
+}
+
+impl std::fmt::Debug for TextFieldRegistration {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("TextFieldRegistration")
+            .field("widget_id", &self.widget_id)
+            .field("is_alive", &self.document.is_alive())
+            .finish()
+    }
+}
+
+impl TextFieldRegistration {
+    pub fn is_alive(&self) -> bool {
+        self.document.is_alive()
+    }
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -380,6 +403,22 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
         trace!("set_menu");
         self.state.set_menu(menu);
+    }
+
+    /// Indicate that text input state has changed.
+    ///
+    /// A widget that accepts text input should call this anytime input state
+    /// (such as the text or the selection) changes as a result of a non text-input
+    /// event.
+    pub fn invalidate_text_input(&mut self, event: Option<crate::shell::text::Event>) {
+        let payload = commands::ImeInvalidation {
+            widget: self.widget_id(),
+            event: event.unwrap_or(crate::shell::text::Event::Reset),
+        };
+        let cmd = commands::INVALIDATE_IME
+            .with(payload)
+            .to(Target::Window(self.window_id()));
+        self.submit_command(cmd);
     }
 
     /// Create a new sub-window.
@@ -702,6 +741,15 @@ impl LifeCycleCtx<'_, '_> {
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
         self.widget_state.focus_chain.push(self.widget_id());
+    }
+
+    /// Register this widget as accepting text input.
+    pub fn register_text_input(&mut self, document: impl ImeHandlerRef + 'static) {
+        let registration = TextFieldRegistration {
+            document: Rc::new(document),
+            widget_id: self.widget_id(),
+        };
+        self.widget_state.text_registrations.push(registration);
     }
 }
 
