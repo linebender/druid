@@ -179,10 +179,10 @@ struct AppInputHandler {
 }
 
 impl InputHandler for AppInputHandler {
-    fn selection(&mut self) -> Selection {
+    fn selection(&self) -> Selection {
         self.state.borrow().selection.clone()
     }
-    fn composition_range(&mut self) -> Option<Range<usize>> {
+    fn composition_range(&self) -> Option<Range<usize>> {
         self.state.borrow().composition.clone()
     }
     fn set_selection(&mut self, range: Selection) {
@@ -211,16 +211,16 @@ impl InputHandler for AppInputHandler {
         doc.composition = None;
         self.window_handle.request_anim_frame();
     }
-    fn slice(&mut self, range: Range<usize>) -> Cow<str> {
+    fn slice(&self, range: Range<usize>) -> Cow<str> {
         self.state.borrow().text[range].to_string().into()
     }
-    fn is_char_boundary(&mut self, i: usize) -> bool {
+    fn is_char_boundary(&self, i: usize) -> bool {
         self.state.borrow().text.is_char_boundary(i)
     }
-    fn len(&mut self) -> usize {
+    fn len(&self) -> usize {
         self.state.borrow().text.len()
     }
-    fn hit_test_point(&mut self, point: Point) -> HitTestPoint {
+    fn hit_test_point(&self, point: Point) -> HitTestPoint {
         self.state
             .borrow()
             .layout
@@ -228,7 +228,7 @@ impl InputHandler for AppInputHandler {
             .unwrap()
             .hit_test_point(point)
     }
-    fn bounding_box(&mut self) -> Option<Rect> {
+    fn bounding_box(&self) -> Option<Rect> {
         Some(Rect::new(
             0.0,
             0.0,
@@ -236,14 +236,14 @@ impl InputHandler for AppInputHandler {
             self.window_size.height,
         ))
     }
-    fn slice_bounding_box(&mut self, range: Range<usize>) -> Option<Rect> {
+    fn slice_bounding_box(&self, range: Range<usize>) -> Option<Rect> {
         let doc = self.state.borrow();
         let layout = doc.layout.as_ref().unwrap();
         let range_start_x = layout.hit_test_text_position(range.start).point.x;
         let range_end_x = layout.hit_test_text_position(range.end).point.x;
         Some(Rect::new(range_start_x, 0.0, range_end_x, FONT_SIZE))
     }
-    fn line_range(&mut self, _char_index: usize, _affinity: text::Affinity) -> Range<usize> {
+    fn line_range(&self, _char_index: usize, _affinity: text::Affinity) -> Range<usize> {
         // we don't have multiple lines, so no matter the input, output is the whole document
         0..self.state.borrow().text.len()
     }
