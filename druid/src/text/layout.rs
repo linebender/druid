@@ -64,6 +64,8 @@ pub struct LayoutMetrics {
     pub size: Size,
     /// The distance from the nominal top of the layout to the first baseline.
     pub first_baseline: f64,
+    /// The width of the layout, inclusive of trailing whitespace.
+    pub trailing_whitespace_width: f64,
     //TODO: add inking_rect
 }
 
@@ -223,6 +225,7 @@ impl<T: TextStorage> TextLayout<T> {
             LayoutMetrics {
                 size,
                 first_baseline,
+                trailing_whitespace_width: layout.trailing_whitespace_width(),
             }
         } else {
             LayoutMetrics::default()
@@ -263,6 +266,26 @@ impl<T: TextStorage> TextLayout<T> {
             .as_ref()
             .map(|layout| layout.rects_for_range(range))
             .unwrap_or_default()
+    }
+
+    /// Return a line suitable for underlining a range of text.
+    ///
+    /// This is really only intended to be used to indicate the composition
+    /// range while IME is active.
+    ///
+    /// range is expected to be on a single visual line.
+    pub fn underline_for_range(&self, range: Range<usize>) -> Line {
+        self.layout
+            .as_ref()
+            .map(|layout| {
+                let p1 = layout.hit_test_text_position(range.start);
+                let p2 = layout.hit_test_text_position(range.end);
+                let line_metric = layout.line_metric(p1.line).unwrap();
+                // heuristic; 1/5 of height is a rough guess at the descender pos?
+                let y_pos = line_metric.baseline + (line_metric.height / 5.0);
+                Line::new((p1.point.x, y_pos), (p2.point.x, y_pos))
+            })
+            .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
     }
 
     /// Given the utf-8 position of a character boundary in the underlying text,

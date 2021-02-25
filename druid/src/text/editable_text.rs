@@ -238,6 +238,7 @@ impl EditableText for Arc<String> {
         Arc::new(s.to_owned())
     }
 }
+
 /// A cursor with convenience functions for moving through EditableText.
 pub trait EditableTextCursor<EditableText> {
     /// Set cursor position.

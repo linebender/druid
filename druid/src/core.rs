@@ -19,7 +19,7 @@ use tracing::{info_span, trace, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
-use crate::contexts::ContextState;
+use crate::contexts::{ContextState, TextFieldRegistration};
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
 use crate::util::ExtendDrain;
@@ -138,6 +138,8 @@ pub(crate) struct WidgetState {
 
     // Port -> Host
     pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
+
+    pub(crate) text_registrations: Vec<TextFieldRegistration>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -683,6 +685,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(widget_id)
                     }
                 }
+                InternalEvent::RouteImeStateChange(widget_id) => {
+                    if *widget_id == self.id() {
+                        modified_event = Some(Event::ImeStateChange);
+                        true
+                    } else {
+                        self.state.children.may_contain(widget_id)
+                    }
+                }
             },
             Event::WindowConnected | Event::WindowCloseRequested => true,
             Event::WindowDisconnected => {
@@ -784,6 +794,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
+            Event::ImeStateChange => false, // targeted to specific widget
             Event::Command(_) => true,
             Event::Notification(_) => false,
         };
@@ -1120,6 +1131,7 @@ impl WidgetState {
             cursor_change: CursorChange::Default,
             cursor: None,
             sub_window_hosts: Vec::new(),
+            text_registrations: Vec::new(),
         }
     }
 
@@ -1163,6 +1175,8 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
+        self.text_registrations
+            .extend(child_state.text_registrations.drain(..));
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.

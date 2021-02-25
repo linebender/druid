@@ -143,7 +143,7 @@ pub enum Event {
 /// holds shift and presses the right arrow key five times, we would expect the
 /// word `hello` to be selected, the `anchor` to still be `0`, and the `active`
 /// to now be `5`.
-#[derive(Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Selection {
     /// The 'anchor' end of the selection.
     ///
