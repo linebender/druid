@@ -7,9 +7,11 @@ members = [
     "druid/examples/web",
     "druid/examples/hello_web",
     "druid/examples/value_formatting",
+    "lasagna",
 ]
 default-members = [
     "druid",
     "druid-shell",
     "druid-derive",
+    "lasagna",
 ]
