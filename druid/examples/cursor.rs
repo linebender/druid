@@ -101,6 +101,7 @@ impl AppState {
                 }
             }
             Cursor::Custom(_) => Cursor::Arrow,
+            _ => Cursor::Arrow,
         };
     }
 }
