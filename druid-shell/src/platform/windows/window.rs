@@ -1676,13 +1676,16 @@ unsafe fn create_window(
 
 impl Cursor {
     fn get_hcursor(&self) -> HCURSOR {
+        #[allow(deprecated)]
         let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
             Cursor::Pointer => IDC_HAND,
             Cursor::Crosshair => IDC_CROSS,
-            // not correct, maybe polyfill this
-            Cursor::OpenHand => IDC_HAND,
+            Cursor::OpenHand => {
+                warn!("Cursor::OpenHand not available on windows");
+                IDC_ARROW
+            }
             Cursor::NotAllowed => IDC_NO,
             Cursor::ResizeLeftRight => IDC_SIZEWE,
             Cursor::ResizeUpDown => IDC_SIZENS,

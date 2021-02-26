@@ -970,6 +970,7 @@ impl WindowHandle {
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         unsafe {
             let nscursor = class!(NSCursor);
+            #[allow(deprecated)]
             let cursor: id = match cursor {
                 Cursor::Arrow => msg_send![nscursor, arrowCursor],
                 Cursor::IBeam => msg_send![nscursor, IBeamCursor],

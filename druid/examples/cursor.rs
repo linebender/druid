@@ -90,8 +90,7 @@ impl AppState {
             Cursor::Arrow => Cursor::IBeam,
             Cursor::IBeam => Cursor::Pointer,
             Cursor::Pointer => Cursor::Crosshair,
-            Cursor::Crosshair => Cursor::OpenHand,
-            Cursor::OpenHand => Cursor::NotAllowed,
+            Cursor::Crosshair => Cursor::NotAllowed,
             Cursor::NotAllowed => Cursor::ResizeLeftRight,
             Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
             Cursor::ResizeUpDown => {
