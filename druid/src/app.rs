@@ -183,7 +183,7 @@ impl<T: Data> AppLauncher<T> {
             let filter_layer = tracing_subscriber::filter::LevelFilter::DEBUG;
             let fmt_layer = tracing_subscriber::fmt::layer()
                 // Display target (eg "my_crate::some_mod::submod") with logs
-                .with_target(false);
+                .with_target(true);
 
             tracing_subscriber::registry()
                 .with(filter_layer)
