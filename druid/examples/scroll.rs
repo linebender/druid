@@ -35,7 +35,7 @@ fn build_widget() -> impl Widget<u32> {
     for i in 0..30 {
         col.add_child(Padding::new(3.0, OverPainter(i)));
     }
-    Scroll::new(col)
+    Padding::new(2.0, Scroll::new(col))
 }
 
 /// A widget that paints outside of its bounds.

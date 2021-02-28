@@ -25,6 +25,7 @@ use crate::keyboard::KeyEvent;
 use crate::kurbo::{Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, CursorDesc, MouseEvent};
+use crate::touch::TouchEvent;
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
@@ -558,6 +559,11 @@ pub trait WinHandler {
 
     /// Get a reference to the handler state. Used mostly by idle handlers.
     fn as_any(&mut self) -> &mut dyn Any;
+
+    #[allow(unused_variables)]
+    fn touch_begin(&mut self, event: &TouchEvent) {}
+    fn touch_end(&mut self, event: &TouchEvent) {}
+    fn touch_update(&mut self, event: &TouchEvent) {}
 }
 
 impl From<platform::WindowHandle> for WindowHandle {

@@ -169,6 +169,7 @@ pub mod scroll_component;
 mod tests;
 pub mod text;
 pub mod theme;
+pub mod touch;
 pub mod widget;
 mod win_handler;
 mod window;

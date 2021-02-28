@@ -19,6 +19,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::bloom::Bloom;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
+use crate::touch::TouchProcessor;
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
@@ -130,6 +131,8 @@ pub(crate) struct WidgetState {
     /// The result of merging up children cursors. This gets cleared when merging state up (unlike
     /// cursor_change, which is persistent).
     pub(crate) cursor: Option<Cursor>,
+
+    pub(crate) touch_processor: TouchProcessor,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -767,10 +770,94 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::KeyUp(_) => self.state.has_focus,
             Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
-            Event::Timer(_) => false, // This event was targeted only to our parent
+            Event::Timer(token) => {
+                self.state.touch_processor.handle(ctx, event, env);
+                true
+            }
             Event::Command(_) => true,
             Event::Notification(_) => false,
+
+            Event::TouchBegin(touch_event) => {
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    &mut self.state,
+                    ctx.state,
+                    rect,
+                    Some(touch_event.pos),
+                    data,
+                    env,
+                );
+                if had_active || self.state.is_hot {
+                    let mut touch_event = touch_event.clone();
+                    touch_event.pos -= rect.origin().to_vec2();
+                    modified_event = Some(Event::TouchBegin(touch_event));
+                    self.state.touch_processor.handle(ctx, modified_event.as_ref().unwrap(), env);
+                    true
+                } else {
+                    false
+                }
+            },
+            Event::TouchEnd(touch_event) => {
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    &mut self.state,
+                    ctx.state,
+                    rect,
+                    Some(touch_event.pos),
+                    data,
+                    env,
+                );
+                if had_active || self.state.is_hot {
+                    let mut touch_event = touch_event.clone();
+                    touch_event.pos -= rect.origin().to_vec2();
+                    modified_event = Some(Event::TouchEnd(touch_event));
+                    self.state.touch_processor.handle(ctx, modified_event.as_ref().unwrap(), env);
+                    true
+                } else {
+                    false
+                }
+            },
+            Event::TouchUpdate(touch_event) => {
+                WidgetPod::set_hot_state(
+                    &mut self.inner,
+                    &mut self.state,
+                    ctx.state,
+                    rect,
+                    Some(touch_event.pos),
+                    data,
+                    env,
+                );
+                if had_active || self.state.is_hot {
+                    let mut touch_event = touch_event.clone();
+                    touch_event.pos -= rect.origin().to_vec2();
+                    modified_event = Some(Event::TouchUpdate(touch_event));
+                    self.state.touch_processor.handle(ctx, modified_event.as_ref().unwrap(), env);
+                    true
+                } else {
+                    false
+                }
+            },
         };
+
+        for processed_event in self.state.touch_processor.processed_events() {
+            dbg!(&processed_event);
+            let mut notifications = VecDeque::new();
+            let mut inner_ctx = EventCtx {
+                state: ctx.state,
+                widget_state: &mut self.state,
+                notifications: &mut notifications,
+                is_handled: false,
+                is_root: false,
+            };
+            inner_ctx.widget_state.has_active = false;
+
+            self.inner.event(&mut inner_ctx, &processed_event, data, env);
+
+            inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
+            ctx.is_handled |= inner_ctx.is_handled;
+            // we try to handle the notifications that occured below us in the tree
+            self.send_notifications(ctx, &mut notifications, data, env);
+        }
 
         if recurse {
             let mut notifications = VecDeque::new();
@@ -1045,6 +1132,7 @@ impl WidgetState {
             timers: HashMap::new(),
             cursor_change: CursorChange::Default,
             cursor: None,
+            touch_processor: TouchProcessor::new(),
         }
     }
 

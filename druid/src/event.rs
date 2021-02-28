@@ -19,6 +19,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
+use crate::touch::TouchEvent;
 use crate::{Command, Notification, WidgetId};
 
 /// An event, propagated downwards during event flow.
@@ -168,6 +169,10 @@ pub enum Event {
     ///
     /// [`WidgetPod`]: struct.WidgetPod.html
     Internal(InternalEvent),
+
+    TouchBegin(TouchEvent),
+    TouchUpdate(TouchEvent),
+    TouchEnd(TouchEvent),
 }
 
 /// Internal events used by druid inside [`WidgetPod`].
@@ -366,7 +371,10 @@ impl Event {
             | Event::KeyDown(_)
             | Event::KeyUp(_)
             | Event::Paste(_)
-            | Event::Zoom(_) => false,
+            | Event::Zoom(_)
+            | Event::TouchBegin(_)
+            | Event::TouchEnd(_)
+            | Event::TouchUpdate(_) => false,
         }
     }
 }

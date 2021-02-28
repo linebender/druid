@@ -24,6 +24,7 @@ use crate::Modifiers;
 pub enum PointerType {
     None,
     Mouse,
+    Touch,
     Stylus,
     Unknown,
 }

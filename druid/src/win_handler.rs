@@ -22,7 +22,7 @@ use std::rc::Rc;
 use crate::kurbo::Size;
 use crate::piet::Piet;
 use crate::shell::{
-    Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region, Scale, WinHandler,
+    Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, TouchEvent, Region, Scale, WinHandler,
     WindowHandle,
 };
 
@@ -830,6 +830,21 @@ impl<T: Data> WinHandler for DruidHandler<T> {
     fn mouse_leave(&mut self) {
         self.app_state
             .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
+    }
+
+    fn touch_begin(&mut self, event: &TouchEvent) {
+        let event = Event::TouchBegin(event.clone().into());
+        self.app_state.do_window_event(event, self.window_id);
+    }
+
+    fn touch_end(&mut self, event: &TouchEvent) {
+        let event = Event::TouchEnd(event.clone().into());
+        self.app_state.do_window_event(event, self.window_id);
+    }
+
+    fn touch_update(&mut self, event: &TouchEvent) {
+        let event = Event::TouchUpdate(event.clone().into());
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {

@@ -59,6 +59,7 @@ mod platform;
 mod region;
 mod scale;
 mod screen;
+mod touch;
 mod window;
 
 pub use application::{AppHandler, Application};
@@ -73,6 +74,7 @@ pub use mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent, Point
 pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
+pub use touch::{TouchEvent, TouchSequenceId};
 pub use window::{
     FileDialogToken, IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle,
     WindowLevel, WindowState,

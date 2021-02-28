@@ -30,6 +30,7 @@ use crate::{
     Notification, Point, Rect, SingleUse, Size, Target, TimerToken, WidgetId, WindowDesc,
     WindowHandle, WindowId,
 };
+use crate::touch::TouchEvent;
 
 /// A macro for implementing methods on multiple contexts.
 ///
@@ -560,6 +561,9 @@ impl EventCtx<'_, '_> {
     /// particular to make that data available in the app state.
     pub fn request_update(&mut self) {
         self.widget_state.request_update = true;
+    }
+
+    pub fn track_touch_events(&mut self, event: &TouchEvent) {
     }
 }
 

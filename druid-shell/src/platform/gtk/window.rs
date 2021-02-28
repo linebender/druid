@@ -27,7 +27,7 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
+use gdk::{EventKey, EventMask, EventSequence, EventTouch, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
@@ -43,6 +43,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent, Po
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::touch::{TouchEvent};
 use crate::window;
 use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
 
@@ -85,6 +86,11 @@ macro_rules! clone {
             move |$(clone!(@param $p),)+| $body
         }
     );
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TouchSequenceId {
+    sequence_id: EventSequence,
 }
 
 #[derive(Clone, Default)]
@@ -304,7 +310,8 @@ impl WindowBuilder {
                 | EventMask::KEY_RELEASE_MASK
                 | EventMask::SCROLL_MASK
                 | EventMask::SMOOTH_SCROLL_MASK
-                | EventMask::FOCUS_CHANGE_MASK,
+                | EventMask::FOCUS_CHANGE_MASK
+                | EventMask::TOUCH_MASK,
         );
 
         win_state.drawing_area.set_can_focus(true);
@@ -406,6 +413,35 @@ impl WindowBuilder {
             }
 
             Inhibit(false)
+        }));
+
+        win_state.drawing_area.connect_touch_event(clone!(handle => move |_widget, event| {
+            if let Some(event) = event.downcast_ref::<EventTouch>() {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|handler| {
+                        let pos: Point =  event.get_position().into();
+                        let scale = state.scale.get();
+                        let touch_event = TouchEvent {
+                            pos: pos.to_dp(scale),
+                            mods: get_modifiers(event.get_state()),
+                            focus: false,
+                            sequence_id: event.get_event_sequence().map(|sq_id|
+                                crate::touch::TouchSequenceId::Value(TouchSequenceId {
+                                   sequence_id: sq_id,
+                                })
+                            ),
+                        };
+
+                        match event.get_event_type() {
+                            gdk::EventType::TouchBegin => { handler.touch_begin(&touch_event); }
+                            gdk::EventType::TouchEnd => { handler.touch_end(&touch_event); }
+                            gdk::EventType::TouchUpdate => { handler.touch_update(&touch_event); }
+                            _ => {}
+                        }
+                    });
+                }
+            }
+            Inhibit(true)
         }));
 
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
