@@ -123,15 +123,32 @@ pub struct ClipBox<T, W> {
     constrain_vertical: bool,
 }
 
-impl<T, W: Widget<T>> ClipBox<T, W> {
-    /// Creates a new `ClipBox` wrapping `child`.
-    pub fn new(child: W) -> Self {
-        ClipBox {
-            child: WidgetPod::new(child),
-            port: Default::default(),
-            constrain_horizontal: false,
-            constrain_vertical: false,
-        }
+impl<T, W> ClipBox<T, W> {
+    /// Builder-style method for deciding whether to constrain the child vertically.
+    ///
+    /// The default is `false`.
+    ///
+    /// This setting affects how a `ClipBox` lays out its child.
+    ///
+    /// - When it is `false` (the default), the child does receive any upper
+    ///   bound on its height: the idea is that the child can be as tall as it
+    ///   wants, and the viewport will somehow get moved around to see all of it.
+    /// - When it is `true`, the viewport's maximum height will be passed down
+    ///   as an upper bound on the height of the child, and the viewport will set
+    ///   its own height to be the same as its child's height.
+    pub fn constrain_vertical(mut self, constrain: bool) -> Self {
+        self.constrain_vertical = constrain;
+        self
+    }
+
+    /// Builder-style method for deciding whether to constrain the child horizontally.
+    ///
+    /// The default is `false`. See [`constrain_vertical`] for more details.
+    ///
+    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
+    pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
+        self.constrain_horizontal = constrain;
+        self
     }
 
     /// Returns a reference to the child widget.
@@ -149,6 +166,11 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.port
     }
 
+    /// Returns the origin of the viewport rectangle.
+    pub fn viewport_origin(&self) -> Point {
+        self.port.rect.origin()
+    }
+
     /// Returns the size of the rectangular viewport into the child widget.
     /// To get the position of the viewport, see [`viewport_origin`].
     ///
@@ -162,16 +184,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.port.content_size
     }
 
-    /// Builder-style method for deciding whether to constrain the child horizontally. The default
-    /// is `false`. See [`constrain_vertical`] for more details.
-    ///
-    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
-    pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
-        self.constrain_horizontal = constrain;
-        self
-    }
-
-    /// Determine whether to constrain the child horizontally.
+    /// Set whether to constrain the child horizontally.
     ///
     /// See [`constrain_vertical`] for more details.
     ///
@@ -180,29 +193,25 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.constrain_horizontal = constrain;
     }
 
-    /// Builder-style method for deciding whether to constrain the child vertically. The default
-    /// is `false`.
-    ///
-    /// This setting affects how a `ClipBox` lays out its child.
-    ///
-    /// - When it is `false` (the default), the child does receive any upper bound on its height:
-    ///   the idea is that the child can be as tall as it wants, and the viewport will somehow get
-    ///   moved around to see all of it.
-    /// - When it is `true`, the viewport's maximum height will be passed down as an upper bound on
-    ///   the height of the child, and the viewport will set its own height to be the same as its
-    ///   child's height.
-    pub fn constrain_vertical(mut self, constrain: bool) -> Self {
-        self.constrain_vertical = constrain;
-        self
-    }
-
-    /// Determine whether to constrain the child vertically.
+    /// Set whether to constrain the child vertically.
     ///
     /// See [`constrain_vertical`] for more details.
     ///
     /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
     pub fn set_constrain_vertical(&mut self, constrain: bool) {
         self.constrain_vertical = constrain;
+    }
+}
+
+impl<T, W: Widget<T>> ClipBox<T, W> {
+    /// Creates a new `ClipBox` wrapping `child`.
+    pub fn new(child: W) -> Self {
+        ClipBox {
+            child: WidgetPod::new(child),
+            port: Default::default(),
+            constrain_horizontal: false,
+            constrain_vertical: false,
+        }
     }
 
     /// Changes the viewport offset by `delta`.
@@ -258,14 +267,10 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         }
     }
 
-    /// Returns the origin of the viewport rectangle.
-    pub fn viewport_origin(&self) -> Point {
-        self.port.rect.origin()
-    }
-
-    /// Allows this `ClipBox`'s viewport rectangle to be modified. The provided callback function
-    /// can modify its argument, and when it is done then this `ClipBox` will be modified to have
-    /// the new viewport rectangle.
+    /// Modify the `ClipBox`'s viewport rectangle with a closure.
+    ///
+    /// The provided callback function can modify its argument, and when it is
+    /// done then this `ClipBox` will be modified to have the new viewport rectangle.
     pub fn with_port<F: FnOnce(&mut Viewport)>(&mut self, f: F) {
         f(&mut self.port);
         self.child
