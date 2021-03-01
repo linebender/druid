@@ -30,7 +30,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`Padding`]: widget/struct.Padding.html
     /// [`Insets`]: kurbo/struct.Insets.html
-    fn padding(self, insets: impl Into<Insets>) -> Padding<T> {
+    fn padding(self, insets: impl Into<Insets>) -> Padding<T, Self> {
         Padding::new(insets, self)
     }
 
