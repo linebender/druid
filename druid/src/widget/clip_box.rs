@@ -121,6 +121,7 @@ pub struct ClipBox<T, W> {
     port: Viewport,
     constrain_horizontal: bool,
     constrain_vertical: bool,
+    must_fill: bool,
 }
 
 impl<T, W> ClipBox<T, W> {
@@ -148,6 +149,16 @@ impl<T, W> ClipBox<T, W> {
     /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
     pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
         self.constrain_horizontal = constrain;
+        self
+    }
+
+    /// Builder-style method to set whether the child must fill the view.
+    ///
+    /// If `false` (the default) there is no minimum constraint on the child's
+    /// size. If `true`, the child is passed the same minimum constraints as
+    /// the `ClipBox`.
+    pub fn content_must_fill(mut self, must_fill: bool) -> Self {
+        self.must_fill = must_fill;
         self
     }
 
@@ -201,6 +212,16 @@ impl<T, W> ClipBox<T, W> {
     pub fn set_constrain_vertical(&mut self, constrain: bool) {
         self.constrain_vertical = constrain;
     }
+
+    /// Set whether the child's size must be greater than or equal the size of
+    /// the `ClipBox`.
+    ///
+    /// See [`content_must_fill`] for more details.
+    ///
+    /// [`content_must_fill`]: ClipBox::content_must_fill
+    pub fn set_content_must_fill(&mut self, must_fill: bool) {
+        self.must_fill = must_fill;
+    }
 }
 
 impl<T, W: Widget<T>> ClipBox<T, W> {
@@ -211,6 +232,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             port: Default::default(),
             constrain_horizontal: false,
             constrain_vertical: false,
+            must_fill: false,
         }
     }
 
@@ -310,8 +332,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         } else {
             f64::INFINITY
         };
+        let min_child_size = if self.must_fill { bc.min() } else { Size::ZERO };
         let child_bc =
-            BoxConstraints::new(Size::ZERO, Size::new(max_child_width, max_child_height));
+            BoxConstraints::new(min_child_size, Size::new(max_child_width, max_child_height));
 
         let content_size = self.child.layout(ctx, &child_bc, data, env);
         self.port.content_size = content_size;
