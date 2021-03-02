@@ -20,6 +20,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
+- Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
 
 ### Changed
 
@@ -625,6 +626,7 @@ Last release without a changelog :(
 [#1596]: https://github.com/linebender/druid/pull/1596
 [#1600]: https://github.com/linebender/druid/pull/1600
 [#1606]: https://github.com/linebender/druid/pull/1606
+[#1635]: https://github.com/linebender/druid/pull/1635
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
