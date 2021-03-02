@@ -48,6 +48,30 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         }
     }
 
+    /// Scroll by `delta` units.
+    ///
+    /// Returns `true` if the scroll offset has changed.
+    pub fn scroll_by(&mut self, delta: Vec2) -> bool {
+        self.clip.pan_by(delta)
+    }
+
+    /// Scroll the minimal distance to show the target rect.
+    ///
+    /// If the target region is larger than the viewport, we will display the
+    /// portion that fits, prioritizing the portion closest to the origin.
+    pub fn scroll_to(&mut self, region: Rect) -> bool {
+        self.clip.pan_to_visible(region)
+    }
+
+    /// Scroll to this position on a particular axis.
+    ///
+    /// Returns `true` if the scroll offset has changed.
+    pub fn scroll_to_on_axis(&mut self, axis: Axis, position: f64) -> bool {
+        self.clip.pan_to_on_axis(axis, position)
+    }
+}
+
+impl<T, W> Scroll<T, W> {
     /// Restrict scrolling to the vertical axis while locking child width.
     pub fn vertical(mut self) -> Self {
         self.scroll_component.enabled = ScrollbarsEnabled::Vertical;
@@ -64,10 +88,48 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         self
     }
 
+    /// Builder-style method to set whether the child must fill the view.
+    ///
+    /// If `false` (the default) there is no minimum constraint on the child's
+    /// size. If `true`, the child must have at least the same size as the parent
+    /// `Scroll` widget.
+    pub fn content_must_fill(mut self, must_fill: bool) -> Self {
+        self.set_content_must_fill(must_fill);
+        self
+    }
+
     /// Disable both scrollbars
     pub fn disable_scrollbars(mut self) -> Self {
         self.scroll_component.enabled = ScrollbarsEnabled::None;
         self
+    }
+
+    /// Set whether the child's size must be greater than or equal the size of
+    /// the `Scroll` widget.
+    ///
+    /// See [`content_must_fill`] for more details.
+    ///
+    /// [`content_must_fill`]: Scroll::content_must_fill
+    pub fn set_content_must_fill(&mut self, must_fill: bool) {
+        self.clip.set_content_must_fill(must_fill);
+    }
+
+    /// Set which scrollbars should be enabled.
+    ///
+    /// If scrollbars are disabled, scrolling will still occur as a result of
+    /// scroll events from a trackpad or scroll wheel.
+    pub fn set_enabled_scrollbars(&mut self, enabled: ScrollbarsEnabled) {
+        self.scroll_component.enabled = enabled;
+    }
+
+    /// Set whether the content can be scrolled in the vertical direction.
+    pub fn set_vertical_scroll_enabled(&mut self, enabled: bool) {
+        self.clip.set_constrain_vertical(!enabled);
+    }
+
+    /// Set whether the content can be scrolled in the horizontal direction.
+    pub fn set_horizontal_scroll_enabled(&mut self, enabled: bool) {
+        self.clip.set_constrain_horizontal(!enabled);
     }
 
     /// Returns a reference to the child widget.
@@ -90,26 +152,11 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         self.clip.viewport_origin().to_vec2()
     }
 
-    /// Scroll by `delta` units.
+    /// Returns a [`Rect`] representing the currently visible region.
     ///
-    /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by(&mut self, delta: Vec2) -> bool {
-        self.clip.pan_by(delta)
-    }
-
-    /// Scroll the minimal distance to show the target rect.
-    ///
-    /// If the target region is larger than the viewport, we will display the
-    /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to(&mut self, region: Rect) -> bool {
-        self.clip.pan_to_visible(region)
-    }
-
-    /// Scroll to this position on a particular axis.
-    ///
-    /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_to_on_axis(&mut self, axis: Axis, position: f64) -> bool {
-        self.clip.pan_to_on_axis(axis, position)
+    /// This is relative to the bounds of the content.
+    pub fn viewport_rect(&self) -> Rect {
+        self.clip.viewport().rect
     }
 
     /// Return the scroll offset on a particular axis
