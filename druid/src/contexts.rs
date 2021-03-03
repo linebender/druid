@@ -27,7 +27,7 @@ use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::Region;
-use crate::text::ImeHandlerRef;
+use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
     Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
@@ -86,27 +86,6 @@ pub struct EventCtx<'a, 'b> {
 pub struct LifeCycleCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-}
-
-#[derive(Clone)]
-pub(crate) struct TextFieldRegistration {
-    pub widget_id: WidgetId,
-    pub document: Rc<dyn ImeHandlerRef>,
-}
-
-impl std::fmt::Debug for TextFieldRegistration {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.debug_struct("TextFieldRegistration")
-            .field("widget_id", &self.widget_id)
-            .field("is_alive", &self.document.is_alive())
-            .finish()
-    }
-}
-
-impl TextFieldRegistration {
-    pub fn is_alive(&self) -> bool {
-        self.document.is_alive()
-    }
 }
 
 /// A mutable context provided to data update methods of widgets.
