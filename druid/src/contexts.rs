@@ -576,10 +576,13 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_next(&mut self) {
         trace!("focus_next");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Next);
         } else {
-            warn!("focus_next can only be called by the currently focused widget");
+            warn!(
+                "focus_next can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -592,10 +595,13 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_prev(&mut self) {
         trace!("focus_prev");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Previous);
         } else {
-            warn!("focus_prev can only be called by the currently focused widget");
+            warn!(
+                "focus_prev can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -608,11 +614,12 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn resign_focus(&mut self) {
         trace!("resign_focus");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Resign);
         } else {
             warn!(
-                "resign_focus can only be called by the currently focused widget ({:?})",
+                "resign_focus can only be called by the currently focused widget \
+                 or one of its ancestors. ({:?})",
                 self.widget_id()
             );
         }
