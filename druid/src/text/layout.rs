@@ -174,7 +174,7 @@ impl<T: TextStorage> TextLayout<T> {
 
     /// Set the text to display.
     pub fn set_text(&mut self, text: T) {
-        if self.text.is_none() || self.text.as_ref().unwrap().as_str() != text.as_str() {
+        if self.text.is_none() || !self.text.as_ref().unwrap().same(&text) {
             self.text = Some(text);
             self.layout = None;
         }

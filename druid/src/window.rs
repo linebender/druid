@@ -25,8 +25,9 @@ use crate::piet::{Color, Piet, RenderContext};
 use crate::shell::{text::InputHandler, Counter, Cursor, Region, TextFieldToken, WindowHandle};
 
 use crate::app::{PendingWindow, WindowSizePolicy};
-use crate::contexts::{ContextState, TextFieldRegistration};
+use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;

@@ -1,4 +1,4 @@
-// Copyright 2020 The Druid Authors.
+// Copyright 2021 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A widget for text editing.
+//! A widget component that integrates with the platform text system.
 
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::ops::Range;
 use std::sync::{Arc, Weak};
-use std::time::Duration;
 
-use super::{EditableText, Movement, Selection, TextLayout, TextStorage};
+use tracing::instrument;
+
+use super::{EditableText, ImeHandlerRef, Movement, Selection, TextLayout, TextStorage};
 use crate::kurbo::{Line, Point, Rect, Vec2};
 use crate::piet::TextLayout as _;
 use crate::shell::text::{Action as ImeAction, Event as ImeUpdate, InputHandler};
 use crate::widget::prelude::*;
-use crate::{
-    theme, Cursor, Env, HotKey, KbKey, Modifiers, Selector, SysMods, TextAlignment, TimerToken,
-    UpdateCtx,
-};
-
-const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
-const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
+use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 
 /// A widget that accepts text input.
 ///
@@ -51,24 +46,16 @@ const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 ///
 /// It is the responsibility of the user of this widget to ensure that the
 /// session is not locked before it is accessed. This can be done by checking
-/// [`SharedTextComponent::can_read`] and [`SharedTextComponent::can_write`];
+/// [`TextComponent::can_read`] and [`TextComponent::can_write`];
 /// after checking these methods the inner session can be accessed via
-/// [`SharedTextComponent::borrow`] and [`SharedTextComponent::borrow_mut`].
+/// [`TextComponent::borrow`] and [`TextComponent::borrow_mut`].
 ///
 /// Sementically, this functions like a `RefCell`; attempting to borrow while
 /// a lock is held will result in a panic.
 #[derive(Debug, Clone)]
-pub struct SharedTextComponent<T> {
+pub struct TextComponent<T> {
     inner: Arc<RefCell<EditSession<T>>>,
     lock: Arc<Cell<ImeLock>>,
-    /// true if a click event caused us to gain focus.
-    ///
-    /// On macOS, if focus happens via click then we set the selection based
-    /// on the click position; if focus happens automatically (e.g. on tab)
-    /// then we select our entire contents.
-    was_focused_from_click: bool,
-    cursor_on: bool,
-    cursor_timer: TimerToken,
 }
 
 /// The inner state of an `EditSession`.
@@ -76,13 +63,29 @@ pub struct SharedTextComponent<T> {
 /// This may be modified directly, or it may be modified by the platform.
 #[derive(Debug, Clone)]
 pub struct EditSession<T> {
+    /// The inner [`TextLayout`] object.
+    ///
+    /// This is exposed so that users can do things like set text properties;
+    /// you should avoid doing things like rebuilding this layout manually, or
+    /// setting the text directly.
     pub layout: TextLayout<T>,
     /// If the platform modifies the text, this contains the new text;
     /// we update the app `Data` with this text on the next update pass.
     external_text_change: Option<T>,
+    external_selection_change: Option<Selection>,
     external_scroll_to: Option<bool>,
+    external_action: Option<ImeAction>,
+    /// A flag set in `update` if the text has changed from a non-IME source.
+    pending_ime_invalidation: Option<ImeUpdate>,
+    /// If `true`, the component will send the [`TextComponent::RETURN`]
+    /// notification when the user enters a newline.
+    pub send_notification_on_return: bool,
+    /// If `true`, the component will send the [`TextComponent::CANCEL`]
+    /// notification when the user cancels editing.
+    pub send_notification_on_cancel: bool,
     selection: Selection,
     accepts_newlines: bool,
+    accepts_tabs: bool,
     alignment: TextAlignment,
     /// The y-position of the text when it does not fill our width.
     alignment_offset: f64,
@@ -90,28 +93,6 @@ pub struct EditSession<T> {
     composition_range: Option<Range<usize>>,
     /// The origin of the textbox, relative to the origin of the window.
     pub origin: Point,
-}
-
-/// A trait for input handlers registered by widgets.
-///
-/// A widget registers itself as accepting text input by calling
-/// [`LifeCycleCtx::register_text_field`](crate::LifeCycleCtx::register_text_field)
-/// while handling the [`LifeCycle::WidgetAdded`] event.
-///
-/// The widget does not explicitly *deregister* afterwards; rather anytime
-/// the widget tree changes, druid will call [`is_alive`] on each registered
-/// `ImeHandlerRef`, and deregister those that return `false`.
-pub trait ImeHandlerRef {
-    /// Returns `true` if this handler is still active.
-    fn is_alive(&self) -> bool;
-    /// Mark the session as locked, and return a handle.
-    ///
-    /// The lock can be read-write or read-only, indicated by the `mutable` flag.
-    ///
-    /// if [`is_alive`] is `true`, this should always return `Some(_)`.
-    fn acquire(&self, mutable: bool) -> Option<Box<dyn InputHandler + 'static>>;
-    /// Mark the session as released.
-    fn release(&self) -> bool;
 }
 
 /// An object that can be used to acquire an `ImeHandler`.
@@ -167,24 +148,39 @@ impl<T: TextStorage + EditableText> ImeHandlerRef for EditSessionRef<T> {
     }
 }
 
-impl<T: EditableText + TextStorage> SharedTextComponent<T> {
-    fn weak_ref(&self) -> impl ImeHandlerRef {
-        EditSessionRef {
-            inner: Arc::downgrade(&self.inner),
-            lock: self.lock.clone(),
-        }
-    }
-}
-
-impl SharedTextComponent<()> {
-    /// A notification sent by the component when its parent should redraw the cursor.
-    pub const REDRAW_CURSOR: Selector = Selector::new("druid-builtin.textbox-redraw-cursor");
+impl TextComponent<()> {
     /// If the payload is true, this follows an edit, and the view will need to be laid
     /// out before scrolling.
     pub const SCROLL_TO: Selector<bool> = Selector::new("druid-builtin.textbox-scroll-to");
+
+    /// A notification sent by the component when the user hits return.
+    ///
+    /// This is only sent when `send_notification_on_return` is `true`.
+    pub const RETURN: Selector = Selector::new("druid-builtin.textbox-return");
+
+    /// A notification sent when the user cancels editing.
+    ///
+    /// This is only sent when `send_notification_on_cancel` is `true`.
+    pub const CANCEL: Selector = Selector::new("druid-builtin.textbox-cancel");
+
+    /// A notification sent by the component when the user presses the tab key.
+    ///
+    /// This is not sent if `accepts_tabs` is true.
+    ///
+    /// An ancestor can handle this event in order to do things like request
+    /// a focus change.
+    pub const TAB: Selector = Selector::new("druid-builtin.textbox-tab");
+
+    /// A notification sent by the component when the user inserts a backtab.
+    ///
+    /// This is not sent if `accepts_tabs` is true.
+    ///
+    /// An ancestor can handle this event in order to do things like request
+    /// a focus change.
+    pub const BACKTAB: Selector = Selector::new("druid-builtin.textbox-backtab");
 }
 
-impl<T> SharedTextComponent<T> {
+impl<T> TextComponent<T> {
     /// Returns `true` if the inner [`EditSession`] can be read.
     pub fn can_read(&self) -> bool {
         self.lock.get() != ImeLock::ReadWrite
@@ -214,36 +210,49 @@ impl<T> SharedTextComponent<T> {
         assert!(self.can_read());
         self.inner.borrow()
     }
+}
 
-    /// Returns `true` if the cursor should be drawn.
-    pub fn should_draw_cursor(&self) -> bool {
-        if cfg!(target_os = "macos") && self.can_read() {
-            self.cursor_on && self.borrow().selection().is_caret()
-        } else {
-            self.cursor_on
+impl<T: EditableText + TextStorage> TextComponent<T> {
+    /// Returns an [`ImeHandlerRef`] that can accept platform text input.
+    ///
+    /// The widget managing this component should call [`LifeCycleCtx::register_text_input`]
+    /// during [`LifeCycle::WidgetAdded`], and pass it this object.
+    pub fn input_handler(&self) -> impl ImeHandlerRef {
+        EditSessionRef {
+            inner: Arc::downgrade(&self.inner),
+            lock: self.lock.clone(),
         }
-    }
-
-    fn reset_cursor_blink(&mut self, token: TimerToken) {
-        self.cursor_on = true;
-        self.cursor_timer = token;
     }
 }
 
-impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
+impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
+    #[instrument(
+        name = "InputComponent",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse) if self.can_write() => {
-                ctx.request_focus();
                 ctx.set_active(true);
-                if !mouse.focus {
-                    self.was_focused_from_click = true;
-                    self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                    self.borrow_mut().do_mouse_down(mouse.pos, mouse.mods, mouse.count);
-                    ctx.invalidate_text_input(Some(ImeUpdate::SelectionChanged));
+                // ensure data is up to date before a click
+                let needs_rebuild = self
+                    .borrow()
+                    .layout
+                    .text()
+                    .map(|old| !old.same(data))
+                    .unwrap_or(true);
+                if needs_rebuild {
+                    self.borrow_mut().layout.set_text(data.clone());
+                    self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+                    self.borrow_mut()
+                        .update_pending_invalidation(ImeUpdate::Reset);
                 }
-                ctx.request_paint();
-                ctx.submit_notification(SharedTextComponent::REDRAW_CURSOR);
+                self.borrow_mut()
+                    .do_mouse_down(mouse.pos, mouse.mods, mouse.count);
+                self.borrow_mut()
+                    .update_pending_invalidation(ImeUpdate::SelectionChanged);
+                ctx.request_update();
             }
             Event::MouseMove(mouse) if self.can_write() => {
                 ctx.set_cursor(&Cursor::IBeam);
@@ -251,7 +260,9 @@ impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
                     let pre_sel = self.borrow().selection();
                     self.borrow_mut().do_drag(mouse.pos);
                     if self.borrow().selection() != pre_sel {
-                        ctx.invalidate_text_input(Some(ImeUpdate::SelectionChanged));
+                        self.borrow_mut()
+                            .update_pending_invalidation(ImeUpdate::SelectionChanged);
+                        ctx.request_update();
                         ctx.request_paint();
                     }
                 }
@@ -262,50 +273,48 @@ impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
                     ctx.request_paint();
                 }
             }
-            Event::Timer(id) => {
-                if *id == self.cursor_timer {
-                    self.cursor_on = !self.cursor_on;
-                    ctx.request_paint();
-                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
-                    ctx.submit_notification(SharedTextComponent::REDRAW_CURSOR);
-                }
-            }
             Event::ImeStateChange => {
-                assert!(self.can_write(), "lock release should be cause of ImeStateChange event");
-                let text = self.borrow_mut().take_external_text_change();
+                assert!(
+                    self.can_write(),
+                    "lock release should be cause of ImeStateChange event"
+                );
                 let scroll_to = self.borrow_mut().take_scroll_to();
-                if let Some(text) = text {
-                    *data = text;
-                    ctx.request_layout();
-                }
+                let action = self.borrow_mut().take_external_action();
 
                 if let Some(scroll_to) = scroll_to {
-                    ctx.submit_notification(SharedTextComponent::SCROLL_TO.with(scroll_to));
+                    ctx.submit_notification(TextComponent::SCROLL_TO.with(scroll_to));
                 }
-                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-            }
-            Event::KeyDown(key_event)
-                    // if composing, let IME handle tab
-                if self.can_read()
-                    && self.borrow().composition_range().is_none() =>
-            {
-                match key_event {
-                    // Tab and shift+tab
-                    k_e if HotKey::new(None, KbKey::Tab).matches(k_e) => {
-                        ctx.focus_next();
-                        ctx.set_handled();
-                    }
-                    k_e if HotKey::new(SysMods::Shift, KbKey::Tab).matches(k_e) => {
-                        ctx.focus_prev();
-                        ctx.set_handled();
-                    }
-                    _ => (),
-                };
+                if let Some(action) = action {
+                    match action {
+                        ImeAction::Cancel => ctx.submit_notification(TextComponent::CANCEL),
+                        ImeAction::InsertNewLine { .. } => {
+                            ctx.submit_notification(TextComponent::RETURN)
+                        }
+                        ImeAction::InsertTab { .. } => ctx.submit_notification(TextComponent::TAB),
+                        ImeAction::InsertBacktab => ctx.submit_notification(TextComponent::BACKTAB),
+                        _ => tracing::warn!("unexepcted external action '{:?}'", action),
+                    };
+                }
+                let text = self.borrow_mut().take_external_text_change();
+                let selection = self.borrow_mut().take_external_selection_change();
+                if let Some(text) = text {
+                    self.borrow_mut().layout.set_text(text.clone());
+                    *data = text;
+                }
+                if let Some(selection) = selection {
+                    self.borrow_mut().selection = selection;
+                }
+                ctx.request_update();
             }
             _ => (),
         }
     }
 
+    #[instrument(
+        name = "InputComponent",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
@@ -313,10 +322,10 @@ impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
                     self.can_write(),
                     "ime should never be locked at WidgetAdded"
                 );
-                ctx.register_text_input(self.weak_ref());
                 self.borrow_mut().layout.set_text(data.to_owned());
                 self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
             }
+            //FIXME: this should happen in the parent too?
             LifeCycle::Internal(crate::InternalLifeCycle::ParentWindowOrigin)
                 if self.can_write() =>
             {
@@ -329,31 +338,29 @@ impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
                     }
                 }
             }
-            LifeCycle::FocusChanged(is_focused) => {
-                if self.can_write() {
-                    if MAC_OR_LINUX && *is_focused && !self.was_focused_from_click {
-                        self.borrow_mut().selection = Selection::new(0, data.len());
-                    }
-                } else {
-                    log::warn!("IME locked during FocusChanged");
-                }
-                self.was_focused_from_click = false;
-                self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                ctx.request_paint();
-            }
             _ => (),
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+    #[instrument(
+        name = "InputComponent",
+        level = "trace",
+        skip(self, ctx, _old, data, env)
+    )]
+    fn update(&mut self, ctx: &mut UpdateCtx, _old: &T, data: &T, env: &Env) {
         if self.can_write() {
             self.borrow_mut().update(ctx, data, env);
         }
     }
 
+    #[instrument(
+        name = "InputComponent",
+        level = "trace",
+        skip(self, ctx, bc, _data, env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         if !self.can_write() {
-            log::warn!("Text layout called with IME lock held.");
+            tracing::warn!("Text layout called with IME lock held.");
             return Size::ZERO;
         }
 
@@ -377,9 +384,10 @@ impl<T: TextStorage + EditableText> Widget<T> for SharedTextComponent<T> {
         size
     }
 
+    #[instrument(name = "InputComponent", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         if !self.can_read() {
-            log::warn!("Text paint called with IME lock held.");
+            tracing::warn!("Text paint called with IME lock held.");
         }
         let selection_color = env.get(theme::SELECTION_COLOR);
         let cursor_color = env.get(theme::CURSOR_COLOR);
@@ -418,6 +426,23 @@ impl<T> EditSession<T> {
         self.selection
     }
 
+    /// Manually set the selection.
+    ///
+    /// If the new selection is different from the current selection, this
+    /// will return an ime event that the controlling widget should use to
+    /// invalidte the platform's IME state, by passing it to
+    /// [`EventCtx::invalidate_text_input`].
+    #[must_use]
+    pub fn set_selection(&mut self, selection: Selection) -> Option<ImeUpdate> {
+        if selection != self.selection {
+            self.selection = selection;
+            self.update_pending_invalidation(ImeUpdate::SelectionChanged);
+            Some(ImeUpdate::SelectionChanged)
+        } else {
+            None
+        }
+    }
+
     /// The range of text currently being modified by an IME.
     pub fn composition_range(&self) -> Option<Range<usize>> {
         self.composition_range.clone()
@@ -436,12 +461,42 @@ impl<T> EditSession<T> {
         self.alignment = alignment;
     }
 
+    /// Returns any invalidation action that should be passed to the platform.
+    ///
+    /// The user of this component *must* check this after calling `update`.
+    pub fn pending_ime_invalidation(&mut self) -> Option<ImeUpdate> {
+        self.pending_ime_invalidation.take()
+    }
+
     fn take_external_text_change(&mut self) -> Option<T> {
         self.external_text_change.take()
     }
 
+    fn take_external_selection_change(&mut self) -> Option<Selection> {
+        self.external_selection_change.take()
+    }
+
     fn take_scroll_to(&mut self) -> Option<bool> {
         self.external_scroll_to.take()
+    }
+
+    fn take_external_action(&mut self) -> Option<ImeAction> {
+        self.external_action.take()
+    }
+
+    // we don't want to replace a more aggressive invalidation with a less aggressive one.
+    fn update_pending_invalidation(&mut self, new_invalidation: ImeUpdate) {
+        self.pending_ime_invalidation = match self.pending_ime_invalidation.take() {
+            None => Some(new_invalidation),
+            Some(prev) => match (prev, new_invalidation) {
+                (ImeUpdate::SelectionChanged, ImeUpdate::SelectionChanged) => {
+                    ImeUpdate::SelectionChanged
+                }
+                (ImeUpdate::LayoutChanged, ImeUpdate::LayoutChanged) => ImeUpdate::LayoutChanged,
+                _ => ImeUpdate::Reset,
+            }
+            .into(),
+        }
     }
 
     fn update_alignment_offset(&mut self, extra_width: f64) {
@@ -454,28 +509,58 @@ impl<T> EditSession<T> {
 }
 
 impl<T: TextStorage + EditableText> EditSession<T> {
+    /// Insert text *not* from the IME, replacing the current selection.
+    ///
+    /// The caller is responsible for notifying the platform of the change in
+    /// text state, by calling [`EventCtx::invalidate_text_input`].
+    #[must_use]
+    pub fn insert_text(&mut self, data: &mut T, new_text: &str) -> ImeUpdate {
+        let new_cursor_pos = self.selection.min() + new_text.len();
+        data.edit(self.selection.range(), new_text);
+        self.selection = Selection::caret(new_cursor_pos);
+        self.scroll_to_selection_end(true);
+        ImeUpdate::Reset
+    }
+
+    /// Sets the clipboard to the contents of the current selection.
+    ///
+    /// Returns `true` if the clipboard was set, and `false` if not (indicating)
+    /// that the selection was empty.)
+    pub fn set_clipboard(&self) -> bool {
+        if let Some(text) = self
+            .layout
+            .text()
+            .and_then(|txt| txt.slice(self.selection.range()))
+        {
+            if !text.is_empty() {
+                crate::Application::global().clipboard().put_string(text);
+                return true;
+            }
+        }
+        false
+    }
+
     fn scroll_to_selection_end(&mut self, after_edit: bool) {
         self.external_scroll_to = Some(after_edit);
     }
 
     fn do_action(&mut self, buffer: &mut T, action: ImeAction) {
-        //tracing::debug!("action {:?}", &action);
         match action {
             ImeAction::Move(movement) => {
                 let sel =
                     crate::text::movement(movement.into(), self.selection, &self.layout, false);
-                self.selection = sel;
+                self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::MoveSelecting(movement) => {
                 let sel =
                     crate::text::movement(movement.into(), self.selection, &self.layout, true);
-                self.selection = sel;
+                self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::SelectAll => {
                 let len = self.layout.text().as_ref().map(|t| t.len()).unwrap_or(0);
-                self.selection = Selection::new(0, len);
+                self.external_selection_change = Some(Selection::new(0, len));
             }
             //ImeAction::SelectLine | ImeAction::SelectParagraph | ImeAction::SelectWord => {
             //tracing::warn!("Line/Word selection actions are not implemented");
@@ -488,37 +573,57 @@ impl<T: TextStorage + EditableText> EditSession<T> {
                     let to_delete =
                         crate::text::movement(movement, self.selection, &self.layout, true);
                     self.selection = to_delete;
-                    self.insert_text(buffer, "")
+                    self.ime_insert_text(buffer, "")
                 }
             }
-            ImeAction::Delete(_) => self.insert_text(buffer, ""),
+            ImeAction::Delete(_) => self.ime_insert_text(buffer, ""),
             ImeAction::DecomposingBackspace => {
-                log::warn!("Decomposing Backspace is not implemented");
+                tracing::warn!("Decomposing Backspace is not implemented");
                 self.backspace(buffer);
             }
             //ImeAction::UppercaseSelection
             //| ImeAction::LowercaseSelection
             //| ImeAction::TitlecaseSelection => {
-            //log::warn!("IME transformations are not implemented");
+            //tracing::warn!("IME transformations are not implemented");
             //}
-            ImeAction::InsertNewLine { newline_type, .. } if self.accepts_newlines => {
-                self.insert_text(buffer, &newline_type.to_string());
+            ImeAction::InsertNewLine {
+                newline_type,
+                ignore_hotkey,
+            } => {
+                if self.send_notification_on_return && !ignore_hotkey {
+                    self.external_action = Some(action);
+                } else if self.accepts_newlines {
+                    self.ime_insert_text(buffer, &newline_type.to_string());
+                }
             }
-            ImeAction::InsertTab { .. } => {
-                self.insert_text(buffer, "\t");
+            ImeAction::InsertTab { ignore_hotkey } => {
+                if ignore_hotkey || self.accepts_tabs {
+                    self.ime_insert_text(buffer, "\t");
+                } else if !ignore_hotkey {
+                    self.external_action = Some(action);
+                }
             }
-            //ImeAction::InsertBacktab => log::warn!("IME backtab not implemented"),
-            ImeAction::InsertSingleQuoteIgnoringSmartQuotes => self.insert_text(buffer, "'"),
-            ImeAction::InsertDoubleQuoteIgnoringSmartQuotes => self.insert_text(buffer, "\""),
+            ImeAction::InsertBacktab => {
+                if !self.accepts_tabs {
+                    self.external_action = Some(action);
+                }
+            }
+            ImeAction::InsertSingleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "'"),
+            ImeAction::InsertDoubleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "\""),
+            ImeAction::Cancel if self.send_notification_on_cancel => {
+                self.external_action = Some(action)
+            }
             other => tracing::warn!("unhandled IME action {:?}", other),
         }
     }
 
     /// Replace the current selection with `text`, and advance the cursor.
-    fn insert_text(&mut self, buffer: &mut T, text: &str) {
+    ///
+    /// This should only be called from the IME.
+    fn ime_insert_text(&mut self, buffer: &mut T, text: &str) {
         let new_cursor_pos = self.selection.min() + text.len();
         buffer.edit(self.selection.range(), text);
-        self.selection = Selection::caret(new_cursor_pos);
+        self.external_selection_change = Some(Selection::caret(new_cursor_pos));
         self.scroll_to_selection_end(true);
     }
 
@@ -529,12 +634,12 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         } else {
             self.selection.range()
         };
-        self.selection = Selection::caret(to_del.start);
+        self.external_selection_change = Some(Selection::caret(to_del.start));
         buffer.edit(to_del, "");
         self.scroll_to_selection_end(true);
     }
 
-    pub fn do_mouse_down(&mut self, point: Point, mods: Modifiers, count: u8) {
+    fn do_mouse_down(&mut self, point: Point, mods: Modifiers, count: u8) {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
@@ -546,7 +651,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         }
     }
 
-    pub fn do_drag(&mut self, point: Point) {
+    fn do_drag(&mut self, point: Point) {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
@@ -582,10 +687,23 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, new_data: &T, env: &Env) {
-        self.layout.set_text(new_data.clone());
+        if self
+            .layout
+            .text()
+            .as_ref()
+            .map(|t| !t.same(new_data))
+            .unwrap_or(true)
+        {
+            self.update_pending_invalidation(ImeUpdate::Reset);
+            self.layout.set_text(new_data.clone());
+        }
         if self.layout.needs_rebuild_after_update(ctx) {
-            self.selection = self.selection.constrained(new_data);
             ctx.request_layout();
+        }
+        let new_sel = self.selection.constrained(new_data);
+        if new_sel != self.selection {
+            self.selection = new_sel;
+            self.update_pending_invalidation(ImeUpdate::SelectionChanged);
         }
         self.layout.rebuild_if_needed(ctx.text(), env);
     }
@@ -604,7 +722,7 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
     }
 
     fn set_selection(&mut self, selection: crate::shell::text::Selection) {
-        self.inner.borrow_mut().selection = selection.into();
+        self.inner.borrow_mut().external_selection_change = Some(selection.into());
         self.inner.borrow_mut().external_scroll_to = Some(true);
     }
 
@@ -679,26 +797,29 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
     }
 }
 
-impl<T> Default for SharedTextComponent<T> {
+impl<T> Default for TextComponent<T> {
     fn default() -> Self {
         let inner = EditSession {
             layout: TextLayout::new(),
             external_scroll_to: None,
             external_text_change: None,
+            external_selection_change: None,
+            external_action: None,
+            pending_ime_invalidation: None,
             selection: Selection::caret(0),
             composition_range: None,
+            send_notification_on_return: false,
+            send_notification_on_cancel: false,
             accepts_newlines: false,
+            accepts_tabs: false,
             alignment: TextAlignment::Start,
             alignment_offset: 0.0,
             origin: Point::ZERO,
         };
 
-        SharedTextComponent {
+        TextComponent {
             inner: Arc::new(RefCell::new(inner)),
             lock: Arc::new(Cell::new(ImeLock::None)),
-            was_focused_from_click: false,
-            cursor_on: false,
-            cursor_timer: TimerToken::INVALID,
         }
     }
 }
