@@ -1099,52 +1099,58 @@ impl WindowHandle {
     }
 
     pub fn remove_text_field(&self, token: TextFieldToken) {
-        let mut state = unsafe {
-            let view = self.nsview.load().as_ref().unwrap();
-            let state: *mut c_void = *view.get_ivar("viewState");
-            &mut (*(state as *mut ViewState))
-        };
-        if state.active_text_input == Some(token) {
-            state.active_text_input = None;
+        let view = self.nsview.load();
+        unsafe {
+            if let Some(view) = (*view).as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+                if state.active_text_input == Some(token) {
+                    state.active_text_input = None;
+                }
+            }
         }
     }
 
     pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
-        let mut state = unsafe {
-            let view = self.nsview.load().as_ref().unwrap();
-            let state: *mut c_void = *view.get_ivar("viewState");
-            &mut (*(state as *mut ViewState))
-        };
-        if let Some(old_field) = state.active_text_input {
-            self.update_text_field(old_field, Event::Reset);
-        }
-        state.active_text_input = active_field;
-        if let Some(new_field) = active_field {
-            self.update_text_field(new_field, Event::Reset);
+        unsafe {
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+
+                if let Some(old_field) = state.active_text_input {
+                    self.update_text_field(old_field, Event::Reset);
+                }
+                state.active_text_input = active_field;
+                if let Some(new_field) = active_field {
+                    self.update_text_field(new_field, Event::Reset);
+                }
+            }
         }
     }
 
     pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
-        let state = unsafe {
-            let view = self.nsview.load().as_ref().unwrap();
-            let state: *mut c_void = *view.get_ivar("viewState");
-            &mut (*(state as *mut ViewState))
-        };
-        if state.active_text_input != Some(token) {
-            return;
-        }
-        match update {
-            Event::LayoutChanged => unsafe {
-                let input_context: id = msg_send![*self.nsview.load(), inputContext];
-                let _: () = msg_send![input_context, invalidateCharacterCoordinates];
-            },
-            Event::Reset | Event::SelectionChanged => unsafe {
-                let input_context: id = msg_send![*self.nsview.load(), inputContext];
-                let _: () = msg_send![input_context, discardMarkedText];
-                let mut edit_lock = state.handler.acquire_input_lock(token, true);
-                edit_lock.set_composition_range(None);
-                state.handler.release_input_lock(token);
-            },
+        unsafe {
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+
+                if state.active_text_input != Some(token) {
+                    return;
+                }
+                match update {
+                    Event::LayoutChanged => {
+                        let input_context: id = msg_send![*self.nsview.load(), inputContext];
+                        let _: () = msg_send![input_context, invalidateCharacterCoordinates];
+                    }
+                    Event::Reset | Event::SelectionChanged => {
+                        let input_context: id = msg_send![*self.nsview.load(), inputContext];
+                        let _: () = msg_send![input_context, discardMarkedText];
+                        let mut edit_lock = state.handler.acquire_input_lock(token, true);
+                        edit_lock.set_composition_range(None);
+                        state.handler.release_input_lock(token);
+                    }
+                }
+            }
         }
     }
 
