@@ -450,6 +450,26 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
                 input_handler.handle_action(Action::Move(movement));
             }
         }
+        KbKey::Backspace => {
+            input_handler.handle_action(Action::Delete(Movement::Grapheme(Direction::Upstream)));
+        }
+        KbKey::Enter => {
+            // I'm sorry windows, you'll get IME soon.
+            input_handler.handle_action(Action::InsertNewLine {
+                ignore_hotkey: false,
+                newline_type: '\n',
+            });
+        }
+        KbKey::Tab => {
+            let action = if event.mods.shift() {
+                Action::InsertBacktab
+            } else {
+                Action::InsertTab {
+                    ignore_hotkey: false,
+                }
+            };
+            input_handler.handle_action(action);
+        }
         _ => {
             handler.release_input_lock(token);
             return false;
