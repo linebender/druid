@@ -168,7 +168,7 @@ impl<T: Data> AppLauncher<T> {
     }
 
     /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
-    /// stderr, controlled by ENV variables.
+    /// stderr.
     ///
     /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
     /// it's probably better to implement it yourself.
@@ -191,7 +191,7 @@ impl<T: Data> AppLauncher<T> {
                 .init();
         }
         // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
-        // because wasm targets will virtually always be browsers.
+        // because this is a GUI framework, so wasm targets will virtually always be browsers.
         #[cfg(target_arch = "wasm32")]
         {
             console_error_panic_hook::set_once();

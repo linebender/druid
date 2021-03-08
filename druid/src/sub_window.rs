@@ -97,9 +97,12 @@ impl<U, W: Widget<U>> SubWindowHost<U, W> {
     }
 }
 
-// TODO
 impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
-    #[instrument(name = "Button", level = "trace", skip(self, ctx, event, _data, _env))]
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, event, _data, _env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut (), _env: &Env) {
         match event {
             Event::Command(cmd) if cmd.is(SUB_WINDOW_PARENT_TO_HOST) => {
@@ -133,13 +136,17 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
         }
     }
 
-    #[instrument(name = "Button", level = "trace", skip(self, ctx, event, _data, _env))]
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, event, _data, _env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &(), _env: &Env) {
         self.child.lifecycle(ctx, event, &self.data, &self.env)
     }
 
     #[instrument(
-        name = "Button",
+        name = "SubWindowHost",
         level = "trace",
         skip(self, ctx, _old_data, _data, _env)
     )]
@@ -149,7 +156,11 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
         }
     }
 
-    #[instrument(name = "Button", level = "trace", skip(self, ctx, bc, _data, _env))]
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, bc, _data, _env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &(), _env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, &self.data, &self.env);
         self.child.set_layout_rect(
@@ -161,7 +172,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
         size
     }
 
-    #[instrument(name = "Button", level = "trace", skip(self, ctx, _data, _env))]
+    #[instrument(name = "SubWindowHost", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &(), _env: &Env) {
         self.child.paint_raw(ctx, &self.data, &self.env);
     }
