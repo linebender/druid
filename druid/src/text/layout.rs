@@ -313,7 +313,7 @@ impl<T: TextStorage> TextLayout<T> {
     /// as part of your widget's [`layout`] method.
     ///
     /// [`layout`]: trait.Widget.html#method.layout
-    pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) {
+    pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) -> bool {
         if let Some(text) = &self.text {
             if self.layout.is_none() {
                 let font = self.font.resolve(env);
@@ -336,8 +336,10 @@ impl<T: TextStorage> TextLayout<T> {
                     .default_attribute(TextAttribute::TextColor(color));
                 let layout = text.add_attributes(builder, env).build().unwrap();
                 self.layout = Some(layout);
+                return true;
             }
         }
+        false
     }
 
     ///  Draw the layout at the provided `Point`.

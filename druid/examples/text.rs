@@ -47,6 +47,7 @@ impl PietTextStorage for AppState {
 }
 
 impl TextStorage for AppState {
+    type Data = ();
     fn add_attributes(&self, builder: PietTextLayoutBuilder, env: &Env) -> PietTextLayoutBuilder {
         self.text.add_attributes(builder, env)
     }
