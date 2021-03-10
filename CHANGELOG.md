@@ -21,6 +21,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
+- Added ListIter implementations for HashMap and OrdMap with list_sources example ([#1700] guess by [@lejero])
 
 ### Changed
 
@@ -423,6 +424,7 @@ Last release without a changelog :(
 [@Poignardazur]: https://github.com/PoignardAzur
 [@HoNile]: https://github.com/HoNile
 [@SecondFlight]: https://github.com/SecondFlight
+[@Lejero]: https://githum.com/lejero
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
