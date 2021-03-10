@@ -859,6 +859,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             ..
         } = ctx;
         let mut sentinal = VecDeque::new();
+        let self_id = self.id();
         let mut inner_ctx = EventCtx {
             state,
             notifications: &mut sentinal,
@@ -869,15 +870,20 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         for _ in 0..notifications.len() {
             let notification = notifications.pop_front().unwrap();
-            let event = Event::Notification(notification);
-            self.inner.event(&mut inner_ctx, &event, data, env);
-            if inner_ctx.is_handled {
-                inner_ctx.is_handled = false;
-            } else if let Event::Notification(notification) = event {
-                // we will try again with the next parent
-                parent_notifications.push_back(notification);
+            // skip notifications that were submitted by our child
+            if notification.source() != self_id {
+                let event = Event::Notification(notification);
+                self.inner.event(&mut inner_ctx, &event, data, env);
+                if inner_ctx.is_handled {
+                    inner_ctx.is_handled = false;
+                } else if let Event::Notification(notification) = event {
+                    // we will try again with the next parent
+                    parent_notifications.push_back(notification);
+                } else {
+                    unreachable!()
+                }
             } else {
-                unreachable!()
+                parent_notifications.push_back(notification);
             }
         }
 
