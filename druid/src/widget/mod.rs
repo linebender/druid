@@ -64,6 +64,7 @@ pub use self::image::Image;
 pub use added::Added;
 pub use align::Align;
 pub use button::Button;
+pub use button::ButtonStyle;
 pub use checkbox::Checkbox;
 pub use click::Click;
 pub use clip_box::{ClipBox, Viewport};

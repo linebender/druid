@@ -14,19 +14,81 @@
 
 //! A button widget.
 
-use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
-use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
+use crate::{theme, Affine, Color, Data, Insets, LinearGradient, UnitPoint};
+use crate::{widget::prelude::*, KeyOrValue};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
 // should be reevaluated at some point.
 const LABEL_INSETS: Insets = Insets::uniform_xy(8., 2.);
 
+/// The style values a Button needs to paint itself
+#[derive(Debug, Clone)]
+pub struct ButtonStyle {
+    /// Border width
+    pub border_width: KeyOrValue<f64>,
+    /// Corner radius
+    pub border_radius: KeyOrValue<f64>,
+    /// Border color
+    pub border_color: KeyOrValue<Color>,
+    /// Whether or not to paint the background as a gradient.
+    /// If false, the background defaults to background_color_a
+    pub background_is_gradient: KeyOrValue<bool>,
+    /// First color of gradient, or default color of background
+    pub background_color_a: KeyOrValue<Color>,
+    /// First color of gradient, or alt color of background
+    pub background_color_b: KeyOrValue<Color>,
+}
+
+impl ButtonStyle {
+    /// Default ButtonStyle
+    pub fn new() -> Self {
+        Self {
+            border_width: theme::BUTTON_BORDER_WIDTH.into(),
+            border_radius: theme::BUTTON_BORDER_RADIUS.into(),
+            border_color: theme::BORDER_DARK.into(),
+            background_is_gradient: true.into(),
+            background_color_a: theme::BUTTON_LIGHT.into(),
+            background_color_b: theme::BUTTON_DARK.into(),
+        }
+    }
+
+    /// Default ButtonStyle when button is hovered
+    pub fn hot() -> Self {
+        let normal = Self::new();
+
+        Self {
+            border_color: theme::BORDER_LIGHT.into(),
+            ..normal
+        }
+    }
+
+    /// Default ButtonStyle when button is active
+    pub fn active() -> Self {
+        let normal = Self::new();
+
+        Self {
+            background_color_a: theme::BUTTON_DARK.into(),
+            background_color_b: theme::BUTTON_LIGHT.into(),
+            ..normal
+        }
+    }
+}
+
+impl Default for ButtonStyle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// A button with a text label.
 pub struct Button<T> {
     label: Label<T>,
     label_size: Size,
+    style_normal: ButtonStyle,
+    style_hot: ButtonStyle,
+    style_active: ButtonStyle,
 }
 
 impl<T: Data> Button<T> {
@@ -72,7 +134,28 @@ impl<T: Data> Button<T> {
         Button {
             label,
             label_size: Size::ZERO,
+            style_normal: ButtonStyle::new(),
+            style_hot: ButtonStyle::hot(),
+            style_active: ButtonStyle::active(),
         }
+    }
+
+    /// Customize this button's default style
+    pub fn with_style_normal(mut self, style: ButtonStyle) -> Self {
+        self.style_normal = style;
+        self
+    }
+
+    /// Customize this button's style on hover
+    pub fn with_style_hot(mut self, style: ButtonStyle) -> Self {
+        self.style_hot = style;
+        self
+    }
+
+    /// Customize this button's style on active
+    pub fn with_style_active(mut self, style: ButtonStyle) -> Self {
+        self.style_active = style;
+        self
     }
 
     /// Construct a new dynamic button.
@@ -158,36 +241,41 @@ impl<T: Data> Widget<T> for Button<T> {
         let is_active = ctx.is_active();
         let is_hot = ctx.is_hot();
         let size = ctx.size();
-        let stroke_width = env.get(theme::BUTTON_BORDER_WIDTH);
+
+        // We choose our style up top
+        let style = if is_active {
+            &self.style_active
+        } else if is_hot {
+            &self.style_hot
+        } else {
+            &self.style_normal
+        };
+
+        // Now we resolve the specific values we need out of that style
+        let stroke_width = style.border_width.resolve(env);
+        let stroke_color = style.border_color.resolve(env);
+        let is_gradient = style.background_is_gradient.resolve(env);
+        let background_a = style.background_color_a.resolve(env);
+        let background_b = style.background_color_b.resolve(env);
+        let border_radius = style.border_radius.resolve(env);
 
         let rounded_rect = size
             .to_rect()
             .inset(-stroke_width / 2.0)
-            .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
+            .to_rounded_rect(border_radius);
 
-        let bg_gradient = if is_active {
-            LinearGradient::new(
+        ctx.stroke(rounded_rect, &stroke_color, stroke_width);
+
+        if is_gradient {
+            let bg_gradient = LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_DARK), env.get(theme::BUTTON_LIGHT)),
-            )
+                (background_a, background_b),
+            );
+            ctx.fill(rounded_rect, &bg_gradient);
         } else {
-            LinearGradient::new(
-                UnitPoint::TOP,
-                UnitPoint::BOTTOM,
-                (env.get(theme::BUTTON_LIGHT), env.get(theme::BUTTON_DARK)),
-            )
-        };
-
-        let border_color = if is_hot {
-            env.get(theme::BORDER_LIGHT)
-        } else {
-            env.get(theme::BORDER_DARK)
-        };
-
-        ctx.stroke(rounded_rect, &border_color, stroke_width);
-
-        ctx.fill(rounded_rect, &bg_gradient);
+            ctx.fill(rounded_rect, &background_a);
+        }
 
         let label_offset = (size.to_vec2() - self.label_size.to_vec2()) / 2.0;
 
