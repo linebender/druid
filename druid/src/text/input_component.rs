@@ -35,7 +35,7 @@ use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 /// overview, see [`druid_shell::text`].
 ///
 /// This type manages an inner [`EditSession`] that is shared with the platform.
-/// Unlike other aspects of druid, the platform interacts with this session, not
+/// Unlike other aspects of Druid, the platform interacts with this session, not
 /// through discrete events.
 ///
 /// This is managed through a simple 'locking' mechanism; the platform asks for
@@ -58,9 +58,11 @@ pub struct TextComponent<T> {
     lock: Arc<Cell<ImeLock>>,
 }
 
-/// The inner state of an `EditSession`.
+/// Editable text state.
 ///
-/// This may be modified directly, or it may be modified by the platform.
+/// This is the inner state of a [`TextComponent`]. It should only be accessed
+/// through its containing [`TextComponent`], or by the platform through an
+/// [`ImeHandlerRef`] created by [`TextComponent::input_handler`].
 #[derive(Debug, Clone)]
 pub struct EditSession<T> {
     /// The inner [`TextLayout`] object.
@@ -149,8 +151,10 @@ impl<T: TextStorage + EditableText> ImeHandlerRef for EditSessionRef<T> {
 }
 
 impl TextComponent<()> {
-    /// If the payload is true, this follows an edit, and the view will need to be laid
-    /// out before scrolling.
+    /// A notification sent by the component when the cursor has moved.
+    ///
+    /// If the payload is true, this follows an edit, and the view will need
+    /// layout before scrolling.
     pub const SCROLL_TO: Selector<bool> = Selector::new("druid-builtin.textbox-scroll-to");
 
     /// A notification sent by the component when the user hits return.
@@ -334,7 +338,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     let new_origin = ctx.window_origin();
                     if prev_origin != new_origin {
                         self.borrow_mut().origin = ctx.window_origin();
-                        ctx.invalidate_text_input(Some(ImeUpdate::LayoutChanged));
+                        ctx.invalidate_text_input(ImeUpdate::LayoutChanged);
                     }
                 }
             }

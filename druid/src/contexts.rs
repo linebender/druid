@@ -26,6 +26,7 @@ use tracing::{error, trace, warn};
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
+use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
@@ -389,10 +390,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// A widget that accepts text input should call this anytime input state
     /// (such as the text or the selection) changes as a result of a non text-input
     /// event.
-    pub fn invalidate_text_input(&mut self, event: Option<crate::shell::text::Event>) {
+    pub fn invalidate_text_input(&mut self, event: ImeInvalidation) {
         let payload = commands::ImeInvalidation {
             widget: self.widget_id(),
-            event: event.unwrap_or(crate::shell::text::Event::Reset),
+            event,
         };
         let cmd = commands::INVALIDATE_IME
             .with(payload)

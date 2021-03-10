@@ -6,6 +6,7 @@ You can find its changes [documented below](#070---2021-01-01).
 # Unreleased
 
 ### Highlights
+- International text input support (IME) on macOS.
 
 ### Added
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
@@ -22,6 +23,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
+- New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 
 ### Changed
@@ -635,6 +637,7 @@ Last release without a changelog :(
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
+[#1636]: https://github.com/linebender/druid/pull/1636
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
 
