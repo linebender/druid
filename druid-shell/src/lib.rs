@@ -61,6 +61,8 @@ mod scale;
 mod screen;
 mod window;
 
+pub mod text;
+
 pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
@@ -74,8 +76,8 @@ pub use region::Region;
 pub use scale::{Scalable, Scale, ScaledArea};
 pub use screen::{Monitor, Screen};
 pub use window::{
-    FileDialogToken, IdleHandle, IdleToken, TimerToken, WinHandler, WindowBuilder, WindowHandle,
-    WindowLevel, WindowState,
+    FileDialogToken, IdleHandle, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowBuilder,
+    WindowHandle, WindowLevel, WindowState,
 };
 
 pub use keyboard_types;

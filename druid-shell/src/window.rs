@@ -28,6 +28,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
+use crate::text::{Event, InputHandler};
 use piet_common::PietText;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -49,6 +50,31 @@ impl TimerToken {
     /// Create a new token from a raw value.
     pub const fn from_raw(id: u64) -> TimerToken {
         TimerToken(id)
+    }
+
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
+        self.0
+    }
+}
+
+/// Uniquely identifies a text input field inside a window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct TextFieldToken(u64);
+
+impl TextFieldToken {
+    /// A token that does not correspond to any text input.
+    pub const INVALID: TextFieldToken = TextFieldToken(0);
+
+    /// Create a new token; this should for the most part be called only by platform code.
+    pub fn next() -> TextFieldToken {
+        static TEXT_FIELD_COUNTER: Counter = Counter::new();
+        TextFieldToken(TEXT_FIELD_COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> TextFieldToken {
+        TextFieldToken(id)
     }
 
     /// Get the raw value for a token.
@@ -275,6 +301,45 @@ impl WindowHandle {
     /// Get access to a type that can perform text layout.
     pub fn text(&self) -> PietText {
         self.0.text()
+    }
+
+    /// Register a new text input receiver for this window.
+    ///
+    /// This method should be called any time a new editable text field is
+    /// created inside a window.  Any text field with a `TextFieldToken` that
+    /// has not yet been destroyed with `remove_text_field` *must* be ready to
+    /// accept input from the platform via `WinHandler::text_input` at any time,
+    /// even if it is not currently focused.
+    ///
+    /// Returns the `TextFieldToken` associated with this new text input.
+    pub fn add_text_field(&self) -> TextFieldToken {
+        self.0.add_text_field()
+    }
+
+    /// Unregister a previously registered text input receiver.
+    ///
+    /// If `token` is the text field currently focused, the platform automatically
+    /// sets the focused field to `None`.
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        self.0.remove_text_field(token)
+    }
+
+    /// Notify the platform that the focused text input receiver has changed.
+    ///
+    /// This must be called any time focus changes to a different text input, or
+    /// when focus switches away from a text input.
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.0.set_focused_text_field(active_field)
+    }
+
+    /// Notify the platform that some text input state has changed, such as the
+    /// selection, contents, etc.
+    ///
+    /// This method should *never* be called in response to edits from a
+    /// `InputHandler`; only in response to changes from the application:
+    /// scrolling, remote edits, etc.
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.0.update_text_field(token, update)
     }
 
     /// Schedule a timer.
@@ -511,6 +576,35 @@ pub trait WinHandler {
     /// on Windows, or keyUp(withEvent:) on macOS.
     #[allow(unused_variables)]
     fn key_up(&mut self, event: KeyEvent) {}
+
+    /// Take a lock for the text document specified by `token`.
+    ///
+    /// All calls to this method must be balanced with a call to
+    /// [`release_input_lock`].
+    ///
+    /// If `mutable` is true, the lock should be a write lock, and allow calling
+    /// mutating methods on InputHandler.  This method is called from the top
+    /// level of the event loop and expects to acquire a lock successfully.
+    ///
+    /// For more information, see [the text input documentation](crate::text).
+    ///
+    /// [`release_input_lock`]: WinHandler::release_input_lock
+    #[allow(unused_variables)]
+    fn acquire_input_lock(
+        &mut self,
+        token: TextFieldToken,
+        mutable: bool,
+    ) -> Box<dyn InputHandler> {
+        panic!("acquire_input_lock was called on a WinHandler that did not expect text input.")
+    }
+
+    /// Release a lock previously acquired by [`acquire_input_lock`].
+    ///
+    /// [`acquire_input_lock`]: WinHandler::acquire_input_lock
+    #[allow(unused_variables)]
+    fn release_input_lock(&mut self, token: TextFieldToken) {
+        panic!("release_input_lock was called on a WinHandler that did not expect text input.")
+    }
 
     /// Called on a mouse wheel event.
     ///
