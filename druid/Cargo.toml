@@ -98,7 +98,7 @@ name = "invalidation"
 required-features = ["im"]
 
 [[example]]
-name = "list_variants"
+name = "list_sources"
 required-features = ["im"]
 
 [[example]]
