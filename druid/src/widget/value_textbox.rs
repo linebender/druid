@@ -1,4 +1,4 @@
-// Copyright 2018 The Druid Authors.
+// Copyright 2021 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -169,7 +169,7 @@ impl<T: Data> ValueTextBox<T> {
                         .borrow_mut()
                         .set_selection(Selection::new(0, self.buffer.len()))
                     {
-                        ctx.invalidate_text_input(Some(inval));
+                        ctx.invalidate_text_input(inval);
                     }
                 }
                 self.send_event(ctx, TextBoxEvent::Invalid(err));
@@ -304,7 +304,6 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                     self.force_selection = new_sel;
 
                     if self.update_data_while_editing && !validation.is_err() {
-                        //FIXME: notify platform of text change
                         if let Ok(new_data) = self.formatter.value(&self.buffer) {
                             *data = new_data;
                             self.last_known_data = Some(data.clone());
@@ -360,7 +359,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
         if let Some(sel) = self.force_selection.take() {
             if self.inner.text().can_write() {
                 if let Some(change) = self.inner.text_mut().borrow_mut().set_selection(sel) {
-                    ctx.invalidate_text_input(Some(change));
+                    ctx.invalidate_text_input(change);
                 }
             }
         }

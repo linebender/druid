@@ -96,6 +96,7 @@ impl Selection {
     }
 }
 
+//FIXME: delete this file, unify with druid-shell::text::Selection
 impl From<Selection> for crate::shell::text::Selection {
     fn from(src: Selection) -> crate::shell::text::Selection {
         crate::shell::text::Selection {

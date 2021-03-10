@@ -49,7 +49,6 @@ pub struct TextBox<T> {
     inner: Padding<T, Scroll<T, TextComponent<T>>>,
     scroll_to_selection_after_layout: bool,
     multiline: bool,
-    wrap_lines: bool,
     /// true if a click event caused us to gain focus.
     ///
     /// On macOS, if focus happens via click then we set the selection based
@@ -78,7 +77,6 @@ impl<T: EditableText + TextStorage> TextBox<T> {
             scroll_to_selection_after_layout: false,
             placeholder,
             multiline: false,
-            wrap_lines: false,
             was_focused_from_click: false,
             cursor_on: false,
             cursor_timer: TimerToken::INVALID,
@@ -109,7 +107,6 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// [`multiline`]: TextBox::multiline
     pub fn with_line_wrapping(mut self, wrap_lines: bool) -> Self {
-        self.wrap_lines = wrap_lines;
         self.inner
             .wrapped_mut()
             .set_horizontal_scroll_enabled(!wrap_lines);
@@ -278,26 +275,6 @@ impl<T> TextBox<T> {
 }
 
 impl<T> TextBox<T> {
-    ///// Set the textbox's selection.
-    //pub fn set_selection(&mut self, selection: Selection) {
-    //self.editor.set_selection(selection);
-    //}
-
-    ///// Set the text and force the editor to update.
-    /////
-    ///// This should be rarely needed; the main use-case would be if you need
-    ///// to manually set the text and then immediately do hit-testing or other
-    ///// tasks that rely on having an up-to-date text layout.
-    //pub fn force_rebuild(&mut self, text: T, factory: &mut PietText, env: &Env) {
-    //self.editor.set_text(text);
-    //self.editor.rebuild_if_needed(factory, env);
-    //}
-}
-
-impl<T> TextBox<T> {
-    //FIXME: maybe a more restrictive API? some kind of `with_text` method that
-    //takes a closure and makes sure we're locked, and then also notifies the platform
-    //of changes afterwards?
     /// An immutable reference to the inner [`TextComponent`].
     ///
     /// Using this correctly is difficult; please see the [`TextComponent`]
@@ -330,22 +307,11 @@ impl<T> TextBox<T> {
 
 impl<T: TextStorage + EditableText> TextBox<T> {
     fn rect_for_selection_end(&self) -> Rect {
-        let selection_end = self.text().borrow().selection().end;
-        let hit = self
-            .text()
-            .borrow()
-            .layout
-            .layout()
-            .unwrap()
-            .hit_test_text_position(selection_end);
-        let line = self
-            .text()
-            .borrow()
-            .layout
-            .layout()
-            .unwrap()
-            .line_metric(hit.line)
-            .unwrap();
+        let text = self.text().borrow();
+        let layout = text.layout.layout().unwrap();
+
+        let hit = layout.hit_test_text_position(text.selection().end);
+        let line = layout.line_metric(hit.line).unwrap();
         let y0 = line.y_offset;
         let y1 = y0 + line.height;
         let x = hit.point.x;
@@ -427,7 +393,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             {
                 if self.text().borrow().set_clipboard() {
                     let inval = self.text_mut().borrow_mut().insert_text(data, "");
-                    ctx.invalidate_text_input(Some(inval));
+                    ctx.invalidate_text_input(inval);
                 }
                 ctx.set_handled();
             }
@@ -440,7 +406,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     };
                     if !text.is_empty() {
                         let inval = self.text_mut().borrow_mut().insert_text(data, text);
-                        ctx.invalidate_text_input(Some(inval));
+                        ctx.invalidate_text_input(inval);
                     }
                 }
             }
@@ -461,7 +427,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 if self.text().can_write() && !self.multiline && !self.was_focused_from_click {
                     let selection = Selection::new(0, data.len());
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
-                    ctx.invalidate_text_input(Some(druid_shell::text::Event::SelectionChanged));
+                    ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
@@ -472,7 +438,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.end, selection.end);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
-                    ctx.invalidate_text_input(Some(druid_shell::text::Event::SelectionChanged));
+                    ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -492,7 +458,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         if self.text().can_write() {
             if let Some(ime_invalidation) = self.text_mut().borrow_mut().pending_ime_invalidation()
             {
-                ctx.invalidate_text_input(Some(ime_invalidation));
+                ctx.invalidate_text_input(ime_invalidation);
             }
         }
     }

@@ -285,7 +285,9 @@ impl<T: Data> Window<T> {
                 self.focus = new;
                 // check if the newly focused widget has an IME session, and
                 // notify the system if so.
-                //FIXME: this is quadratic. do we care?
+                //
+                // If you're here because a profiler sent you: I guess I should've
+                // used a hashmap?
                 let old_was_ime = old
                     .map(|old| {
                         self.ime_handlers

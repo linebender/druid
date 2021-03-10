@@ -43,6 +43,7 @@ pub enum Movement {
     EndOfDocument,
 }
 
+//FIXME: we should remove this whole file, and use the Movement type defined in druid-shell?
 impl From<crate::shell::text::Movement> for Movement {
     fn from(src: crate::shell::text::Movement) -> Movement {
         use crate::shell::text::{Direction, Movement as SMovemement, VerticalMovement};
@@ -63,7 +64,8 @@ impl From<crate::shell::text::Movement> for Movement {
             | SMovemement::Vertical(VerticalMovement::PageDown) => Movement::Down,
             SMovemement::Vertical(VerticalMovement::DocumentStart) => Movement::StartOfDocument,
             SMovemement::Vertical(VerticalMovement::DocumentEnd) => Movement::EndOfDocument,
-            _ => unreachable!(),
+            // the source enum is non_exhaustive
+            _ => panic!("unhandled movement {:?}", src),
         }
     }
 }
