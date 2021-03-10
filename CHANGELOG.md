@@ -22,7 +22,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
-- Added ListIter implementations for HashMap and OrdMap (tbd by [@Lejero])
+- Added ListIter implementations for HashMap and OrdMap ([#1641] by [@Lejero])
 
 ### Changed
 
@@ -634,6 +634,7 @@ Last release without a changelog :(
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
+[#1641]: https://github.com/linebender/druid/pull/1641
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
