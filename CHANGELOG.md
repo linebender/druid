@@ -20,8 +20,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
+- Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
-- Added ListIter implementations for HashMap and OrdMap with list_sources example ([#1700] guess by [@lejero])
 
 ### Changed
 
@@ -29,6 +29,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
+- Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 
 ### Deprecated
 
@@ -424,7 +425,7 @@ Last release without a changelog :(
 [@Poignardazur]: https://github.com/PoignardAzur
 [@HoNile]: https://github.com/HoNile
 [@SecondFlight]: https://github.com/SecondFlight
-[@Lejero]: https://github.com/Lejero
+[@lord]: https://github.com/lord
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -628,6 +629,8 @@ Last release without a changelog :(
 [#1596]: https://github.com/linebender/druid/pull/1596
 [#1600]: https://github.com/linebender/druid/pull/1600
 [#1606]: https://github.com/linebender/druid/pull/1606
+[#1619]: https://github.com/linebender/druid/pull/1619
+[#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
