@@ -197,8 +197,12 @@ where
             let mut ret = (item.0.clone(), item.1.clone());
             cb(&mut ret.1, i);
 
-            if !item.1.same(&ret.1) {
-                self[&item.0] = ret.1;
+            //If item.0(Key) is different, we remove and reinsert with the new key.
+            if !item.0.same(&ret.0) {
+                self.remove(&item.0);
+                self.insert(ret.0, ret.1);
+            } else if !item.1.same(&ret.1) {
+                self[&ret.0] = ret.1;
             }
         }
     }
@@ -227,7 +231,11 @@ where
             let mut ret = (item.0.clone(), item.1.clone());
             cb(&mut ret, i);
 
-            if !item.1.same(&ret.1) {
+            //If item.0(Key) is different, we remove and reinsert with the new key.
+            if !item.0.same(&ret.0) {
+                self.remove(&item.0);
+                self.insert(ret.0, ret.1);
+            } else if !item.1.same(&ret.1) {
                 self[&ret.0] = ret.1;
             }
         }
