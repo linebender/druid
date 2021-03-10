@@ -14,8 +14,7 @@
 
 //! Demos alternative iterable data types for the List widget, im::HashMap and im::OrdMap
 
-use druid::im::{hashmap, ordmap, vector, HashMap, OrdMap, Vector};
-use druid::lens::{self, LensExt};
+use druid::im::{hashmap, ordmap, HashMap, OrdMap};
 use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
@@ -67,16 +66,16 @@ fn ui_builder() -> impl Widget<AppData> {
                 data.adding_index += 1;
                 data.hm_values.insert(
                     data.adding_index as u32,
-                    String::from(format!("Fruit #{}", data.adding_index)),
+                    format!("Fruit #{}", data.adding_index),
                 );
                 data.hm_keys_values
-                    .insert(String::from(format!("Country #{}", data.adding_index)), 42);
+                    .insert(format!("Country #{}", data.adding_index), 42);
                 data.om_values.insert(
                     data.adding_index as u32,
-                    String::from(format!("Fruit #{}", data.adding_index)),
+                    format!("Fruit #{}", data.adding_index),
                 );
                 data.om_keys_values
-                    .insert(String::from(format!("Country #{}", data.adding_index)), 42);
+                    .insert(format!("Country #{}", data.adding_index), 42);
             })
             .fix_height(30.0)
             .expand_width(),
@@ -84,36 +83,24 @@ fn ui_builder() -> impl Widget<AppData> {
     root.add_child(
         Button::new("Remove First")
             .on_click(|_, data: &mut AppData, _| {
-                if data.hm_values.len() > 0 {
-                    match data.hm_values.clone().iter().next() {
-                        Some(k) => {
-                            data.hm_values.remove(&k.0.clone());
-                        }
-                        _ => (),
+                if !data.hm_values.is_empty() {
+                    if let Some(k) = data.hm_values.clone().iter().next() {
+                        data.hm_values.remove(&k.0.clone());
                     }
                 }
-                if data.hm_keys_values.len() > 0 {
-                    match data.hm_keys_values.clone().iter().next() {
-                        Some(k) => {
-                            data.hm_keys_values.remove(&k.0.clone());
-                        }
-                        _ => (),
+                if !data.hm_keys_values.is_empty() {
+                    if let Some(k) = data.hm_keys_values.clone().iter().next() {
+                        data.hm_keys_values.remove(&k.0.clone());
                     }
                 }
-                if data.om_values.len() > 0 {
-                    match data.om_values.clone().iter().next() {
-                        Some(k) => {
-                            data.om_values.remove(&k.0.clone());
-                        }
-                        _ => (),
+                if !data.om_values.is_empty() {
+                    if let Some(k) = data.om_values.clone().iter().next() {
+                        data.om_values.remove(&k.0.clone());
                     }
                 }
-                if data.om_keys_values.len() > 0 {
-                    match data.om_keys_values.clone().iter().next() {
-                        Some(k) => {
-                            data.om_keys_values.remove(&k.0.clone());
-                        }
-                        _ => (),
+                if !data.om_keys_values.is_empty() {
+                    if let Some(k) = data.om_keys_values.clone().iter().next() {
+                        data.om_keys_values.remove(&k.0.clone());
                     }
                 }
             })
@@ -130,7 +117,7 @@ fn ui_builder() -> impl Widget<AppData> {
             .with_child(Label::new("List from im::HashMap Values"))
             .with_child(
                 Scroll::new(List::new(|| {
-                    Label::new(|item: &String, _env: &_| format!("{}", item))
+                    Label::new(|item: &String, _env: &_| item.to_string())
                         .align_vertical(UnitPoint::LEFT)
                         .padding(10.0)
                         .expand()
@@ -172,7 +159,7 @@ fn ui_builder() -> impl Widget<AppData> {
             .with_child(Label::new("List from im::OrdMap Values"))
             .with_child(
                 Scroll::new(List::new(|| {
-                    Label::new(|item: &String, _env: &_| format!("{}", item))
+                    Label::new(|item: &String, _env: &_| item.to_string())
                         .align_vertical(UnitPoint::LEFT)
                         .padding(10.0)
                         .expand()
