@@ -424,7 +424,7 @@ Last release without a changelog :(
 [@Poignardazur]: https://github.com/PoignardAzur
 [@HoNile]: https://github.com/HoNile
 [@SecondFlight]: https://github.com/SecondFlight
-[@Lejero]: https://githum.com/lejero
+[@Lejero]: https://githum.com/Lejero
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
