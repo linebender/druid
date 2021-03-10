@@ -98,6 +98,10 @@ name = "invalidation"
 required-features = ["im"]
 
 [[example]]
+name = "list_variants"
+required-features = ["im"]
+
+[[example]]
 name = "list"
 required-features = ["im"]
 
