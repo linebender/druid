@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid_shell::{kurbo::{Point, Size}, piet::Piet};
+//! A container for a window.
 
-use crate::tree::Mutation;
+use druid_shell::{kurbo::Line, piet::{Color, RenderContext}};
 
-/// The trait for (widget-like) render elements.
-///
-/// We can envision other elements (like menus and windows), but
-/// keep things simple for now.
-pub trait Element {
-    fn mutate(&mut self, mutation: Mutation);
+#[derive(Default)]
+pub struct Window;
 
-    fn layout(&mut self) -> Size;
+const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
-    fn paint(&mut self, ctx: &mut Piet, pos: Point);
+impl Window {
+    pub fn paint(&mut self, piet: &mut druid_shell::piet::Piet) {
+        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
+    }
 }
