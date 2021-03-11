@@ -22,7 +22,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
-- Added ListIter implementations for HashMap and OrdMap ([#1641] by [@Lejero])
+- Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 
 ### Changed
 
