@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Demos alternative iterable data types for the List widget, im::HashMap and im::OrdMap
+//! Demos alternative iterable data type for the List widget, im::OrdMap
+//! Two ListIter implementations provide a version which only concerns
+//! itself with the values, and another which concerns itself with both
+//! keys and vales.
 
-use druid::im::{hashmap, ordmap, HashMap, OrdMap};
+use druid::im::{ordmap, OrdMap};
 use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
@@ -23,8 +26,6 @@ use druid::{
 #[derive(Clone, Data, Lens)]
 struct AppData {
     adding_index: usize,
-    hm_values: HashMap<u32, String>,
-    hm_keys_values: HashMap<String, u64>,
     om_values: OrdMap<u32, String>,
     om_keys_values: OrdMap<String, u64>,
 }
@@ -36,17 +37,12 @@ pub fn main() {
             LocalizedString::new("list-sources-demo-window-title")
                 .with_placeholder("List Sources Demo"),
         );
-    // Set our initial data. The HashMap and OrdMap types will behave differently ordering the same data.
-    let hm_values = hashmap! {3 => String::from("Apple"), 1 => String::from("Pear"), 2 => String::from("Orange")};
-    let hm_keys_values = hashmap! {String::from("Russia") => 17098242, String::from("Canada") => 9984670,
-    String::from("China") => 956960};
+    // Set our initial data.
     let om_values = ordmap! {3 => String::from("Apple"), 1 => String::from("Pear"), 2 => String::from("Orange")};
     let om_keys_values = ordmap! {String::from("Russia") => 17098242, String::from("Canada") => 9984670,
     String::from("China") => 956960};
     let data = AppData {
-        adding_index: hm_values.len(),
-        hm_values,
-        hm_keys_values,
+        adding_index: om_values.len(),
         om_values,
         om_keys_values,
     };
@@ -64,12 +60,6 @@ fn ui_builder() -> impl Widget<AppData> {
         Button::new("Add")
             .on_click(|_, data: &mut AppData, _| {
                 data.adding_index += 1;
-                data.hm_values.insert(
-                    data.adding_index as u32,
-                    format!("Fruit #{}", data.adding_index),
-                );
-                data.hm_keys_values
-                    .insert(format!("Country #{}", data.adding_index), 42);
                 data.om_values.insert(
                     data.adding_index as u32,
                     format!("Fruit #{}", data.adding_index),
@@ -83,16 +73,6 @@ fn ui_builder() -> impl Widget<AppData> {
     root.add_child(
         Button::new("Remove First")
             .on_click(|_, data: &mut AppData, _| {
-                if !data.hm_values.is_empty() {
-                    if let Some(k) = data.hm_values.clone().iter().next() {
-                        data.hm_values.remove(&k.0.clone());
-                    }
-                }
-                if !data.hm_keys_values.is_empty() {
-                    if let Some(k) = data.hm_keys_values.clone().iter().next() {
-                        data.hm_keys_values.remove(&k.0.clone());
-                    }
-                }
                 if !data.om_values.is_empty() {
                     if let Some(k) = data.om_values.clone().iter().next() {
                         data.om_values.remove(&k.0.clone());
@@ -109,48 +89,6 @@ fn ui_builder() -> impl Widget<AppData> {
     );
 
     let mut lists = Flex::row().cross_axis_alignment(CrossAxisAlignment::Start);
-
-    // Build a list of values from a hashmap
-    // The display order will be indeterminate.
-    lists.add_flex_child(
-        Flex::column()
-            .with_child(Label::new("List from im::HashMap Values"))
-            .with_child(
-                Scroll::new(List::new(|| {
-                    Label::new(|item: &String, _env: &_| item.to_string())
-                        .align_vertical(UnitPoint::LEFT)
-                        .padding(10.0)
-                        .expand()
-                        .height(50.0)
-                        .background(Color::rgb(0.5, 0.5, 0.5))
-                }))
-                .vertical()
-                .lens(AppData::hm_values),
-            ),
-        1.0,
-    );
-
-    // Build a list of key value pairs from a hashmap
-    // The display order will be indeterminate.
-    lists.add_flex_child(
-        Flex::column()
-            .with_child(Label::new("List from im::HashMap Keys and Values"))
-            .with_child(
-                Scroll::new(List::new(|| {
-                    Label::new(|item: &(String, u64), _env: &_| {
-                        format!("{0}: {1} square kilometres", item.0, item.1)
-                    })
-                    .align_vertical(UnitPoint::LEFT)
-                    .padding(10.0)
-                    .expand()
-                    .height(50.0)
-                    .background(Color::rgb(0.5, 0.0, 0.5))
-                }))
-                .vertical()
-                .lens(AppData::hm_keys_values),
-            ),
-        1.0,
-    );
 
     // Build a list values from an ordmap
     // The display order will be based on the Ord trait of the keys

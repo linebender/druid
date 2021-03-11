@@ -20,7 +20,7 @@ use std::f64;
 use std::sync::Arc;
 
 #[cfg(feature = "im")]
-use crate::im::{HashMap, OrdMap, Vector};
+use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
@@ -118,69 +118,6 @@ impl<T: Data> ListIter<T> for Vector<T> {
 }
 
 #[cfg(feature = "im")]
-//We sidestep dealing with ListIter<(K, V)> here.
-//That would require us to deal with changing keys and key collisions.
-impl<K, V> ListIter<V> for HashMap<K, V>
-where
-    K: Data + std::hash::Hash + std::cmp::Eq,
-    V: Data,
-{
-    fn for_each(&self, mut cb: impl FnMut(&V, usize)) {
-        for (i, item) in self.iter().enumerate() {
-            let ret = (item.0.to_owned(), item.1.to_owned());
-            cb(&ret.1, i);
-        }
-    }
-
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut V, usize)) {
-        for (i, item) in self.iter_mut().enumerate() {
-            let mut ret = (item.0.clone(), item.1.clone());
-            cb(&mut ret.1, i);
-
-            if !item.1.same(&ret.1) {
-                *item.1 = ret.1;
-            }
-        }
-    }
-
-    fn data_len(&self) -> usize {
-        self.len()
-    }
-}
-
-#[cfg(feature = "im")]
-//TODO: This implementation just disregards any changes to the key. It makes it visible, but nothing else.
-impl<K, V> ListIter<(K, V)> for HashMap<K, V>
-where
-    K: Data + std::hash::Hash + std::cmp::Eq,
-    V: Data,
-{
-    fn for_each(&self, mut cb: impl FnMut(&(K, V), usize)) {
-        for (i, item) in self.iter().enumerate() {
-            let ret = (item.0.to_owned(), item.1.to_owned());
-            cb(&ret, i);
-        }
-    }
-
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (K, V), usize)) {
-        for (i, item) in self.iter_mut().enumerate() {
-            let mut ret = (item.0.clone(), item.1.clone());
-            cb(&mut ret, i);
-
-            if !item.1.same(&ret.1) {
-                *item.1 = ret.1;
-            }
-        }
-    }
-
-    fn data_len(&self) -> usize {
-        self.len()
-    }
-}
-
-#[cfg(feature = "im")]
-//We sidestep dealing with ListIter<(K, V)> here.
-//That would require us to deal with changing keys and key collisions.
 impl<K, V> ListIter<V> for OrdMap<K, V>
 where
     K: Data + Ord,
@@ -198,11 +135,7 @@ where
             let mut ret = (item.0.clone(), item.1.clone());
             cb(&mut ret.1, i);
 
-            //If item.0(Key) is different, we remove and reinsert with the new key.
-            if !item.0.same(&ret.0) {
-                self.remove(&item.0);
-                self.insert(ret.0, ret.1);
-            } else if !item.1.same(&ret.1) {
+            if !item.1.same(&ret.1) {
                 self[&ret.0] = ret.1;
             }
         }
