@@ -987,14 +987,13 @@ impl WndProc for MyWndProc {
                                 && (event.key == KbKey::Alt || event.key == KbKey::F10);
                             match event.state {
                                 KeyState::Down => {
-                                    let keydown_handled = s.handler.key_down(event.clone())
-                                        || self.with_window_state(|window_state| {
-                                            simulate_input(
-                                                &mut *s.handler,
-                                                window_state.active_text_input.get(),
-                                                event,
-                                            )
-                                        });
+                                    let keydown_handled = self.with_window_state(|window_state| {
+                                        simulate_input(
+                                            &mut *s.handler,
+                                            window_state.active_text_input.get(),
+                                            event,
+                                        )
+                                    });
                                     if keydown_handled || handle_menu {
                                         return true;
                                     }
