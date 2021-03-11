@@ -24,6 +24,10 @@ use druid_shell::{
 
 mod element;
 mod foo;
+mod tree;
+mod window;
+
+use window::Window;
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
@@ -32,6 +36,7 @@ const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 struct HelloState {
     size: Size,
     handle: WindowHandle,
+    window: Window,
 }
 
 impl WinHandler for HelloState {
@@ -44,7 +49,7 @@ impl WinHandler for HelloState {
     fn paint(&mut self, piet: &mut druid_shell::piet::Piet, _: &Region) {
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
-        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
+        self.window.paint(piet);
     }
 
     fn command(&mut self, id: u32) {
@@ -125,9 +130,6 @@ impl WinHandler for HelloState {
 }
 
 fn main() {
-    foo::foo();
-
-    /*
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
     file_menu.add_item(
@@ -158,5 +160,4 @@ fn main() {
     window.show();
 
     app.run(None);
-    */
 }
