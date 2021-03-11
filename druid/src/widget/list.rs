@@ -97,7 +97,6 @@ pub trait ListIter<T>: Data {
     /// Return data length.
     fn data_len(&self) -> usize;
 }
-
 #[cfg(feature = "im")]
 impl<T: Data> ListIter<T> for Vector<T> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
@@ -132,11 +131,11 @@ where
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut V, usize)) {
         for (i, item) in self.clone().iter().enumerate() {
-            let mut ret = (item.0.clone(), item.1.clone());
-            cb(&mut ret.1, i);
+            let mut ret = item.1.clone();
+            cb(&mut ret, i);
 
-            if !item.1.same(&ret.1) {
-                self[&ret.0] = ret.1;
+            if !item.1.same(&ret) {
+                self[&item.0] = ret;
             }
         }
     }
@@ -147,7 +146,6 @@ where
 }
 
 #[cfg(feature = "im")]
-//TODO: This implementation just disregards any changes to the key. It makes it visible, but nothing else.
 impl<K, V> ListIter<(K, V)> for OrdMap<K, V>
 where
     K: Data + Ord,
