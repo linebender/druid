@@ -68,7 +68,6 @@ impl_example!(image);
 impl_example!(invalidation);
 impl_example!(layout);
 impl_example!(lens);
-impl_example!(list_sources);
 impl_example!(list);
 impl_example!(multiwin);
 impl_example!(open_save);

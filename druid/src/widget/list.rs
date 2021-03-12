@@ -116,6 +116,8 @@ impl<T: Data> ListIter<T> for Vector<T> {
     }
 }
 
+//An implementation for ListIter<(K, V)> has been ommitted due to problems
+//with how the List Widget handles the reordering of its data.
 #[cfg(feature = "im")]
 impl<K, V> ListIter<V> for OrdMap<K, V>
 where
@@ -136,39 +138,6 @@ where
 
             if !item.1.same(&ret) {
                 self[&item.0] = ret;
-            }
-        }
-    }
-
-    fn data_len(&self) -> usize {
-        self.len()
-    }
-}
-
-#[cfg(feature = "im")]
-impl<K, V> ListIter<(K, V)> for OrdMap<K, V>
-where
-    K: Data + Ord,
-    V: Data,
-{
-    fn for_each(&self, mut cb: impl FnMut(&(K, V), usize)) {
-        for (i, item) in self.iter().enumerate() {
-            let ret = (item.0.to_owned(), item.1.to_owned());
-            cb(&ret, i);
-        }
-    }
-
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (K, V), usize)) {
-        for (i, item) in self.clone().iter().enumerate() {
-            let mut ret = (item.0.clone(), item.1.clone());
-            cb(&mut ret, i);
-
-            //If item.0(Key) is different, we remove and reinsert with the new key.
-            if !item.0.same(&ret.0) {
-                self.remove(&item.0);
-                self.insert(ret.0, ret.1);
-            } else if !item.1.same(&ret.1) {
-                self[&ret.0] = ret.1;
             }
         }
     }
