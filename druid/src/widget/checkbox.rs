@@ -18,6 +18,7 @@ use crate::kurbo::{BezPath, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
 use crate::widget::{prelude::*, Label, LabelText};
+use tracing::{instrument, trace};
 
 /// A checkbox that toggles a `bool`.
 pub struct Checkbox {
@@ -39,11 +40,13 @@ impl Checkbox {
 }
 
 impl Widget<bool> for Checkbox {
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, event, data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.request_paint();
+                trace!("Checkbox {:?} pressed", ctx.widget_id());
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
@@ -51,8 +54,10 @@ impl Widget<bool> for Checkbox {
                     if ctx.is_hot() {
                         if *data {
                             *data = false;
+                            trace!("Checkbox {:?} released - unchecked", ctx.widget_id());
                         } else {
                             *data = true;
+                            trace!("Checkbox {:?} released - checked", ctx.widget_id());
                         }
                     }
                     ctx.request_paint();
@@ -62,6 +67,7 @@ impl Widget<bool> for Checkbox {
         }
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
         self.child_label.lifecycle(ctx, event, data, env);
         if let LifeCycle::HotChanged(_) = event {
@@ -69,11 +75,17 @@ impl Widget<bool> for Checkbox {
         }
     }
 
+    #[instrument(
+        name = "CheckBox",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, env: &Env) {
         self.child_label.update(ctx, old_data, data, env);
         ctx.request_paint();
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &bool, env: &Env) -> Size {
         bc.debug_check("Checkbox");
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
@@ -87,9 +99,11 @@ impl Widget<bool> for Checkbox {
         let our_size = bc.constrain(desired_size);
         let baseline = self.child_label.baseline_offset() + (our_size.height - label_size.height);
         ctx.set_baseline_offset(baseline);
+        trace!("Computed layout: size={}, baseline={}", our_size, baseline);
         our_size
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);

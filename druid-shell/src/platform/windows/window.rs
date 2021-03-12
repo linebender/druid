@@ -76,8 +76,11 @@ use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+};
 
 /// The platform target DPI.
 ///
@@ -221,6 +224,7 @@ struct WindowState {
     // For resizable borders, window can still be resized with code.
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
+    active_text_input: Cell<Option<TextFieldToken>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -983,7 +987,14 @@ impl WndProc for MyWndProc {
                                 && (event.key == KbKey::Alt || event.key == KbKey::F10);
                             match event.state {
                                 KeyState::Down => {
-                                    if s.handler.key_down(event) || handle_menu {
+                                    let keydown_handled = self.with_window_state(|window_state| {
+                                        simulate_input(
+                                            &mut *s.handler,
+                                            window_state.active_text_input.get(),
+                                            event,
+                                        )
+                                    });
+                                    if keydown_handled || handle_menu {
                                         return true;
                                     }
                                 }
@@ -1366,6 +1377,7 @@ impl WindowBuilder {
                 is_resizable: Cell::new(self.resizable),
                 is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
+                active_text_input: Cell::new(None),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1676,11 +1688,16 @@ unsafe fn create_window(
 
 impl Cursor {
     fn get_hcursor(&self) -> HCURSOR {
+        #[allow(deprecated)]
         let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
+            Cursor::Pointer => IDC_HAND,
             Cursor::Crosshair => IDC_CROSS,
-            Cursor::OpenHand => IDC_HAND,
+            Cursor::OpenHand => {
+                warn!("Cursor::OpenHand not available on windows");
+                IDC_ARROW
+            }
             Cursor::NotAllowed => IDC_NO,
             Cursor::ResizeLeftRight => IDC_SIZEWE,
             Cursor::ResizeUpDown => IDC_SIZENS,
@@ -1945,6 +1962,28 @@ impl WindowHandle {
 
     pub fn text(&self) -> PietText {
         PietText::new(self.dwrite_factory.clone())
+    }
+
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
+    }
+
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(state) = self.state.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None);
+            }
+        }
+    }
+
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(state) = self.state.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // noop until we get a real text input implementation
     }
 
     /// Request a timer event.

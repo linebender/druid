@@ -86,7 +86,7 @@ pub fn main() {
             .with_placeholder("You spin me right round..."),
     );
     AppLauncher::with_window(window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(())
         .expect("launch failed");
 }

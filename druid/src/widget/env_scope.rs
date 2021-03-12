@@ -17,6 +17,7 @@
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Point, WidgetPod};
+use tracing::instrument;
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {
@@ -57,6 +58,7 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
@@ -64,12 +66,18 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.event(ctx, event, data, &new_env)
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
         self.child.lifecycle(ctx, event, data, &new_env)
     }
 
+    #[instrument(
+        name = "EnvScope",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
@@ -77,6 +85,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         self.child.update(ctx, data, &new_env);
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("EnvScope");
 
@@ -88,6 +97,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         size
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
         (self.f)(&mut new_env, &data);
