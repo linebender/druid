@@ -20,7 +20,7 @@ use std::f64;
 use std::sync::Arc;
 
 #[cfg(feature = "im")]
-use crate::im::Vector;
+use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
@@ -97,7 +97,6 @@ pub trait ListIter<T>: Data {
     /// Return data length.
     fn data_len(&self) -> usize;
 }
-
 #[cfg(feature = "im")]
 impl<T: Data> ListIter<T> for Vector<T> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
@@ -109,6 +108,37 @@ impl<T: Data> ListIter<T> for Vector<T> {
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
         for (i, item) in self.iter_mut().enumerate() {
             cb(item, i);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+//An implementation for ListIter<(K, V)> has been ommitted due to problems
+//with how the List Widget handles the reordering of its data.
+#[cfg(feature = "im")]
+impl<K, V> ListIter<V> for OrdMap<K, V>
+where
+    K: Data + Ord,
+    V: Data,
+{
+    fn for_each(&self, mut cb: impl FnMut(&V, usize)) {
+        for (i, item) in self.iter().enumerate() {
+            let ret = (item.0.to_owned(), item.1.to_owned());
+            cb(&ret.1, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut V, usize)) {
+        for (i, item) in self.clone().iter().enumerate() {
+            let mut ret = item.1.clone();
+            cb(&mut ret, i);
+
+            if !item.1.same(&ret) {
+                self[&item.0] = ret;
+            }
         }
     }
 
