@@ -20,6 +20,7 @@ mod widget_wrapper;
 
 mod added;
 mod align;
+mod aspect_ratio_box;
 mod button;
 mod checkbox;
 mod click;
@@ -63,6 +64,7 @@ mod widget_ext;
 pub use self::image::Image;
 pub use added::Added;
 pub use align::Align;
+pub use aspect_ratio_box::AspectRatioBox;
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use click::Click;
