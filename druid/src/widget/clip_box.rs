@@ -16,6 +16,7 @@ use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
+use tracing::{instrument, trace};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -121,17 +122,45 @@ pub struct ClipBox<T, W> {
     port: Viewport,
     constrain_horizontal: bool,
     constrain_vertical: bool,
+    must_fill: bool,
 }
 
-impl<T, W: Widget<T>> ClipBox<T, W> {
-    /// Creates a new `ClipBox` wrapping `child`.
-    pub fn new(child: W) -> Self {
-        ClipBox {
-            child: WidgetPod::new(child),
-            port: Default::default(),
-            constrain_horizontal: false,
-            constrain_vertical: false,
-        }
+impl<T, W> ClipBox<T, W> {
+    /// Builder-style method for deciding whether to constrain the child vertically.
+    ///
+    /// The default is `false`.
+    ///
+    /// This setting affects how a `ClipBox` lays out its child.
+    ///
+    /// - When it is `false` (the default), the child does receive any upper
+    ///   bound on its height: the idea is that the child can be as tall as it
+    ///   wants, and the viewport will somehow get moved around to see all of it.
+    /// - When it is `true`, the viewport's maximum height will be passed down
+    ///   as an upper bound on the height of the child, and the viewport will set
+    ///   its own height to be the same as its child's height.
+    pub fn constrain_vertical(mut self, constrain: bool) -> Self {
+        self.constrain_vertical = constrain;
+        self
+    }
+
+    /// Builder-style method for deciding whether to constrain the child horizontally.
+    ///
+    /// The default is `false`. See [`constrain_vertical`] for more details.
+    ///
+    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
+    pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
+        self.constrain_horizontal = constrain;
+        self
+    }
+
+    /// Builder-style method to set whether the child must fill the view.
+    ///
+    /// If `false` (the default) there is no minimum constraint on the child's
+    /// size. If `true`, the child is passed the same minimum constraints as
+    /// the `ClipBox`.
+    pub fn content_must_fill(mut self, must_fill: bool) -> Self {
+        self.must_fill = must_fill;
+        self
     }
 
     /// Returns a reference to the child widget.
@@ -149,6 +178,11 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.port
     }
 
+    /// Returns the origin of the viewport rectangle.
+    pub fn viewport_origin(&self) -> Point {
+        self.port.rect.origin()
+    }
+
     /// Returns the size of the rectangular viewport into the child widget.
     /// To get the position of the viewport, see [`viewport_origin`].
     ///
@@ -162,16 +196,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.port.content_size
     }
 
-    /// Builder-style method for deciding whether to constrain the child horizontally. The default
-    /// is `false`. See [`constrain_vertical`] for more details.
-    ///
-    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
-    pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
-        self.constrain_horizontal = constrain;
-        self
-    }
-
-    /// Determine whether to constrain the child horizontally.
+    /// Set whether to constrain the child horizontally.
     ///
     /// See [`constrain_vertical`] for more details.
     ///
@@ -180,29 +205,36 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.constrain_horizontal = constrain;
     }
 
-    /// Builder-style method for deciding whether to constrain the child vertically. The default
-    /// is `false`.
-    ///
-    /// This setting affects how a `ClipBox` lays out its child.
-    ///
-    /// - When it is `false` (the default), the child does receive any upper bound on its height:
-    ///   the idea is that the child can be as tall as it wants, and the viewport will somehow get
-    ///   moved around to see all of it.
-    /// - When it is `true`, the viewport's maximum height will be passed down as an upper bound on
-    ///   the height of the child, and the viewport will set its own height to be the same as its
-    ///   child's height.
-    pub fn constrain_vertical(mut self, constrain: bool) -> Self {
-        self.constrain_vertical = constrain;
-        self
-    }
-
-    /// Determine whether to constrain the child vertically.
+    /// Set whether to constrain the child vertically.
     ///
     /// See [`constrain_vertical`] for more details.
     ///
     /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
     pub fn set_constrain_vertical(&mut self, constrain: bool) {
         self.constrain_vertical = constrain;
+    }
+
+    /// Set whether the child's size must be greater than or equal the size of
+    /// the `ClipBox`.
+    ///
+    /// See [`content_must_fill`] for more details.
+    ///
+    /// [`content_must_fill`]: ClipBox::content_must_fill
+    pub fn set_content_must_fill(&mut self, must_fill: bool) {
+        self.must_fill = must_fill;
+    }
+}
+
+impl<T, W: Widget<T>> ClipBox<T, W> {
+    /// Creates a new `ClipBox` wrapping `child`.
+    pub fn new(child: W) -> Self {
+        ClipBox {
+            child: WidgetPod::new(child),
+            port: Default::default(),
+            constrain_horizontal: false,
+            constrain_vertical: false,
+            must_fill: false,
+        }
     }
 
     /// Changes the viewport offset by `delta`.
@@ -258,14 +290,10 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         }
     }
 
-    /// Returns the origin of the viewport rectangle.
-    pub fn viewport_origin(&self) -> Point {
-        self.port.rect.origin()
-    }
-
-    /// Allows this `ClipBox`'s viewport rectangle to be modified. The provided callback function
-    /// can modify its argument, and when it is done then this `ClipBox` will be modified to have
-    /// the new viewport rectangle.
+    /// Modify the `ClipBox`'s viewport rectangle with a closure.
+    ///
+    /// The provided callback function can modify its argument, and when it is
+    /// done then this `ClipBox` will be modified to have the new viewport rectangle.
     pub fn with_port<F: FnOnce(&mut Viewport)>(&mut self, f: F) {
         f(&mut self.port);
         self.child
@@ -274,24 +302,32 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
-    fn event(&mut self, ctx: &mut EventCtx, ev: &Event, data: &mut T, env: &Env) {
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let viewport = ctx.size().to_rect();
         let force_event = self.child.is_hot() || self.child.has_active();
         if let Some(child_event) =
-            ev.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
+            event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
         {
             self.child.event(ctx, &child_event, data, env);
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, ev: &LifeCycle, data: &T, env: &Env) {
-        self.child.lifecycle(ctx, ev, data, env);
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        self.child.lifecycle(ctx, event, data, env);
     }
 
+    #[instrument(
+        name = "ClipBox",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("ClipBox");
 
@@ -305,8 +341,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         } else {
             f64::INFINITY
         };
+        let min_child_size = if self.must_fill { bc.min() } else { Size::ZERO };
         let child_bc =
-            BoxConstraints::new(Size::ZERO, Size::new(max_child_width, max_child_height));
+            BoxConstraints::new(min_child_size, Size::new(max_child_width, max_child_height));
 
         let content_size = self.child.layout(ctx, &child_bc, data, env);
         self.port.content_size = content_size;
@@ -315,9 +352,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         self.port.rect = self.port.rect.with_size(bc.constrain(content_size));
         let new_offset = self.port.clamp_view_origin(self.viewport_origin());
         self.pan_to(new_offset);
+        trace!("Computed sized: {}", self.viewport_size());
         self.viewport_size()
     }
 
+    #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let viewport = ctx.size().to_rect();
         let offset = self.viewport_origin().to_vec2();

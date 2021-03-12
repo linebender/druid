@@ -48,7 +48,7 @@ pub fn main() {
         .delegate(Delegate {
             windows: Vec::new(),
         })
-        .use_env_tracing()
+        .log_to_console()
         .launch(State::default())
         .expect("launch failed");
 }

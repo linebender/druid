@@ -15,6 +15,7 @@
 //! A toggle switch widget.
 
 use std::time::Duration;
+use tracing::{instrument, trace};
 
 use crate::kurbo::{Circle, Shape};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
@@ -87,6 +88,7 @@ impl Switch {
 }
 
 impl Widget<bool> for Switch {
+    #[instrument(name = "Switch", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, env: &Env) {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;
@@ -155,6 +157,7 @@ impl Widget<bool> for Switch {
         }
     }
 
+    #[instrument(name = "Switch", level = "trace", skip(self, ctx, event, _data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, env: &Env) {
         if matches!(event, LifeCycle::WidgetAdded) {
             self.on_text.rebuild_if_needed(ctx.text(), env);
@@ -162,6 +165,11 @@ impl Widget<bool> for Switch {
         }
     }
 
+    #[instrument(
+        name = "Switch",
+        level = "trace",
+        skip(self, ctx, old_data, data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, _env: &Env) {
         if old_data != data {
             self.animation_in_progress = true;
@@ -169,7 +177,14 @@ impl Widget<bool> for Switch {
         }
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &bool, env: &Env) -> Size {
+    #[instrument(name = "Switch", level = "trace", skip(self, ctx, bc, _data, env))]
+    fn layout(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &bool,
+        env: &Env,
+    ) -> Size {
         let text_metrics = self.on_text.layout_metrics();
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let width = height * SWITCH_WIDTH_RATIO;
@@ -178,9 +193,13 @@ impl Widget<bool> for Switch {
         let text_bottom_padding = height - (text_metrics.size.height + label_y);
         let text_baseline_offset = text_metrics.size.height - text_metrics.first_baseline;
         ctx.set_baseline_offset(text_bottom_padding + text_baseline_offset);
-        bc.constrain(Size::new(width, height))
+
+        let size = bc.constrain(Size::new(width, height));
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Switch", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let switch_width = switch_height * SWITCH_WIDTH_RATIO;

@@ -88,9 +88,9 @@ impl AppState {
     fn next_cursor(&mut self) {
         self.cursor = match self.cursor {
             Cursor::Arrow => Cursor::IBeam,
-            Cursor::IBeam => Cursor::Crosshair,
-            Cursor::Crosshair => Cursor::OpenHand,
-            Cursor::OpenHand => Cursor::NotAllowed,
+            Cursor::IBeam => Cursor::Pointer,
+            Cursor::Pointer => Cursor::Crosshair,
+            Cursor::Crosshair => Cursor::NotAllowed,
             Cursor::NotAllowed => Cursor::ResizeLeftRight,
             Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
             Cursor::ResizeUpDown => {
@@ -101,6 +101,7 @@ impl AppState {
                 }
             }
             Cursor::Custom(_) => Cursor::Arrow,
+            _ => Cursor::Arrow,
         };
     }
 }
@@ -119,7 +120,7 @@ pub fn main() {
         custom_desc,
     };
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

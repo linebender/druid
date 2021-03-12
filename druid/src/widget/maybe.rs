@@ -160,7 +160,7 @@ impl<T> MaybeWidget<T> {
         match self {
             Self::Some(widget) => Some(f(widget)),
             Self::None(_) => {
-                log::warn!("`MaybeWidget::with_some` called on `None` value");
+                tracing::trace!("`MaybeWidget::with_some` called on `None` value");
                 None
             }
         }
@@ -174,7 +174,7 @@ impl<T> MaybeWidget<T> {
         match self {
             Self::None(widget) => Some(f(widget)),
             Self::Some(_) => {
-                log::warn!("`MaybeWidget::with_none` called on `Some` value");
+                tracing::trace!("`MaybeWidget::with_none` called on `Some` value");
                 None
             }
         }

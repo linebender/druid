@@ -47,8 +47,11 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+};
 
 use super::application::Application;
 use super::dialog;
@@ -174,6 +177,7 @@ pub(crate) struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
     click_counter: ClickCounter,
+    active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
@@ -292,6 +296,7 @@ impl WindowBuilder {
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
             click_counter: ClickCounter::default(),
+            active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
         });
 
@@ -587,7 +592,7 @@ impl WindowBuilder {
                             Some(Vec2::new(delta_x, delta_y))
                         }
                         e => {
-                            eprintln!(
+                            warn!(
                                 "Warning: the Druid widget got some whacky scroll direction {:?}",
                                 e
                             );
@@ -624,7 +629,7 @@ impl WindowBuilder {
                     state.current_keycode.set(Some(hw_keycode));
 
                     state.with_handler(|h|
-                        h.key_down(make_key_event(key, repeat, KeyState::Down))
+                        simulate_input(h, state.active_text_input.get(), make_key_event(key, repeat, KeyState::Down))
                     );
                 }
 
@@ -978,6 +983,28 @@ impl WindowHandle {
         PietText::new()
     }
 
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
+    }
+
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(state) = self.state.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None)
+            }
+        }
+    }
+
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(state) = self.state.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // noop until we get a real text input implementation
+    }
+
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         let interval = deadline
             .checked_duration_since(Instant::now())
@@ -1188,10 +1215,12 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
     } else {
         gdk::Cursor::from_name(
             &gdk_window.get_display(),
+            #[allow(deprecated)]
             match cursor {
                 // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
+                Cursor::Pointer => "pointer",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

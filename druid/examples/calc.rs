@@ -256,7 +256,7 @@ pub fn main() {
         in_num: false,
     };
     AppLauncher::with_window(window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(calc_state)
         .expect("launch failed");
 }

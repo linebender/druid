@@ -18,6 +18,7 @@ use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::Data;
+use tracing::instrument;
 
 /// A wrapper that adds an identity to an otherwise anonymous widget.
 pub struct IdentityWrapper<W> {
@@ -33,22 +34,43 @@ impl<W> IdentityWrapper<W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
+    #[instrument(
+        name = "IdentityWrapper",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }
 
+    #[instrument(
+        name = "IdentityWrapper",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.inner.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(
+        name = "IdentityWrapper",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.inner.update(ctx, old_data, data, env);
     }
 
+    #[instrument(
+        name = "IdentityWrapper",
+        level = "trace",
+        skip(self, ctx, bc, data, env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         self.inner.layout(ctx, bc, data, env)
     }
 
+    #[instrument(name = "IdentityWrapper", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.inner.paint(ctx, data, env);
     }

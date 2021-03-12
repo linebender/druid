@@ -22,6 +22,7 @@ use crate::{
     widget::prelude::*,
     Data,
 };
+use tracing::{instrument, trace};
 
 /// A widget that renders a bitmap Image.
 ///
@@ -164,12 +165,24 @@ impl Image {
 }
 
 impl<T: Data> Widget<T> for Image {
+    #[instrument(name = "Image", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
+    #[instrument(name = "Image", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
+    #[instrument(
+        name = "Image",
+        level = "trace",
+        skip(self, _ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
+    #[instrument(
+        name = "Image",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, _env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -184,7 +197,7 @@ impl<T: Data> Widget<T> for Image {
         // the image.
         let max = bc.max();
         let image_size = self.image_data.size();
-        if bc.is_width_bounded() && !bc.is_height_bounded() {
+        let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
             let ratio = max.width / image_size.width;
             Size::new(max.width, ratio * image_size.height)
         } else if bc.is_height_bounded() && !bc.is_width_bounded() {
@@ -192,9 +205,12 @@ impl<T: Data> Widget<T> for Image {
             Size::new(ratio * image_size.width, max.height)
         } else {
             bc.constrain(self.image_data.size())
-        }
+        };
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Image", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.image_data.size());
 

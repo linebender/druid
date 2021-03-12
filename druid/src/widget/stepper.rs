@@ -16,6 +16,7 @@
 
 use std::f64::EPSILON;
 use std::time::Duration;
+use tracing::{instrument, trace};
 
 use crate::kurbo::BezPath;
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
@@ -115,6 +116,7 @@ impl Default for Stepper {
 }
 
 impl Widget<f64> for Stepper {
+    #[instrument(name = "Stepper", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
         let stroke_width = 2.0;
         let rounded_rect = ctx
@@ -177,6 +179,11 @@ impl Widget<f64> for Stepper {
         ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
     }
 
+    #[instrument(
+        name = "Stepper",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -184,12 +191,15 @@ impl Widget<f64> for Stepper {
         _data: &f64,
         env: &Env,
     ) -> Size {
-        bc.constrain(Size::new(
+        let size = bc.constrain(Size::new(
             env.get(theme::BASIC_WIDGET_HEIGHT),
             env.get(theme::BORDERED_WIDGET_HEIGHT),
-        ))
+        ));
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Stepper", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
@@ -233,6 +243,11 @@ impl Widget<f64> for Stepper {
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
+    #[instrument(
+        name = "Stepper",
+        level = "trace",
+        skip(self, ctx, old_data, data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
         if (*data - old_data).abs() > EPSILON {
             ctx.request_paint();

@@ -16,6 +16,7 @@
 
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
+use tracing::instrument;
 
 /// A progress bar, displaying a numeric progress value.
 ///
@@ -31,14 +32,34 @@ impl ProgressBar {
 }
 
 impl Widget<f64> for ProgressBar {
+    #[instrument(
+        name = "ProgressBar",
+        level = "trace",
+        skip(self, _ctx, _event, _data, _env)
+    )]
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut f64, _env: &Env) {}
 
+    #[instrument(
+        name = "ProgressBar",
+        level = "trace",
+        skip(self, _ctx, _event, _data, _env)
+    )]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
+    #[instrument(
+        name = "ProgressBar",
+        level = "trace",
+        skip(self, ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
         ctx.request_paint();
     }
 
+    #[instrument(
+        name = "ProgressBar",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -53,6 +74,7 @@ impl Widget<f64> for ProgressBar {
         ))
     }
 
+    #[instrument(name = "ProgressBar", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let height = env.get(theme::BASIC_WIDGET_HEIGHT);
         let corner_radius = env.get(theme::PROGRESS_BAR_RADIUS);

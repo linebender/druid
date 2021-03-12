@@ -15,6 +15,7 @@
 //! A textbox widget.
 
 use std::time::Duration;
+use tracing::{instrument, trace};
 
 use crate::piet::PietText;
 use crate::text::{
@@ -411,6 +412,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
 }
 
 impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
+    #[instrument(name = "TextBox", level = "trace", skip(self, ctx, event, data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         self.suppress_adjust_hscroll = false;
         match event {
@@ -490,6 +492,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         }
     }
 
+    #[instrument(name = "TextBox", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
@@ -509,7 +512,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _: &T, data: &T, env: &Env) {
+    #[instrument(
+        name = "TextBox",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.editor.update(ctx, data, env);
         if !self.suppress_adjust_hscroll && !self.multiline {
             self.update_hscroll(ctx.size().width, env);
@@ -519,6 +527,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         }
     }
 
+    #[instrument(name = "TextBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
         let text_insets = env.get(theme::TEXTBOX_INSETS);
@@ -547,9 +556,15 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             bottom_padding + (text_metrics.size.height - text_metrics.first_baseline);
         ctx.set_baseline_offset(baseline_off);
 
+        trace!(
+            "Computed layout: size={}, baseline_offset={:?}",
+            size,
+            baseline_off
+        );
         size
     }
 
+    #[instrument(name = "TextBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = ctx.size();
         let background_color = env.get(theme::BACKGROUND_LIGHT);
@@ -728,6 +743,11 @@ impl<T: Data> ValueTextBox<T> {
 }
 
 impl<T: Data> Widget<T> for ValueTextBox<T> {
+    #[instrument(
+        name = "ValueTextBox",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if matches!(event, Event::Command(cmd) if cmd.is(BEGIN_EDITING)) {
             return self.begin(ctx, data);
@@ -818,6 +838,11 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
         }
     }
 
+    #[instrument(
+        name = "ValueTextBox",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             self.buffer = self.formatter.format(data);
@@ -835,6 +860,11 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
         }
     }
 
+    #[instrument(
+        name = "ValueTextBox",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         let changed_by_us = self
             .last_known_data
@@ -876,10 +906,16 @@ impl<T: Data> Widget<T> for ValueTextBox<T> {
         }
     }
 
+    #[instrument(
+        name = "ValueTextBox",
+        level = "trace",
+        skip(self, ctx, bc, _data, env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         self.inner.layout(ctx, bc, &self.buffer, env)
     }
 
+    #[instrument(name = "ValueTextBox", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         self.inner.paint(ctx, &self.buffer, env);
     }
