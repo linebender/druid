@@ -19,7 +19,7 @@ use tracing::{instrument, trace};
 
 use crate::{
     kurbo::BezPath,
-    piet::{self, FixedLinearGradient, GradientStop},
+    piet::{self, FixedLinearGradient, GradientStop, LineCap, LineJoin, StrokeStyle},
     widget::common::FillStrat,
     widget::prelude::*,
     Affine, Color, Data, Point, Rect,
@@ -309,7 +309,22 @@ impl SvgRenderer {
         match &p.stroke {
             Some(stroke) => {
                 let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity, ctx);
-                ctx.stroke(path, &*brush, stroke.width.value());
+                ctx.stroke_styled(
+                    path,
+                    &*brush,
+                    stroke.width.value(),
+                    &StrokeStyle::new()
+                        .line_join(match stroke.linejoin {
+                            usvg::LineJoin::Miter => LineJoin::Miter,
+                            usvg::LineJoin::Round => LineJoin::Round,
+                            usvg::LineJoin::Bevel => LineJoin::Bevel,
+                        })
+                        .line_cap(match stroke.linecap {
+                            usvg::LineCap::Butt => LineCap::Butt,
+                            usvg::LineCap::Round => LineCap::Round,
+                            usvg::LineCap::Square => LineCap::Square,
+                        }),
+                );
             }
             None => {}
         }
