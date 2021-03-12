@@ -14,19 +14,16 @@
 
 //! Rich text with style spans.
 
-use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
-use druid_shell::kurbo::Rect;
-use druid_shell::Cursor;
-
+use super::attribute::Link;
 use super::{Attribute, AttributeSpans, TextStorage};
 use crate::piet::{
     util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayoutBuilder,
     TextStorage as PietTextStorage,
 };
-use crate::{ArcStr, Data, Env, EventCtx, FontDescriptor, KeyOrValue, MouseEvent, TextLayout};
+use crate::{ArcStr, Command, Data, Env, FontDescriptor, KeyOrValue};
 
 /// Text with optional style spans.
 #[derive(Clone, Debug, Data)]
@@ -34,17 +31,6 @@ pub struct RichText {
     buffer: ArcStr,
     attrs: Arc<AttributeSpans>,
     links: Arc<[Link]>,
-}
-
-struct Link {
-    range: Range<usize>,
-    handler: Box<dyn Fn(&mut EventCtx, &Env)>,
-}
-
-impl fmt::Debug for Link {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Link {{{:?}}}", self.range)
-    }
 }
 
 impl RichText {
@@ -96,8 +82,6 @@ impl PietTextStorage for RichText {
 }
 
 impl TextStorage for RichText {
-    type Data = Vec<(Rect, usize)>;
-
     fn add_attributes(
         &self,
         mut builder: PietTextLayoutBuilder,
@@ -109,30 +93,8 @@ impl TextStorage for RichText {
         builder
     }
 
-    fn after_layout(&self, layout: &TextLayout<Self>, data: &mut Self::Data) {
-        data.clear();
-        let iter = self.links.iter().enumerate().flat_map(|(i, link)| {
-            layout
-                .rects_for_range(link.range.clone())
-                .into_iter()
-                .map(move |rect| (rect, i))
-        });
-        data.extend(iter);
-    }
-
-    fn mouse_click(&self, ctx: &mut EventCtx, event: &MouseEvent, data: &Self::Data, env: &Env) {
-        if let Some((_, idx)) = data.iter().find(|(hit_box, _)| hit_box.contains(event.pos)) {
-            (self.links[*idx].handler)(ctx, env);
-            ctx.set_handled();
-        }
-    }
-
-    fn mouse_move(&self, ctx: &mut EventCtx, event: &MouseEvent, data: &Self::Data, _env: &Env) {
-        if data.iter().any(|(hit_box, _)| hit_box.contains(event.pos)) {
-            ctx.set_cursor(&Cursor::Pointer);
-        } else {
-            ctx.clear_cursor();
-        }
+    fn links(&self) -> &[Link] {
+        &self.links
     }
 }
 
@@ -273,11 +235,10 @@ impl AttributesAdder<'_> {
     }
 
     /// Make this text clickable.
-    pub fn link(&mut self, f: impl Fn(&mut EventCtx, &Env) + 'static) -> &mut Self {
-        self.rich_text_builder.links.push(Link {
-            range: self.range.clone(),
-            handler: Box::new(f),
-        });
+    pub fn link(&mut self, command: impl Into<Command>) -> &mut Self {
+        self.rich_text_builder
+            .links
+            .push(Link::new(self.range.clone(), command.into()));
         self
     }
 }

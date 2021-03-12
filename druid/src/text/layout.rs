@@ -15,7 +15,9 @@
 //! A type for laying out, drawing, and interacting with text.
 
 use std::ops::Range;
+use std::rc::Rc;
 
+use super::attribute::Link;
 use super::TextStorage;
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::piet::{
@@ -55,6 +57,7 @@ pub struct TextLayout<T> {
     layout: Option<PietTextLayout>,
     wrap_width: f64,
     alignment: TextAlignment,
+    links: Rc<[(Rect, usize)]>,
 }
 
 /// Metrics describing the layout text.
@@ -82,6 +85,7 @@ impl<T> TextLayout<T> {
             layout: None,
             wrap_width: f64::INFINITY,
             alignment: Default::default(),
+            links: Rc::new([]),
         }
     }
 
@@ -280,6 +284,17 @@ impl<T: TextStorage> TextLayout<T> {
             .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
     }
 
+    /// Returns the link at the mouse position.
+    pub fn link_for_mouse_pos(&self, pos: Point) -> Option<&Link> {
+        let (_, i) = self
+            .links
+            .iter()
+            .rfind(|(hit_box, _)| hit_box.contains(pos))?;
+
+        let text = self.text()?;
+        text.links().get(*i)
+    }
+
     /// Called during the containing widgets `update` method; this text object
     /// will check to see if any used environment items have changed,
     /// and invalidate itself as needed.
@@ -313,7 +328,7 @@ impl<T: TextStorage> TextLayout<T> {
     /// as part of your widget's [`layout`] method.
     ///
     /// [`layout`]: trait.Widget.html#method.layout
-    pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) -> bool {
+    pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) {
         if let Some(text) = &self.text {
             if self.layout.is_none() {
                 let font = self.font.resolve(env);
@@ -335,11 +350,22 @@ impl<T: TextStorage> TextLayout<T> {
                     .default_attribute(descriptor.style)
                     .default_attribute(TextAttribute::TextColor(color));
                 let layout = text.add_attributes(builder, env).build().unwrap();
+
+                self.links = text
+                    .links()
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(i, link)| {
+                        layout
+                            .rects_for_range(link.range())
+                            .into_iter()
+                            .map(move |rect| (rect, i))
+                    })
+                    .collect();
+
                 self.layout = Some(layout);
-                return true;
             }
         }
-        false
     }
 
     ///  Draw the layout at the provided `Point`.

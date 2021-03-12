@@ -17,13 +17,12 @@
 use std::sync::Arc;
 
 use crate::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
-use crate::{Data, Env, EventCtx, MouseEvent, TextLayout};
+use crate::{Data, Env};
+
+use super::attribute::Link;
 
 /// A type that represents text that can be displayed.
 pub trait TextStorage: PietTextStorage + Data {
-    /// This allow you to store your data inside the `TextLayout`.
-    type Data: Default + Clone;
-
     /// If this TextStorage object manages style spans, it should implement
     /// this method and update the provided builder with its spans, as required.
     #[allow(unused_variables)]
@@ -31,17 +30,10 @@ pub trait TextStorage: PietTextStorage + Data {
         builder
     }
 
-    /// This method called after text layout is done.
-    #[allow(unused_variables)]
-    fn after_layout(&self, layout: &TextLayout<Self>, data: &mut Self::Data) {}
-
-    /// This method is called on mouse clicks.
-    #[allow(unused_variables)]
-    fn mouse_click(&self, ctx: &mut EventCtx, event: &MouseEvent, data: &Self::Data, env: &Env) {}
-
-    /// This method is called on mouse move.
-    #[allow(unused_variables)]
-    fn mouse_move(&self, ctx: &mut EventCtx, event: &MouseEvent, data: &Self::Data, env: &Env) {}
+    /// The links inside the text.
+    fn links(&self) -> &[Link] {
+        &[]
+    }
 }
 
 /// A reference counted string slice.
@@ -50,14 +42,8 @@ pub trait TextStorage: PietTextStorage + Data {
 /// it cannot be mutated, but unlike `String` it can be cheaply cloned.
 pub type ArcStr = Arc<str>;
 
-impl TextStorage for ArcStr {
-    type Data = ();
-}
+impl TextStorage for ArcStr {}
 
-impl TextStorage for String {
-    type Data = ();
-}
+impl TextStorage for String {}
 
-impl TextStorage for Arc<String> {
-    type Data = ();
-}
+impl TextStorage for Arc<String> {}

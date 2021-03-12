@@ -17,7 +17,14 @@
 use std::ops::Range;
 
 use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as PietAttr};
-use crate::{Env, FontDescriptor, KeyOrValue};
+use crate::{Command, Env, FontDescriptor, KeyOrValue};
+
+/// A link represents a clickable part in the text.
+#[derive(Debug, Clone)]
+pub struct Link {
+    pub(crate) range: Range<usize>,
+    pub(crate) command: Command,
+}
 
 /// A collection of spans of attributes of various kinds.
 #[derive(Debug, Clone, Default)]
@@ -91,6 +98,18 @@ pub enum Attribute {
     Underline(bool),
     /// A [`FontDescriptor`](struct.FontDescriptor.html).
     Descriptor(KeyOrValue<FontDescriptor>),
+}
+
+impl Link {
+    /// Create a new `Link`.
+    pub fn new(range: Range<usize>, command: Command) -> Self {
+        Self { range, command }
+    }
+
+    /// Get Link's range.
+    pub fn range(&self) -> Range<usize> {
+        self.range.clone()
+    }
 }
 
 impl AttributeSpans {

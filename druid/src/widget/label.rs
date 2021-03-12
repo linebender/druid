@@ -16,6 +16,8 @@
 
 use std::ops::{Deref, DerefMut};
 
+use druid_shell::Cursor;
+
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
 use crate::{
@@ -89,10 +91,9 @@ pub struct Label<T> {
 /// localized text, use [`Label`].
 ///
 /// [`Label`]: struct.Label.html
-pub struct RawLabel<T: TextStorage> {
+pub struct RawLabel<T> {
     layout: TextLayout<T>,
     line_break_mode: LineBreaking,
-    text_storage_data: T::Data,
 }
 
 /// Options for handling lines that are too wide for the label.
@@ -149,7 +150,6 @@ impl<T: TextStorage> RawLabel<T> {
         Self {
             layout: TextLayout::new(),
             line_break_mode: LineBreaking::Overflow,
-            text_storage_data: Default::default(),
         }
     }
 
@@ -513,19 +513,26 @@ impl<T: Data> Widget<T> for Label<T> {
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseUp(event) => {
                 // Account for the padding
-                let mut event = event.clone();
-                event.pos.x -= LABEL_X_PADDING;
-                data.mouse_click(ctx, &event, &self.text_storage_data, env);
+                let mut pos = event.pos;
+                pos.x -= LABEL_X_PADDING;
+                if let Some(link) = self.layout.link_for_mouse_pos(pos) {
+                    ctx.submit_command(link.command.clone());
+                }
             }
             Event::MouseMove(event) => {
                 // Account for the padding
-                let mut event = event.clone();
-                event.pos.x -= LABEL_X_PADDING;
-                data.mouse_move(ctx, &event, &self.text_storage_data, env);
+                let mut pos = event.pos;
+                pos.x -= LABEL_X_PADDING;
+
+                if self.layout.link_for_mouse_pos(pos).is_some() {
+                    ctx.set_cursor(&Cursor::Pointer);
+                } else {
+                    ctx.clear_cursor();
+                }
             }
             _ => {}
         }
@@ -547,7 +554,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
 
         let width = match self.line_break_mode {
@@ -556,9 +563,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         };
 
         self.layout.set_wrap_width(width);
-        if self.layout.rebuild_if_needed(ctx.text(), env) {
-            data.after_layout(&self.layout, &mut self.text_storage_data);
-        }
+        self.layout.rebuild_if_needed(ctx.text(), env);
 
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
