@@ -522,7 +522,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
     #[instrument(
         name = "RawLabel",
         level = "trace",
-        skip(self, _ctx, event, _data, _env)
+        skip(self, ctx, event, _data, _env)
     )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
