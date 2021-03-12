@@ -16,6 +16,7 @@
 
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
+use tracing::{instrument, trace};
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -77,19 +78,24 @@ impl<T> Align<T> {
 }
 
 impl<T: Data> Widget<T> for Align<T> {
+    #[instrument(name = "Align", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
 
+    #[instrument(name = "Align", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(name = "Align", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "Align", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        trace!("Layout constraints: {:?}", bc);
         bc.debug_check("Align");
 
         let size = self.child.layout(ctx, &bc.loosen(), data, env);
@@ -122,9 +128,16 @@ impl<T: Data> Widget<T> for Align<T> {
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        trace!(
+            "Computed layout: origin={}, size={}, insets={:?}",
+            origin,
+            my_size,
+            my_insets
+        );
         my_size
     }
 
+    #[instrument(name = "Align", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
     }

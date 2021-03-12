@@ -17,6 +17,7 @@
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
 use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
+use tracing::{instrument, trace};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -110,22 +111,26 @@ impl<T: Data> Button<T> {
 }
 
 impl<T: Data> Widget<T> for Button<T> {
+    #[instrument(name = "Button", level = "trace", skip(self, ctx, event, _data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.request_paint();
+                trace!("Button {:?} pressed", ctx.widget_id());
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
                     ctx.set_active(false);
                     ctx.request_paint();
+                    trace!("Button {:?} released", ctx.widget_id());
                 }
             }
             _ => (),
         }
     }
 
+    #[instrument(name = "Button", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::HotChanged(_) = event {
             ctx.request_paint();
@@ -133,10 +138,12 @@ impl<T: Data> Widget<T> for Button<T> {
         self.label.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(name = "Button", level = "trace", skip(self, ctx, old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.label.update(ctx, old_data, data, env)
     }
 
+    #[instrument(name = "Button", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Button");
         let padding = Size::new(LABEL_INSETS.x_value(), LABEL_INSETS.y_value());
@@ -148,12 +155,15 @@ impl<T: Data> Widget<T> for Button<T> {
         let baseline = self.label.baseline_offset();
         ctx.set_baseline_offset(baseline + LABEL_INSETS.y1);
 
-        bc.constrain(Size::new(
+        let button_size = bc.constrain(Size::new(
             self.label_size.width + padding.width,
             (self.label_size.height + padding.height).max(min_height),
-        ))
+        ));
+        trace!("Computed button size: {}", button_size);
+        button_size
     }
 
+    #[instrument(name = "Button", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let is_active = ctx.is_active();
         let is_hot = ctx.is_hot();

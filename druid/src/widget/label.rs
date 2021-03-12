@@ -24,6 +24,7 @@ use crate::{
     ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment,
     TextLayout,
 };
+use tracing::{instrument, trace};
 
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
@@ -476,8 +477,10 @@ impl<T: Data> LabelText<T> {
 }
 
 impl<T: Data> Widget<T> for Label<T> {
+    #[instrument(name = "Label", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
+    #[instrument(name = "Label", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if matches!(event, LifeCycle::WidgetAdded) {
             self.text.resolve(data, env);
@@ -487,6 +490,7 @@ impl<T: Data> Widget<T> for Label<T> {
         }
     }
 
+    #[instrument(name = "Label", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let data_changed = self.text.resolve(data, env);
         self.text_should_be_updated = false;
@@ -500,10 +504,12 @@ impl<T: Data> Widget<T> for Label<T> {
         }
     }
 
+    #[instrument(name = "Label", level = "trace", skip(self, ctx, bc, _data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         self.label.layout(ctx, bc, &self.current_text, env)
     }
 
+    #[instrument(name = "Label", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         if self.text_should_be_updated {
             tracing::warn!("Label text changed without call to update. See LabelAdapter::set_text for information.");
@@ -513,6 +519,11 @@ impl<T: Data> Widget<T> for Label<T> {
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
+    #[instrument(
+        name = "RawLabel",
+        level = "trace",
+        skip(self, _ctx, event, _data, _env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseUp(event) => {
@@ -538,12 +549,22 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
     }
 
+    #[instrument(
+        name = "RawLabel",
+        level = "trace",
+        skip(self, _ctx, event, data, _env)
+    )]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
         if matches!(event, LifeCycle::WidgetAdded) {
             self.layout.set_text(data.to_owned());
         }
     }
 
+    #[instrument(
+        name = "RawLabel",
+        level = "trace",
+        skip(self, ctx, old_data, data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _env: &Env) {
         if !old_data.same(data) {
             self.layout.set_text(data.clone());
@@ -554,6 +575,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
     }
 
+    #[instrument(name = "RawLabel", level = "trace", skip(self, ctx, bc, _data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
         bc.debug_check("Label");
 
@@ -567,12 +589,15 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
 
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-        bc.constrain(Size::new(
+        let size = bc.constrain(Size::new(
             text_metrics.size.width + 2. * LABEL_X_PADDING,
             text_metrics.size.height,
-        ))
+        ));
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "RawLabel", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let origin = Point::new(LABEL_X_PADDING, 0.0);
         let label_size = ctx.size();

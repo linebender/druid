@@ -18,6 +18,7 @@ use crate::kurbo::Circle;
 use crate::widget::prelude::*;
 use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText};
 use crate::{theme, Data, LinearGradient, UnitPoint};
+use tracing::{instrument, trace};
 
 const DEFAULT_RADIO_RADIUS: f64 = 7.0;
 const INNER_CIRCLE_RADIUS: f64 = 2.0;
@@ -61,11 +62,13 @@ impl<T: Data> Radio<T> {
 }
 
 impl<T: Data + PartialEq> Widget<T> for Radio<T> {
+    #[instrument(name = "Radio", level = "trace", skip(self, ctx, event, data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 ctx.set_active(true);
                 ctx.request_paint();
+                trace!("Radio button {:?} pressed", ctx.widget_id());
             }
             Event::MouseUp(_) => {
                 if ctx.is_active() {
@@ -74,12 +77,14 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
                         *data = self.variant.clone();
                     }
                     ctx.request_paint();
+                    trace!("Radio button {:?} released", ctx.widget_id());
                 }
             }
             _ => (),
         }
     }
 
+    #[instrument(name = "Radio", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child_label.lifecycle(ctx, event, data, env);
         if let LifeCycle::HotChanged(_) = event {
@@ -87,6 +92,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
     }
 
+    #[instrument(name = "Radio", level = "trace", skip(self, ctx, old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.child_label.update(ctx, old_data, data, env);
         if !old_data.same(data) {
@@ -94,6 +100,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
     }
 
+    #[instrument(name = "Radio", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Radio");
 
@@ -105,9 +112,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
             label_size.width + radio_diam + x_padding,
             radio_diam.max(label_size.height),
         );
-        bc.constrain(desired_size)
+        let size = bc.constrain(desired_size);
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Radio", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);

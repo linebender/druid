@@ -15,11 +15,14 @@
 //! Simple list view widget.
 
 use std::cmp::Ordering;
+use std::collections::VecDeque;
 use std::f64;
 use std::sync::Arc;
 
+use tracing::{instrument, trace};
+
 #[cfg(feature = "im")]
-use crate::im::Vector;
+use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
@@ -96,7 +99,6 @@ pub trait ListIter<T>: Data {
     /// Return data length.
     fn data_len(&self) -> usize;
 }
-
 #[cfg(feature = "im")]
 impl<T: Data> ListIter<T> for Vector<T> {
     fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
@@ -108,6 +110,37 @@ impl<T: Data> ListIter<T> for Vector<T> {
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
         for (i, item) in self.iter_mut().enumerate() {
             cb(item, i);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+//An implementation for ListIter<(K, V)> has been ommitted due to problems
+//with how the List Widget handles the reordering of its data.
+#[cfg(feature = "im")]
+impl<K, V> ListIter<V> for OrdMap<K, V>
+where
+    K: Data + Ord,
+    V: Data,
+{
+    fn for_each(&self, mut cb: impl FnMut(&V, usize)) {
+        for (i, item) in self.iter().enumerate() {
+            let ret = (item.0.to_owned(), item.1.to_owned());
+            cb(&ret.1, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut V, usize)) {
+        for (i, item) in self.clone().iter().enumerate() {
+            let mut ret = item.1.clone();
+            cb(&mut ret, i);
+
+            if !item.1.same(&ret) {
+                self[&item.0] = ret;
+            }
         }
     }
 
@@ -216,7 +249,79 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
     }
 }
 
+impl<T: Data> ListIter<T> for Arc<VecDeque<T>> {
+    fn for_each(&self, mut cb: impl FnMut(&T, usize)) {
+        for (i, item) in self.iter().enumerate() {
+            cb(item, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
+        let mut new_data = VecDeque::with_capacity(self.data_len());
+        let mut any_changed = false;
+
+        for (i, item) in self.iter().enumerate() {
+            let mut d = item.to_owned();
+            cb(&mut d, i);
+
+            if !any_changed && !item.same(&d) {
+                any_changed = true;
+            }
+            new_data.push_back(d);
+        }
+
+        if any_changed {
+            *self = Arc::new(new_data);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.len()
+    }
+}
+
+// S == shared data type
+impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<VecDeque<T>>) {
+    fn for_each(&self, mut cb: impl FnMut(&(S, T), usize)) {
+        for (i, item) in self.1.iter().enumerate() {
+            let d = (self.0.clone(), item.to_owned());
+            cb(&d, i);
+        }
+    }
+
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
+        let mut new_data = VecDeque::with_capacity(self.1.len());
+        let mut any_shared_changed = false;
+        let mut any_el_changed = false;
+
+        for (i, item) in self.1.iter().enumerate() {
+            let mut d = (self.0.clone(), item.to_owned());
+            cb(&mut d, i);
+
+            if !any_shared_changed && !self.0.same(&d.0) {
+                any_shared_changed = true;
+            }
+            if any_shared_changed {
+                self.0 = d.0;
+            }
+            if !any_el_changed && !item.same(&d.1) {
+                any_el_changed = true;
+            }
+            new_data.push_back(d.1);
+        }
+
+        if any_el_changed {
+            self.1 = Arc::new(new_data);
+        }
+    }
+
+    fn data_len(&self) -> usize {
+        self.1.len()
+    }
+}
+
 impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
+    #[instrument(name = "List", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each_mut(|child_data, _| {
@@ -226,6 +331,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
+    #[instrument(name = "List", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             if self.update_child_count(data, env) {
@@ -241,6 +347,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         });
     }
 
+    #[instrument(name = "List", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         // we send update to children first, before adding or removing children;
         // this way we avoid sending update to newly added children, at the cost
@@ -257,6 +364,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         }
     }
 
+    #[instrument(name = "List", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let axis = self.axis;
         let spacing = self.spacing.resolve(env);
@@ -286,9 +394,11 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let my_size = bc.constrain(Size::from(axis.pack(major_pos, minor)));
         let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, insets);
         my_size
     }
 
+    #[instrument(name = "List", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut children = self.children.iter_mut();
         data.for_each(|child_data, _| {

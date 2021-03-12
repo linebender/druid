@@ -69,7 +69,7 @@ pub fn main() {
     let window = WindowDesc::new(build_app()).title("Very flexible");
 
     AppLauncher::with_window(window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(0)
         .expect("launch failed");
 }

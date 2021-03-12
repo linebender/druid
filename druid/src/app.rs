@@ -162,20 +162,13 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
+    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::SimpleLogger::new()
-            .with_level(log::LevelFilter::Debug)
-            .init()
-            .expect("Failed to initialize logger.");
-        #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Debug).expect("Failed to initialize logger.");
-        self
+        self.log_to_console()
     }
 
     /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
-    /// stderr, controlled by ENV variables.
+    /// stderr.
     ///
     /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
     /// it's probably better to implement it yourself.
@@ -183,14 +176,14 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the subscriber fails to initialize.
-    pub fn use_env_tracing(self) -> Self {
+    pub fn log_to_console(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
-            let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
-            let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-                .or_else(|_| tracing_subscriber::EnvFilter::try_new("debug"))
-                .expect("Failed to initialize tracing subscriber");
+            let filter_layer = tracing_subscriber::filter::LevelFilter::DEBUG;
+            let fmt_layer = tracing_subscriber::fmt::layer()
+                // Display target (eg "my_crate::some_mod::submod") with logs
+                .with_target(true);
 
             tracing_subscriber::registry()
                 .with(filter_layer)
@@ -198,7 +191,7 @@ impl<T: Data> AppLauncher<T> {
                 .init();
         }
         // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
-        // because wasm targets will virtually always be browsers.
+        // because this is a GUI framework, so wasm targets will virtually always be browsers.
         #[cfg(target_arch = "wasm32")]
         {
             console_error_panic_hook::set_once();

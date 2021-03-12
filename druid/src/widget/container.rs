@@ -17,6 +17,7 @@
 use super::BackgroundBrush;
 use crate::widget::prelude::*;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
+use tracing::{instrument, trace, trace_span};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -139,21 +140,31 @@ impl<T: Data> Container<T> {
 }
 
 impl<T: Data> Widget<T> for Container<T> {
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.inner.event(ctx, event, data, env);
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.inner.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(
+        name = "Container",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         if let Some(BackgroundBrush::Painter(p)) = self.background.as_mut() {
-            p.update(ctx, old_data, data, env);
+            trace_span!("update background").in_scope(|| {
+                p.update(ctx, old_data, data, env);
+            });
         }
         self.inner.update(ctx, data, env);
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Container");
 
@@ -174,18 +185,22 @@ impl<T: Data> Widget<T> for Container<T> {
 
         let my_insets = self.inner.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, my_insets);
         my_size
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let corner_radius = self.corner_radius.resolve(env);
 
         if let Some(background) = self.background.as_mut() {
             let panel = ctx.size().to_rounded_rect(corner_radius);
 
-            ctx.with_save(|ctx| {
-                ctx.clip(panel);
-                background.paint(ctx, data, env);
+            trace_span!("paint background").in_scope(|| {
+                ctx.with_save(|ctx| {
+                    ctx.clip(panel);
+                    background.paint(ctx, data, env);
+                });
             });
         }
 
