@@ -17,6 +17,7 @@
 use crate::kurbo::common::FloatExt;
 use crate::widget::prelude::*;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
+use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.
 ///
@@ -587,24 +588,28 @@ impl<T: Data> Flex<T> {
 }
 
 impl<T: Data> Widget<T> for Flex<T> {
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
             child.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
             child.lifecycle(ctx, event, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
             child.update(ctx, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Flex");
         // we loosen our constraints when passing to children.
@@ -799,9 +804,15 @@ impl<T: Data> Widget<T> for Flex<T> {
         };
 
         ctx.set_baseline_offset(baseline_offset);
+        trace!(
+            "Computed layout: size={}, baseline_offset={}",
+            my_size,
+            baseline_offset
+        );
         my_size
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
             child.paint(ctx, data, env);

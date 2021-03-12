@@ -16,6 +16,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::mem;
+use tracing::{error, info, info_span};
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
@@ -170,7 +171,7 @@ impl<T: Data> Window<T> {
             if let Some(mut handle) = self.handle.get_idle_handle() {
                 handle.schedule_idle(RUN_COMMANDS_TOKEN);
             } else {
-                tracing::error!("failed to get idle handle");
+                error!("failed to get idle handle");
             }
         }
     }
@@ -196,7 +197,7 @@ impl<T: Data> Window<T> {
                 if let Some(widget_id) = self.timers.get(&token) {
                     Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
                 } else {
-                    tracing::error!("No widget found for timer {:?}", token);
+                    error!("No widget found for timer {:?}", token);
                     return Handled::No;
                 }
             }
@@ -226,11 +227,16 @@ impl<T: Data> Window<T> {
                 is_root: true,
             };
 
-            self.root.event(&mut ctx, &event, data, env);
+            {
+                let _span = info_span!("event");
+                let _span = _span.enter();
+                self.root.event(&mut ctx, &event, data, env);
+            }
+
             if !ctx.notifications.is_empty() {
-                tracing::info!("{} unhandled notifications:", ctx.notifications.len());
+                info!("{} unhandled notifications:", ctx.notifications.len());
                 for (i, n) in ctx.notifications.iter().enumerate() {
-                    tracing::info!("{}: {:?}", i, n);
+                    info!("{}: {:?}", i, n);
                 }
             }
             Handled::from(ctx.is_handled)
@@ -291,7 +297,13 @@ impl<T: Data> Window<T> {
             state: &mut state,
             widget_state: &mut widget_state,
         };
-        self.root.lifecycle(&mut ctx, event, data, env);
+
+        {
+            let _span = info_span!("lifecycle");
+            let _span = _span.enter();
+            self.root.lifecycle(&mut ctx, event, data, env);
+        }
+
         self.post_event_processing(&mut widget_state, queue, data, env, process_commands);
     }
 
@@ -308,7 +320,12 @@ impl<T: Data> Window<T> {
             env,
         };
 
-        self.root.update(&mut update_ctx, data, env);
+        {
+            let _span = info_span!("update");
+            let _span = _span.enter();
+            self.root.update(&mut update_ctx, data, env);
+        }
+
         if let Some(cursor) = &widget_state.cursor {
             self.handle.set_cursor(cursor);
         }
@@ -391,7 +408,13 @@ impl<T: Data> Window<T> {
             WindowSizePolicy::User => BoxConstraints::tight(self.size),
             WindowSizePolicy::Content => BoxConstraints::UNBOUNDED,
         };
-        let content_size = self.root.layout(&mut layout_ctx, &bc, data, env);
+
+        let content_size = {
+            let _span = info_span!("layout");
+            let _span = _span.enter();
+            self.root.layout(&mut layout_ctx, &bc, data, env)
+        };
+
         if let WindowSizePolicy::Content = self.size_policy {
             let insets = self.handle.content_insets();
             let full_size = (content_size.to_rect() + insets).size();
@@ -440,7 +463,10 @@ impl<T: Data> Window<T> {
         };
 
         let root = &mut self.root;
-        ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
+        info_span!("paint").in_scope(|| {
+            ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
+        });
+
         let mut z_ops = mem::take(&mut ctx.z_ops);
         z_ops.sort_by_key(|k| k.z_index);
 

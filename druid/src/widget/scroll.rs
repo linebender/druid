@@ -17,6 +17,7 @@
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
+use tracing::{instrument, trace};
 
 /// A container that scrolls its contents.
 ///
@@ -166,6 +167,7 @@ impl<T, W> Scroll<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
+    #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let scroll_component = &mut self.scroll_component;
         self.clip.with_port(|port| {
@@ -180,15 +182,18 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         });
     }
 
+    #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.scroll_component.lifecycle(ctx, event, env);
         self.clip.lifecycle(ctx, event, data, env);
     }
 
+    #[instrument(name = "Scroll", level = "trace", skip(self, ctx, old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         self.clip.update(ctx, old_data, data, env);
     }
 
+    #[instrument(name = "Scroll", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Scroll");
 
@@ -205,9 +210,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 .reset_scrollbar_fade(|d| ctx.request_timer(d), env);
         }
 
+        trace!("Computed size: {}", self_size);
         self_size
     }
 
+    #[instrument(name = "Scroll", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.clip.paint(ctx, data, env);
         self.scroll_component

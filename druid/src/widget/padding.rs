@@ -17,6 +17,8 @@
 use crate::widget::{prelude::*, WidgetWrapper};
 use crate::{Data, Insets, Point, WidgetPod};
 
+use tracing::{instrument, trace};
+
 /// A widget that just adds padding around its child.
 pub struct Padding<T, W> {
     left: f64,
@@ -74,18 +76,26 @@ impl<T, W> WidgetWrapper for Padding<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(
+        name = "Padding",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Padding");
 
@@ -100,9 +110,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
         let my_size = Size::new(size.width + hpad, size.height + vpad);
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, my_insets);
         my_size
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
     }
