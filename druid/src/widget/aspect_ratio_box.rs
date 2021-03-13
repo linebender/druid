@@ -1,6 +1,6 @@
 use druid::widget::prelude::*;
 use druid::Data;
-use tracing::warn;
+use tracing::{instrument, warn};
 
 /// A widget that preserves the aspect ratio given to it.
 ///
@@ -58,24 +58,44 @@ impl<T> AspectRatioBox<T> {
 }
 
 impl<T: Data> Widget<T> for AspectRatioBox<T> {
+    #[instrument(
+        name = "AspectRatioBox",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(
+        name = "AspectRatioBox",
+        level = "trace",
+        skip(self, ctx, event, data, env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.lifecycle(ctx, event, data, env)
         }
     }
 
+    #[instrument(
+        name = "AspectRatioBox",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.update(ctx, old_data, data, env);
         }
     }
 
+    #[instrument(
+        name = "AspectRatioBox",
+        level = "trace",
+        skip(self, ctx, bc, data, env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("AspectRatioBox");
 
@@ -147,6 +167,7 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         size
     }
 
+    #[instrument(name = "AspectRatioBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if let Some(ref mut inner) = self.inner {
             inner.paint(ctx, data, env);
