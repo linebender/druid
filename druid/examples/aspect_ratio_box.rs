@@ -10,7 +10,6 @@ fn main() {
     let aspect_ratio_message =
         "Hello there, this is a box that maintains it's aspect-ratio as best as possible. Notice text will overflow if box becomes too small.";
     AppLauncher::with_window(window)
-        .use_env_tracing()
         .launch(AppState {
             fixed_box: fixed_message.to_string(),
             aspect_ratio_box: aspect_ratio_message.to_string(),
