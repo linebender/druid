@@ -40,6 +40,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
+- Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 
 ### Visual
 
@@ -635,6 +636,7 @@ Last release without a changelog :(
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1647]: https://github.com/linebender/druid/pull/1647
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
