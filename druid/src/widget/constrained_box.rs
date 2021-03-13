@@ -37,16 +37,19 @@ pub struct ConstrainedBox<T> {
 
 impl<T> ConstrainedBox<T> {
     /// Construct container with child and provided box constraints.
-    pub fn new(inner: impl Widget<T> + 'static, bc: BoxConstraints) -> Self {
+    pub fn new(inner: impl Widget<T> + 'static, bc: impl Into<BoxConstraints>) -> Self {
         Self {
             inner: Some(Box::new(inner)),
-            bc,
+            bc: bc.into(),
         }
     }
 
     /// Construct container without child, but with box constraints.
-    pub fn empty(bc: BoxConstraints) -> Self {
-        Self { inner: None, bc }
+    pub fn empty(bc: impl Into<BoxConstraints>) -> Self {
+        Self {
+            inner: None,
+            bc: bc.into(),
+        }
     }
 
     /// Get the current box constraints.
