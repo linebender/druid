@@ -23,6 +23,7 @@ use druid::{
     AppDelegate, AppLauncher, Color, Command, Data, DelegateCtx, FontFamily, FontStyle, FontWeight,
     Handled, Lens, LocalizedString, MenuDesc, Selector, Target, Widget, WidgetExt, WindowDesc,
 };
+use tracing::warn;
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Minimal Markdown");
 
@@ -79,7 +80,10 @@ impl<T: Data> AppDelegate<T> for Delegate {
         _env: &Env,
     ) -> Handled {
         if let Some(url) = cmd.get(OPEN_LINK) {
+            #[cfg(not(target_arch = "wasm32"))]
             open::that_in_background(url);
+            #[cfg(target_arch = "wasm32")]
+            warn!("opening link({}) not supported on web yet.", url);
             Handled::Yes
         } else {
             Handled::No
