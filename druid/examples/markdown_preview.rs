@@ -14,27 +14,32 @@
 
 //! An example of live markdown preview
 
-use std::ops::Range;
-
 use pulldown_cmark::{Event as ParseEvent, Parser, Tag};
 
-use druid::text::{Attribute, AttributeSpans, RichText};
+use druid::text::{AttributesAdder, RichText, RichTextBuilder};
 use druid::widget::prelude::*;
 use druid::widget::{Controller, LineBreaking, RawLabel, Scroll, Split, TextBox};
 use druid::{
-    AppLauncher, Color, Data, FontFamily, FontStyle, FontWeight, Lens, LocalizedString, MenuDesc,
-    Widget, WidgetExt, WindowDesc,
+    AppDelegate, AppLauncher, Color, Command, Data, DelegateCtx, FontFamily, FontStyle, FontWeight,
+    Handled, Lens, LocalizedString, MenuDesc, Selector, Target, Widget, WidgetExt, WindowDesc,
 };
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Minimal Markdown");
 
 const TEXT: &str = "*Hello* ***world***! This is a `TextBox` where you can \
-                   use limited markdown notation, which is reflected in the \
-                   **styling** of the `Label` on the left.";
+		    use limited markdown notation, which is reflected in the \
+		    **styling** of the `Label` on the left.
+
+A very good place to ask questions and discuss development work is our [Zulip chat instance],\
+in the #druid-help and #druid channels, respectively.
+
+[Zulip chat instance]: https://xi.zulipchat.com
+";
 
 const SPACER_SIZE: f64 = 8.0;
 const BLOCKQUOTE_COLOR: Color = Color::grey8(0x88);
 const LINK_COLOR: Color = Color::rgb8(0, 0, 0xEE);
+const OPEN_LINK: Selector<String> = Selector::new("druid-example.open-link");
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
@@ -62,6 +67,25 @@ impl<W: Widget<AppState>> Controller<AppState, W> for RichTextRebuilder {
     }
 }
 
+struct Delegate;
+
+impl<T: Data> AppDelegate<T> for Delegate {
+    fn command(
+        &mut self,
+        _ctx: &mut DelegateCtx,
+        _target: Target,
+        cmd: &Command,
+        _data: &mut T,
+        _env: &Env,
+    ) -> Handled {
+        if let Some(url) = cmd.get(OPEN_LINK) {
+            open::that_in_background(url);
+            Handled::Yes
+        } else {
+            Handled::No
+        }
+    }
+}
 pub fn main() {
     // describe the main window
     let main_window = WindowDesc::new(build_root_widget())
@@ -78,6 +102,7 @@ pub fn main() {
     // start the application
     AppLauncher::with_window(main_window)
         .log_to_console()
+        .delegate(Delegate)
         .launch(initial_state)
         .expect("Failed to launch application");
 }
@@ -108,8 +133,7 @@ fn build_root_widget() -> impl Widget<AppState> {
 /// the appropriate attributes.
 fn rebuild_rendered_text(text: &str) -> RichText {
     let mut current_pos = 0;
-    let mut buffer = String::new();
-    let mut attrs = AttributeSpans::new();
+    let mut builder = RichTextBuilder::new();
     let mut tag_stack = Vec::new();
 
     let parser = Parser::new(text);
@@ -119,7 +143,7 @@ fn rebuild_rendered_text(text: &str) -> RichText {
                 tag_stack.push((current_pos, tag));
             }
             ParseEvent::Text(txt) => {
-                buffer.push_str(&txt);
+                builder.push(&txt);
                 current_pos += txt.len();
             }
             ParseEvent::End(end_tag) => {
@@ -127,33 +151,34 @@ fn rebuild_rendered_text(text: &str) -> RichText {
                     .pop()
                     .expect("parser does not return unbalanced tags");
                 assert_eq!(end_tag, tag, "mismatched tags?");
-                add_attribute_for_tag(&tag, start_off..current_pos, &mut attrs);
+                add_attribute_for_tag(
+                    &tag,
+                    builder.add_attributes_for_range(start_off..current_pos),
+                );
                 if add_newline_after_tag(&tag) {
-                    buffer.push_str("\n\n");
+                    builder.push("\n\n");
                     current_pos += 2;
                 }
             }
             ParseEvent::Code(txt) => {
-                buffer.push_str(&txt);
-                let range = current_pos..current_pos + txt.len();
-                attrs.add(range, Attribute::font_family(FontFamily::MONOSPACE));
+                builder.push(&txt).font_family(FontFamily::MONOSPACE);
                 current_pos += txt.len();
             }
             ParseEvent::Html(txt) => {
-                buffer.push_str(&txt);
-                let range = current_pos..current_pos + txt.len();
-                attrs.add(range.clone(), Attribute::font_family(FontFamily::MONOSPACE));
-                attrs.add(range, Attribute::text_color(BLOCKQUOTE_COLOR));
+                builder
+                    .push(&txt)
+                    .font_family(FontFamily::MONOSPACE)
+                    .text_color(BLOCKQUOTE_COLOR);
                 current_pos += txt.len();
             }
             ParseEvent::HardBreak => {
-                buffer.push_str("\n\n");
-                current_pos += 1;
+                builder.push("\n\n");
+                current_pos += 2;
             }
             _ => (),
         }
     }
-    RichText::new_with_attributes(buffer.into(), attrs)
+    builder.build()
 }
 
 fn add_newline_after_tag(tag: &Tag) -> bool {
@@ -163,7 +188,7 @@ fn add_newline_after_tag(tag: &Tag) -> bool {
     )
 }
 
-fn add_attribute_for_tag(tag: &Tag, range: Range<usize>, attrs: &mut AttributeSpans) {
+fn add_attribute_for_tag(tag: &Tag, mut attrs: AttributesAdder) {
     match tag {
         Tag::Heading(lvl) => {
             let font_size = match lvl {
@@ -174,21 +199,25 @@ fn add_attribute_for_tag(tag: &Tag, range: Range<usize>, attrs: &mut AttributeSp
                 5 => 16.0,
                 _ => 12.0,
             };
-            attrs.add(range.clone(), Attribute::size(font_size));
-            attrs.add(range, Attribute::weight(FontWeight::BOLD));
+            attrs.size(font_size).weight(FontWeight::BOLD);
         }
         Tag::BlockQuote => {
-            attrs.add(range.clone(), Attribute::style(FontStyle::Italic));
-            attrs.add(range, Attribute::text_color(BLOCKQUOTE_COLOR));
+            attrs.style(FontStyle::Italic).text_color(BLOCKQUOTE_COLOR);
         }
         Tag::CodeBlock(_) => {
-            attrs.add(range, Attribute::font_family(FontFamily::MONOSPACE));
+            attrs.font_family(FontFamily::MONOSPACE);
         }
-        Tag::Emphasis => attrs.add(range, Attribute::style(FontStyle::Italic)),
-        Tag::Strong => attrs.add(range, Attribute::weight(FontWeight::BOLD)),
-        Tag::Link(..) => {
-            attrs.add(range.clone(), Attribute::underline(true));
-            attrs.add(range, Attribute::text_color(LINK_COLOR));
+        Tag::Emphasis => {
+            attrs.style(FontStyle::Italic);
+        }
+        Tag::Strong => {
+            attrs.weight(FontWeight::BOLD);
+        }
+        Tag::Link(_link_ty, target, _title) => {
+            attrs
+                .underline(true)
+                .text_color(LINK_COLOR)
+                .link(OPEN_LINK.with(target.to_string()));
         }
         // ignore other tags for now
         _ => (),
