@@ -310,7 +310,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         let text = self.text().borrow();
         let layout = text.layout.layout().unwrap();
 
-        let hit = layout.hit_test_text_position(text.selection().end);
+        let hit = layout.hit_test_text_position(text.selection().active);
         let line = layout.line_metric(hit.line).unwrap();
         let y0 = line.y_offset;
         let y1 = y0 + line.height;
@@ -437,7 +437,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             LifeCycle::FocusChanged(false) => {
                 if self.text().can_write() && MAC_OR_LINUX && !self.multiline {
                     let selection = self.text().borrow().selection();
-                    let selection = Selection::new(selection.end, selection.end);
+                    let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
@@ -545,7 +545,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         if is_focused && self.should_draw_cursor() {
             // if there's no data, we always draw the cursor based on
             // our alignment.
-            let cursor_pos = self.text().borrow().selection().end;
+            let cursor_pos = self.text().borrow().selection().active;
             let cursor_line = self
                 .text()
                 .borrow()

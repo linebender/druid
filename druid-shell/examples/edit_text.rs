@@ -102,7 +102,7 @@ impl WinHandler for AppState {
             }
         }
         if !doc.selection.is_caret() {
-            for rect in layout.rects_for_range(doc.selection.to_range()) {
+            for rect in layout.rects_for_range(doc.selection.range()) {
                 piet.fill(rect, &SELECTION_BG_COLOR);
             }
         }
@@ -132,7 +132,7 @@ impl WinHandler for AppState {
             println!("user pressed c! wow! setting selection to 0");
 
             // update internal selection state
-            self.document.borrow_mut().selection = Selection::new_caret(0);
+            self.document.borrow_mut().selection = Selection::caret(0);
 
             // notify the OS that we've updated the selection
             self.handle
@@ -189,7 +189,7 @@ struct AppInputHandler {
 
 impl InputHandler for AppInputHandler {
     fn selection(&self) -> Selection {
-        self.state.borrow().selection.clone()
+        self.state.borrow().selection
     }
     fn composition_range(&self) -> Option<Range<usize>> {
         self.state.borrow().composition.clone()
@@ -282,7 +282,7 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
                     None => return false,
                 }
             };
-            handler.set_selection(Selection::new_caret(updated_index));
+            handler.set_selection(Selection::caret(updated_index));
         }
         Action::MoveSelecting(movement) => {
             let mut selection = handler.selection();
@@ -294,16 +294,13 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
         }
         Action::SelectAll => {
             let len = handler.len();
-            let selection = Selection {
-                anchor: 0,
-                active: len,
-            };
+            let selection = Selection::new(0, len);
             handler.set_selection(selection);
         }
         Action::Delete(_) if !is_caret => {
             // movement is ignored for non-caret selections
             let selection = handler.selection();
-            handler.replace_range(selection.to_range(), "");
+            handler.replace_range(selection.range(), "");
         }
         Action::Delete(movement) => {
             let mut selection = handler.selection();
@@ -311,7 +308,7 @@ fn apply_default_behavior(handler: &mut AppInputHandler, action: Action) -> bool
                 Some(v) => v,
                 None => return false,
             };
-            handler.replace_range(selection.to_range(), "");
+            handler.replace_range(selection.range(), "");
         }
         _ => return false,
     }
