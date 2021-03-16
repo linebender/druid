@@ -235,6 +235,8 @@ impl AttributesAdder<'_> {
     }
 
     /// Add a [`Link`] attribute.
+    ///
+    /// [`Link`]: super::attribute::Link
     pub fn link(&mut self, command: impl Into<Command>) -> &mut Self {
         self.rich_text_builder
             .links

@@ -37,6 +37,9 @@ pub trait TextStorage: PietTextStorage + Data {
     ///
     /// Unlike other attributes, links are managed in Druid, not in [`piet`]; as such they
     /// require a separate API.
+    ///
+    /// [`Link`]: super::attribute::Link
+    /// [`piet`]: https://docs.rs/piet
     fn links(&self) -> &[Link] {
         &[]
     }

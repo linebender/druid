@@ -289,6 +289,8 @@ impl<T: TextStorage> TextLayout<T> {
     /// This can be used both for hit-testing (deciding whether to change the mouse cursor,
     /// or performing some other action when hovering) as well as for retrieving a [`Link`]
     /// on click.
+    ///
+    /// [`Link`]: super::attribute::Link
     pub fn link_for_pos(&self, pos: Point) -> Option<&Link> {
         let (_, i) = self
             .links
