@@ -82,6 +82,9 @@ piet-common = { version = "=0.3.2", features = ["png"] }
 pulldown-cmark = { version = "0.8", default-features = false }
 test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
 
+[target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
+open = "1.6"
+
 [[example]]
 name = "cursor"
 required-features = ["image", "png"]
