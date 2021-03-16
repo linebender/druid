@@ -30,7 +30,13 @@ pub trait TextStorage: PietTextStorage + Data {
         builder
     }
 
-    /// The links inside the text.
+    /// Any additional [`Link`] attributes on this text.
+    ///
+    /// If this `TextStorage` object manages link attributes, it should implement this
+    /// method and return any attached [`Link`]s.
+    ///
+    /// Unlike other attributes, links are managed in Druid, not in [`piet`]; as such they
+    /// require a separate API.
     fn links(&self) -> &[Link] {
         &[]
     }

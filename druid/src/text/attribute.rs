@@ -19,7 +19,7 @@ use std::ops::Range;
 use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as PietAttr};
 use crate::{Command, Env, FontDescriptor, KeyOrValue};
 
-/// A link represents a clickable part in the text.
+/// A clickable range of text with an associated [`Command`].
 #[derive(Debug, Clone)]
 pub struct Link {
     pub(crate) range: Range<usize>,
@@ -106,7 +106,7 @@ impl Link {
         Self { range, command }
     }
 
-    /// Get Link's range.
+    /// Get this `Link`'s range.
     pub fn range(&self) -> Range<usize> {
         self.range.clone()
     }

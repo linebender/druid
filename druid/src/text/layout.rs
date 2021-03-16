@@ -284,8 +284,12 @@ impl<T: TextStorage> TextLayout<T> {
             .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
     }
 
-    /// Returns the link at the mouse position.
-    pub fn link_for_mouse_pos(&self, pos: Point) -> Option<&Link> {
+    /// Returns the [`Link`] at the provided point (relative to the layout's origin) if one exists.
+    ///
+    /// This can be used both for hit-testing (deciding whether to change the mouse cursor,
+    /// or performing some other action when hovering) as well as for retrieving a [`Link`]
+    /// on click.
+    pub fn link_for_pos(&self, pos: Point) -> Option<&Link> {
         let (_, i) = self
             .links
             .iter()

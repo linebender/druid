@@ -528,16 +528,14 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         match event {
             Event::MouseUp(event) => {
                 // Account for the padding
-                let mut pos = event.pos;
-                pos.x -= LABEL_X_PADDING;
+                let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
                 if let Some(link) = self.layout.link_for_mouse_pos(pos) {
                     ctx.submit_command(link.command.clone());
                 }
             }
             Event::MouseMove(event) => {
                 // Account for the padding
-                let mut pos = event.pos;
-                pos.x -= LABEL_X_PADDING;
+                let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
 
                 if self.layout.link_for_mouse_pos(pos).is_some() {
                     ctx.set_cursor(&Cursor::Pointer);

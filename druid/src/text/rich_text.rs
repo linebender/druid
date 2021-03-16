@@ -234,7 +234,7 @@ impl AttributesAdder<'_> {
         self
     }
 
-    /// Make this text clickable.
+    /// Add a [`Link`] attribute.
     pub fn link(&mut self, command: impl Into<Command>) -> &mut Self {
         self.rich_text_builder
             .links

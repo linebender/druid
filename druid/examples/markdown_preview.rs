@@ -30,11 +30,11 @@ const TEXT: &str = "*Hello* ***world***! This is a `TextBox` where you can \
 		    use limited markdown notation, which is reflected in the \
 		    **styling** of the `Label` on the left.
 
-A very good place to ask questions and discuss development work is our [Zulip chat instance],\
-in the #druid-help and #druid channels, respectively.
-
-[Zulip chat instance]: https://xi.zulipchat.com
-";
+		    If you're curious about Druid, a good place to ask questions \
+		    and discuss development work is our [Zulip chat instance], \
+		    in the #druid-help and #druid channels, respectively.\n\n\n\
+		    
+		    [Zulip chat instance]: https://xi.zulipchat.com";
 
 const SPACER_SIZE: f64 = 8.0;
 const BLOCKQUOTE_COLOR: Color = Color::grey8(0x88);
