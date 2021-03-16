@@ -198,6 +198,6 @@ pub fn offset_for_delete_backwards(region: &Selection, text: &impl EditableText)
     if !region.is_caret() {
         region.min()
     } else {
-        backspace_offset(text, region.end)
+        backspace_offset(text, region.active)
     }
 }

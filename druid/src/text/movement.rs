@@ -94,7 +94,7 @@ pub fn movement<T: EditableText + TextStorage>(
     let (offset, h_pos) = match m {
         Movement::Left => {
             if s.is_caret() || modify {
-                text.prev_grapheme_offset(s.end)
+                text.prev_grapheme_offset(s.active)
                     .map(|off| (off, None))
                     .unwrap_or((0, s.h_pos))
             } else {
@@ -103,16 +103,16 @@ pub fn movement<T: EditableText + TextStorage>(
         }
         Movement::Right => {
             if s.is_caret() || modify {
-                text.next_grapheme_offset(s.end)
+                text.next_grapheme_offset(s.active)
                     .map(|off| (off, None))
-                    .unwrap_or((s.end, s.h_pos))
+                    .unwrap_or((s.active, s.h_pos))
             } else {
                 (s.max(), None)
             }
         }
 
         Movement::Up => {
-            let cur_pos = layout.hit_test_text_position(s.end);
+            let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == 0 {
                 (0, Some(h_pos))
@@ -124,7 +124,7 @@ pub fn movement<T: EditableText + TextStorage>(
             }
         }
         Movement::Down => {
-            let cur_pos = layout.hit_test_text_position(s.end);
+            let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == layout.line_count() - 1 {
                 (text.len(), Some(h_pos))
@@ -138,15 +138,15 @@ pub fn movement<T: EditableText + TextStorage>(
             }
         }
 
-        Movement::PrecedingLineBreak => (text.preceding_line_break(s.end), None),
-        Movement::NextLineBreak => (text.next_line_break(s.end), None),
+        Movement::PrecedingLineBreak => (text.preceding_line_break(s.active), None),
+        Movement::NextLineBreak => (text.next_line_break(s.active), None),
 
         Movement::StartOfDocument => (0, None),
         Movement::EndOfDocument => (text.len(), None),
 
         Movement::LeftWord => {
             let offset = if s.is_caret() || modify {
-                text.prev_word_offset(s.end).unwrap_or(0)
+                text.prev_word_offset(s.active).unwrap_or(0)
             } else {
                 s.min()
             };
@@ -154,7 +154,7 @@ pub fn movement<T: EditableText + TextStorage>(
         }
         Movement::RightWord => {
             let offset = if s.is_caret() || modify {
-                text.next_word_offset(s.end).unwrap_or(s.end)
+                text.next_word_offset(s.active).unwrap_or(s.active)
             } else {
                 s.max()
             };
@@ -162,6 +162,6 @@ pub fn movement<T: EditableText + TextStorage>(
         }
     };
 
-    let start = if modify { s.start } else { offset };
+    let start = if modify { s.anchor } else { offset };
     Selection::new(start, offset).with_h_pos(h_pos)
 }

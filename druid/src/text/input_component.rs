@@ -415,7 +415,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
         let sel_rects = self.borrow().layout.rects_for_range(selection.range());
         if let Some(composition) = composition {
             // I believe selection should always be contained in composition range while composing?
-            assert!(composition.start <= selection.start && composition.end >= selection.end);
+            assert!(composition.start <= selection.anchor && composition.end >= selection.active);
             let comp_rects = self.borrow().layout.rects_for_range(composition);
             for region in comp_rects {
                 let y = region.max_y().floor();
@@ -647,7 +647,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     fn backspace(&mut self, buffer: &mut T) {
         let to_del = if self.selection.is_caret() {
             let del_start = crate::text::offset_for_delete_backwards(&self.selection, buffer);
-            del_start..self.selection.start
+            del_start..self.selection.anchor
         } else {
             self.selection.range()
         };
@@ -660,11 +660,11 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
-            self.selection.end = pos;
+            self.selection.active = pos;
         } else {
             let sel = self.sel_region_for_pos(pos, count);
-            self.selection.start = sel.start;
-            self.selection.end = sel.end;
+            self.selection.anchor = sel.start;
+            self.selection.active = sel.end;
         }
     }
 
@@ -672,7 +672,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
-        self.selection.end = pos;
+        self.selection.active = pos;
         self.scroll_to_selection_end(false);
     }
 
@@ -717,7 +717,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         if self.layout.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
         }
-        let new_sel = self.selection.constrained(new_data);
+        let new_sel = self.selection.constrained(new_data.as_str());
         if new_sel != self.selection {
             self.selection = new_sel;
             self.update_pending_invalidation(ImeUpdate::SelectionChanged);
@@ -734,12 +734,12 @@ impl<T: TextStorage> EditSessionHandle<T> {
 }
 
 impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
-    fn selection(&self) -> crate::shell::text::Selection {
-        self.inner.borrow().selection.into()
+    fn selection(&self) -> Selection {
+        self.inner.borrow().selection
     }
 
-    fn set_selection(&mut self, selection: crate::shell::text::Selection) {
-        self.inner.borrow_mut().external_selection_change = Some(selection.into());
+    fn set_selection(&mut self, selection: Selection) {
+        self.inner.borrow_mut().external_selection_change = Some(selection);
         self.inner.borrow_mut().external_scroll_to = Some(true);
     }
 
