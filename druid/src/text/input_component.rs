@@ -56,6 +56,13 @@ use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 pub struct TextComponent<T> {
     inner: Arc<RefCell<EditSession<T>>>,
     lock: Arc<Cell<ImeLock>>,
+    // HACK: because of the way focus works (it is managed higher up, in
+    // whatever widget is controlling this) we can't rely on `is_focused` in
+    // the PaintCtx.
+    /// A manual flag set by the parent to control drawing behaviour.
+    ///
+    /// The parent should update this when handling [`LifeCycle::FocusChanged`].
+    pub has_focus: bool,
 }
 
 /// Editable text state.
@@ -393,7 +400,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
         if !self.can_read() {
             tracing::warn!("Text paint called with IME lock held.");
         }
-        let selection_color = env.get(theme::SELECTION_COLOR);
+
+        let selection_color = if self.has_focus {
+            env.get(theme::SELECTED_TEXT_BACKGROUND_COLOR)
+        } else {
+            env.get(theme::SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR)
+        };
+
         let cursor_color = env.get(theme::CURSOR_COLOR);
         let text_offset = Vec2::new(self.borrow().alignment_offset, 0.0);
 
@@ -824,6 +837,7 @@ impl<T> Default for TextComponent<T> {
         TextComponent {
             inner: Arc::new(RefCell::new(inner)),
             lock: Arc::new(Cell::new(ImeLock::None)),
+            has_focus: false,
         }
     }
 }

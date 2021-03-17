@@ -429,6 +429,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
+                self.inner.wrapped_mut().child_mut().has_focus = true;
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
                 ctx.request_paint();
@@ -440,6 +441,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
+                self.inner.wrapped_mut().child_mut().has_focus = false;
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
                 ctx.request_paint();
