@@ -611,6 +611,25 @@ pub enum Direction {
     Downstream,
 }
 
+impl Direction {
+    /// Returns `true` if this direction is byte-wise backwards for
+    /// the provided [`WritingDirection`].
+    ///
+    /// The provided direction *must not be* `WritingDirection::Natural`.
+    pub fn is_upstream_for_direction(self, direction: WritingDirection) -> bool {
+        assert!(
+            !matches!(direction, WritingDirection::Natural),
+            "writing direction must be resolved"
+        );
+        match self {
+            Direction::Upstream => true,
+            Direction::Downstream => false,
+            Direction::Left => matches!(direction, WritingDirection::LeftToRight),
+            Direction::Right => matches!(direction, WritingDirection::RightToLeft),
+        }
+    }
+}
+
 /// Distinguishes between two visually distinct locations with the same byte
 /// index.
 ///

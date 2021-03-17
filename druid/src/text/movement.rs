@@ -16,59 +16,8 @@
 
 use crate::kurbo::Point;
 use crate::piet::TextLayout as _;
+pub use crate::shell::text::{Direction, Movement, VerticalMovement, WritingDirection};
 use crate::text::{EditableText, Selection, TextLayout, TextStorage};
-
-/// The specification of a movement.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Movement {
-    /// Move to the left by one grapheme cluster.
-    Left,
-    /// Move to the right by one grapheme cluster.
-    Right,
-    /// Move up one visible line.
-    Up,
-    /// Move down one visible line.
-    Down,
-    /// Move to the left by one word.
-    LeftWord,
-    /// Move to the right by one word.
-    RightWord,
-    /// Move to left end of visible line.
-    PrecedingLineBreak,
-    /// Move to right end of visible line.
-    NextLineBreak,
-    /// Move to the beginning of the document
-    StartOfDocument,
-    /// Move to the end of the document
-    EndOfDocument,
-}
-
-//FIXME: we should remove this whole file, and use the Movement type defined in druid-shell?
-impl From<crate::shell::text::Movement> for Movement {
-    fn from(src: crate::shell::text::Movement) -> Movement {
-        use crate::shell::text::{Direction, Movement as SMovemement, VerticalMovement};
-        match src {
-            SMovemement::Grapheme(Direction::Left) | SMovemement::Grapheme(Direction::Upstream) => {
-                Movement::Left
-            }
-            SMovemement::Grapheme(_) => Movement::Right,
-            SMovemement::Word(Direction::Left) => Movement::LeftWord,
-            SMovemement::Word(_) => Movement::RightWord,
-            SMovemement::Line(Direction::Left) | SMovemement::ParagraphStart => {
-                Movement::PrecedingLineBreak
-            }
-            SMovemement::Line(_) | SMovemement::ParagraphEnd => Movement::NextLineBreak,
-            SMovemement::Vertical(VerticalMovement::LineUp)
-            | SMovemement::Vertical(VerticalMovement::PageUp) => Movement::Up,
-            SMovemement::Vertical(VerticalMovement::LineDown)
-            | SMovemement::Vertical(VerticalMovement::PageDown) => Movement::Down,
-            SMovemement::Vertical(VerticalMovement::DocumentStart) => Movement::StartOfDocument,
-            SMovemement::Vertical(VerticalMovement::DocumentEnd) => Movement::EndOfDocument,
-            // the source enum is non_exhaustive
-            _ => panic!("unhandled movement {:?}", src),
-        }
-    }
-}
 
 /// Compute the result of movement on a selection.
 ///
@@ -91,8 +40,14 @@ pub fn movement<T: EditableText + TextStorage>(
         }
     };
 
+    let writing_direction = if crate::piet::util::first_strong_rtl(text.as_str()) {
+        WritingDirection::RightToLeft
+    } else {
+        WritingDirection::LeftToRight
+    };
+
     let (offset, h_pos) = match m {
-        Movement::Left => {
+        Movement::Grapheme(d) if d.is_upstream_for_direction(writing_direction) => {
             if s.is_caret() || modify {
                 text.prev_grapheme_offset(s.active)
                     .map(|off| (off, None))
@@ -101,7 +56,7 @@ pub fn movement<T: EditableText + TextStorage>(
                 (s.min(), None)
             }
         }
-        Movement::Right => {
+        Movement::Grapheme(_) => {
             if s.is_caret() || modify {
                 text.next_grapheme_offset(s.active)
                     .map(|off| (off, None))
@@ -110,8 +65,7 @@ pub fn movement<T: EditableText + TextStorage>(
                 (s.max(), None)
             }
         }
-
-        Movement::Up => {
+        Movement::Vertical(VerticalMovement::LineUp) => {
             let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == 0 {
@@ -123,7 +77,7 @@ pub fn movement<T: EditableText + TextStorage>(
                 (up_pos.idx, Some(point_above.x))
             }
         }
-        Movement::Down => {
+        Movement::Vertical(VerticalMovement::LineDown) => {
             let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == layout.line_count() - 1 {
@@ -137,14 +91,23 @@ pub fn movement<T: EditableText + TextStorage>(
                 (up_pos.idx, Some(point_below.x))
             }
         }
+        Movement::Vertical(VerticalMovement::DocumentStart) => (0, None),
+        Movement::Vertical(VerticalMovement::DocumentEnd) => (text.len(), None),
 
-        Movement::PrecedingLineBreak => (text.preceding_line_break(s.active), None),
-        Movement::NextLineBreak => (text.next_line_break(s.active), None),
+        Movement::ParagraphStart => (text.preceding_line_break(s.active), None),
+        Movement::ParagraphEnd => (text.next_line_break(s.active), None),
 
-        Movement::StartOfDocument => (0, None),
-        Movement::EndOfDocument => (text.len(), None),
-
-        Movement::LeftWord => {
+        Movement::Line(d) => {
+            let hit = layout.hit_test_text_position(s.active);
+            let lm = layout.line_metric(hit.line).unwrap();
+            let offset = if d.is_upstream_for_direction(writing_direction) {
+                lm.start_offset
+            } else {
+                lm.end_offset
+            };
+            (offset, None)
+        }
+        Movement::Word(d) if d.is_upstream_for_direction(writing_direction) => {
             let offset = if s.is_caret() || modify {
                 text.prev_word_offset(s.active).unwrap_or(0)
             } else {
@@ -152,13 +115,22 @@ pub fn movement<T: EditableText + TextStorage>(
             };
             (offset, None)
         }
-        Movement::RightWord => {
+        Movement::Word(_) => {
             let offset = if s.is_caret() || modify {
                 text.next_word_offset(s.active).unwrap_or(s.active)
             } else {
                 s.max()
             };
             (offset, None)
+        }
+
+        // These two are not handled; they require knowledge of the size
+        // of the viewport.
+        Movement::Vertical(VerticalMovement::PageDown)
+        | Movement::Vertical(VerticalMovement::PageUp) => (s.active, s.h_pos),
+        other => {
+            tracing::warn!("unhandled movement {:?}", other);
+            (s.anchor, s.h_pos)
         }
     };
 

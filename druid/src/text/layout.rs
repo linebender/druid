@@ -57,6 +57,7 @@ pub struct TextLayout<T> {
     wrap_width: f64,
     alignment: TextAlignment,
     links: Rc<[(Rect, usize)]>,
+    text_is_rtl: bool,
 }
 
 /// Metrics describing the layout text.
@@ -87,16 +88,7 @@ impl<T> TextLayout<T> {
             wrap_width: f64::INFINITY,
             alignment: Default::default(),
             links: Rc::new([]),
-        }
-    }
-
-    /// Create a new `TextLayout` with the provided text.
-    ///
-    /// This is useful when the text is not died to application data.
-    pub fn from_text(text: impl Into<T>) -> Self {
-        TextLayout {
-            text: Some(text.into()),
-            ..TextLayout::new()
+            text_is_rtl: false,
         }
     }
 
@@ -162,9 +154,27 @@ impl<T> TextLayout<T> {
             self.layout = None;
         }
     }
+
+    /// Returns `true` if this layout's text appears to be right-to-left.
+    ///
+    /// See [`piet::util::first_strong_rtl`] for more information.
+    ///
+    /// [`piet::util::first_strong_rtl`]: crate::piet::util::first_strong_rtl
+    pub fn text_is_rtl(&self) -> bool {
+        self.text_is_rtl
+    }
 }
 
 impl<T: TextStorage> TextLayout<T> {
+    /// Create a new `TextLayout` with the provided text.
+    ///
+    /// This is useful when the text is not tied to application data.
+    pub fn from_text(text: impl Into<T>) -> Self {
+        let mut this = TextLayout::new();
+        this.set_text(text.into());
+        this
+    }
+
     /// Returns `true` if this layout needs to be rebuilt.
     ///
     /// This happens (for instance) after style attributes are modified.
@@ -178,6 +188,7 @@ impl<T: TextStorage> TextLayout<T> {
     /// Set the text to display.
     pub fn set_text(&mut self, text: T) {
         if self.text.is_none() || !self.text.as_ref().unwrap().same(&text) {
+            self.text_is_rtl = crate::piet::util::first_strong_rtl(text.as_str());
             self.text = Some(text);
             self.layout = None;
         }
