@@ -27,7 +27,7 @@ mod rich_text;
 pub mod selection;
 mod storage;
 
-pub use self::attribute::{Attribute, AttributeSpans};
+pub use self::attribute::{Attribute, AttributeSpans, Link};
 pub use self::backspace::offset_for_delete_backwards;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
 pub use self::font_descriptor::FontDescriptor;

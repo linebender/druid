@@ -22,8 +22,10 @@ use crate::{Command, Env, FontDescriptor, KeyOrValue};
 /// A clickable range of text with an associated [`Command`].
 #[derive(Debug, Clone)]
 pub struct Link {
-    pub(crate) range: Range<usize>,
-    pub(crate) command: Command,
+    /// The range of text for the link.
+    pub range: Range<usize>,
+    /// A [`Command`] representing the link's payload.
+    pub command: Command,
 }
 
 /// A collection of spans of attributes of various kinds.
