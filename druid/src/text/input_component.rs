@@ -202,6 +202,14 @@ impl<T> TextComponent<T> {
         self.lock.get() == ImeLock::None
     }
 
+    /// Returns `true` if the IME is actively composing (or the text is locked.)
+    ///
+    /// When text is composing, you should avoid doing things like modifying the
+    /// selection or copy/pasting text.
+    pub fn is_composing(&self) -> bool {
+        self.can_read() && self.borrow().composition_range.is_some()
+    }
+
     /// Attempt to mutably borrow the inner [`EditSession`].
     ///
     /// # Panics

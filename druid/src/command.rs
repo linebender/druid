@@ -319,6 +319,9 @@ pub mod sys {
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
 
+    /// Select all.
+    pub const SELECT_ALL: Selector = Selector::new("druid-builtin.menu-select-all");
+
     /// Text input state has changed, and we need to notify the platform.
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
         Selector::new("druid-builtin.invalidate-ime");

@@ -44,6 +44,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Fixed
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
+- `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
@@ -649,6 +650,7 @@ Last release without a changelog :(
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
