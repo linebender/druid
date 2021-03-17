@@ -18,6 +18,7 @@ use std::{
     any::{Any, TypeId},
     collections::VecDeque,
     ops::{Deref, DerefMut},
+    rc::Rc,
     time::Duration,
 };
 use tracing::{error, trace, warn};
@@ -25,7 +26,9 @@ use tracing::{error, trace, warn};
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::piet::{Piet, PietText, RenderContext};
+use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
+use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
     Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
@@ -382,6 +385,22 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.state.set_menu(menu);
     }
 
+    /// Indicate that text input state has changed.
+    ///
+    /// A widget that accepts text input should call this anytime input state
+    /// (such as the text or the selection) changes as a result of a non text-input
+    /// event.
+    pub fn invalidate_text_input(&mut self, event: ImeInvalidation) {
+        let payload = commands::ImeInvalidation {
+            widget: self.widget_id(),
+            event,
+        };
+        let cmd = commands::INVALIDATE_IME
+            .with(payload)
+            .to(Target::Window(self.window_id()));
+        self.submit_command(cmd);
+    }
+
     /// Create a new sub-window.
     ///
     /// The sub-window will have its app data synchronised with caller's nearest ancestor [`WidgetPod`].
@@ -576,10 +595,13 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_next(&mut self) {
         trace!("focus_next");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Next);
         } else {
-            warn!("focus_next can only be called by the currently focused widget");
+            warn!(
+                "focus_next can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -592,10 +614,13 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_prev(&mut self) {
         trace!("focus_prev");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Previous);
         } else {
-            warn!("focus_prev can only be called by the currently focused widget");
+            warn!(
+                "focus_prev can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -608,11 +633,12 @@ impl EventCtx<'_, '_> {
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn resign_focus(&mut self) {
         trace!("resign_focus");
-        if self.is_focused() {
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Resign);
         } else {
             warn!(
-                "resign_focus can only be called by the currently focused widget ({:?})",
+                "resign_focus can only be called by the currently focused widget \
+                 or one of its ancestors. ({:?})",
                 self.widget_id()
             );
         }
@@ -695,6 +721,15 @@ impl LifeCycleCtx<'_, '_> {
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
         self.widget_state.focus_chain.push(self.widget_id());
+    }
+
+    /// Register this widget as accepting text input.
+    pub fn register_text_input(&mut self, document: impl ImeHandlerRef + 'static) {
+        let registration = TextFieldRegistration {
+            document: Rc::new(document),
+            widget_id: self.widget_id(),
+        };
+        self.widget_state.text_registrations.push(registration);
     }
 }
 
