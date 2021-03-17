@@ -20,7 +20,7 @@ use std::ops::Range;
 use crate::text::EditableText;
 
 /// A Selection type for EditableText.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Selection {
     /// The inactive edge of a selection, as a byte offset. When
     /// equal to end, the selection range acts as a caret.
@@ -93,5 +93,25 @@ impl Selection {
     /// Return a range from smallest to largest index
     pub fn range(self) -> Range<usize> {
         self.min()..self.max()
+    }
+}
+
+//FIXME: delete this file, unify with druid-shell::text::Selection
+impl From<Selection> for crate::shell::text::Selection {
+    fn from(src: Selection) -> crate::shell::text::Selection {
+        crate::shell::text::Selection {
+            anchor: src.start,
+            active: src.end,
+        }
+    }
+}
+
+impl From<crate::shell::text::Selection> for Selection {
+    fn from(src: crate::shell::text::Selection) -> Selection {
+        Selection {
+            start: src.anchor,
+            end: src.active,
+            h_pos: None,
+        }
     }
 }

@@ -6,6 +6,7 @@ You can find its changes [documented below](#070---2021-01-01).
 # Unreleased
 
 ### Highlights
+- International text input support (IME) on macOS.
 
 ### Added
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
@@ -22,6 +23,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
+- New `TextBox` widget with IME integration ([#1636] by [@cmyr])
+- `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 
 ### Changed
@@ -37,9 +40,12 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Removed
 
 ### Fixed
+- `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
+
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
+- Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 
 ### Visual
 
@@ -634,7 +640,10 @@ Last release without a changelog :(
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
+[#1636]: https://github.com/linebender/druid/pull/1636
+[#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1647]: https://github.com/linebender/druid/pull/1647
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

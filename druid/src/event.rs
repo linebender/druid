@@ -176,6 +176,15 @@ pub enum Event {
     ///
     /// [`EventCtx::set_handled`]: crate::EventCtx::set_handled
     Notification(Notification),
+    /// Sent to a widget when the platform may have mutated shared IME state.
+    ///
+    /// This is sent to a widget that has an attached IME session anytime the
+    /// platform has released a mutable lock on shared state.
+    ///
+    /// This does not *mean* that any state has changed, but the widget
+    /// should check the shared state, perform invalidation, and update `Data`
+    /// as necessary.
+    ImeStateChange,
     /// Internal druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -202,6 +211,8 @@ pub enum InternalEvent {
     TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
+    /// Route an IME change event.
+    RouteImeStateChange(WidgetId),
 }
 
 /// Application life cycle events.
@@ -384,6 +395,7 @@ impl Event {
             | Event::KeyDown(_)
             | Event::KeyUp(_)
             | Event::Paste(_)
+            | Event::ImeStateChange
             | Event::Zoom(_) => false,
         }
     }

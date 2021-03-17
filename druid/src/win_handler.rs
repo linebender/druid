@@ -22,18 +22,18 @@ use std::rc::Rc;
 use crate::kurbo::Size;
 use crate::piet::Piet;
 use crate::shell::{
-    Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region, Scale, WinHandler,
-    WindowHandle,
+    text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region,
+    Scale, TextFieldToken, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::ContextMenu;
-use crate::window::Window;
+use crate::window::{ImeUpdateFn, Window};
 use crate::{
     Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, MenuDesc, PlatformError, Selector,
-    Target, TimerToken, WindowDesc, WindowId,
+    Target, TimerToken, WidgetId, WindowDesc, WindowId,
 };
 
 use crate::app::{PendingWindow, WindowConfig};
@@ -96,6 +96,7 @@ struct Inner<T> {
     root_menu: Option<MenuDesc<T>>,
     pub(crate) env: Env,
     pub(crate) data: T,
+    ime_focus_change: Option<Box<dyn Fn()>>,
 }
 
 /// All active windows.
@@ -163,6 +164,7 @@ impl<T> AppState<T> {
             data,
             env,
             windows: Windows::default(),
+            ime_focus_change: None,
         }));
 
         AppState { inner }
@@ -467,6 +469,14 @@ impl<T: Data> Inner<T> {
         // we send `update` to all windows, not just the active one:
         for window in self.windows.iter_mut() {
             window.update(&mut self.command_queue, &self.data, &self.env);
+            if let Some(focus_change) = window.ime_focus_change.take() {
+                // we need to call this outside of the borrow, so we create a
+                // closure that takes the correct window handle. yes, it feels
+                // weird.
+                let handle = window.handle.clone();
+                let f = Box::new(move || handle.set_focused_text_field(focus_change));
+                self.ime_focus_change = Some(f);
+            }
         }
         self.invalidate_and_finalize();
     }
@@ -479,6 +489,32 @@ impl<T: Data> Inner<T> {
         for win in self.windows.iter_mut() {
             win.invalidate_and_finalize();
         }
+    }
+
+    fn ime_update_fn(&self, window_id: WindowId, widget_id: WidgetId) -> Option<Box<ImeUpdateFn>> {
+        self.windows
+            .get(window_id)
+            .and_then(|window| window.ime_invalidation_fn(widget_id))
+    }
+
+    fn get_ime_lock(
+        &mut self,
+        window_id: WindowId,
+        token: TextFieldToken,
+        mutable: bool,
+    ) -> Box<dyn InputHandler> {
+        self.windows
+            .get_mut(window_id)
+            .unwrap()
+            .get_ime_handler(token, mutable)
+    }
+
+    /// Returns a `WidgetId` if the lock was mutable; the widget should be updated.
+    fn release_ime_lock(&mut self, window_id: WindowId, token: TextFieldToken) -> Option<WidgetId> {
+        self.windows
+            .get_mut(window_id)
+            .unwrap()
+            .release_ime_lock(token)
     }
 
     #[cfg(target_os = "macos")]
@@ -537,6 +573,10 @@ impl<T: Data> AppState<T> {
         let result = self.inner.borrow_mut().do_window_event(window_id, event);
         self.process_commands();
         self.inner.borrow_mut().do_update();
+        let ime_change = self.inner.borrow_mut().ime_focus_change.take();
+        if let Some(ime_change) = ime_change {
+            (ime_change)()
+        }
         result
     }
 
@@ -624,6 +664,7 @@ impl<T: Data> AppState<T> {
                 }
             }
             _ if cmd.is(sys_cmd::CLOSE_ALL_WINDOWS) => self.request_close_all_windows(),
+            T::Window(id) if cmd.is(sys_cmd::INVALIDATE_IME) => self.invalidate_ime(cmd, id),
             // these should come from a window
             // FIXME: we need to be able to open a file without a window handle
             T::Window(id) if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => self.show_open_panel(cmd, id),
@@ -773,6 +814,22 @@ impl<T: Data> AppState<T> {
         self.inner.borrow_mut().do_window_event(window_id, event);
     }
 
+    fn invalidate_ime(&mut self, cmd: Command, id: WindowId) {
+        let params = cmd.get_unchecked(sys_cmd::INVALIDATE_IME);
+        let update_fn = self.inner.borrow().ime_update_fn(id, params.widget);
+        if let Some(func) = update_fn {
+            func(params.event);
+        }
+    }
+
+    fn release_ime_lock(&mut self, window_id: WindowId, token: TextFieldToken) {
+        let needs_update = self.inner.borrow_mut().release_ime_lock(window_id, token);
+        if let Some(widget) = needs_update {
+            let event = Event::Internal(InternalEvent::RouteImeStateChange(widget));
+            self.do_window_event(event, window_id);
+        }
+    }
+
     fn quit(&self) {
         self.inner.borrow().app.quit()
     }
@@ -920,6 +977,21 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn as_any(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn acquire_input_lock(
+        &mut self,
+        token: TextFieldToken,
+        mutable: bool,
+    ) -> Box<dyn InputHandler> {
+        self.app_state
+            .inner
+            .borrow_mut()
+            .get_ime_lock(self.window_id, token, mutable)
+    }
+
+    fn release_input_lock(&mut self, token: TextFieldToken) {
+        self.app_state.release_ime_lock(self.window_id, token);
     }
 
     fn request_close(&mut self) {
