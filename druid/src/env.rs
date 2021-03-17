@@ -240,6 +240,11 @@ impl Env {
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
     pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
+    /// Creates a new empty Env with localization information.
+    pub fn new() -> Self {
+        Env::default()
+    }
+
     /// Gets a value from the environment, expecting it to be present.
     ///
     /// Note that the return value is a reference for "expensive" types such
@@ -365,6 +370,21 @@ impl Env {
     pub fn get_debug_color(&self, id: u64) -> Color {
         let color_num = id as usize % self.0.debug_colors.len();
         self.0.debug_colors[color_num].clone()
+    }
+
+    /// Replaces and adds to current `Env`'s values with values form the provided `Env`.
+    pub(crate) fn with_overrides(&self, changes: &Env) -> Env {
+        let mut new_env = self.to_owned();
+        let mut internal_env = Arc::make_mut(&mut new_env.0).to_owned();
+        let env_map = &mut internal_env.map;
+
+        for (key, value) in changes.0.map.iter() {
+            let _ = env_map.insert(key.clone(), value.clone());
+        }
+
+        new_env.0 = Arc::new(internal_env);
+
+        new_env
     }
 }
 
