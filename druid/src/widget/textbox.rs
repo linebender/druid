@@ -23,7 +23,8 @@ use crate::text::{EditableText, Selection, TextComponent, TextLayout, TextStorag
 use crate::widget::prelude::*;
 use crate::widget::{Padding, Scroll, WidgetWrapper};
 use crate::{
-    theme, Color, FontDescriptor, KeyOrValue, Point, Rect, TextAlignment, TimerToken, Vec2,
+    theme, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect, SysMods,
+    TextAlignment, TimerToken, Vec2,
 };
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
@@ -327,6 +328,35 @@ impl<T: TextStorage + EditableText> TextBox<T> {
             self.inner.wrapped_mut().scroll_to(rect + SCROLL_TO_INSETS);
         }
     }
+
+    /// These commands may be supplied by menus; but if they aren't, we
+    /// inject them again, here.
+    fn fallback_do_builtin_command(
+        &mut self,
+        ctx: &mut EventCtx,
+        key: &KeyEvent,
+    ) -> Option<Command> {
+        use crate::commands as sys;
+        let our_id = ctx.widget_id();
+        match key {
+            key if HotKey::new(SysMods::Cmd, "c").matches(key) => Some(sys::COPY.to(our_id)),
+            key if HotKey::new(SysMods::Cmd, "x").matches(key) => Some(sys::CUT.to(our_id)),
+            // we have to send paste to the window, in order to get it converted into the `Paste`
+            // event
+            key if HotKey::new(SysMods::Cmd, "v").matches(key) => {
+                Some(sys::PASTE.to(ctx.window_id()))
+            }
+            key if HotKey::new(SysMods::Cmd, "z").matches(key) => Some(sys::UNDO.to(our_id)),
+            key if HotKey::new(SysMods::CmdShift, "Z").matches(key) && !cfg!(windows) => {
+                Some(sys::REDO.to(our_id))
+            }
+            key if HotKey::new(SysMods::Cmd, "y").matches(key) && cfg!(windows) => {
+                Some(sys::REDO.to(our_id))
+            }
+            key if HotKey::new(SysMods::Cmd, "a").matches(key) => Some(sys::SELECT_ALL.to(our_id)),
+            _ => None,
+        }
+    }
 }
 
 impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
@@ -362,6 +392,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 _ => (),
             },
+            Event::KeyDown(key) if !self.text().is_composing() => {
+                if let Some(cmd) = self.fallback_do_builtin_command(ctx, key) {
+                    ctx.submit_command(cmd);
+                    ctx.set_handled();
+                }
+            }
             Event::MouseDown(mouse) if self.text().can_write() => {
                 if !mouse.focus {
                     ctx.request_focus();
@@ -382,13 +418,17 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
             }
             Event::Command(ref cmd)
-                if self.text().can_read() && ctx.is_focused() && cmd.is(crate::commands::COPY) =>
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::COPY) =>
             {
                 self.text().borrow().set_clipboard();
                 ctx.set_handled();
             }
             Event::Command(cmd)
-                if self.text().can_write() && ctx.is_focused() && cmd.is(crate::commands::CUT) =>
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::CUT) =>
             {
                 if self.text().borrow().set_clipboard() {
                     let inval = self.text_mut().borrow_mut().insert_text(data, "");
