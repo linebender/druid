@@ -564,14 +564,12 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     fn do_action(&mut self, buffer: &mut T, action: ImeAction) {
         match action {
             ImeAction::Move(movement) => {
-                let sel =
-                    crate::text::movement(movement.into(), self.selection, &self.layout, false);
+                let sel = crate::text::movement(movement, self.selection, &self.layout, false);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::MoveSelecting(movement) => {
-                let sel =
-                    crate::text::movement(movement.into(), self.selection, &self.layout, true);
+                let sel = crate::text::movement(movement, self.selection, &self.layout, true);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
@@ -583,8 +581,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
             //tracing::warn!("Line/Word selection actions are not implemented");
             //}
             ImeAction::Delete(movement) if self.selection.is_caret() => {
-                let movement: Movement = movement.into();
-                if movement == Movement::Left {
+                if movement == Movement::Grapheme(druid_shell::text::Direction::Upstream) {
                     self.backspace(buffer);
                 } else {
                     let to_delete =
