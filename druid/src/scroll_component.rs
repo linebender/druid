@@ -23,9 +23,7 @@ use crate::{
     kurbo::{Point, Rect, Vec2},
     theme::SCROLLBAR_MIN_SIZE,
 };
-use crate::{
-    Env, Event, EventCtx, Key, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken,
-};
+use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 #[derive(Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
