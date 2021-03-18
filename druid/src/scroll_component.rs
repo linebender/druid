@@ -17,12 +17,9 @@
 
 use std::time::Duration;
 
+use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
-use crate::{
-    kurbo::{Point, Rect, Vec2},
-    theme::SCROLLBAR_MIN_SIZE,
-};
 use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 #[derive(Debug, Copy, Clone)]
@@ -190,7 +187,7 @@ impl ScrollComponent {
         let percent_scrolled = scroll_offset.y / (content_size.height - viewport_size.height);
 
         let length = (percent_visible * viewport_size.height).ceil();
-        let length = length.max(env.get(SCROLLBAR_MIN_SIZE));
+        let length = length.max(env.get(theme::SCROLLBAR_MIN_SIZE));
 
         let vertical_padding = bar_pad + bar_pad + bar_width;
 
@@ -225,7 +222,7 @@ impl ScrollComponent {
         let percent_scrolled = scroll_offset.x / (content_size.width - viewport_size.width);
 
         let length = (percent_visible * viewport_size.width).ceil();
-        let length = length.max(env.get(SCROLLBAR_MIN_SIZE));
+        let length = length.max(env.get(theme::SCROLLBAR_MIN_SIZE));
 
         let horizontal_padding = bar_pad + bar_pad + bar_width;
 
