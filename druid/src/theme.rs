@@ -16,7 +16,7 @@
 
 #![allow(missing_docs)]
 
-use crate::{piet::Color, scroll_component::SCROLLBAR_MIN_SIZE};
+use crate::piet::Color;
 
 use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key};
 
@@ -100,6 +100,9 @@ pub const SCROLLBAR_PAD: Key<f64> = Key::new("org.linebender.druid.theme.scrollb
 pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_radius");
 pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.scrollbar_edge_width");
+/// Minimum length for any scrollbar to be when measured on that
+/// scrollbar's primary axis.
+pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollbar_min_size");
 
 /// An initial theme.
 pub(crate) fn add_to_env(env: Env) -> Env {
