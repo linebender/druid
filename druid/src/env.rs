@@ -342,8 +342,7 @@ impl Env {
     ) -> Result<(), ValueTypeError> {
         let env = Arc::make_mut(&mut self.0);
         let key = key.into();
-        let entry = env.map.entry(key);
-        match entry {
+        match env.map.entry(key) {
             std::collections::hash_map::Entry::Occupied(mut e) => {
                 let existing = e.get_mut();
                 if !existing.is_same_type(&raw) {
