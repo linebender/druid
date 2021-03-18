@@ -52,4 +52,3 @@ pub fn foo() {
     c.do_element();
     c.do_widget();
 }
-

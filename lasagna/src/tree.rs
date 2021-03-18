@@ -15,10 +15,10 @@
 use std::{any::Any, collections::HashMap, num::NonZeroU64};
 
 pub struct Mutation {
-    child: Vec<MutationEl>,
+    pub child: Vec<MutationEl>,
     // Should be a Vec? Option?
     // Deeper question: always apply after child mutation?
-    cmds: Box<dyn Any>,
+    pub cmds: Box<dyn Any>,
 }
 
 pub enum MutationEl {
@@ -92,7 +92,6 @@ impl TreeStructure {
                     }
                     self.children.get_mut(&id).unwrap().drain(i..i + n);
                 }
-                _ => ()
             }
         }
     }
