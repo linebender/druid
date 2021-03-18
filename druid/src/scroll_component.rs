@@ -182,12 +182,13 @@ impl ScrollComponent {
 
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
+        let bar_min_size = env.get(theme::SCROLLBAR_MIN_SIZE);
 
         let percent_visible = viewport_size.height / content_size.height;
         let percent_scrolled = scroll_offset.y / (content_size.height - viewport_size.height);
 
         let length = (percent_visible * viewport_size.height).ceil();
-        let length = length.max(env.get(theme::SCROLLBAR_MIN_SIZE));
+        let length = length.max(bar_min_size);
 
         let vertical_padding = bar_pad + bar_pad + bar_width;
 
@@ -217,12 +218,13 @@ impl ScrollComponent {
 
         let bar_width = env.get(theme::SCROLLBAR_WIDTH);
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
+        let bar_min_size = env.get(theme::SCROLLBAR_MIN_SIZE);
 
         let percent_visible = viewport_size.width / content_size.width;
         let percent_scrolled = scroll_offset.x / (content_size.width - viewport_size.width);
 
         let length = (percent_visible * viewport_size.width).ceil();
-        let length = length.max(env.get(theme::SCROLLBAR_MIN_SIZE));
+        let length = length.max(bar_min_size);
 
         let horizontal_padding = bar_pad + bar_pad + bar_width;
 
