@@ -19,11 +19,8 @@ use std::time::Duration;
 
 use crate::theme;
 use crate::widget::{Axis, Viewport};
-use crate::{
-    kurbo::{Point, Rect, Vec2},
-    Key,
-};
-use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
+use crate::kurbo::{Point, Rect, Vec2};
+use crate::{Env, Event, EventCtx, Key, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
