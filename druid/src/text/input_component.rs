@@ -100,6 +100,7 @@ pub struct EditSession<T> {
     alignment_offset: f64,
     /// The portion of the text that is currently marked by the IME.
     composition_range: Option<Range<usize>>,
+    drag_granularity: DragGranularity,
     /// The origin of the textbox, relative to the origin of the window.
     pub origin: Point,
 }
@@ -121,6 +122,23 @@ struct EditSessionRef<T> {
 struct EditSessionHandle<T> {
     text: T,
     inner: Arc<RefCell<EditSession<T>>>,
+}
+
+/// When a drag follows a double- or triple-click, the behaviour of
+/// drag changes to only select whole words or whole paragraphs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DragGranularity {
+    Grapheme,
+    /// Start and end are the start/end bounds of the initial selection.
+    Word {
+        start: usize,
+        end: usize,
+    },
+    /// Start and end are the start/end bounds of the initial selection.
+    Paragraph {
+        start: usize,
+        end: usize,
+    },
 }
 
 /// An informal lock.
@@ -272,6 +290,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 self.borrow_mut()
                     .update_pending_invalidation(ImeUpdate::SelectionChanged);
                 ctx.request_update();
+                ctx.request_paint();
             }
             Event::MouseMove(mouse) if self.can_write() => {
                 ctx.set_cursor(&Cursor::IBeam);
@@ -684,9 +703,13 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         if mods.shift() {
             self.selection.active = pos;
         } else {
-            let sel = self.sel_region_for_pos(pos, count);
-            self.selection.anchor = sel.start;
-            self.selection.active = sel.end;
+            let Range { start, end } = self.sel_region_for_pos(pos, count);
+            self.selection = Selection::new(start, end);
+            self.drag_granularity = match count {
+                2 => DragGranularity::Word { start, end },
+                3 => DragGranularity::Paragraph { start, end },
+                _ => DragGranularity::Grapheme,
+            };
         }
     }
 
@@ -694,7 +717,33 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
-        self.selection.active = pos;
+        let text = match self.layout.text() {
+            Some(text) => text,
+            None => return,
+        };
+
+        let (start, end) = match self.drag_granularity {
+            DragGranularity::Grapheme => (self.selection.anchor, pos),
+            DragGranularity::Word { start, end } => {
+                let word_range = self.word_for_pos(pos);
+                if pos <= start {
+                    (end, word_range.start)
+                } else {
+                    (start, word_range.end)
+                }
+            }
+            DragGranularity::Paragraph { start, end } => {
+                let par_start = text.preceding_line_break(pos);
+                let par_end = text.next_line_break(pos);
+
+                if pos <= start {
+                    (end, par_start)
+                } else {
+                    (start, par_end)
+                }
+            }
+        };
+        self.selection = Selection::new(start, end);
         self.scroll_to_selection_end(false);
     }
 
@@ -864,6 +913,7 @@ impl<T> Default for TextComponent<T> {
             accepts_tabs: false,
             alignment: TextAlignment::Start,
             alignment_offset: 0.0,
+            drag_granularity: DragGranularity::Grapheme,
             origin: Point::ZERO,
         };
 
