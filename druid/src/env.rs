@@ -347,9 +347,8 @@ impl Env {
                 let existing = e.get_mut();
                 if !existing.is_same_type(&raw) {
                     return Err(ValueTypeError::new(any::type_name::<V>(), raw));
-                } else {
-                    *existing = raw;
                 }
+                *existing = raw;
             }
             std::collections::hash_map::Entry::Vacant(e) => {
                 e.insert(raw);
