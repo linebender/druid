@@ -442,6 +442,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
                 self.inner.wrapped_mut().child_mut().has_focus = false;
+                if !self.multiline {
+                    self.inner.wrapped_mut().scroll_to(Rect::ZERO);
+                }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
                 ctx.request_paint();
