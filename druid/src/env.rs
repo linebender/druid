@@ -348,7 +348,7 @@ impl Env {
                 let existing = e.get_mut();
                 if !existing.is_same_type(&raw) {
                     return Err(ValueTypeError::new(any::type_name::<V>(), raw));
-                }else {
+                } else {
                     *existing = raw;
                 }
             }

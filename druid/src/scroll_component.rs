@@ -17,14 +17,18 @@
 
 use std::time::Duration;
 
-use crate::{Key, kurbo::{Point, Rect, Vec2}};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
+use crate::{
+    kurbo::{Point, Rect, Vec2},
+    Key,
+};
 use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
-pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.scroll-component.scrollbar-min-size");
+pub const SCROLLBAR_MIN_SIZE: Key<f64> =
+    Key::new("org.linebender.scroll-component.scrollbar-min-size");
 
 #[derive(Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
@@ -496,5 +500,5 @@ impl ScrollComponent {
 }
 /// An initial scroll bar.
 pub(crate) fn add_to_env(env: Env) -> Env {
-    env.adding(SCROLLBAR_MIN_SIZE,  45.0_f64)
+    env.adding(SCROLLBAR_MIN_SIZE, 45.0)
 }
