@@ -27,6 +27,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
 
 ### Changed
 
@@ -648,6 +649,7 @@ Last release without a changelog :(
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1662]: https://github.com/linebender/druid/pull/1662
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

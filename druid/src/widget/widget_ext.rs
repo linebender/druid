@@ -28,9 +28,12 @@ use crate::{
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`Padding`] widget with the given [`Insets`].
     ///
-    /// [`Padding`]: widget/struct.Padding.html
-    /// [`Insets`]: kurbo/struct.Insets.html
-    fn padding(self, insets: impl Into<Insets>) -> Padding<T, Self> {
+    /// Like [`Padding::new`], this can accept a variety of arguments, including
+    /// a [`Key`] referring to [`Insets`] in the [`Env`].
+    ///
+    /// [`Key`]: crate::Key
+    /// [`Insets`]: crate::Insets
+    fn padding(self, insets: impl Into<KeyOrValue<Insets>>) -> Padding<T, Self> {
         Padding::new(insets, self)
     }
 
