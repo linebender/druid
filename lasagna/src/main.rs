@@ -33,13 +33,13 @@ const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 #[derive(Default)]
-struct HelloState {
+struct MainState {
     size: Size,
     handle: WindowHandle,
     window: Window,
 }
 
-impl WinHandler for HelloState {
+impl WinHandler for MainState {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
     }
@@ -152,7 +152,7 @@ fn main() {
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
-    builder.set_handler(Box::new(HelloState::default()));
+    builder.set_handler(Box::new(MainState::default()));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
 

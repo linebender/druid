@@ -14,15 +14,22 @@
 
 //! A container for a window.
 
-use druid_shell::{kurbo::Line, piet::{Color, RenderContext}};
+use druid_shell::kurbo::{Line, Point};
+use druid_shell::piet::{Color, RenderContext};
+
+use crate::element::{Button, Element};
 
 #[derive(Default)]
-pub struct Window;
+pub struct Window {
+    button: Button,
+}
 
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 impl Window {
     pub fn paint(&mut self, piet: &mut druid_shell::piet::Piet) {
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
+        self.button.layout();
+        self.button.paint(piet, Point::new(0.0, 0.0));
     }
 }
