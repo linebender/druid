@@ -17,10 +17,12 @@
 
 use std::time::Duration;
 
+use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
-use crate::kurbo::{Point, Rect, Vec2};
-use crate::{Env, Event, EventCtx, Key, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
+use crate::{
+    Env, Event, EventCtx, Key, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken,
+};
 
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
@@ -494,8 +496,4 @@ impl ScrollComponent {
             self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
         }
     }
-}
-/// An initial scroll bar.
-pub(crate) fn add_to_env(env: Env) -> Env {
-    env.adding(SCROLLBAR_MIN_SIZE, 45.0)
 }

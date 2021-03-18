@@ -16,7 +16,7 @@
 
 #![allow(missing_docs)]
 
-use crate::piet::Color;
+use crate::{piet::Color, scroll_component::SCROLLBAR_MIN_SIZE};
 
 use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key};
 
@@ -161,6 +161,7 @@ pub(crate) fn add_to_env(env: Env) -> Env {
                 .with_style(FontStyle::Italic)
                 .with_size(15.0),
         )
+        .adding(SCROLLBAR_MIN_SIZE, 45.0)
 }
 
 #[deprecated(since = "0.7.0", note = "use Env::default() instead")]

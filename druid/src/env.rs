@@ -14,13 +14,13 @@
 
 //! An environment which is passed downward into the widget tree.
 
-use std::any;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::{any, collections::hash_map::Entry};
 
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
@@ -343,14 +343,14 @@ impl Env {
         let env = Arc::make_mut(&mut self.0);
         let key = key.into();
         match env.map.entry(key) {
-            std::collections::hash_map::Entry::Occupied(mut e) => {
+            Entry::Occupied(mut e) => {
                 let existing = e.get_mut();
                 if !existing.is_same_type(&raw) {
                     return Err(ValueTypeError::new(any::type_name::<V>(), raw));
                 }
                 *existing = raw;
             }
-            std::collections::hash_map::Entry::Vacant(e) => {
+            Entry::Vacant(e) => {
                 e.insert(raw);
             }
         }
@@ -526,9 +526,7 @@ impl Env {
             .adding(Env::DEBUG_WIDGET_ID, false)
             .adding(Env::DEBUG_WIDGET, false);
 
-        let env = crate::theme::add_to_env(env);
-
-        crate::scroll_component::add_to_env(env)
+        crate::theme::add_to_env(env)
     }
 }
 
