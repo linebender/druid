@@ -16,7 +16,7 @@
 
 use std::any;
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -342,13 +342,18 @@ impl Env {
     ) -> Result<(), ValueTypeError> {
         let env = Arc::make_mut(&mut self.0);
         let key = key.into();
-        // TODO: use of Entry might be more efficient
-        if let Some(existing) = env.map.get(&key) {
-            if !existing.is_same_type(&raw) {
-                return Err(ValueTypeError::new(any::type_name::<V>(), raw));
+        match env.map.entry(key) {
+            Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+                if !existing.is_same_type(&raw) {
+                    return Err(ValueTypeError::new(any::type_name::<V>(), raw));
+                }
+                *existing = raw;
+            }
+            Entry::Vacant(e) => {
+                e.insert(raw);
             }
         }
-        env.map.insert(key, raw);
         Ok(())
     }
 
