@@ -342,13 +342,20 @@ impl Env {
     ) -> Result<(), ValueTypeError> {
         let env = Arc::make_mut(&mut self.0);
         let key = key.into();
-        // TODO: use of Entry might be more efficient
-        if let Some(existing) = env.map.get(&key) {
-            if !existing.is_same_type(&raw) {
-                return Err(ValueTypeError::new(any::type_name::<V>(), raw));
+        let entry = env.map.entry(key);
+        match entry {
+            std::collections::hash_map::Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+                if !existing.is_same_type(&raw) {
+                    return Err(ValueTypeError::new(any::type_name::<V>(), raw));
+                }else {
+                    *existing = raw;
+                }
+            }
+            std::collections::hash_map::Entry::Vacant(e) => {
+                e.insert(raw);
             }
         }
-        env.map.insert(key, raw);
         Ok(())
     }
 
@@ -521,7 +528,9 @@ impl Env {
             .adding(Env::DEBUG_WIDGET_ID, false)
             .adding(Env::DEBUG_WIDGET, false);
 
-        crate::theme::add_to_env(env)
+        let env = crate::theme::add_to_env(env);
+
+        crate::scroll_component::add_to_env(env)
     }
 }
 

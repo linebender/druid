@@ -17,15 +17,14 @@
 
 use std::time::Duration;
 
-use crate::kurbo::{Point, Rect, Vec2};
+use crate::{Key, kurbo::{Point, Rect, Vec2}};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
 use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
-//TODO: Add this to env
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
-pub const SCROLLBAR_MIN_SIZE: f64 = 45.0;
+pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.scroll-component.scrollbar-min-size");
 
 #[derive(Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
@@ -192,7 +191,7 @@ impl ScrollComponent {
         let percent_scrolled = scroll_offset.y / (content_size.height - viewport_size.height);
 
         let length = (percent_visible * viewport_size.height).ceil();
-        let length = length.max(SCROLLBAR_MIN_SIZE);
+        let length = length.max(env.get(SCROLLBAR_MIN_SIZE));
 
         let vertical_padding = bar_pad + bar_pad + bar_width;
 
@@ -227,7 +226,7 @@ impl ScrollComponent {
         let percent_scrolled = scroll_offset.x / (content_size.width - viewport_size.width);
 
         let length = (percent_visible * viewport_size.width).ceil();
-        let length = length.max(SCROLLBAR_MIN_SIZE);
+        let length = length.max(env.get(SCROLLBAR_MIN_SIZE));
 
         let horizontal_padding = bar_pad + bar_pad + bar_width;
 
@@ -494,4 +493,8 @@ impl ScrollComponent {
             self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
         }
     }
+}
+/// An initial scroll bar.
+pub(crate) fn add_to_env(env: Env) -> Env {
+    env.adding(SCROLLBAR_MIN_SIZE,  45.0_f64)
 }
