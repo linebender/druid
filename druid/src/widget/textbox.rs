@@ -26,7 +26,6 @@ use crate::{
     theme, Color, FontDescriptor, KeyOrValue, Point, Rect, TextAlignment, TimerToken, Vec2,
 };
 
-const TEXTBOX_INSETS: Insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 
@@ -73,7 +72,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
         let mut scroll = Scroll::new(TextComponent::default()).content_must_fill(true);
         scroll.set_enabled_scrollbars(crate::scroll_component::ScrollbarsEnabled::None);
         Self {
-            inner: Padding::new(TEXTBOX_INSETS, scroll),
+            inner: Padding::new(theme::TEXTBOX_INSETS, scroll),
             scroll_to_selection_after_layout: false,
             placeholder,
             multiline: false,
@@ -474,6 +473,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             tracing::warn!("Widget::layout called with outstanding IME lock.");
         }
         let min_width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let textbox_insets = env.get(theme::TEXTBOX_INSETS);
 
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         let min_size = bc.constrain((min_width, 0.0));
@@ -491,7 +491,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let baseline_off = layout_baseline
             - (self.inner.wrapped().child_size().height
                 - self.inner.wrapped().viewport_rect().height())
-            + TEXTBOX_INSETS.y1;
+            + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
             self.scroll_to_selection_end();
@@ -516,6 +516,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let cursor_color = env.get(theme::CURSOR_COLOR);
         let border_width = env.get(theme::TEXTBOX_BORDER_WIDTH);
+        let textbox_insets = env.get(theme::TEXTBOX_INSETS);
 
         let is_focused = ctx.is_focused();
 
@@ -540,7 +541,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             ctx.with_save(|ctx| {
                 ctx.clip(clip_rect);
                 self.placeholder
-                    .draw(ctx, (TEXTBOX_INSETS.x0, TEXTBOX_INSETS.y0));
+                    .draw(ctx, (textbox_insets.x0, textbox_insets.y0));
             })
         }
 
@@ -554,7 +555,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 .borrow()
                 .cursor_line_for_text_position(cursor_pos);
 
-            let padding_offset = Vec2::new(TEXTBOX_INSETS.x0, TEXTBOX_INSETS.y0);
+            let padding_offset = Vec2::new(textbox_insets.x0, textbox_insets.y0);
 
             let cursor = if data.is_empty() {
                 cursor_line + padding_offset
