@@ -25,7 +25,7 @@ use crate::kurbo::{Line, Point, Rect, Vec2};
 use crate::piet::TextLayout as _;
 use crate::shell::text::{Action as ImeAction, Event as ImeUpdate, InputHandler};
 use crate::widget::prelude::*;
-use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
+use crate::{text, theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 
 /// A widget that accepts text input.
 ///
@@ -564,28 +564,45 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     fn do_action(&mut self, buffer: &mut T, action: ImeAction) {
         match action {
             ImeAction::Move(movement) => {
-                let sel = crate::text::movement(movement, self.selection, &self.layout, false);
+                let sel = text::movement(movement, self.selection, &self.layout, false);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::MoveSelecting(movement) => {
-                let sel = crate::text::movement(movement, self.selection, &self.layout, true);
+                let sel = text::movement(movement, self.selection, &self.layout, true);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::SelectAll => {
-                let len = self.layout.text().as_ref().map(|t| t.len()).unwrap_or(0);
+                let len = buffer.len();
                 self.external_selection_change = Some(Selection::new(0, len));
             }
-            //ImeAction::SelectLine | ImeAction::SelectParagraph | ImeAction::SelectWord => {
-            //tracing::warn!("Line/Word selection actions are not implemented");
-            //}
+            ImeAction::SelectWord => {
+                if self.selection.is_caret() {
+                    let range =
+                        text::movement::word_range_for_pos(buffer.as_str(), self.selection.active);
+                    self.external_selection_change = Some(Selection::new(range.start, range.end));
+                }
+
+                // it is unclear what the behaviour should be if the selection
+                // is not a caret (and may span multiple words)
+            }
+            // This requires us to have access to the layout, which might be stale?
+            ImeAction::SelectLine => (),
+            // this assumes our internal selection is consistent with the buffer?
+            ImeAction::SelectParagraph => {
+                if !self.selection.is_caret() || buffer.len() < self.selection.active {
+                    return;
+                }
+                let prev = buffer.preceding_line_break(self.selection.active);
+                let next = buffer.next_line_break(self.selection.active);
+                self.external_selection_change = Some(Selection::new(prev, next));
+            }
             ImeAction::Delete(movement) if self.selection.is_caret() => {
                 if movement == Movement::Grapheme(druid_shell::text::Direction::Upstream) {
                     self.backspace(buffer);
                 } else {
-                    let to_delete =
-                        crate::text::movement(movement, self.selection, &self.layout, true);
+                    let to_delete = text::movement(movement, self.selection, &self.layout, true);
                     self.selection = to_delete;
                     self.ime_insert_text(buffer, "")
                 }
@@ -643,7 +660,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
 
     fn backspace(&mut self, buffer: &mut T) {
         let to_del = if self.selection.is_caret() {
-            let del_start = crate::text::offset_for_delete_backwards(&self.selection, buffer);
+            let del_start = text::offset_for_delete_backwards(&self.selection, buffer);
             del_start..self.selection.anchor
         } else {
             self.selection.range()
@@ -680,24 +697,35 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn sel_region_for_pos(&mut self, pos: usize, click_count: u8) -> Range<usize> {
-        let text = match self.layout.text() {
-            Some(text) => text,
-            None => return pos..pos,
-        };
         match click_count {
             1 => pos..pos,
-            2 => {
-                //FIXME: this doesn't handle whitespace correctly
-                let word_min = text.prev_word_offset(pos).unwrap_or(0);
-                let word_max = text.next_word_offset(pos).unwrap_or_else(|| text.len());
-                word_min..word_max
-            }
+            2 => self.word_for_pos(pos),
             _ => {
+                let text = match self.layout.text() {
+                    Some(text) => text,
+                    None => return pos..pos,
+                };
                 let line_min = text.preceding_line_break(pos);
                 let line_max = text.next_line_break(pos);
                 line_min..line_max
             }
         }
+    }
+
+    fn word_for_pos(&self, pos: usize) -> Range<usize> {
+        let layout = match self.layout.layout() {
+            Some(layout) => layout,
+            None => return pos..pos,
+        };
+
+        let line_n = layout.hit_test_text_position(pos).line;
+        let lm = layout.line_metric(line_n).unwrap();
+        let text = layout.line_text(line_n).unwrap();
+        let rel_pos = pos - lm.start_offset;
+        let mut range = text::movement::word_range_for_pos(text, rel_pos);
+        range.start += lm.start_offset;
+        range.end += lm.start_offset;
+        range
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, new_data: &T, env: &Env) {

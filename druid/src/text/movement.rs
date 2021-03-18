@@ -14,6 +14,10 @@
 
 //! Text editing movements.
 
+use std::ops::Range;
+
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::kurbo::Point;
 use crate::piet::TextLayout as _;
 pub use crate::shell::text::{Direction, Movement, VerticalMovement, WritingDirection};
@@ -136,4 +140,28 @@ pub fn movement<T: EditableText + TextStorage>(
 
     let start = if modify { s.anchor } else { offset };
     Selection::new(start, offset).with_h_pos(h_pos)
+}
+
+/// Given a position in some text, return the containing word boundaries.
+///
+/// The returned range may not necessary be a 'word'; for instance it could be
+/// the sequence of whitespace between two words.
+///
+/// If the position is on a word boundary, that will be considered the start
+/// of the range.
+///
+/// This uses Unicode word boundaries, as defined in [UAX#29].
+///
+/// [UAX#29]: http://www.unicode.org/reports/tr29/
+pub fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
+    let mut word_iter = text.split_word_bound_indices().peekable();
+    let mut word_start = pos;
+    while let Some((ix, _)) = word_iter.next() {
+        if word_iter.peek().map(|(ix, _)| *ix > pos).unwrap_or(false) {
+            word_start = ix;
+            break;
+        }
+    }
+    let word_end = word_iter.next().map(|(ix, _)| ix).unwrap_or(pos);
+    word_start..word_end
 }
