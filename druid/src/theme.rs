@@ -143,6 +143,7 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(SCROLLBAR_FADE_DELAY, 1500u64)
         .adding(SCROLLBAR_WIDTH, 8.)
         .adding(SCROLLBAR_PAD, 2.)
+        .adding(SCROLLBAR_MIN_SIZE, 45.)
         .adding(SCROLLBAR_RADIUS, 5.)
         .adding(SCROLLBAR_EDGE_WIDTH, 1.)
         .adding(WIDGET_PADDING_VERTICAL, 10.0)
@@ -164,7 +165,6 @@ pub(crate) fn add_to_env(env: Env) -> Env {
                 .with_style(FontStyle::Italic)
                 .with_size(15.0),
         )
-        .adding(SCROLLBAR_MIN_SIZE, 45.0)
 }
 
 #[deprecated(since = "0.7.0", note = "use Env::default() instead")]
