@@ -25,7 +25,7 @@ use crate::kurbo::{Line, Point, Rect, Vec2};
 use crate::piet::TextLayout as _;
 use crate::shell::text::{Action as ImeAction, Event as ImeUpdate, InputHandler};
 use crate::widget::prelude::*;
-use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
+use crate::{text, theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 
 /// A widget that accepts text input.
 ///
@@ -56,6 +56,13 @@ use crate::{theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 pub struct TextComponent<T> {
     inner: Arc<RefCell<EditSession<T>>>,
     lock: Arc<Cell<ImeLock>>,
+    // HACK: because of the way focus works (it is managed higher up, in
+    // whatever widget is controlling this) we can't rely on `is_focused` in
+    // the PaintCtx.
+    /// A manual flag set by the parent to control drawing behaviour.
+    ///
+    /// The parent should update this when handling [`LifeCycle::FocusChanged`].
+    pub has_focus: bool,
 }
 
 /// Editable text state.
@@ -393,7 +400,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
         if !self.can_read() {
             tracing::warn!("Text paint called with IME lock held.");
         }
-        let selection_color = env.get(theme::SELECTION_COLOR);
+
+        let selection_color = if self.has_focus {
+            env.get(theme::SELECTED_TEXT_BACKGROUND_COLOR)
+        } else {
+            env.get(theme::SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR)
+        };
+
         let cursor_color = env.get(theme::CURSOR_COLOR);
         let text_offset = Vec2::new(self.borrow().alignment_offset, 0.0);
 
@@ -402,7 +415,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
         let sel_rects = self.borrow().layout.rects_for_range(selection.range());
         if let Some(composition) = composition {
             // I believe selection should always be contained in composition range while composing?
-            assert!(composition.start <= selection.start && composition.end >= selection.end);
+            assert!(composition.start <= selection.anchor && composition.end >= selection.active);
             let comp_rects = self.borrow().layout.rects_for_range(composition);
             for region in comp_rects {
                 let y = region.max_y().floor();
@@ -551,31 +564,45 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     fn do_action(&mut self, buffer: &mut T, action: ImeAction) {
         match action {
             ImeAction::Move(movement) => {
-                let sel =
-                    crate::text::movement(movement.into(), self.selection, &self.layout, false);
+                let sel = text::movement(movement, self.selection, &self.layout, false);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::MoveSelecting(movement) => {
-                let sel =
-                    crate::text::movement(movement.into(), self.selection, &self.layout, true);
+                let sel = text::movement(movement, self.selection, &self.layout, true);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
             ImeAction::SelectAll => {
-                let len = self.layout.text().as_ref().map(|t| t.len()).unwrap_or(0);
+                let len = buffer.len();
                 self.external_selection_change = Some(Selection::new(0, len));
             }
-            //ImeAction::SelectLine | ImeAction::SelectParagraph | ImeAction::SelectWord => {
-            //tracing::warn!("Line/Word selection actions are not implemented");
-            //}
+            ImeAction::SelectWord => {
+                if self.selection.is_caret() {
+                    let range =
+                        text::movement::word_range_for_pos(buffer.as_str(), self.selection.active);
+                    self.external_selection_change = Some(Selection::new(range.start, range.end));
+                }
+
+                // it is unclear what the behaviour should be if the selection
+                // is not a caret (and may span multiple words)
+            }
+            // This requires us to have access to the layout, which might be stale?
+            ImeAction::SelectLine => (),
+            // this assumes our internal selection is consistent with the buffer?
+            ImeAction::SelectParagraph => {
+                if !self.selection.is_caret() || buffer.len() < self.selection.active {
+                    return;
+                }
+                let prev = buffer.preceding_line_break(self.selection.active);
+                let next = buffer.next_line_break(self.selection.active);
+                self.external_selection_change = Some(Selection::new(prev, next));
+            }
             ImeAction::Delete(movement) if self.selection.is_caret() => {
-                let movement: Movement = movement.into();
-                if movement == Movement::Left {
+                if movement == Movement::Grapheme(druid_shell::text::Direction::Upstream) {
                     self.backspace(buffer);
                 } else {
-                    let to_delete =
-                        crate::text::movement(movement, self.selection, &self.layout, true);
+                    let to_delete = text::movement(movement, self.selection, &self.layout, true);
                     self.selection = to_delete;
                     self.ime_insert_text(buffer, "")
                 }
@@ -633,8 +660,8 @@ impl<T: TextStorage + EditableText> EditSession<T> {
 
     fn backspace(&mut self, buffer: &mut T) {
         let to_del = if self.selection.is_caret() {
-            let del_start = crate::text::offset_for_delete_backwards(&self.selection, buffer);
-            del_start..self.selection.start
+            let del_start = text::offset_for_delete_backwards(&self.selection, buffer);
+            del_start..self.selection.anchor
         } else {
             self.selection.range()
         };
@@ -647,11 +674,11 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
-            self.selection.end = pos;
+            self.selection.active = pos;
         } else {
             let sel = self.sel_region_for_pos(pos, count);
-            self.selection.start = sel.start;
-            self.selection.end = sel.end;
+            self.selection.anchor = sel.start;
+            self.selection.active = sel.end;
         }
     }
 
@@ -659,7 +686,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let point = point + Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
-        self.selection.end = pos;
+        self.selection.active = pos;
         self.scroll_to_selection_end(false);
     }
 
@@ -670,24 +697,35 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn sel_region_for_pos(&mut self, pos: usize, click_count: u8) -> Range<usize> {
-        let text = match self.layout.text() {
-            Some(text) => text,
-            None => return pos..pos,
-        };
         match click_count {
             1 => pos..pos,
-            2 => {
-                //FIXME: this doesn't handle whitespace correctly
-                let word_min = text.prev_word_offset(pos).unwrap_or(0);
-                let word_max = text.next_word_offset(pos).unwrap_or_else(|| text.len());
-                word_min..word_max
-            }
+            2 => self.word_for_pos(pos),
             _ => {
+                let text = match self.layout.text() {
+                    Some(text) => text,
+                    None => return pos..pos,
+                };
                 let line_min = text.preceding_line_break(pos);
                 let line_max = text.next_line_break(pos);
                 line_min..line_max
             }
         }
+    }
+
+    fn word_for_pos(&self, pos: usize) -> Range<usize> {
+        let layout = match self.layout.layout() {
+            Some(layout) => layout,
+            None => return pos..pos,
+        };
+
+        let line_n = layout.hit_test_text_position(pos).line;
+        let lm = layout.line_metric(line_n).unwrap();
+        let text = layout.line_text(line_n).unwrap();
+        let rel_pos = pos - lm.start_offset;
+        let mut range = text::movement::word_range_for_pos(text, rel_pos);
+        range.start += lm.start_offset;
+        range.end += lm.start_offset;
+        range
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, new_data: &T, env: &Env) {
@@ -704,7 +742,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         if self.layout.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
         }
-        let new_sel = self.selection.constrained(new_data);
+        let new_sel = self.selection.constrained(new_data.as_str());
         if new_sel != self.selection {
             self.selection = new_sel;
             self.update_pending_invalidation(ImeUpdate::SelectionChanged);
@@ -721,12 +759,12 @@ impl<T: TextStorage> EditSessionHandle<T> {
 }
 
 impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
-    fn selection(&self) -> crate::shell::text::Selection {
-        self.inner.borrow().selection.into()
+    fn selection(&self) -> Selection {
+        self.inner.borrow().selection
     }
 
-    fn set_selection(&mut self, selection: crate::shell::text::Selection) {
-        self.inner.borrow_mut().external_selection_change = Some(selection.into());
+    fn set_selection(&mut self, selection: Selection) {
+        self.inner.borrow_mut().external_selection_change = Some(selection);
         self.inner.borrow_mut().external_scroll_to = Some(true);
     }
 
@@ -824,6 +862,7 @@ impl<T> Default for TextComponent<T> {
         TextComponent {
             inner: Arc::new(RefCell::new(inner)),
             lock: Arc::new(Cell::new(ImeLock::None)),
+            has_focus: false,
         }
     }
 }

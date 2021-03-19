@@ -1121,7 +1121,8 @@ impl WindowHandle {
                 .unwrap();
 
             let first_child = &vbox.get_children()[0];
-            if first_child.is::<gtk::MenuBar>() {
+            if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
+                old_menubar.deactivate();
                 vbox.remove(first_child);
             }
             let menubar = menu.into_gtk_menubar(&self, &accel_group);

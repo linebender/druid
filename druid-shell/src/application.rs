@@ -169,7 +169,7 @@ impl Application {
         self.platform_app.quit()
     }
 
-    // TODO: do these two go in some kind of PlatformExt trait?
+    // TODO: do these three go in some kind of PlatformExt trait?
     /// Hide the application this window belongs to. (cmd+H)
     pub fn hide(&self) {
         #[cfg(target_os = "macos")]
@@ -180,6 +180,15 @@ impl Application {
     pub fn hide_others(&self) {
         #[cfg(target_os = "macos")]
         self.platform_app.hide_others()
+    }
+
+    /// Sets the global application menu, on platforms where there is one.
+    ///
+    /// On platforms with no global application menu, this has no effect.
+    #[allow(unused_variables)]
+    pub fn set_menu(&self, menu: crate::Menu) {
+        #[cfg(target_os = "macos")]
+        self.platform_app.set_menu(menu.into_inner());
     }
 
     /// Returns a handle to the system clipboard.
