@@ -9,6 +9,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - International text input support (IME) on macOS.
 
 ### Added
+- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
@@ -390,6 +391,7 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
+[@arthmis]: https://github.com/arthmis
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -645,6 +647,7 @@ Last release without a changelog :(
 [#1636]: https://github.com/linebender/druid/pull/1636
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1645]: https://github.com/linebender/druid/pull/1645
 [#1647]: https://github.com/linebender/druid/pull/1647
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
