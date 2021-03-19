@@ -25,14 +25,15 @@ use tracing::{error, trace, warn};
 
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
+use crate::menu::ContextMenu;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
-    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
+    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -376,15 +377,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.request_layout();
     }
 
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        trace!("set_menu");
-        self.state.set_menu(menu);
-    }
-
     /// Indicate that text input state has changed.
     ///
     /// A widget that accepts text input should call this anytime input state
@@ -530,12 +522,13 @@ impl EventCtx<'_, '_> {
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
+    pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
         trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
+            let menu = ContextMenu { menu, location };
             self.submit_command(
                 commands::SHOW_CONTEXT_MENU
-                    .with(Box::new(menu))
+                    .with(SingleUse::new(Box::new(menu)))
                     .to(Target::Window(self.state.window_id)),
             );
         } else {
@@ -879,19 +872,6 @@ impl<'a> ContextState<'a> {
         trace!("submit_command");
         self.command_queue
             .push_back(command.default_to(self.window_id.into()));
-    }
-
-    fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        trace!("set_menu");
-        if self.root_app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                commands::SET_MENU
-                    .with(Box::new(menu))
-                    .to(Target::Window(self.window_id)),
-            );
-        } else {
-            debug_panic!("EventCtx::set_menu<T> - T must match the application data type.");
-        }
     }
 
     fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {

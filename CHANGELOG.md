@@ -34,6 +34,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
+- Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
 
 ### Deprecated
 
@@ -638,6 +639,7 @@ Last release without a changelog :(
 [#1600]: https://github.com/linebender/druid/pull/1600
 [#1606]: https://github.com/linebender/druid/pull/1606
 [#1619]: https://github.com/linebender/druid/pull/1619
+[#1625]: https://github.com/linebender/druid/pull/1625
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1636]: https://github.com/linebender/druid/pull/1636
