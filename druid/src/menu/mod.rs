@@ -126,29 +126,18 @@ type MenuBuild<T> = Box<dyn FnMut(Option<WindowId>, &T, &Env) -> Menu<T>>;
 /// This is for completely recreating the menus (for when you want to change the actual menu
 /// structure, rather than just, say, enabling or disabling entries).
 pub(crate) struct MenuManager<T> {
-    build: MenuBuild<T>,
+    // The function for rebuilding the menu. If this is `None` (which is the case for context
+    // menus), `menu` will always be `Some(..)`.
+    build: Option<MenuBuild<T>>,
     popup: bool,
     old_data: Option<T>,
     menu: Option<Menu<T>>,
 }
 
 /// A menu displayed as a pop-over.
-pub struct ContextMenu<T> {
-    pub(crate) build: Box<dyn FnMut(&T, &Env) -> Menu<T>>,
+pub(crate) struct ContextMenu<T> {
+    pub(crate) menu: Menu<T>,
     pub(crate) location: Point,
-}
-
-impl<T: Data> ContextMenu<T> {
-    /// Create a new [`ContextMenu`].
-    pub fn new(
-        build: impl FnMut(&T, &Env) -> Menu<T> + 'static,
-        location: Point,
-    ) -> ContextMenu<T> {
-        ContextMenu {
-            build: Box::new(build),
-            location,
-        }
-    }
 }
 
 impl<T: Data> MenuManager<T> {
@@ -157,7 +146,7 @@ impl<T: Data> MenuManager<T> {
         build: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
     ) -> MenuManager<T> {
         MenuManager {
-            build: Box::new(build),
+            build: Some(Box::new(build)),
             popup: false,
             old_data: None,
             menu: None,
@@ -165,12 +154,12 @@ impl<T: Data> MenuManager<T> {
     }
 
     /// Create a new [`MenuManager`] for a context menu.
-    pub fn new_for_popup(mut build: impl FnMut(&T, &Env) -> Menu<T> + 'static) -> MenuManager<T> {
+    pub fn new_for_popup(menu: Menu<T>) -> MenuManager<T> {
         MenuManager {
-            build: Box::new(move |_, data, env| build(data, env)),
+            build: None,
             popup: true,
             old_data: None,
-            menu: None,
+            menu: Some(menu),
         }
     }
 
@@ -206,7 +195,9 @@ impl<T: Data> MenuManager<T> {
 
     /// Build an initial menu from the application data.
     pub fn initialize(&mut self, window: Option<WindowId>, data: &T, env: &Env) -> PlatformMenu {
-        self.menu = Some((self.build)(window, data, env));
+        if let Some(build) = &mut self.build {
+            self.menu = Some((build)(window, data, env));
+        }
         self.old_data = Some(data.clone());
         self.refresh(data, env)
     }
@@ -223,7 +214,11 @@ impl<T: Data> MenuManager<T> {
         if let (Some(menu), Some(old_data)) = (self.menu.as_mut(), self.old_data.as_ref()) {
             let ret = match menu.update(old_data, data, env) {
                 MenuUpdate::NeedsRebuild => {
-                    self.menu = Some((self.build)(window, data, env));
+                    if let Some(build) = &mut self.build {
+                        self.menu = Some((build)(window, data, env));
+                    } else {
+                        tracing::warn!("tried to rebuild a context menu");
+                    }
                     Some(self.refresh(data, env))
                 }
                 MenuUpdate::NeedsRefresh => Some(self.refresh(data, env)),
@@ -570,7 +565,8 @@ impl<T: Data> Menu<T> {
     /// whereas refreshing involves tweaking the existing menu entries (e.g. enabling or disabling
     /// items).
     ///
-    /// If you do not provide a callback using this method, the menu will never get rebuilt.
+    /// If you do not provide a callback using this method, the menu will never get rebuilt.  Also,
+    /// only window and application menus get rebuilt; context menus never do.
     ///
     /// [`refresh_on`]: self::Menu<T>::refresh_on
     pub fn rebuild_on(mut self, rebuild: impl FnMut(&T, &T, &Env) -> bool + 'static) -> Self {

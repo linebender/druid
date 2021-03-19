@@ -131,13 +131,7 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub(crate) fn show_context_menu(
-        &mut self,
-        menu: impl FnMut(&T, &Env) -> Menu<T> + 'static,
-        point: Point,
-        data: &T,
-        env: &Env,
-    ) {
+    pub(crate) fn show_context_menu(&mut self, menu: Menu<T>, point: Point, data: &T, env: &Env) {
         let mut manager = MenuManager::new_for_popup(menu);
         self.handle
             .show_context_menu(manager.initialize(Some(self.id), data, env), point);

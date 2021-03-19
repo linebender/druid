@@ -20,8 +20,8 @@ use druid::widget::{
 };
 use druid::Target::Global;
 use druid::{
-    commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, ContextMenu, Data,
-    DelegateCtx, Handled, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowId,
+    commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, Data, DelegateCtx,
+    Handled, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowId,
 };
 use tracing::info;
 
@@ -137,8 +137,7 @@ impl<W: Widget<State>> Controller<State, W> for ContextMenuController {
     ) {
         match event {
             Event::MouseDown(ref mouse) if mouse.button.is_right() => {
-                let menu = ContextMenu::new(make_context_menu, mouse.pos);
-                ctx.show_context_menu(menu);
+                ctx.show_context_menu(make_context_menu(), mouse.pos);
             }
             _ => child.event(ctx, event, data, env),
         }
@@ -220,7 +219,7 @@ fn make_menu(_: Option<WindowId>, state: &State, _: &Env) -> Menu<State> {
     base.rebuild_on(|old_data, data, _env| old_data.menu_count != data.menu_count)
 }
 
-fn make_context_menu(_state: &State, _env: &Env) -> Menu<State> {
+fn make_context_menu() -> Menu<State> {
     Menu::empty()
         .entry(
             MenuItem::new(LocalizedString::new("Increment"))

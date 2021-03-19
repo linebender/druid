@@ -25,14 +25,15 @@ use tracing::{error, trace, warn};
 
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
+use crate::menu::ContextMenu;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
-    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
+    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -521,9 +522,10 @@ impl EventCtx<'_, '_> {
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
+    pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
         trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
+            let menu = ContextMenu { menu, location };
             self.submit_command(
                 commands::SHOW_CONTEXT_MENU
                     .with(SingleUse::new(Box::new(menu)))

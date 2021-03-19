@@ -446,7 +446,7 @@ impl<T: Data> Inner<T> {
                 .and_then(|b| b.downcast::<ContextMenu<T>>().ok())
             {
                 Some(menu) => {
-                    win.show_context_menu(menu.build, menu.location, &self.data, &self.env)
+                    win.show_context_menu(menu.menu, menu.location, &self.data, &self.env)
                 }
                 None => panic!(
                     "{} command must carry a ContextMenu<application state>.",

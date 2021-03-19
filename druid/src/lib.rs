@@ -204,7 +204,7 @@ pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
-pub use menu::{sys as platform_menus, ContextMenu, Menu, MenuItem};
+pub use menu::{sys as platform_menus, Menu, MenuItem};
 pub use mouse::MouseEvent;
 pub use text::{ArcStr, FontDescriptor, TextLayout};
 pub use util::Handled;
