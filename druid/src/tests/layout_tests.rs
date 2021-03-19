@@ -186,3 +186,81 @@ fn flex_paint_rect_overflow() {
         assert_eq!(state.paint_rect().size(), expected_paint_rect.size());
     })
 }
+
+use crate::tests::harness::*;
+use crate::widget::AspectRatioBox;
+use crate::widget::Label;
+use crate::WidgetExt;
+
+#[test]
+fn tight_constraints() {
+    let id = WidgetId::next();
+    let (width, height) = (400., 400.);
+    let aspect = AspectRatioBox::<()>::new(Label::new("hello!"), 1.0)
+        .with_id(id)
+        .fix_width(width)
+        .fix_height(height)
+        .center();
+
+    let (window_width, window_height) = (600., 600.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(width, height));
+    });
+}
+
+#[test]
+fn infinite_constraints_with_child() {
+    let id = WidgetId::next();
+    let (width, height) = (100., 100.);
+    let label = Label::new("hello!").fix_width(width).height(height);
+    let aspect = AspectRatioBox::<()>::new(label, 1.0)
+        .with_id(id)
+        .scroll()
+        .center();
+
+    let (window_width, window_height) = (600., 600.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(width, height));
+    });
+}
+
+// this test still needs some work
+// I am testing for this condition:
+// The box constraint on the width's min and max is 300.0.
+// The height of the window is 50.0 and width 600.0.
+// I'm not sure what size the SizedBox passes in for the height constraint
+// but it is most likely 50.0 for max and 0.0 for min.
+// The aspect ratio is 2.0 which means the box has to have dimensions (300., 150.)
+// however given these constraints it isn't possible.
+// should the aspect ratio box maintain aspect ratio anyways or should it clip/overflow?
+#[test]
+fn tight_constraint_on_width() {
+    let id = WidgetId::next();
+    let label = Label::new("hello!");
+    let aspect = AspectRatioBox::<()>::new(label, 2.0)
+        .with_id(id)
+        .fix_width(300.)
+        // wrap in align widget because root widget must fill the window space
+        .center();
+
+    let (window_width, window_height) = (600., 50.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        dbg!(state.layout_rect().size());
+        // assert_eq!(state.layout_rect().size(), Size::new(500., 500.));
+    });
+}
