@@ -833,8 +833,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // Doing this conditionally only makes sense when there's a measurable performance boost.
         ctx.widget_state.merge_up(&mut self.state);
 
-        ctx.widget_state.children_disabled_changed |= (self.state.is_explicitly_disabled_new
-            != self.state.is_explicitly_disabled);
+        ctx.widget_state.children_disabled_changed |=
+            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
     }
 
     /// Send notifications originating from this widget's children to this
@@ -1015,7 +1015,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 if was_disabled != self.state.is_disabled() {
                     extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                 } else if self.state.children_disabled_changed {
-                    extra_event = Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+                    extra_event =
+                        Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
                 }
 
                 if self.state.is_disabled() && self.state.has_focus {
@@ -1027,7 +1028,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 //It is easier to always use the extra event since we can disable our self's while
                 //our parent was enabled and vice versa.
                 false
-            },
+            }
             //NOTE: this is not sent here, but from the special set_hot_state method
             LifeCycle::HotChanged(_) => false,
             LifeCycle::FocusChanged(_) => {
@@ -1050,16 +1051,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
-        if let LifeCycle::DisabledChanged(_) | LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged) = event {
+        if let LifeCycle::DisabledChanged(_)
+        | LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged) = event
+        {
             self.state.children_disabled_changed = false;
             ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
 
             //Delete changes of disabled state that happened during DisabledChanged
             self.state.is_explicitly_disabled_new = self.state.is_explicitly_disabled;
-
         } else if self.state.is_explicitly_disabled != self.state.is_explicitly_disabled_new {
             ctx.widget_state.children_disabled_changed = true;
-
         }
 
         ctx.widget_state.merge_up(&mut self.state);
@@ -1135,9 +1136,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
->
-        ctx.widget_state.children_disabled_changed |= (self.state.is_explicitly_disabled_new
-            != self.state.is_explicitly_disabled);
+
+        ctx.widget_state.children_disabled_changed |=
+            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
     }
 }
 
@@ -1193,7 +1194,7 @@ impl WidgetState {
             cursor_change: CursorChange::Default,
             cursor: None,
             sub_window_hosts: Vec::new(),
-            is_explicitly_disabled_new: false
+            is_explicitly_disabled_new: false,
         }
     }
 

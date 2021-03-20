@@ -415,10 +415,9 @@ impl InternalLifeCycle {
     /// (for example the hidden tabs in a tabs widget).
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            InternalLifeCycle::RouteWidgetAdded | InternalLifeCycle::RouteFocusChanged { .. } |
-            InternalLifeCycle::RouteDisabledChanged => {
-                true
-            }
+            InternalLifeCycle::RouteWidgetAdded
+            | InternalLifeCycle::RouteFocusChanged { .. }
+            | InternalLifeCycle::RouteDisabledChanged => true,
             InternalLifeCycle::ParentWindowOrigin => false,
             #[cfg(test)]
             InternalLifeCycle::DebugRequestState { .. }
