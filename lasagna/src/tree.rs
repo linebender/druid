@@ -14,11 +14,10 @@
 
 use std::{any::Any, collections::HashMap, num::NonZeroU64};
 
+#[derive(Default)]
 pub struct Mutation {
+    pub cmds: Option<Box<dyn Any>>,
     pub child: Vec<MutationEl>,
-    // Should be a Vec? Option?
-    // Deeper question: always apply after child mutation?
-    pub cmds: Box<dyn Any>,
 }
 
 pub enum MutationEl {
