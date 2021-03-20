@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use druid_shell::kurbo::{Line, Size};
+use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
@@ -23,16 +23,16 @@ use druid_shell::{
 };
 
 mod element;
-mod foo;
 mod tree;
 mod window;
 
-use window::Window;
+use crate::element::{Action, Button, Element};
+use crate::tree::{Id, Mutation, MutationEl};
+use crate::window::Window;
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
-#[derive(Default)]
 struct MainState {
     size: Size,
     handle: WindowHandle,
@@ -129,6 +129,17 @@ impl WinHandler for MainState {
     }
 }
 
+impl MainState {
+    fn new(app_logic: impl FnMut(Vec<Action>) -> Mutation + 'static) -> MainState {
+        let window = Window::new(Box::new(app_logic));
+        MainState {
+            size: Default::default(),
+            handle: Default::default(),
+            window,
+        }
+    }
+}
+
 fn main() {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
@@ -150,9 +161,24 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
+    let my_app_logic = |actions| {
+        let id = Id::next();
+        let button = Button;
+        let boxed_button: Box<dyn Element> = Box::new(button);
+        Mutation {
+            cmds: None,
+            child: vec![MutationEl::Insert(
+                id,
+                Box::new(boxed_button),
+                Mutation::default(),
+            )],
+        }
+    };
+
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
-    builder.set_handler(Box::new(MainState::default()));
+    let main_state = MainState::new(my_app_logic);
+    builder.set_handler(Box::new(main_state));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
 

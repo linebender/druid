@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::any::Any;
+
 use druid_shell::kurbo::{Point, Size, Vec2};
 use druid_shell::piet::{Color, Piet, RenderContext, Text, TextLayoutBuilder};
 
@@ -24,6 +26,8 @@ use crate::tree::{Id, Mutation, MutationEl};
 pub trait Element {
     fn mutate(&mut self, mutation: Mutation);
 
+    fn event(&mut self, event: &Event, actions: &mut Vec<Action>);
+
     fn layout(&mut self) -> Size;
 
     fn paint(&mut self, ctx: &mut Piet, pos: Point);
@@ -33,6 +37,15 @@ pub struct Pod {
     id: Id,
     size: Size,
     element: Box<dyn Element>,
+}
+
+pub struct Action {
+    pub id: Id,
+    pub action: Box<dyn Any>,
+}
+
+pub enum Event {
+    MouseDown(Point),
 }
 
 impl Pod {
@@ -54,6 +67,8 @@ pub struct Button;
 
 impl Element for Button {
     fn mutate(&mut self, _mutation: Mutation) {}
+
+    fn event(&mut self, event: &Event, actions: &mut Vec<Action>) {}
 
     fn layout(&mut self) -> Size {
         Size::new(100., 20.)
@@ -99,6 +114,8 @@ impl Element for Column {
             }
         }
     }
+
+    fn event(&mut self, event: &Event, actions: &mut Vec<Action>) {}
 
     fn layout(&mut self) -> Size {
         let mut size = Size::default();

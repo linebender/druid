@@ -17,16 +17,24 @@
 use druid_shell::kurbo::{Line, Point};
 use druid_shell::piet::{Color, RenderContext};
 
-use crate::element::{Button, Element};
+use crate::element::{Action, Button, Element};
+use crate::tree::Mutation;
 
-#[derive(Default)]
 pub struct Window {
+    app_logic: Box<dyn FnMut(Vec<Action>) -> Mutation>,
     button: Button,
 }
 
 const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 impl Window {
+    pub fn new(app_logic: Box<dyn FnMut(Vec<Action>) -> Mutation>) -> Window {
+        Window {
+            app_logic,
+            button: Default::default(),
+        }
+    }
+
     pub fn paint(&mut self, piet: &mut druid_shell::piet::Piet) {
         piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
         self.button.layout();
