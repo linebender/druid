@@ -20,10 +20,10 @@ mod invalidation_tests;
 mod layout_tests;
 
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::rc::Rc;
-use std::collections::HashMap;
 
 use crate::widget::*;
 use crate::*;
@@ -355,30 +355,27 @@ fn focus_changed() {
 fn simple_disable() {
     const CHANGE_DISABLED: Selector<bool> = Selector::new("druid-tests.change-disabled");
 
-    let test_widget_factory = |auto_focus: bool, id: WidgetId, state: Rc<Cell<Option<bool>>>|{
-        let mut widget = ModularWidget::new(state)
-            .lifecycle_fn(move |state, ctx, event, _, _|{
-                match event {
-                    LifeCycle::WidgetAdded => {
-                        if auto_focus {
-                            ctx.register_for_focus();
-                        }
-                    },
-                    LifeCycle::DisabledChanged(disabled) => {
-                        *state.get_mut() = Some(*disabled);
+    let test_widget_factory = |auto_focus: bool, id: WidgetId, state: Rc<Cell<Option<bool>>>| {
+        ModularWidget::new(state)
+            .lifecycle_fn(move |state, ctx, event, _, _| match event {
+                LifeCycle::WidgetAdded => {
+                    if auto_focus {
+                        ctx.register_for_focus();
                     }
-                    _ => {}
                 }
+                LifeCycle::DisabledChanged(disabled) => {
+                    state.set(Some(*disabled));
+                }
+                _ => {}
             })
-            .event_fn(|_, ctx, event, _, _|{
+            .event_fn(|_, ctx, event, _, _| {
                 if let Event::Command(cmd) = event {
                     if let Some(disabled) = cmd.get(CHANGE_DISABLED) {
                         ctx.set_disabled(*disabled);
                     }
                 }
             })
-            .with_id(id);
-        widget
+            .with_id(id)
     };
 
     let disabled_0: Rc<Cell<Option<bool>>> = Default::default();
@@ -433,26 +430,22 @@ fn simple_disable() {
 
 #[test]
 fn disable_tree() {
-    const MULTI_CHANGE_DISABLED: Selector<HashMap<WidgetId, bool>> = Selector::new("druid-tests.multi-change-disabled");
+    const MULTI_CHANGE_DISABLED: Selector<HashMap<WidgetId, bool>> =
+        Selector::new("druid-tests.multi-change-disabled");
 
-    let leaf_factory = |state: Rc<Cell<Option<bool>>>|{
-        ModularWidget::new(state)
-            .lifecycle_fn(move |state, ctx, event, _, _|{
-                match event {
-                    LifeCycle::WidgetAdded => {
-                        if auto_focus {
-                            ctx.register_for_focus();
-                        }
-                    },
-                    LifeCycle::DisabledChanged(disabled) => {
-                        *state.get_mut() = Some(*disabled);
-                    }
-                    _ => {}
-                }
-            })
+    let leaf_factory = |state: Rc<Cell<Option<bool>>>| {
+        ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| match event {
+            LifeCycle::WidgetAdded => {
+                ctx.register_for_focus();
+            }
+            LifeCycle::DisabledChanged(disabled) => {
+                state.set(Some(*disabled));
+            }
+            _ => {}
+        })
     };
 
-    let wrapper = |id: WidgetId, widget: Box<dyn Widget<()>>|{
+    let wrapper = |id: WidgetId, widget: Box<dyn Widget<()>>| {
         ModularWidget::new(WidgetPod::new(widget))
             .lifecycle_fn(|inner, ctx, event, data, env| {
                 inner.lifecycle(ctx, event, data, env);
@@ -460,7 +453,7 @@ fn disable_tree() {
             .event_fn(|inner, ctx, event, data, env| {
                 if let Event::Command(cmd) = event {
                     if let Some(map) = cmd.get(MULTI_CHANGE_DISABLED) {
-                        if let Some(disabled) = map.get(ctx.widget_id()) {
+                        if let Some(disabled) = map.get(&ctx.widget_id()) {
                             ctx.set_disabled(*disabled);
                         }
                     }
@@ -472,7 +465,7 @@ fn disable_tree() {
     };
 
     fn multi_update(states: &[(WidgetId, bool)]) -> Command {
-        let payload = states.iter().collect::<HashMap<_, _>>();
+        let payload = states.iter().cloned().collect::<HashMap<_, _>>();
         Command::new(MULTI_CHANGE_DISABLED, payload, Target::Global)
     }
 
@@ -520,41 +513,97 @@ fn disable_tree() {
         assert_eq!(harness.window().focus_chain().len(), 6);
 
         harness.submit_command(multi_update(&[(root_id, true)]));
-        check_states([Some(true), Some(true), Some(true), Some(true), Some(true), Some(true)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 0);
 
         harness.submit_command(multi_update(&[(inner_id, true)]));
-        check_states([Some(true), Some(true), Some(true), Some(true), Some(true), Some(true)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 0);
 
         // Node 0 should not be affected
         harness.submit_command(multi_update(&[(root_id, false)]));
-        check_states([Some(true), Some(true), Some(false), Some(false), Some(false), Some(false)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(false),
+            Some(false),
+            Some(false),
+            Some(false),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 4);
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, false), (outer_id, true)]));
-        check_states([Some(true), Some(true), Some(false), Some(false), Some(false), Some(false)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(false),
+            Some(false),
+            Some(false),
+            Some(false),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 4);
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, true), (outer_id, false)]));
-        check_states([Some(true), Some(true), Some(false), Some(false), Some(false), Some(false)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(false),
+            Some(false),
+            Some(false),
+            Some(false),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 4);
 
         // Changing two widgets on the same level
         harness.submit_command(multi_update(&[(single_id, true), (inner_id, false)]));
-        check_states([Some(false), Some(false), Some(true), Some(false), Some(false), Some(false)]);
+        check_states([
+            Some(false),
+            Some(false),
+            Some(true),
+            Some(false),
+            Some(false),
+            Some(false),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 5);
 
         // Disabling the root should disable all widgets
         harness.submit_command(multi_update(&[(root_id, true)]));
-        check_states([Some(true), Some(true), Some(true), Some(true), Some(true), Some(true)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 0);
 
         // Enabling a widget in a disabled tree should not affect the enclosed widgets
         harness.submit_command(multi_update(&[(single_id, false)]));
-        check_states([Some(true), Some(true), Some(true), Some(true), Some(true), Some(true)]);
+        check_states([
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+            Some(true),
+        ]);
         assert_eq!(harness.window().focus_chain().len(), 0);
     })
 }
