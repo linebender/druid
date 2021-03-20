@@ -254,6 +254,13 @@ pub enum LifeCycle {
     /// [`Size`]: struct.Size.html
     /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
     Size(Size),
+    /// Called when the Disabled state of the widgets is changed.
+    ///
+    /// [`is_disabled`](struct.EventCtx.html#method.is_disabled) returns if the widget is disabled.
+    ///
+    /// [`set_disabled`](struct.EventCtx.html#method.set_disabled) to change the widgets disabled
+    /// state.
+    DisabledChanged(bool),
     /// Called when the "hot" status changes.
     ///
     /// This will always be called _before_ the event that triggered it; that is,
@@ -299,6 +306,8 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
+    /// Used to route the `DisabledChanged` event to the required widgets.
+    RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,
     /// Testing only: request the `WidgetState` of a specific widget.
@@ -395,7 +404,7 @@ impl LifeCycle {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             LifeCycle::Internal(internal) => internal.should_propagate_to_hidden(),
-            LifeCycle::WidgetAdded => true,
+            LifeCycle::WidgetAdded | LifeCycle::DisabledChanged(_) => true,
             LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
         }
     }
@@ -406,7 +415,8 @@ impl InternalLifeCycle {
     /// (for example the hidden tabs in a tabs widget).
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            InternalLifeCycle::RouteWidgetAdded | InternalLifeCycle::RouteFocusChanged { .. } => {
+            InternalLifeCycle::RouteWidgetAdded | InternalLifeCycle::RouteFocusChanged { .. } |
+            InternalLifeCycle::RouteDisabledChanged => {
                 true
             }
             InternalLifeCycle::ParentWindowOrigin => false,

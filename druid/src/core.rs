@@ -104,6 +104,20 @@ pub(crate) struct WidgetState {
     pub(crate) viewport_offset: Vec2,
 
     // TODO: consider using bitflags for the booleans.
+    // Any child of this widget changed the disabled state and should either receive
+    // LifeCycle::DisabledChanged or InternalLifeCycle::RouteDisabledChanged
+    pub(crate) children_disabled_changed: bool,
+
+    // Any of our ancestors are disabled. Therefore we are also disabled.
+    pub(crate) ancestor_disabled: bool,
+
+    // explicitly disabled through the usage of EventCtx::set_disabled(true) on this widget.
+    pub(crate) is_explicitly_disabled: bool,
+
+    // A buffer for the value of EventCtx::set_disabled() before this widget receives
+    // LifeCycle::DisabledChanged or InternalLifeCycle::RouteDisabledChanged
+    pub(crate) is_explicitly_disabled_new: bool,
+
     pub(crate) is_hot: bool,
 
     pub(crate) is_active: bool,
@@ -818,6 +832,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
         // Doing this conditionally only makes sense when there's a measurable performance boost.
         ctx.widget_state.merge_up(&mut self.state);
+
+        ctx.widget_state.children_disabled_changed |= (self.state.is_explicitly_disabled_new
+            != self.state.is_explicitly_disabled);
     }
 
     /// Send notifications originating from this widget's children to this
@@ -938,6 +955,30 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     f.call(&self.state);
                     true
                 }
+                InternalLifeCycle::RouteDisabledChanged => {
+                    //If our children changed update the focus-chain
+                    if self.state.children_disabled_changed {
+                        self.state.focus_chain.clear();
+                    }
+
+                    let was_disabled = self.state.is_disabled();
+
+                    self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
+
+                    if self.state.is_disabled() && self.state.has_focus {
+                        // This may gets overwritten. This is ok because it still ensures that a
+                        // FocusChange is routed after we updated the focus-chain.
+                        self.state.request_focus = Some(FocusChange::Resign);
+                    }
+
+                    if was_disabled != self.state.is_disabled() {
+                        extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
+                        //Each widget needs only one of DisabledChanged and RouteDisabledChanged
+                        false
+                    } else {
+                        self.state.children_disabled_changed
+                    }
+                }
             },
             LifeCycle::WidgetAdded => {
                 assert!(self.old_data.is_none());
@@ -960,6 +1001,33 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // This event was meant only for our parent, so don't recurse.
                 false
             }
+            LifeCycle::DisabledChanged(ancestors_disabled) => {
+                //If our children changed update the focus-chain
+                if self.state.children_disabled_changed {
+                    self.state.focus_chain.clear();
+                }
+
+                let was_disabled = self.state.is_disabled();
+
+                self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
+                self.state.ancestor_disabled = *ancestors_disabled;
+
+                if was_disabled != self.state.is_disabled() {
+                    extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
+                } else if self.state.children_disabled_changed {
+                    extra_event = Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+                }
+
+                if self.state.is_disabled() && self.state.has_focus {
+                    // This may gets overwritten. This is ok because it still ensures that a
+                    // FocusChange is routed after we updated the focus-chain.
+                    self.state.request_focus = Some(FocusChange::Resign);
+                }
+
+                //It is easier to always use the extra event since we can disable our self's while
+                //our parent was enabled and vice versa.
+                false
+            },
             //NOTE: this is not sent here, but from the special set_hot_state method
             LifeCycle::HotChanged(_) => false,
             LifeCycle::FocusChanged(_) => {
@@ -980,6 +1048,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         if let Some(event) = extra_event.as_ref() {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
+        }
+
+        if let LifeCycle::DisabledChanged(_) | LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged) = event {
+            self.state.children_disabled_changed = false;
+            ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
+
+            //Delete changes of disabled state that happened during DisabledChanged
+            self.state.is_explicitly_disabled_new = self.state.is_explicitly_disabled;
+
+        } else if self.state.is_explicitly_disabled != self.state.is_explicitly_disabled_new {
+            ctx.widget_state.children_disabled_changed = true;
+
         }
 
         ctx.widget_state.merge_up(&mut self.state);
@@ -1055,6 +1135,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
+>
+        ctx.widget_state.children_disabled_changed |= (self.state.is_explicitly_disabled_new
+            != self.state.is_explicitly_disabled);
     }
 }
 
@@ -1091,6 +1174,9 @@ impl WidgetState {
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
             viewport_offset: Vec2::ZERO,
+            children_disabled_changed: false,
+            ancestor_disabled: false,
+            is_explicitly_disabled: false,
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
@@ -1107,7 +1193,12 @@ impl WidgetState {
             cursor_change: CursorChange::Default,
             cursor: None,
             sub_window_hosts: Vec::new(),
+            is_explicitly_disabled_new: false
         }
+    }
+
+    pub(crate) fn is_disabled(&self) -> bool {
+        self.is_explicitly_disabled || self.ancestor_disabled
     }
 
     pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
@@ -1139,6 +1230,7 @@ impl WidgetState {
 
         self.needs_layout |= child_state.needs_layout;
         self.request_anim |= child_state.request_anim;
+        self.children_disabled_changed |= child_state.children_disabled_changed;
         self.has_active |= child_state.has_active;
         self.has_focus |= child_state.has_focus;
         self.children_changed |= child_state.children_changed;

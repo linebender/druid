@@ -271,6 +271,23 @@ impl_context_method!(
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus
         }
+
+        /// The disabled state of a widget.
+        ///
+        /// Returns `true` if this widget or any of its ancestors is explicitly disabled.
+        /// To make this widget explicitly disabled use [`set_disabled`].
+        ///
+        /// Disabled means that this widget should not change the state of the application. What
+        /// that means is not entirely clear but in any it should not change its data. Therefore
+        /// others can use this as a safety mechanism to prevent the application from entering an
+        /// illegal state.
+        /// For an example the decrease button of a counter of type `usize` should be disabled if the
+        /// value is `0`.
+        ///
+        /// [`set_disabled`]: EventCtx::set_disabled
+        pub fn is_disabled(&self) -> bool {
+            self.widget_state.is_disabled()
+        }
     }
 );
 
@@ -362,6 +379,19 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     pub fn children_changed(&mut self) {
         self.widget_state.children_changed = true;
         self.request_layout();
+    }
+
+    /// Sets the explicitly disabled state of this widget.
+    /// The widget may still be disabled if `set_disabled(false)` was called. See [`is_disabled`]
+    ///
+    /// Calling this method during [`LifeCycle::DisabledChanged`] has no effect.
+    ///
+    /// [`LifeCycle::DisabledChanged`]: struct.LifeCycle.html#variant.DisabledChanged
+    /// [`is_disabled`]: EventCtx::is_disabled
+    pub fn set_disabled(&mut self, disabled: bool) {
+        // widget_state.children_disabled_changed is not set because we want to be able to delete
+        // changes that happened during DisabledChanged.
+        self.widget_state.is_explicitly_disabled_new = disabled;
     }
 
     /// Set the menu of the window containing the current widget.
