@@ -912,6 +912,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         if self.state.children_changed {
                             self.state.children.clear();
                             self.state.focus_chain.clear();
+                            if self.state.auto_focus {
+                                self.state.focus_chain.push(self.state.id);
+                            }
                         }
                         self.state.children_changed
                     }
@@ -975,11 +978,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         // In case we change but none of our children we still need to update the
                         // focus-chain
                         self.state.focus_chain.clear();
+                        if self.state.auto_focus {
+                            self.state.focus_chain.push(self.state.id);
+                        }
                         extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                         //Each widget needs only one of DisabledChanged and RouteDisabledChanged
                         false
                     } else if self.state.children_disabled_changed {
                         self.state.focus_chain.clear();
+                        if self.state.auto_focus {
+                            self.state.focus_chain.push(self.state.id);
+                        }
                         true
                     } else {
                         false
@@ -1017,10 +1026,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     // In case we change but none of our children we still need to update the
                     // focus-chain
                     self.state.focus_chain.clear();
+                    if self.state.auto_focus {
+                        self.state.focus_chain.push(self.state.id);
+                    }
                     extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
-
                 } else if self.state.children_disabled_changed {
                     self.state.focus_chain.clear();
+                    if self.state.auto_focus {
+                        self.state.focus_chain.push(self.state.id);
+                    }
                     extra_event =
                         Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
                 }
@@ -1062,9 +1076,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         {
             self.state.children_disabled_changed = false;
             if !self.state.is_disabled() {
-                if self.state.auto_focus {
-                    self.state.focus_chain.push(self.state.id);
-                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
             }
 
@@ -1077,13 +1088,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         ctx.widget_state.merge_up(&mut self.state);
 
         // we need to (re)register children in case of one of the following events
+        if let LifeCycle::WidgetAdded = event {
+            // If this widget is not already present, autofocus is not set before the event,
+            // since we call register_for_focus in widget added.
+            if self.state.auto_focus {
+                self.state.focus_chain.push(self.state.id);
+            }
+        }
+
         match event {
             LifeCycle::WidgetAdded | LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded) => {
                 self.state.children_changed = false;
                 ctx.widget_state.children = ctx.widget_state.children.union(self.state.children);
-                if self.state.auto_focus {
-                    self.state.focus_chain.push(self.state.id);
-                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
                 ctx.register_child(self.id());
             }
@@ -1218,7 +1234,8 @@ impl WidgetState {
     }
 
     pub(crate) fn tree_disabled_changed(&self) -> bool {
-        self.children_disabled_changed || self.is_explicitly_disabled != self.is_explicitly_disabled_new
+        self.children_disabled_changed
+            || self.is_explicitly_disabled != self.is_explicitly_disabled_new
     }
 
     pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
