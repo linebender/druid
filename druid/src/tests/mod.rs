@@ -20,9 +20,12 @@ mod invalidation_tests;
 mod layout_tests;
 
 use std::cell::Cell;
-//use std::collections::HashMap;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::rc::Rc;
 
 use crate::widget::*;
@@ -416,46 +419,59 @@ fn simple_disable() {
 
     Harness::create_simple((), root, |harness| {
         harness.send_initial_events();
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states("send_initial_events", [None, None, None, None]);
-        assert_eq!(harness.window().focus_chain().len(), 4);
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2, id_3]);
         harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states("Change 1", [Some(true), None, None, None]);
-        assert_eq!(harness.window().focus_chain().len(), 3);
+        assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3]);
         harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states("Change 2", [Some(true), None, Some(true), None]);
-        assert_eq!(harness.window().focus_chain().len(), 2);
+        assert_eq!(harness.window().focus_chain(), &[id_1, id_3]);
         harness.submit_command(Command::new(CHANGE_DISABLED, true, id_3));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states("Change 3", [Some(true), None, Some(true), Some(true)]);
-        assert_eq!(harness.window().focus_chain().len(), 1);
+        assert_eq!(harness.window().focus_chain(), &[id_1]);
         harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states("Change 4", [Some(true), None, Some(false), Some(true)]);
-        assert_eq!(harness.window().focus_chain().len(), 2);
-        //This is intended the widget should not receive an event!
+        assert_eq!(harness.window().focus_chain(), &[id_1, id_2]);
         harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
-        check_states("Change 5", [Some(true), None, Some(false), Some(true)]);
-        assert_eq!(harness.window().focus_chain().len(), 2);
+        check_states("Change 5", [Some(true), None, Some(true), Some(true)]);
+        assert_eq!(harness.window().focus_chain(), &[id_1]);
         //This is intended the widget should not receive an event!
         harness.submit_command(Command::new(CHANGE_DISABLED, false, id_1));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
-        check_states("Change 6", [Some(true), None, Some(false), Some(true)]);
-        assert_eq!(harness.window().focus_chain().len(), 2);
+        check_states("Change 6", [Some(true), None, Some(true), Some(true)]);
+        assert_eq!(harness.window().focus_chain(), &[id_1]);
     })
 }
 
-/*#[test]
+#[test]
 fn disable_tree() {
     const MULTI_CHANGE_DISABLED: Selector<HashMap<WidgetId, bool>> =
         Selector::new("druid-tests.multi-change-disabled");
 
+    fn write_direct(text: &str) {
+        static mut FILE: Option<File> = None;
+
+        #[allow(unsafe_code)]
+        unsafe {
+            if FILE.is_none() {
+                FILE = Some(
+                    OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open("./test_log")
+                        .unwrap(),
+                );
+            }
+            let file = FILE.as_mut().unwrap();
+            file.write_all(text.as_bytes()).unwrap();
+            file.write_all("\n".as_bytes()).unwrap();
+            file.flush().unwrap();
+        }
+    }
+
     let leaf_factory = |state: Rc<Cell<Option<bool>>>| {
         ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| {
-            println!("lc leaf!");
+            write_direct("lc leaf!");
             match event {
                 LifeCycle::WidgetAdded => {
                     ctx.register_for_focus();
@@ -471,20 +487,21 @@ fn disable_tree() {
     let wrapper = |id: WidgetId, widget: Box<dyn Widget<()>>| {
         ModularWidget::new(WidgetPod::new(widget))
             .lifecycle_fn(|inner, ctx, event, data, env| {
-                println!("lc!");
+                write_direct("lc");
                 inner.lifecycle(ctx, event, data, env);
+                write_direct("lc finished");
             })
             .event_fn(|inner, ctx, event, data, env| {
-                println!("ev!");
+                write_direct("ev");
                 if let Event::Command(cmd) = event {
                     if let Some(map) = cmd.get(MULTI_CHANGE_DISABLED) {
                         if let Some(disabled) = map.get(&ctx.widget_id()) {
+                            write_direct("change state");
                             ctx.set_disabled(*disabled);
                         }
                     }
-                } else {
-                    inner.event(ctx, event, data, env);
                 }
+                inner.event(ctx, event, data, env);
             })
             .with_id(id)
     };
@@ -509,21 +526,19 @@ fn disable_tree() {
             || desired[4] != disabled_4.get()
             || desired[5] != disabled_5.get()
         {
-            panic!(
-                format!(
-                    "test \"{}\":\nexpected: {:?}\n got:      {:?}",
-                    name,
-                    desired,
-                    [
-                        disabled_0.get(),
-                        disabled_1.get(),
-                        disabled_2.get(),
-                        disabled_3.get(),
-                        disabled_4.get(),
-                        disabled_5.get()
-                    ]
-                )
-            );
+            panic!(format!(
+                "test \"{}\":\nexpected: {:?}\n got:      {:?}",
+                name,
+                desired,
+                [
+                    disabled_0.get(),
+                    disabled_1.get(),
+                    disabled_2.get(),
+                    disabled_3.get(),
+                    disabled_4.get(),
+                    disabled_5.get()
+                ]
+            ));
         }
     };
 
@@ -549,14 +564,17 @@ fn disable_tree() {
 
     let root = wrapper(root_id, node2);
 
+    write_direct("\n\n================= TEST DISABLE =====================\n");
+
     Harness::create_simple((), root, |harness| {
         harness.send_initial_events();
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        write_direct("run lifecycle");
         check_states("Send initial events", [None, None, None, None, None, None]);
         assert_eq!(harness.window().focus_chain().len(), 6);
 
         harness.submit_command(multi_update(&[(root_id, true)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        write_direct("run lifecycle");
+        write_direct("test1");
         check_states(
             "disable root (0)",
             [
@@ -568,10 +586,12 @@ fn disable_tree() {
                 Some(true),
             ],
         );
+        write_direct("test2");
         assert_eq!(harness.window().focus_chain().len(), 0);
-
+        write_direct("test3");
         harness.submit_command(multi_update(&[(inner_id, true)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+
+        write_direct("run lifecycle");
         check_states(
             "disable inner (1)",
             [
@@ -587,7 +607,6 @@ fn disable_tree() {
 
         // Node 0 should not be affected
         harness.submit_command(multi_update(&[(root_id, false)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "enable root (2)",
             [
@@ -603,7 +622,7 @@ fn disable_tree() {
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, false), (outer_id, true)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change inner outer (3)",
             [
@@ -619,7 +638,7 @@ fn disable_tree() {
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, true), (outer_id, false)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change inner outer (4)",
             [
@@ -635,7 +654,7 @@ fn disable_tree() {
 
         // Changing two widgets on the same level
         harness.submit_command(multi_update(&[(single_id, true), (inner_id, false)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change horizontal (5)",
             [
@@ -651,7 +670,7 @@ fn disable_tree() {
 
         // Disabling the root should disable all widgets
         harness.submit_command(multi_update(&[(root_id, true)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "disable root (6)",
             [
@@ -667,7 +686,7 @@ fn disable_tree() {
 
         // Enabling a widget in a disabled tree should not affect the enclosed widgets
         harness.submit_command(multi_update(&[(single_id, false)]));
-        harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
+        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "enable single (7)",
             [
@@ -681,7 +700,7 @@ fn disable_tree() {
         );
         assert_eq!(harness.window().focus_chain().len(), 0);
     })
-}*/
+}
 
 #[test]
 fn simple_lifecyle() {
