@@ -157,7 +157,7 @@ impl<T: Data> Window<T> {
 
         // Update the disabled state if necessary
         // Always do this before sending focus change, since this event updates the focus chain.
-        if self.root.state().is_disabled() {
+        if self.root.state().tree_disabled_changed() {
             let event = LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged);
             self.lifecycle(queue, &event, data, env, false);
         }
