@@ -697,7 +697,7 @@ impl LifeCycleCtx<'_, '_> {
     /// [`LifeCycle::WidgetAdded`]: enum.Lifecycle.html#variant.WidgetAdded
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn register_for_focus(&mut self) {
-        self.widget_state.focus_chain.push(self.widget_id());
+        self.widget_state.auto_focus = true;
     }
 }
 
