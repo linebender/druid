@@ -23,9 +23,6 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::rc::Rc;
 
 use crate::widget::*;
@@ -444,21 +441,93 @@ fn simple_disable() {
 }
 
 #[test]
+fn resign_focus_on_disable() {
+    const CHANGE_DISABLED: Selector<bool> = Selector::new("druid-tests.change-disabled-disable");
+    const REQUEST_FOCUS: Selector<()> = Selector::new("druid-tests.change-disabled-focus");
+
+    let test_widget_factory = |auto_focus: bool, id: WidgetId, inner: Option<Box<dyn Widget<()>>>| {
+        ModularWidget::new(inner.map(|widget|WidgetPod::new(widget)))
+            .lifecycle_fn(move |state, ctx, event, data, env| {
+                match event {
+                    LifeCycle::WidgetAdded => {
+                        if auto_focus {
+                            ctx.register_for_focus();
+                        }
+                    }
+                    _ => {}
+                }
+                if let Some(inner) = state {
+                    inner.lifecycle(ctx, event, data, env);
+                }
+            })
+            .event_fn(|state, ctx, event, data, env| {
+                if let Event::Command(cmd) = event {
+                    if let Some(disabled) = cmd.get(CHANGE_DISABLED) {
+                        ctx.set_disabled(*disabled);
+                        return;
+                    }
+                    if cmd.is(REQUEST_FOCUS) {
+                        ctx.request_focus();
+                        return;
+                    }
+                }
+                if let Some(inner) = state {
+                    inner.event(ctx, event, data, env);
+                }
+            })
+            .with_id(id)
+    };
+
+    let id_0 = WidgetId::next();
+    let id_1 = WidgetId::next();
+    let id_2 = WidgetId::next();
+
+    let root = Flex::row()
+        .with_child(test_widget_factory(true, id_0, Some(test_widget_factory(true, id_1, None).boxed())))
+        .with_child(test_widget_factory(true, id_2, None));
+
+    Harness::create_simple((), root, |harness| {
+        harness.send_initial_events();
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
+        assert_eq!(harness.window().focus, None);
+        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_2));
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
+        assert_eq!(harness.window().focus, Some(id_2));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        assert_eq!(harness.window().focus_chain(), &[id_2]);
+        assert_eq!(harness.window().focus, Some(id_2));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        assert_eq!(harness.window().focus_chain(), &[]);
+        assert_eq!(harness.window().focus, None);
+        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_0));
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
+        assert_eq!(harness.window().focus, None);
+        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_1));
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
+        assert_eq!(harness.window().focus, Some(id_1));
+        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
+        assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
+        assert_eq!(harness.window().focus, Some(id_1));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        assert_eq!(harness.window().focus_chain(), &[id_2]);
+        assert_eq!(harness.window().focus, None);
+    })
+}
+
+#[test]
 fn disable_tree() {
     const MULTI_CHANGE_DISABLED: Selector<HashMap<WidgetId, bool>> =
         Selector::new("druid-tests.multi-change-disabled");
 
     let leaf_factory = |state: Rc<Cell<Option<bool>>>| {
-        ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| {
-            match event {
-                LifeCycle::WidgetAdded => {
-                    ctx.register_for_focus();
-                }
-                LifeCycle::DisabledChanged(disabled) => {
-                    state.set(Some(*disabled));
-                }
-                _ => {}
+        ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| match event {
+            LifeCycle::WidgetAdded => {
+                ctx.register_for_focus();
             }
+            LifeCycle::DisabledChanged(disabled) => {
+                state.set(Some(*disabled));
+            }
+            _ => {}
         })
     };
 
@@ -471,8 +540,8 @@ fn disable_tree() {
                 if let Event::Command(cmd) = event {
                     if let Some(map) = cmd.get(MULTI_CHANGE_DISABLED) {
                         if let Some(disabled) = map.get(&ctx.widget_id()) {
-                            write_direct("change state");
                             ctx.set_disabled(*disabled);
+                            return;
                         }
                     }
                 }
@@ -539,17 +608,12 @@ fn disable_tree() {
 
     let root = wrapper(root_id, node2);
 
-    write_direct("\n\n================= TEST DISABLE =====================\n");
-
     Harness::create_simple((), root, |harness| {
         harness.send_initial_events();
-        write_direct("run lifecycle");
         check_states("Send initial events", [None, None, None, None, None, None]);
         assert_eq!(harness.window().focus_chain().len(), 6);
 
         harness.submit_command(multi_update(&[(root_id, true)]));
-        write_direct("run lifecycle");
-        write_direct("test1");
         check_states(
             "disable root (0)",
             [
@@ -561,12 +625,9 @@ fn disable_tree() {
                 Some(true),
             ],
         );
-        write_direct("test2");
         assert_eq!(harness.window().focus_chain().len(), 0);
-        write_direct("test3");
         harness.submit_command(multi_update(&[(inner_id, true)]));
 
-        write_direct("run lifecycle");
         check_states(
             "disable inner (1)",
             [
