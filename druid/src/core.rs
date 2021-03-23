@@ -1076,8 +1076,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if let LifeCycle::WidgetAdded = event {
             // If this widget is not already present, autofocus is not set before the event,
             // since we call register_for_focus in widget added.
+            // To be consistent with RouteWidgetAdded DisabledChanged and Route DisabledChange we
+            // insert our id at the first position.
             if self.state.auto_focus {
-                self.state.focus_chain.push(self.state.id);
+                self.state.focus_chain.insert(0, self.state.id);
             }
         }
 
