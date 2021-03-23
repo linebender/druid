@@ -95,7 +95,7 @@ pub fn main() -> Result<(), PlatformError> {
     let main_window = WindowDesc::new(build_app())
         .title(LocalizedString::new("panels-demo-window-title").with_placeholder("Fancy Boxes!"));
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(())?;
 
     Ok(())

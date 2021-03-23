@@ -15,8 +15,9 @@
 //! A type for laying out, drawing, and interacting with text.
 
 use std::ops::Range;
+use std::rc::Rc;
 
-use super::TextStorage;
+use super::{Link, TextStorage};
 use crate::kurbo::{Line, Point, Rect, Size};
 use crate::piet::{
     Color, PietText, PietTextLayout, Text as _, TextAlignment, TextAttribute, TextLayout as _,
@@ -55,6 +56,8 @@ pub struct TextLayout<T> {
     layout: Option<PietTextLayout>,
     wrap_width: f64,
     alignment: TextAlignment,
+    links: Rc<[(Rect, usize)]>,
+    text_is_rtl: bool,
 }
 
 /// Metrics describing the layout text.
@@ -64,6 +67,8 @@ pub struct LayoutMetrics {
     pub size: Size,
     /// The distance from the nominal top of the layout to the first baseline.
     pub first_baseline: f64,
+    /// The width of the layout, inclusive of trailing whitespace.
+    pub trailing_whitespace_width: f64,
     //TODO: add inking_rect
 }
 
@@ -82,16 +87,8 @@ impl<T> TextLayout<T> {
             layout: None,
             wrap_width: f64::INFINITY,
             alignment: Default::default(),
-        }
-    }
-
-    /// Create a new `TextLayout` with the provided text.
-    ///
-    /// This is useful when the text is not died to application data.
-    pub fn from_text(text: impl Into<T>) -> Self {
-        TextLayout {
-            text: Some(text.into()),
-            ..TextLayout::new()
+            links: Rc::new([]),
+            text_is_rtl: false,
         }
     }
 
@@ -157,9 +154,27 @@ impl<T> TextLayout<T> {
             self.layout = None;
         }
     }
+
+    /// Returns `true` if this layout's text appears to be right-to-left.
+    ///
+    /// See [`piet::util::first_strong_rtl`] for more information.
+    ///
+    /// [`piet::util::first_strong_rtl`]: crate::piet::util::first_strong_rtl
+    pub fn text_is_rtl(&self) -> bool {
+        self.text_is_rtl
+    }
 }
 
 impl<T: TextStorage> TextLayout<T> {
+    /// Create a new `TextLayout` with the provided text.
+    ///
+    /// This is useful when the text is not tied to application data.
+    pub fn from_text(text: impl Into<T>) -> Self {
+        let mut this = TextLayout::new();
+        this.set_text(text.into());
+        this
+    }
+
     /// Returns `true` if this layout needs to be rebuilt.
     ///
     /// This happens (for instance) after style attributes are modified.
@@ -172,7 +187,8 @@ impl<T: TextStorage> TextLayout<T> {
 
     /// Set the text to display.
     pub fn set_text(&mut self, text: T) {
-        if self.text.is_none() || self.text.as_ref().unwrap().as_str() != text.as_str() {
+        if self.text.is_none() || !self.text.as_ref().unwrap().same(&text) {
+            self.text_is_rtl = crate::piet::util::first_strong_rtl(text.as_str());
             self.text = Some(text);
             self.layout = None;
         }
@@ -223,6 +239,7 @@ impl<T: TextStorage> TextLayout<T> {
             LayoutMetrics {
                 size,
                 first_baseline,
+                trailing_whitespace_width: layout.trailing_whitespace_width(),
             }
         } else {
             LayoutMetrics::default()
@@ -265,6 +282,26 @@ impl<T: TextStorage> TextLayout<T> {
             .unwrap_or_default()
     }
 
+    /// Return a line suitable for underlining a range of text.
+    ///
+    /// This is really only intended to be used to indicate the composition
+    /// range while IME is active.
+    ///
+    /// range is expected to be on a single visual line.
+    pub fn underline_for_range(&self, range: Range<usize>) -> Line {
+        self.layout
+            .as_ref()
+            .map(|layout| {
+                let p1 = layout.hit_test_text_position(range.start);
+                let p2 = layout.hit_test_text_position(range.end);
+                let line_metric = layout.line_metric(p1.line).unwrap();
+                // heuristic; 1/5 of height is a rough guess at the descender pos?
+                let y_pos = line_metric.baseline + (line_metric.height / 5.0);
+                Line::new((p1.point.x, y_pos), (p2.point.x, y_pos))
+            })
+            .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
+    }
+
     /// Given the utf-8 position of a character boundary in the underlying text,
     /// return a `Line` suitable for drawing a vertical cursor at that boundary.
     pub fn cursor_line_for_text_position(&self, text_pos: usize) -> Line {
@@ -278,6 +315,23 @@ impl<T: TextStorage> TextLayout<T> {
                 Line::new(p1, p2)
             })
             .unwrap_or_else(|| Line::new(Point::ZERO, Point::ZERO))
+    }
+
+    /// Returns the [`Link`] at the provided point (relative to the layout's origin) if one exists.
+    ///
+    /// This can be used both for hit-testing (deciding whether to change the mouse cursor,
+    /// or performing some other action when hovering) as well as for retrieving a [`Link`]
+    /// on click.
+    ///
+    /// [`Link`]: super::attribute::Link
+    pub fn link_for_pos(&self, pos: Point) -> Option<&Link> {
+        let (_, i) = self
+            .links
+            .iter()
+            .rfind(|(hit_box, _)| hit_box.contains(pos))?;
+
+        let text = self.text()?;
+        text.links().get(*i)
     }
 
     /// Called during the containing widgets `update` method; this text object
@@ -335,6 +389,19 @@ impl<T: TextStorage> TextLayout<T> {
                     .default_attribute(descriptor.style)
                     .default_attribute(TextAttribute::TextColor(color));
                 let layout = text.add_attributes(builder, env).build().unwrap();
+
+                self.links = text
+                    .links()
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(i, link)| {
+                        layout
+                            .rects_for_range(link.range())
+                            .into_iter()
+                            .map(move |rect| (rect, i))
+                    })
+                    .collect();
+
                 self.layout = Some(layout);
             }
         }

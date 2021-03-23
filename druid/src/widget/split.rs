@@ -18,6 +18,7 @@ use crate::kurbo::Line;
 use crate::widget::flex::Axis;
 use crate::widget::prelude::*;
 use crate::{theme, Color, Cursor, Data, Point, Rect, WidgetPod};
+use tracing::{instrument, trace, warn};
 
 /// A container containing two other widgets, splitting the area either horizontally or vertically.
 pub struct Split<T> {
@@ -265,6 +266,7 @@ impl<T> Split<T> {
 }
 
 impl<T: Data> Widget<T> for Split<T> {
+    #[instrument(name = "Split", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if self.child1.is_active() {
             self.child1.event(ctx, event, data, env);
@@ -321,28 +323,31 @@ impl<T: Data> Widget<T> for Split<T> {
         }
     }
 
+    #[instrument(name = "Split", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child1.lifecycle(ctx, event, data, env);
         self.child2.lifecycle(ctx, event, data, env);
     }
 
+    #[instrument(name = "Split", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         self.child1.update(ctx, &data, env);
         self.child2.update(ctx, &data, env);
     }
 
+    #[instrument(name = "Split", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Split");
 
         match self.split_axis {
             Axis::Horizontal => {
                 if !bc.is_width_bounded() {
-                    tracing::warn!("A Split widget was given an unbounded width to split.")
+                    warn!("A Split widget was given an unbounded width to split.")
                 }
             }
             Axis::Vertical => {
                 if !bc.is_height_bounded() {
-                    tracing::warn!("A Split widget was given an unbounded height to split.")
+                    warn!("A Split widget was given an unbounded height to split.")
                 }
             }
         }
@@ -423,9 +428,11 @@ impl<T: Data> Widget<T> for Split<T> {
         let insets = paint_rect - my_size.to_rect();
         ctx.set_paint_insets(insets);
 
+        trace!("Computed layout: size={}, insets={:?}", my_size, insets);
         my_size
     }
 
+    #[instrument(name = "Split", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         if self.solid {
             self.paint_solid_bar(ctx, env);

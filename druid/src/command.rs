@@ -183,7 +183,7 @@ pub mod sys {
     use super::Selector;
     use crate::{
         sub_window::{SubWindowDesc, SubWindowUpdate},
-        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
+        FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig,
     };
 
     /// Quit the running application. This command is handled by the druid library.
@@ -224,7 +224,7 @@ pub mod sys {
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
-    pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
+    pub(crate) const SHOW_CONTEXT_MENU: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.show-context-menu");
 
     /// This is sent to the window handler to create a new sub window.
@@ -239,12 +239,6 @@ pub mod sys {
     /// if that processing changed the data value.
     pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.host_to_parent");
-
-    /// The selector for a command to set the window's menu. The payload should
-    /// be a [`MenuDesc`] object.
-    ///
-    /// [`MenuDesc`]: ../struct.MenuDesc.html
-    pub(crate) const SET_MENU: Selector<Box<dyn Any>> = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
@@ -324,6 +318,17 @@ pub mod sys {
 
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
+
+    /// Text input state has changed, and we need to notify the platform.
+    pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
+        Selector::new("druid-builtin.invalidate-ime");
+
+    /// A change that has occured to text state, and needs to be
+    /// communicated to the platform.
+    pub(crate) struct ImeInvalidation {
+        pub widget: WidgetId,
+        pub event: crate::shell::text::Event,
+    }
 }
 
 impl Selector<()> {

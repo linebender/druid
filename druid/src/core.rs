@@ -15,12 +15,14 @@
 //! The fundamental druid types.
 
 use std::collections::{HashMap, VecDeque};
+use tracing::{info_span, trace, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
+use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
@@ -156,6 +158,8 @@ pub(crate) struct WidgetState {
 
     // Port -> Host
     pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
+
+    pub(crate) text_registrations: Vec<TextFieldRegistration>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -245,7 +249,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`set_origin`]: WidgetPod::set_origin
     pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
         if layout_rect.size() != self.state.size {
-            tracing::warn!("set_layout_rect passed different size than returned by layout method");
+            warn!("set_layout_rect passed different size than returned by layout method");
         }
         self.set_origin(ctx, data, env, layout_rect.origin());
     }
@@ -401,7 +405,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 state,
                 widget_state: child_state,
             };
-            child.lifecycle(&mut child_ctx, &hot_changed_event, data, env);
+            // We add a span so that inner logs are marked as being in a lifecycle pass
+            info_span!("lifecycle")
+                .in_scope(|| child.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
             // if hot changes and we're showing widget ids, always repaint
             if env.get(Env::DEBUG_WIDGET_ID) {
                 child_ctx.request_paint();
@@ -577,6 +583,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 state: child_ctx.state,
             };
             let size_event = LifeCycle::Size(new_size);
+
+            // We add a span so that inner logs are marked as being in a lifecycle pass
+            let _span = info_span!("lifecycle");
+            let _span = _span.enter();
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
         }
 
@@ -590,11 +600,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     fn log_layout_issues(&self, size: Size) {
         if size.width.is_infinite() {
             let name = self.widget().type_name();
-            tracing::warn!("Widget `{}` has an infinite width.", name);
+            warn!("Widget `{}` has an infinite width.", name);
         }
         if size.height.is_infinite() {
             let name = self.widget().type_name();
-            tracing::warn!("Widget `{}` has an infinite height.", name);
+            warn!("Widget `{}` has an infinite height.", name);
         }
     }
 
@@ -634,7 +644,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         // log if we seem not to be laid out when we should be
         if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
-            tracing::warn!(
+            warn!(
                 "{:?} received an event ({:?}) without having been laid out. \
                 This likely indicates a missed call to set_layout_rect.",
                 ctx.widget_id(),
@@ -690,6 +700,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 InternalEvent::RouteTimer(token, widget_id) => {
                     if *widget_id == self.id() {
                         modified_event = Some(Event::Timer(*token));
+                        true
+                    } else {
+                        self.state.children.may_contain(widget_id)
+                    }
+                }
+                InternalEvent::RouteImeStateChange(widget_id) => {
+                    if *widget_id == self.id() {
+                        modified_event = Some(Event::ImeStateChange);
                         true
                     } else {
                         self.state.children.may_contain(widget_id)
@@ -796,6 +814,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
+            Event::ImeStateChange => true, // once delivered to the focus widget, recurse to the component?
             Event::Command(_) => true,
             Event::Notification(_) => false,
         };
@@ -832,6 +851,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             // we try to handle the notifications that occured below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
+        } else {
+            trace!("event wasn't propagated to {:?}", self.state.id);
         }
 
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
@@ -859,34 +880,32 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             notifications: parent_notifications,
             ..
         } = ctx;
-        let mut sentinal = VecDeque::new();
+        let self_id = self.id();
         let mut inner_ctx = EventCtx {
             state,
-            notifications: &mut sentinal,
+            notifications: parent_notifications,
             widget_state: &mut self.state,
             is_handled: false,
             is_root: false,
         };
 
-        for _ in 0..notifications.len() {
-            let notification = notifications.pop_front().unwrap();
-            let event = Event::Notification(notification);
-            self.inner.event(&mut inner_ctx, &event, data, env);
-            if inner_ctx.is_handled {
-                inner_ctx.is_handled = false;
-            } else if let Event::Notification(notification) = event {
-                // we will try again with the next parent
-                parent_notifications.push_back(notification);
+        for notification in notifications.drain(..) {
+            // skip notifications that were submitted by our child
+            if notification.source() != self_id {
+                let event = Event::Notification(notification);
+                self.inner.event(&mut inner_ctx, &event, data, env);
+                if inner_ctx.is_handled {
+                    inner_ctx.is_handled = false;
+                } else if let Event::Notification(notification) = event {
+                    // we will try again with the next parent
+                    inner_ctx.notifications.push_back(notification);
+                } else {
+                    // could be unchecked but we avoid unsafe in druid :shrug:
+                    unreachable!()
+                }
             } else {
-                unreachable!()
+                inner_ctx.notifications.push_back(notification);
             }
-        }
-
-        if !inner_ctx.notifications.is_empty() {
-            tracing::warn!(
-                "A Notification was submitted while handling another \
-            notification; the submitted notification will be ignored."
-            );
         }
     }
 
@@ -988,6 +1007,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             },
             LifeCycle::WidgetAdded => {
                 assert!(self.old_data.is_none());
+                trace!("Received LifeCycle::WidgetAdded");
 
                 self.old_data = Some(data.clone());
                 self.env = Some(env.clone());
@@ -1103,7 +1123,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         if !self.state.request_update {
             match (self.old_data.as_ref(), self.env.as_ref()) {
-                (Some(d), Some(e)) if d.same(data) && e.same(env) => return,
+                (Some(d), Some(e)) if d.same(data) && e.same(env) => {
+                    trace!("data and env are unchanged, returning early.");
+                    return;
+                }
                 (Some(_), None) => self.env = Some(env.clone()),
                 (None, _) => {
                     debug_panic!(
@@ -1213,6 +1236,7 @@ impl WidgetState {
             sub_window_hosts: Vec::new(),
             is_explicitly_disabled_new: false,
             auto_focus: false,
+            text_registrations: Vec::new(),
         }
     }
 
@@ -1242,6 +1266,11 @@ impl WidgetState {
     ///
     /// This method is idempotent and can be called multiple times.
     fn merge_up(&mut self, child_state: &mut WidgetState) {
+        trace!(
+            "merge_up self.id={:?} child.id={:?}",
+            self.id,
+            child_state.id
+        );
         let clip = self
             .layout_rect()
             .with_origin(Point::ORIGIN)
@@ -1268,6 +1297,8 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
+        self.text_registrations
+            .extend(child_state.text_registrations.drain(..));
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
@@ -1392,6 +1423,7 @@ mod tests {
         assert!(ctx.widget_state.children.may_contain(&ID_1));
         assert!(ctx.widget_state.children.may_contain(&ID_2));
         assert!(ctx.widget_state.children.may_contain(&ID_3));
-        assert_eq!(ctx.widget_state.children.entry_count(), 7);
+        // A textbox is composed of three components with distinct ids
+        assert_eq!(ctx.widget_state.children.entry_count(), 15);
     }
 }

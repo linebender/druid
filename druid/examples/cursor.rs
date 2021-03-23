@@ -120,7 +120,7 @@ pub fn main() {
         custom_desc,
     };
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

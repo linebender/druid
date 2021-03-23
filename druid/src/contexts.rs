@@ -18,17 +18,22 @@ use std::{
     any::{Any, TypeId},
     collections::VecDeque,
     ops::{Deref, DerefMut},
+    rc::Rc,
     time::Duration,
 };
+use tracing::{error, trace, warn};
 
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
+use crate::menu::ContextMenu;
 use crate::piet::{Piet, PietText, RenderContext};
+use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
+use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
-    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
+    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -81,8 +86,8 @@ pub struct EventCtx<'a, 'b> {
 /// [`register_child`]: #method.register_child
 /// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
 pub struct LifeCycleCtx<'a, 'b> {
-    pub(crate) widget_state: &'a mut WidgetState,
     pub(crate) state: &'a mut ContextState<'b>,
+    pub(crate) widget_state: &'a mut WidgetState,
 }
 
 /// A mutable context provided to data update methods of widgets.
@@ -304,6 +309,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`hot`]: EventCtx::is_hot
     /// [`active`]: EventCtx::is_active
     pub fn set_cursor(&mut self, cursor: &Cursor) {
+        trace!("set_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Set(cursor.clone());
     }
 
@@ -318,6 +324,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`hot`]: EventCtx::is_hot
     /// [`active`]: EventCtx::is_active
     pub fn override_cursor(&mut self, cursor: &Cursor) {
+        trace!("override_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Override(cursor.clone());
     }
 
@@ -328,6 +335,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// [`override_cursor`]: EventCtx::override_cursor
     /// [`set_cursor`]: EventCtx::set_cursor
     pub fn clear_cursor(&mut self) {
+        trace!("clear_cursor");
         self.widget_state.cursor_change = CursorChange::Default;
     }
 });
@@ -341,6 +349,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`request_paint_rect`]: #method.request_paint_rect
     /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
     pub fn request_paint(&mut self) {
+        trace!("request_paint");
         self.widget_state.invalid.set_rect(
             self.widget_state.paint_rect() - self.widget_state.layout_rect().origin().to_vec2(),
         );
@@ -351,6 +360,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// [`paint`]: trait.Widget.html#tymethod.paint
     pub fn request_paint_rect(&mut self, rect: Rect) {
+        trace!("request_paint_rect {}", rect);
         self.widget_state.invalid.add_rect(rect);
     }
 
@@ -365,11 +375,13 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// [`layout`]: trait.Widget.html#tymethod.layout
     pub fn request_layout(&mut self) {
+        trace!("request_layout");
         self.widget_state.needs_layout = true;
     }
 
     /// Request an animation frame.
     pub fn request_anim_frame(&mut self) {
+        trace!("request_anim_frame");
         self.widget_state.request_anim = true;
     }
 
@@ -377,6 +389,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// Widgets must call this method after adding a new child.
     pub fn children_changed(&mut self) {
+        trace!("children_changed");
         self.widget_state.children_changed = true;
         self.request_layout();
     }
@@ -393,13 +406,21 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         // changes that happened during DisabledChanged.
         self.widget_state.is_explicitly_disabled_new = disabled;
     }
-
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+  
+    /// Indicate that text input state has changed.
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        self.state.set_menu(menu);
+    /// A widget that accepts text input should call this anytime input state
+    /// (such as the text or the selection) changes as a result of a non text-input
+    /// event.
+    pub fn invalidate_text_input(&mut self, event: ImeInvalidation) {
+        let payload = commands::ImeInvalidation {
+            widget: self.widget_id(),
+            event,
+        };
+        let cmd = commands::INVALIDATE_IME
+            .with(payload)
+            .to(Target::Window(self.window_id()));
+        self.submit_command(cmd);
     }
 
     /// Create a new sub-window.
@@ -418,6 +439,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         data: U,
         env: Env,
     ) -> WindowId {
+        trace!("new_sub_window");
         let req = SubWindowDesc::new(self.widget_id(), window_config, widget, data, env);
         let window_id = req.window_id;
         self.widget_state
@@ -446,6 +468,7 @@ impl_context_method!(
         /// [`Command`]: struct.Command.html
         /// [`update`]: trait.Widget.html#tymethod.update
         pub fn submit_command(&mut self, cmd: impl Into<Command>) {
+            trace!("submit_command");
             self.state.submit_command(cmd.into())
         }
 
@@ -454,6 +477,7 @@ impl_context_method!(
         ///
         /// [`ExtEventSink`]: struct.ExtEventSink.html
         pub fn get_external_handle(&self) -> ExtEventSink {
+            trace!("get_external_handle");
             self.state.ext_handle.clone()
         }
 
@@ -462,6 +486,7 @@ impl_context_method!(
         /// The return value is a token, which can be used to associate the
         /// request with the event.
         pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+            trace!("request_timer deadline={:?}", deadline);
             self.state.request_timer(&mut self.widget_state, deadline)
         }
     }
@@ -492,6 +517,7 @@ impl EventCtx<'_, '_> {
     ///
     /// [`Selector`]: crate::Selector
     pub fn submit_notification(&mut self, note: impl Into<Command>) {
+        trace!("submit_notification");
         let note = note.into().into_notification(self.widget_state.id);
         self.notifications.push_back(note);
     }
@@ -500,6 +526,7 @@ impl EventCtx<'_, '_> {
     ///
     /// See [`EventCtx::is_active`](struct.EventCtx.html#method.is_active).
     pub fn set_active(&mut self, active: bool) {
+        trace!("set_active({})", active);
         self.widget_state.is_active = active;
         // TODO: plumb mouse grab through to platform (through druid-shell)
     }
@@ -509,6 +536,7 @@ impl EventCtx<'_, '_> {
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
+        trace!("new_window");
         if self.state.root_app_data_type == TypeId::of::<T>() {
             self.submit_command(
                 commands::NEW_WINDOW
@@ -524,11 +552,13 @@ impl EventCtx<'_, '_> {
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
+    pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
+        trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
+            let menu = ContextMenu { menu, location };
             self.submit_command(
                 commands::SHOW_CONTEXT_MENU
-                    .with(Box::new(menu))
+                    .with(SingleUse::new(Box::new(menu)))
                     .to(Target::Window(self.state.window_id)),
             );
         } else {
@@ -541,6 +571,7 @@ impl EventCtx<'_, '_> {
     /// Set the event as "handled", which stops its propagation to other
     /// widgets.
     pub fn set_handled(&mut self) {
+        trace!("set_handled");
         self.is_handled = true;
     }
 
@@ -559,6 +590,7 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn request_focus(&mut self) {
+        trace!("request_focus");
         // We need to send the request even if we're currently focused,
         // because we may have a sibling widget that already requested focus
         // and we have no way of knowing that yet. We need to override that
@@ -573,6 +605,7 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn set_focus(&mut self, target: WidgetId) {
+        trace!("set_focus target={:?}", target);
         self.widget_state.request_focus = Some(FocusChange::Focus(target));
     }
 
@@ -584,10 +617,14 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_next(&mut self) {
-        if self.is_focused() {
+        trace!("focus_next");
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Next);
         } else {
-            tracing::warn!("focus_next can only be called by the currently focused widget");
+            warn!(
+                "focus_next can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -599,10 +636,14 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn focus_prev(&mut self) {
-        if self.is_focused() {
+        trace!("focus_prev");
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Previous);
         } else {
-            tracing::warn!("focus_prev can only be called by the currently focused widget");
+            warn!(
+                "focus_prev can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
         }
     }
 
@@ -614,11 +655,13 @@ impl EventCtx<'_, '_> {
     ///
     /// [`is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn resign_focus(&mut self) {
-        if self.is_focused() {
+        trace!("resign_focus");
+        if self.has_focus() {
             self.widget_state.request_focus = Some(FocusChange::Resign);
         } else {
-            tracing::warn!(
-                "resign_focus can only be called by the currently focused widget ({:?})",
+            warn!(
+                "resign_focus can only be called by the currently focused widget \
+                 or one of its ancestors. ({:?})",
                 self.widget_id()
             );
         }
@@ -634,6 +677,7 @@ impl EventCtx<'_, '_> {
     /// method, consider whether it might be better to refactor to be more idiomatic, in
     /// particular to make that data available in the app state.
     pub fn request_update(&mut self) {
+        trace!("request_update");
         self.widget_state.request_update = true;
     }
 }
@@ -685,6 +729,7 @@ impl LifeCycleCtx<'_, '_> {
     /// In general, you should not need to call this method; it is handled by
     /// the `WidgetPod`.
     pub fn register_child(&mut self, child_id: WidgetId) {
+        trace!("register_child id={:?}", child_id);
         self.widget_state.children.add(&child_id);
     }
 
@@ -697,7 +742,17 @@ impl LifeCycleCtx<'_, '_> {
     /// [`LifeCycle::WidgetAdded`]: enum.Lifecycle.html#variant.WidgetAdded
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn register_for_focus(&mut self) {
+        trace!("register_for_focus");
         self.widget_state.auto_focus = true;
+    }
+
+    /// Register this widget as accepting text input.
+    pub fn register_text_input(&mut self, document: impl ImeHandlerRef + 'static) {
+        let registration = TextFieldRegistration {
+            document: Rc::new(document),
+            widget_id: self.widget_id(),
+        };
+        self.widget_state.text_registrations.push(registration);
     }
 }
 
@@ -714,7 +769,9 @@ impl LayoutCtx<'_, '_> {
     /// [`Insets`]: struct.Insets.html
     /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
-        self.widget_state.paint_insets = insets.into().nonnegative();
+        let insets = insets.into();
+        trace!("set_paint_insets {:?}", insets);
+        self.widget_state.paint_insets = insets.nonnegative();
     }
 
     /// Set an explicit baseline position for this widget.
@@ -727,6 +784,7 @@ impl LayoutCtx<'_, '_> {
     /// The provided value should be the distance from the *bottom* of the
     /// widget to the baseline.
     pub fn set_baseline_offset(&mut self, baseline: f64) {
+        trace!("set_baseline_offset {}", baseline);
         self.widget_state.baseline_offset = baseline
     }
 }
@@ -793,14 +851,14 @@ impl PaintCtx<'_, '_, '_> {
     /// ```
     pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx)) {
         if let Err(e) = self.render_ctx.save() {
-            tracing::error!("Failed to save RenderContext: '{}'", e);
+            error!("Failed to save RenderContext: '{}'", e);
             return;
         }
 
         f(self);
 
         if let Err(e) = self.render_ctx.restore() {
-            tracing::error!("Failed to restore RenderContext: '{}'", e);
+            error!("Failed to restore RenderContext: '{}'", e);
         }
     }
 
@@ -841,23 +899,13 @@ impl<'a> ContextState<'a> {
     }
 
     fn submit_command(&mut self, command: Command) {
+        trace!("submit_command");
         self.command_queue
             .push_back(command.default_to(self.window_id.into()));
     }
 
-    fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        if self.root_app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                commands::SET_MENU
-                    .with(Box::new(menu))
-                    .to(Target::Window(self.window_id)),
-            );
-        } else {
-            debug_panic!("EventCtx::set_menu<T> - T must match the application data type.");
-        }
-    }
-
     fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
+        trace!("request_timer deadline={:?}", deadline);
         let timer_token = self.window.request_timer(deadline);
         widget_state.add_timer(timer_token);
         timer_token

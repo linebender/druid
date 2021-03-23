@@ -41,7 +41,12 @@ pub const BUTTON_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.button_border_width");
 pub const BORDER_DARK: Key<Color> = Key::new("org.linebender.druid.theme.border_dark");
 pub const BORDER_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.border_light");
-pub const SELECTION_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.selection_color");
+#[deprecated(since = "0.8.0", note = "use SELECTED_TEXT_BACKGROUND_COLOR instead")]
+pub const SELECTION_COLOR: Key<Color> = SELECTED_TEXT_BACKGROUND_COLOR;
+pub const SELECTED_TEXT_BACKGROUND_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.selection_color");
+pub const SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.selection_color_inactive");
 pub const SELECTION_TEXT_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.selection_text_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.cursor_color");
@@ -95,6 +100,9 @@ pub const SCROLLBAR_PAD: Key<f64> = Key::new("org.linebender.druid.theme.scrollb
 pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_radius");
 pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.scrollbar_edge_width");
+/// Minimum length for any scrollbar to be when measured on that
+/// scrollbar's primary axis.
+pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollbar_min_size");
 
 /// An initial theme.
 pub(crate) fn add_to_env(env: Env) -> Env {
@@ -114,7 +122,11 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BUTTON_BORDER_WIDTH, 2.)
         .adding(BORDER_DARK, Color::rgb8(0x3a, 0x3a, 0x3a))
         .adding(BORDER_LIGHT, Color::rgb8(0xa1, 0xa1, 0xa1))
-        .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
+        .adding(
+            SELECTED_TEXT_BACKGROUND_COLOR,
+            Color::rgb8(0x43, 0x70, 0xA8),
+        )
+        .adding(SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR, Color::grey8(0x74))
         .adding(SELECTION_TEXT_COLOR, Color::rgb8(0x00, 0x00, 0x00))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
@@ -124,13 +136,14 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
         .adding(TEXTBOX_BORDER_WIDTH, 1.)
-        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 4.0, 2.0))
+        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 4.0, 4.0))
         .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLLBAR_MAX_OPACITY, 0.7)
         .adding(SCROLLBAR_FADE_DELAY, 1500u64)
         .adding(SCROLLBAR_WIDTH, 8.)
         .adding(SCROLLBAR_PAD, 2.)
+        .adding(SCROLLBAR_MIN_SIZE, 45.)
         .adding(SCROLLBAR_RADIUS, 5.)
         .adding(SCROLLBAR_EDGE_WIDTH, 1.)
         .adding(WIDGET_PADDING_VERTICAL, 10.0)

@@ -14,34 +14,14 @@
 
 //! Text editing movements.
 
+use std::ops::Range;
+
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::kurbo::Point;
 use crate::piet::TextLayout as _;
+pub use crate::shell::text::{Direction, Movement, VerticalMovement, WritingDirection};
 use crate::text::{EditableText, Selection, TextLayout, TextStorage};
-
-/// The specification of a movement.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Movement {
-    /// Move to the left by one grapheme cluster.
-    Left,
-    /// Move to the right by one grapheme cluster.
-    Right,
-    /// Move up one visible line.
-    Up,
-    /// Move down one visible line.
-    Down,
-    /// Move to the left by one word.
-    LeftWord,
-    /// Move to the right by one word.
-    RightWord,
-    /// Move to left end of visible line.
-    PrecedingLineBreak,
-    /// Move to right end of visible line.
-    NextLineBreak,
-    /// Move to the beginning of the document
-    StartOfDocument,
-    /// Move to the end of the document
-    EndOfDocument,
-}
 
 /// Compute the result of movement on a selection.
 ///
@@ -64,28 +44,33 @@ pub fn movement<T: EditableText + TextStorage>(
         }
     };
 
+    let writing_direction = if crate::piet::util::first_strong_rtl(text.as_str()) {
+        WritingDirection::RightToLeft
+    } else {
+        WritingDirection::LeftToRight
+    };
+
     let (offset, h_pos) = match m {
-        Movement::Left => {
+        Movement::Grapheme(d) if d.is_upstream_for_direction(writing_direction) => {
             if s.is_caret() || modify {
-                text.prev_grapheme_offset(s.end)
+                text.prev_grapheme_offset(s.active)
                     .map(|off| (off, None))
                     .unwrap_or((0, s.h_pos))
             } else {
                 (s.min(), None)
             }
         }
-        Movement::Right => {
+        Movement::Grapheme(_) => {
             if s.is_caret() || modify {
-                text.next_grapheme_offset(s.end)
+                text.next_grapheme_offset(s.active)
                     .map(|off| (off, None))
-                    .unwrap_or((s.end, s.h_pos))
+                    .unwrap_or((s.active, s.h_pos))
             } else {
                 (s.max(), None)
             }
         }
-
-        Movement::Up => {
-            let cur_pos = layout.hit_test_text_position(s.end);
+        Movement::Vertical(VerticalMovement::LineUp) => {
+            let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == 0 {
                 (0, Some(h_pos))
@@ -96,8 +81,8 @@ pub fn movement<T: EditableText + TextStorage>(
                 (up_pos.idx, Some(point_above.x))
             }
         }
-        Movement::Down => {
-            let cur_pos = layout.hit_test_text_position(s.end);
+        Movement::Vertical(VerticalMovement::LineDown) => {
+            let cur_pos = layout.hit_test_text_position(s.active);
             let h_pos = s.h_pos.unwrap_or(cur_pos.point.x);
             if cur_pos.line == layout.line_count() - 1 {
                 (text.len(), Some(h_pos))
@@ -110,31 +95,73 @@ pub fn movement<T: EditableText + TextStorage>(
                 (up_pos.idx, Some(point_below.x))
             }
         }
+        Movement::Vertical(VerticalMovement::DocumentStart) => (0, None),
+        Movement::Vertical(VerticalMovement::DocumentEnd) => (text.len(), None),
 
-        Movement::PrecedingLineBreak => (text.preceding_line_break(s.end), None),
-        Movement::NextLineBreak => (text.next_line_break(s.end), None),
+        Movement::ParagraphStart => (text.preceding_line_break(s.active), None),
+        Movement::ParagraphEnd => (text.next_line_break(s.active), None),
 
-        Movement::StartOfDocument => (0, None),
-        Movement::EndOfDocument => (text.len(), None),
-
-        Movement::LeftWord => {
+        Movement::Line(d) => {
+            let hit = layout.hit_test_text_position(s.active);
+            let lm = layout.line_metric(hit.line).unwrap();
+            let offset = if d.is_upstream_for_direction(writing_direction) {
+                lm.start_offset
+            } else {
+                lm.end_offset
+            };
+            (offset, None)
+        }
+        Movement::Word(d) if d.is_upstream_for_direction(writing_direction) => {
             let offset = if s.is_caret() || modify {
-                text.prev_word_offset(s.end).unwrap_or(0)
+                text.prev_word_offset(s.active).unwrap_or(0)
             } else {
                 s.min()
             };
             (offset, None)
         }
-        Movement::RightWord => {
+        Movement::Word(_) => {
             let offset = if s.is_caret() || modify {
-                text.next_word_offset(s.end).unwrap_or(s.end)
+                text.next_word_offset(s.active).unwrap_or(s.active)
             } else {
                 s.max()
             };
             (offset, None)
         }
+
+        // These two are not handled; they require knowledge of the size
+        // of the viewport.
+        Movement::Vertical(VerticalMovement::PageDown)
+        | Movement::Vertical(VerticalMovement::PageUp) => (s.active, s.h_pos),
+        other => {
+            tracing::warn!("unhandled movement {:?}", other);
+            (s.anchor, s.h_pos)
+        }
     };
 
-    let start = if modify { s.start } else { offset };
+    let start = if modify { s.anchor } else { offset };
     Selection::new(start, offset).with_h_pos(h_pos)
+}
+
+/// Given a position in some text, return the containing word boundaries.
+///
+/// The returned range may not necessary be a 'word'; for instance it could be
+/// the sequence of whitespace between two words.
+///
+/// If the position is on a word boundary, that will be considered the start
+/// of the range.
+///
+/// This uses Unicode word boundaries, as defined in [UAX#29].
+///
+/// [UAX#29]: http://www.unicode.org/reports/tr29/
+pub fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
+    let mut word_iter = text.split_word_bound_indices().peekable();
+    let mut word_start = pos;
+    while let Some((ix, _)) = word_iter.next() {
+        if word_iter.peek().map(|(ix, _)| *ix > pos).unwrap_or(false) {
+            word_start = ix;
+            break;
+        }
+    }
+    let word_end = word_iter.next().map(|(ix, _)| ix).unwrap_or(pos);
+    word_start..word_end
 }
