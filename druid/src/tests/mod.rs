@@ -445,45 +445,47 @@ fn resign_focus_on_disable() {
     const CHANGE_DISABLED: Selector<bool> = Selector::new("druid-tests.change-disabled-disable");
     const REQUEST_FOCUS: Selector<()> = Selector::new("druid-tests.change-disabled-focus");
 
-    let test_widget_factory = |auto_focus: bool, id: WidgetId, inner: Option<Box<dyn Widget<()>>>| {
-        ModularWidget::new(inner.map(|widget|WidgetPod::new(widget)))
-            .lifecycle_fn(move |state, ctx, event, data, env| {
-                match event {
-                    LifeCycle::WidgetAdded => {
+    let test_widget_factory =
+        |auto_focus: bool, id: WidgetId, inner: Option<Box<dyn Widget<()>>>| {
+            ModularWidget::new(inner.map(WidgetPod::new))
+                .lifecycle_fn(move |state, ctx, event, data, env| {
+                    if let LifeCycle::WidgetAdded = event {
                         if auto_focus {
                             ctx.register_for_focus();
                         }
                     }
-                    _ => {}
-                }
-                if let Some(inner) = state {
-                    inner.lifecycle(ctx, event, data, env);
-                }
-            })
-            .event_fn(|state, ctx, event, data, env| {
-                if let Event::Command(cmd) = event {
-                    if let Some(disabled) = cmd.get(CHANGE_DISABLED) {
-                        ctx.set_disabled(*disabled);
-                        return;
+                    if let Some(inner) = state {
+                        inner.lifecycle(ctx, event, data, env);
                     }
-                    if cmd.is(REQUEST_FOCUS) {
-                        ctx.request_focus();
-                        return;
+                })
+                .event_fn(|state, ctx, event, data, env| {
+                    if let Event::Command(cmd) = event {
+                        if let Some(disabled) = cmd.get(CHANGE_DISABLED) {
+                            ctx.set_disabled(*disabled);
+                            return;
+                        }
+                        if cmd.is(REQUEST_FOCUS) {
+                            ctx.request_focus();
+                            return;
+                        }
                     }
-                }
-                if let Some(inner) = state {
-                    inner.event(ctx, event, data, env);
-                }
-            })
-            .with_id(id)
-    };
+                    if let Some(inner) = state {
+                        inner.event(ctx, event, data, env);
+                    }
+                })
+                .with_id(id)
+        };
 
     let id_0 = WidgetId::next();
     let id_1 = WidgetId::next();
     let id_2 = WidgetId::next();
 
     let root = Flex::row()
-        .with_child(test_widget_factory(true, id_0, Some(test_widget_factory(true, id_1, None).boxed())))
+        .with_child(test_widget_factory(
+            true,
+            id_0,
+            Some(test_widget_factory(true, id_1, None).boxed()),
+        ))
         .with_child(test_widget_factory(true, id_2, None));
 
     Harness::create_simple((), root, |harness| {
