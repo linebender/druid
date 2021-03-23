@@ -406,7 +406,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         // changes that happened during DisabledChanged.
         self.widget_state.is_explicitly_disabled_new = disabled;
     }
-  
+
     /// Indicate that text input state has changed.
     ///
     /// A widget that accepts text input should call this anytime input state
