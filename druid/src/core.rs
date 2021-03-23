@@ -911,10 +911,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         if self.state.children_changed {
                             self.state.children.clear();
-                            self.state.focus_chain.clear();
-                            if self.state.auto_focus {
-                                self.state.focus_chain.push(self.state.id);
-                            }
+                            self.state.reset_focus_chain();
                         }
                         self.state.children_changed
                     }
@@ -977,18 +974,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if was_disabled != self.state.is_disabled() {
                         // In case we change but none of our children we still need to update the
                         // focus-chain
-                        self.state.focus_chain.clear();
-                        if self.state.auto_focus {
-                            self.state.focus_chain.push(self.state.id);
-                        }
+                        self.state.reset_focus_chain();
                         extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                         //Each widget needs only one of DisabledChanged and RouteDisabledChanged
                         false
                     } else if self.state.children_disabled_changed {
-                        self.state.focus_chain.clear();
-                        if self.state.auto_focus {
-                            self.state.focus_chain.push(self.state.id);
-                        }
+                        self.state.reset_focus_chain();
                         true
                     } else {
                         false
@@ -1025,16 +1016,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 if was_disabled != self.state.is_disabled() {
                     // In case we change but none of our children we still need to update the
                     // focus-chain
-                    self.state.focus_chain.clear();
-                    if self.state.auto_focus {
-                        self.state.focus_chain.push(self.state.id);
-                    }
+                    self.state.reset_focus_chain();
                     extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                 } else if self.state.children_disabled_changed {
-                    self.state.focus_chain.clear();
-                    if self.state.auto_focus {
-                        self.state.focus_chain.push(self.state.id);
-                    }
+                    self.state.reset_focus_chain();
                     extra_event =
                         Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
                 }
@@ -1240,6 +1225,13 @@ impl WidgetState {
 
     pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
         self.timers.insert(timer_token, self.id);
+    }
+
+    pub(crate) fn reset_focus_chain(&mut self) {
+        self.focus_chain.clear();
+        if self.auto_focus {
+            self.focus_chain.push(self.id);
+        }
     }
 
     /// Update to incorporate state changes from a child.

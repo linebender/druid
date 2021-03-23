@@ -448,30 +448,8 @@ fn disable_tree() {
     const MULTI_CHANGE_DISABLED: Selector<HashMap<WidgetId, bool>> =
         Selector::new("druid-tests.multi-change-disabled");
 
-    fn write_direct(text: &str) {
-        static mut FILE: Option<File> = None;
-
-        #[allow(unsafe_code)]
-        unsafe {
-            if FILE.is_none() {
-                FILE = Some(
-                    OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .open("./test_log")
-                        .unwrap(),
-                );
-            }
-            let file = FILE.as_mut().unwrap();
-            file.write_all(text.as_bytes()).unwrap();
-            file.write_all("\n".as_bytes()).unwrap();
-            file.flush().unwrap();
-        }
-    }
-
     let leaf_factory = |state: Rc<Cell<Option<bool>>>| {
         ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| {
-            write_direct("lc leaf!");
             match event {
                 LifeCycle::WidgetAdded => {
                     ctx.register_for_focus();
@@ -487,12 +465,9 @@ fn disable_tree() {
     let wrapper = |id: WidgetId, widget: Box<dyn Widget<()>>| {
         ModularWidget::new(WidgetPod::new(widget))
             .lifecycle_fn(|inner, ctx, event, data, env| {
-                write_direct("lc");
                 inner.lifecycle(ctx, event, data, env);
-                write_direct("lc finished");
             })
             .event_fn(|inner, ctx, event, data, env| {
-                write_direct("ev");
                 if let Event::Command(cmd) = event {
                     if let Some(map) = cmd.get(MULTI_CHANGE_DISABLED) {
                         if let Some(disabled) = map.get(&ctx.widget_id()) {
@@ -622,7 +597,6 @@ fn disable_tree() {
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, false), (outer_id, true)]));
-        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change inner outer (3)",
             [
@@ -638,7 +612,6 @@ fn disable_tree() {
 
         // Changing inner and outer in different directions should not affect the leaves
         harness.submit_command(multi_update(&[(inner_id, true), (outer_id, false)]));
-        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change inner outer (4)",
             [
@@ -654,7 +627,6 @@ fn disable_tree() {
 
         // Changing two widgets on the same level
         harness.submit_command(multi_update(&[(single_id, true), (inner_id, false)]));
-        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "change horizontal (5)",
             [
@@ -670,7 +642,6 @@ fn disable_tree() {
 
         // Disabling the root should disable all widgets
         harness.submit_command(multi_update(&[(root_id, true)]));
-        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "disable root (6)",
             [
@@ -686,7 +657,6 @@ fn disable_tree() {
 
         // Enabling a widget in a disabled tree should not affect the enclosed widgets
         harness.submit_command(multi_update(&[(single_id, false)]));
-        //harness.lifecycle(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
         check_states(
             "enable single (7)",
             [
