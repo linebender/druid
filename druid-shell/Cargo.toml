@@ -17,7 +17,7 @@ default-target = "x86_64-pc-windows-msvc"
 default = ["gtk"]
 gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf"]
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
-# Implement HasRawWindowHandle for WindowHandle 
+# Implement HasRawWindowHandle for WindowHandle
 raw-win-handle = ["raw-window-handle"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -40,8 +40,8 @@ hdr = ["piet-common/hdr"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.3.2"
-kurbo = "0.7.1"
+piet-common = "=0.4.0"
+kurbo = "0.8.1"
 
 tracing = "0.1.22"
 lazy_static = "1.4.0"
@@ -99,7 +99,7 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "=0.3.2", features = ["png"] }
+piet-common = { version = "=0.4.0", features = ["png"] }
 static_assertions = "1.1.0"
 test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = "0.2.15"

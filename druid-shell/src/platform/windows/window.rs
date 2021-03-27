@@ -434,7 +434,8 @@ impl WndState {
                         .unwrap()
                 });
 
-            let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
+            let text = PietText::new(dw.clone());
+            let mut piet_ctx = Piet::new(d2d, text, rt);
 
             // Clear the background if transparency DC is found
             if let Some(dc) = dc_for_transparency {
