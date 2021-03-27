@@ -14,30 +14,47 @@
 
 //! A container for a window.
 
-use druid_shell::kurbo::{Line, Point};
-use druid_shell::piet::{Color, RenderContext};
+use druid_shell::kurbo::Point;
 
-use crate::element::{Action, Button, Element};
-use crate::tree::Mutation;
+use crate::element::{Action, Column, Element, Event};
+use crate::tree::{Id, Mutation};
 
 pub struct Window {
     app_logic: Box<dyn FnMut(Vec<Action>) -> Mutation>,
-    button: Button,
+    // Note: given we have a root id here, it's possible we should
+    // just require an id for every node in `TreeStructure`.
+    root_id: Id,
+    root: Column,
+    actions: Vec<Action>,
 }
-
-const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 impl Window {
     pub fn new(app_logic: Box<dyn FnMut(Vec<Action>) -> Mutation>) -> Window {
         Window {
             app_logic,
-            button: Default::default(),
+            root_id: Id::next(),
+            root: Default::default(),
+            actions: Vec::new(),
         }
     }
 
     pub fn paint(&mut self, piet: &mut druid_shell::piet::Piet) {
-        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
-        self.button.layout();
-        self.button.paint(piet, Point::new(0.0, 0.0));
+        self.root.layout();
+        self.root.paint(piet, Point::new(0.0, 0.0));
+    }
+
+    pub fn mouse_down(&mut self, point: Point) {
+        self.event(Event::MouseDown(point))
+    }
+
+    fn event(&mut self, event: Event) {
+        self.root.event(&event, self.root_id, &mut self.actions);
+        self.run_app_logic();
+    }
+
+    pub(crate) fn run_app_logic(&mut self) {
+        let actions = std::mem::take(&mut self.actions);
+        let mutation = (self.app_logic)(actions);
+        self.root.mutate(mutation);
     }
 }

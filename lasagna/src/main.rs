@@ -19,19 +19,18 @@ use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, FileDialogOptions, FileDialogToken, FileInfo, FileSpec, HotKey, KeyEvent,
-    Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder, WindowHandle,
 };
 
 mod element;
 mod tree;
 mod window;
 
-use crate::element::{Action, Button, Element};
+use crate::element::{Action, Button, ButtonCmd, Element};
 use crate::tree::{Id, Mutation, MutationEl};
 use crate::window::Window;
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
-const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
 
 struct MainState {
     size: Size,
@@ -87,22 +86,16 @@ impl WinHandler for MainState {
         println!("mouse_wheel {:?}", event);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent) {
+    fn mouse_move(&mut self, _event: &MouseEvent) {
         self.handle.set_cursor(&Cursor::Arrow);
-        println!("mouse_move {:?}", event);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
-        println!("mouse_down {:?}", event);
+        self.window.mouse_down(event.pos);
+        self.handle.invalidate();
     }
 
-    fn mouse_up(&mut self, event: &MouseEvent) {
-        println!("mouse_up {:?}", event);
-    }
-
-    fn timer(&mut self, id: TimerToken) {
-        println!("timer fired: {:?}", id);
-    }
+    fn mouse_up(&mut self, _event: &MouseEvent) {}
 
     fn size(&mut self, size: Size) {
         self.size = size;
@@ -132,11 +125,13 @@ impl WinHandler for MainState {
 impl MainState {
     fn new(app_logic: impl FnMut(Vec<Action>) -> Mutation + 'static) -> MainState {
         let window = Window::new(Box::new(app_logic));
-        MainState {
+        let mut state = MainState {
             size: Default::default(),
             handle: Default::default(),
             window,
-        }
+        };
+        state.window.run_app_logic();
+        state
     }
 }
 
@@ -161,17 +156,34 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let my_app_logic = |actions| {
-        let id = Id::next();
-        let button = Button;
-        let boxed_button: Box<dyn Element> = Box::new(button);
-        Mutation {
-            cmds: None,
-            child: vec![MutationEl::Insert(
-                id,
-                Box::new(boxed_button),
-                Mutation::default(),
-            )],
+    let mut count = 0;
+    let mut button_id = None;
+    let my_app_logic = move |actions: Vec<Action>| {
+        fn mk_button_mut(count: usize) -> Mutation {
+            Mutation {
+                cmds: Some(Box::new(ButtonCmd::SetText(format!("count: {}", count)))),
+                child: vec![],
+            }
+        }
+        if let Some(_button_id) = button_id {
+            count += actions.len();
+            Mutation {
+                cmds: None,
+                child: vec![MutationEl::Update(mk_button_mut(count))],
+            }
+        } else {
+            let id = Id::next();
+            let button = Button::default();
+            let boxed_button: Box<dyn Element> = Box::new(button);
+            button_id = Some(id);
+            Mutation {
+                cmds: None,
+                child: vec![MutationEl::Insert(
+                    id,
+                    Box::new(boxed_button),
+                    mk_button_mut(count),
+                )],
+            }
         }
     };
 
