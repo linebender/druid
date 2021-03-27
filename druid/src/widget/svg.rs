@@ -311,7 +311,9 @@ impl SvgRenderer {
                 let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity, ctx);
                 let mut stroke_style = StrokeStyle::new()
                     .line_join(match stroke.linejoin {
-                        usvg::LineJoin::Miter => LineJoin::Miter,
+                        usvg::LineJoin::Miter => LineJoin::Miter {
+                            limit: stroke.miterlimit.value(),
+                        },
                         usvg::LineJoin::Round => LineJoin::Round,
                         usvg::LineJoin::Bevel => LineJoin::Bevel,
                     })
@@ -319,10 +321,10 @@ impl SvgRenderer {
                         usvg::LineCap::Butt => LineCap::Butt,
                         usvg::LineCap::Round => LineCap::Round,
                         usvg::LineCap::Square => LineCap::Square,
-                    })
-                    .miter_limit(stroke.miterlimit.value());
+                    });
                 if let Some(dash_array) = &stroke.dasharray {
-                    stroke_style.set_dash(dash_array.clone(), stroke.dashoffset as f64);
+                    stroke_style.set_dash_pattern(dash_array.as_slice());
+                    stroke_style.set_dash_offset(stroke.dashoffset as f64);
                 }
                 ctx.stroke_styled(path, &*brush, stroke.width.value(), &stroke_style);
             }
