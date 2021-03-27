@@ -26,7 +26,7 @@ use crate::tree::{Id, Mutation, MutationEl};
 pub trait Element {
     fn mutate(&mut self, mutation: Mutation);
 
-    fn event(&mut self, event: &Event, actions: &mut Vec<Action>);
+    fn event(&mut self, event: &Event, id: Id, actions: &mut Vec<Action>);
 
     fn layout(&mut self) -> Size;
 
@@ -44,6 +44,7 @@ pub struct Action {
     pub action: Box<dyn Any>,
 }
 
+#[derive(Debug)]
 pub enum Event {
     MouseDown(Point),
 }
@@ -63,12 +64,29 @@ impl Pod {
 }
 
 #[derive(Default)]
-pub struct Button;
+pub struct Button(String);
+
+pub enum ButtonCmd {
+    SetText(String),
+}
 
 impl Element for Button {
-    fn mutate(&mut self, _mutation: Mutation) {}
+    fn mutate(&mut self, mutation: Mutation) {
+        if let Some(cmd) = mutation.cmds {
+            if let Ok(cmd) = cmd.downcast() {
+                match *cmd {
+                    ButtonCmd::SetText(s) => self.0 = s,
+                }
+            }
+        }
+    }
 
-    fn event(&mut self, event: &Event, actions: &mut Vec<Action>) {}
+    fn event(&mut self, _event: &Event, id: Id, actions: &mut Vec<Action>) {
+        actions.push(Action {
+            id,
+            action: Box::new(()),
+        })
+    }
 
     fn layout(&mut self) -> Size {
         Size::new(100., 20.)
@@ -77,7 +95,7 @@ impl Element for Button {
     fn paint(&mut self, ctx: &mut Piet, pos: Point) {
         let layout = ctx
             .text()
-            .new_text_layout("text")
+            .new_text_layout(self.0.clone())
             .text_color(Color::WHITE)
             .build()
             .unwrap();
@@ -115,7 +133,22 @@ impl Element for Column {
         }
     }
 
-    fn event(&mut self, event: &Event, actions: &mut Vec<Action>) {}
+    fn event(&mut self, event: &Event, _id: Id, actions: &mut Vec<Action>) {
+        match event {
+            Event::MouseDown(p) => {
+                let mut p = *p;
+                for child in &mut self.children {
+                    if p.y < child.size.height {
+                        let child_event = Event::MouseDown(p);
+                        child.element.event(&child_event, child.id, actions);
+                        break;
+                    } else {
+                        p.y -= child.size.height;
+                    }
+                }
+            }
+        }
+    }
 
     fn layout(&mut self) -> Size {
         let mut size = Size::default();
