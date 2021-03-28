@@ -163,9 +163,9 @@ pub enum WindowLevel {
 /// Contains the different states a Window can be in.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowState {
-    MAXIMIZED,
-    MINIMIZED,
-    RESTORED,
+    Maximized,
+    Minimized,
+    Restored,
 }
 
 /// A handle to a platform window object.

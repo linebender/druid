@@ -1448,7 +1448,7 @@ impl WindowHandle {
 
     pub fn get_window_state(&self) -> window::WindowState {
         warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
-        window::WindowState::RESTORED
+        window::WindowState::Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
