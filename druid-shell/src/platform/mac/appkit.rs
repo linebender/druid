@@ -14,8 +14,7 @@
 
 //! macOS AppKit bindings.
 
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![allow(clippy::upper_case_acronyms, non_snake_case, non_upper_case_globals)]
 
 use bitflags::bitflags;
 use cocoa::base::id;

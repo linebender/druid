@@ -609,9 +609,9 @@ impl MyWndProc {
                 }
                 DeferredOp::SetWindowState(val) => unsafe {
                     let s = match val {
-                        window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                        window::WindowState::MINIMIZED => SW_MINIMIZE,
-                        window::WindowState::RESTORED => SW_RESTORE,
+                        window::WindowState::Maximized => SW_MAXIMIZE,
+                        window::WindowState::Minimized => SW_MINIMIZE,
+                        window::WindowState::Restored => SW_RESTORE,
                     };
                     ShowWindow(hwnd, s);
                 },
@@ -849,7 +849,7 @@ impl WndProc for MyWndProc {
             WM_NCCALCSIZE => unsafe {
                 if wparam != 0 && !self.has_titlebar() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() == window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() == window::WindowState::Maximized {
                             // When maximized, windows still adds offsets for the frame
                             // so we counteract them here.
                             let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
@@ -871,7 +871,7 @@ impl WndProc for MyWndProc {
                 let mut hit = DefWindowProcW(hwnd, msg, wparam, lparam);
                 if !self.has_titlebar() && self.resizable() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() != window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() != window::WindowState::Maximized {
                             let mut rect = RECT {
                                 left: 0,
                                 top: 0,
@@ -1267,7 +1267,7 @@ impl WindowBuilder {
             size: None,
             min_size: None,
             position: None,
-            state: window::WindowState::RESTORED,
+            state: window::WindowState::Restored,
         }
     }
 
@@ -1413,8 +1413,8 @@ impl WindowBuilder {
             }
 
             match self.state {
-                window::WindowState::MAXIMIZED => dwStyle |= WS_MAXIMIZE,
-                window::WindowState::MINIMIZED => dwStyle |= WS_MINIMIZE,
+                window::WindowState::Maximized => dwStyle |= WS_MAXIMIZE,
+                window::WindowState::Minimized => dwStyle |= WS_MINIMIZE,
                 _ => (),
             };
 
@@ -1715,8 +1715,8 @@ impl WindowHandle {
             let hwnd = w.hwnd.get();
             unsafe {
                 let show = match self.get_window_state() {
-                    window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                    window::WindowState::MINIMIZED => SW_MINIMIZE,
+                    window::WindowState::Maximized => SW_MAXIMIZE,
+                    window::WindowState::Minimized => SW_MINIMIZE,
                     _ => SW_SHOWNORMAL,
                 };
                 ShowWindow(hwnd, show);
@@ -1803,7 +1803,7 @@ impl WindowHandle {
 
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
-        self.defer(DeferredOp::SetWindowState(window::WindowState::RESTORED));
+        self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         self.defer(DeferredOp::SetPosition(position));
     }
 
@@ -1917,15 +1917,15 @@ impl WindowHandle {
                     );
                 }
                 if (style & WS_MAXIMIZE) != 0 {
-                    window::WindowState::MAXIMIZED
+                    window::WindowState::Maximized
                 } else if (style & WS_MINIMIZE) != 0 {
-                    window::WindowState::MINIMIZED
+                    window::WindowState::Minimized
                 } else {
-                    window::WindowState::RESTORED
+                    window::WindowState::Restored
                 }
             }
         } else {
-            window::WindowState::RESTORED
+            window::WindowState::Restored
         }
     }
 

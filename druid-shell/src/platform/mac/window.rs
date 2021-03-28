@@ -1271,14 +1271,14 @@ impl WindowHandle {
             let window: id = msg_send![*self.nsview.load(), window];
             let isMin: BOOL = msg_send![window, isMiniaturized];
             if isMin != NO {
-                return WindowState::MINIMIZED;
+                return WindowState::Minimized;
             }
             let isZoomed: BOOL = msg_send![window, isZoomed];
             if isZoomed != NO {
-                return WindowState::MAXIMIZED;
+                return WindowState::Maximized;
             }
         }
-        WindowState::RESTORED
+        WindowState::Restored
     }
 
     pub fn set_window_state(&mut self, state: WindowState) {
@@ -1287,19 +1287,19 @@ impl WindowHandle {
             let window: id = msg_send![*self.nsview.load(), window];
             match (state, cur_state) {
                 (s1, s2) if s1 == s2 => (),
-                (WindowState::MINIMIZED, _) => {
+                (WindowState::Minimized, _) => {
                     let () = msg_send![window, performMiniaturize: self];
                 }
-                (WindowState::MAXIMIZED, _) => {
+                (WindowState::Maximized, _) => {
                     let () = msg_send![window, performZoom: self];
                 }
-                (WindowState::RESTORED, WindowState::MAXIMIZED) => {
+                (WindowState::Restored, WindowState::Maximized) => {
                     let () = msg_send![window, performZoom: self];
                 }
-                (WindowState::RESTORED, WindowState::MINIMIZED) => {
+                (WindowState::Restored, WindowState::Minimized) => {
                     let () = msg_send![window, deminiaturize: self];
                 }
-                (WindowState::RESTORED, WindowState::RESTORED) => {} // Can't be reached
+                (WindowState::Restored, WindowState::Restored) => {} // Can't be reached
             }
         }
     }
