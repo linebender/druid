@@ -40,7 +40,7 @@ hdr = ["piet-common/hdr"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.4.0"
+piet-common = "=0.4.1"
 kurbo = "0.8.1"
 
 tracing = "0.1.22"
@@ -99,7 +99,7 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent"]
 
 [dev-dependencies]
-piet-common = { version = "=0.4.0", features = ["png"] }
+piet-common = { version = "=0.4.1", features = ["png"] }
 static_assertions = "1.1.0"
 test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = "0.2.15"

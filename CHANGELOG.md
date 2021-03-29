@@ -7,6 +7,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Highlights
 - International text input support (IME) on macOS.
+- Rich text and complex script support on Linux.
 
 ### Added
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
@@ -37,6 +38,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 - Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
+- Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
 
 ### Deprecated
 
@@ -650,6 +652,7 @@ Last release without a changelog :(
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
 [#1662]: https://github.com/linebender/druid/pull/1662
+[#1677]: https://github.com/linebender/druid/pull/1677
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

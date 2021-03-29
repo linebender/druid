@@ -167,7 +167,7 @@ enum DeferredOp {
 
 #[derive(Clone)]
 pub struct WindowHandle {
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: Weak<WindowState>,
 }
 
@@ -243,7 +243,7 @@ struct MyWndProc {
     app: Application,
     handle: RefCell<WindowHandle>,
     d2d_factory: D2DFactory,
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: RefCell<Option<WndState>>,
     present_strategy: PresentStrategy,
 }
@@ -419,7 +419,7 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, invalid: &Region) {
+    fn render(&mut self, d2d: &D2DFactory, text: &PietText, invalid: &Region) {
         let rt = self.render_target.as_mut().unwrap();
 
         rt.begin_draw();
@@ -434,8 +434,7 @@ impl WndState {
                         .unwrap()
                 });
 
-            let text = PietText::new(dw.clone());
-            let mut piet_ctx = Piet::new(d2d, text, rt);
+            let mut piet_ctx = Piet::new(d2d, text.clone(), rt);
 
             // Clear the background if transparency DC is found
             if let Some(dc) = dc_for_transparency {
@@ -815,7 +814,7 @@ impl WndProc for MyWndProc {
                     let invalid = self.take_invalid();
                     if !invalid.rects().is_empty() {
                         s.handler.rebuild_resources();
-                        s.render(&self.d2d_factory, &self.dwrite_factory, &invalid);
+                        s.render(&self.d2d_factory, &self.text, &invalid);
                         if let Some(ref mut ds) = s.dxgi_state {
                             let mut dirty_rects = util::region_to_rectis(&invalid, self.scale());
                             let params = DXGI_PRESENT_PARAMETERS {
@@ -950,11 +949,7 @@ impl WndProc for MyWndProc {
                         if let Err(e) = s.rebuild_render_target(&self.d2d_factory, scale) {
                             error!("error building render target: {}", e);
                         }
-                        s.render(
-                            &self.d2d_factory,
-                            &self.dwrite_factory,
-                            &size_dp.to_rect().into(),
-                        );
+                        s.render(&self.d2d_factory, &self.text, &size_dp.to_rect().into());
                         let present_after = match self.present_strategy {
                             PresentStrategy::Sequential => 1,
                             _ => 0,
@@ -1330,12 +1325,13 @@ impl WindowBuilder {
         unsafe {
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
-            let dw_clone = dwrite_factory.clone();
+            let fonts = self.app.fonts.clone();
+            let text = PietText::new_with_shared_fonts(dwrite_factory, Some(fonts));
             let wndproc = MyWndProc {
                 app: self.app.clone(),
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
-                dwrite_factory: dw_clone,
+                text: text.clone(),
                 state: RefCell::new(None),
                 present_strategy: self.present_strategy,
             };
@@ -1382,7 +1378,7 @@ impl WindowBuilder {
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
-                dwrite_factory,
+                text,
                 state: Rc::downgrade(&win),
             };
 
@@ -1962,7 +1958,7 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> PietText {
-        PietText::new(self.dwrite_factory.clone())
+        self.text.clone()
     }
 
     pub fn add_text_field(&self) -> TextFieldToken {
@@ -2176,7 +2172,7 @@ impl Default for WindowHandle {
     fn default() -> Self {
         WindowHandle {
             state: Default::default(),
-            dwrite_factory: DwriteFactory::new().unwrap(),
+            text: PietText::new_with_shared_fonts(DwriteFactory::new().unwrap(), None),
         }
     }
 }
