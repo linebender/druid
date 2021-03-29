@@ -24,10 +24,12 @@ use druid_shell::{
 
 mod element;
 mod tree;
+mod vdom;
 mod window;
 
 use crate::element::{Action, Button, ButtonCmd, Element};
 use crate::tree::{Id, Mutation, MutationEl};
+use crate::vdom::{Reconciler, VdomNode};
 use crate::window::Window;
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -135,6 +137,71 @@ impl MainState {
     }
 }
 
+#[derive(Default)]
+struct ManualMutationCount {
+    count: usize,
+    button_id: Option<Id>,
+}
+
+impl ManualMutationCount {
+    fn run(&mut self, actions: Vec<Action>) -> Mutation {
+        fn mk_button_mut(count: usize) -> Mutation {
+            Mutation {
+                cmds: Some(Box::new(ButtonCmd::SetText(format!("count: {}", count)))),
+                child: vec![],
+            }
+        }
+        if let Some(_button_id) = self.button_id {
+            self.count += actions.len();
+            Mutation {
+                cmds: None,
+                child: vec![MutationEl::Update(mk_button_mut(self.count))],
+            }
+        } else {
+            let id = Id::next();
+            let button = Button::default();
+            let boxed_button: Box<dyn Element> = Box::new(button);
+            self.button_id = Some(id);
+            Mutation {
+                cmds: None,
+                child: vec![MutationEl::Insert(
+                    id,
+                    Box::new(boxed_button),
+                    mk_button_mut(self.count),
+                )],
+            }
+        }
+    }
+}
+
+// Note: this should become a generic implementation.
+struct VdomCount {
+    reconciler: Reconciler<VdomCountState>,
+    state: VdomCountState,
+}
+
+#[derive(Default)]
+struct VdomCountState {
+    count: usize,
+}
+
+impl VdomCountState {
+    fn render(&self) -> VdomNode<Self> {
+        VdomNode::Column(vec![VdomNode::Button(
+            format!("count: {}", self.count),
+            Box::new(|state: &mut VdomCountState| state.count += 1),
+        )])
+    }
+}
+
+impl VdomCount {
+    fn run(&mut self, actions: Vec<Action>) -> Mutation {
+        self.reconciler.run_actions(actions, &mut self.state);
+        let vdom = self.state.render();
+        self.reconciler.reconcile(vdom)
+    }
+}
+
 fn main() {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
@@ -156,40 +223,18 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let mut count = 0;
-    let mut button_id = None;
-    let my_app_logic = move |actions: Vec<Action>| {
-        fn mk_button_mut(count: usize) -> Mutation {
-            Mutation {
-                cmds: Some(Box::new(ButtonCmd::SetText(format!("count: {}", count)))),
-                child: vec![],
-            }
-        }
-        if let Some(_button_id) = button_id {
-            count += actions.len();
-            Mutation {
-                cmds: None,
-                child: vec![MutationEl::Update(mk_button_mut(count))],
-            }
-        } else {
-            let id = Id::next();
-            let button = Button::default();
-            let boxed_button: Box<dyn Element> = Box::new(button);
-            button_id = Some(id);
-            Mutation {
-                cmds: None,
-                child: vec![MutationEl::Insert(
-                    id,
-                    Box::new(boxed_button),
-                    mk_button_mut(count),
-                )],
-            }
-        }
+    //let mut app_logic = ManualMutationCount::default();
+
+    let mut app_logic = VdomCount {
+        // Note: this id is bogus. It's probably not needed.
+        // TODO: change reconciler to not need root id
+        reconciler: Reconciler::new(Id::next()),
+        state: VdomCountState::default(),
     };
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
-    let main_state = MainState::new(my_app_logic);
+    let main_state = MainState::new(move |actions| app_logic.run(actions));
     builder.set_handler(Box::new(main_state));
     builder.set_title("Hello example");
     builder.set_menu(menubar);
