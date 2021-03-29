@@ -875,10 +875,17 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
     fn slice_bounding_box(&self, range: Range<usize>) -> Option<Rect> {
         let origin = self.inner.borrow().origin;
         let layout = &self.inner.borrow().layout;
-        layout
-            .rects_for_range(range)
-            .first()
-            .map(|rect| *rect + origin.to_vec2())
+        if range.is_empty() {
+            let hit = layout
+                .layout()
+                .map(|l| l.hit_test_text_position(range.start))?;
+            let line = layout.layout().and_then(|l| l.line_metric(hit.line))?;
+            let x = hit.point.x;
+            Some(Rect::new(x, line.y_offset, x, line.y_offset + line.height))
+        } else {
+            layout.rects_for_range(range).first().copied()
+        }
+        .map(|rect| rect + origin.to_vec2())
     }
 
     fn handle_action(&mut self, action: ImeAction) {
