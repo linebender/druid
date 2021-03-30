@@ -412,18 +412,17 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
 
     /// Indicate that text input state has changed.
     ///
-    /// A widget that accepts text input should call this anytime input state
-    /// (such as the text or the selection) changes as a result of a non text-input
-    /// event.
+    /// This will always be applied to the currently active text field. Inactive
+    /// text fields do not need to be invalidated.
     pub fn invalidate_text_input(&mut self, event: ImeInvalidation) {
-        let payload = commands::ImeInvalidation {
-            widget: self.widget_id(),
-            event,
-        };
-        let cmd = commands::INVALIDATE_IME
-            .with(payload)
-            .to(Target::Window(self.window_id()));
-        self.submit_command(cmd);
+        if self.state.focus_widget.is_some() {
+            let cmd = commands::INVALIDATE_IME
+                .with(event)
+                .to(Target::Window(self.window_id()));
+            self.submit_command(cmd);
+        } else {
+            tracing::info!("skipping ime invalidation; no widget has focus");
+        }
     }
 
     /// Create a new sub-window.

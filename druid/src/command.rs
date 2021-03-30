@@ -183,7 +183,7 @@ pub mod sys {
     use super::Selector;
     use crate::{
         sub_window::{SubWindowDesc, SubWindowUpdate},
-        FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig,
+        FileDialogOptions, FileInfo, SingleUse, WindowConfig,
     };
 
     /// Quit the running application. This command is handled by the druid library.
@@ -323,15 +323,8 @@ pub mod sys {
     pub const SELECT_ALL: Selector = Selector::new("druid-builtin.menu-select-all");
 
     /// Text input state has changed, and we need to notify the platform.
-    pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
+    pub(crate) const INVALIDATE_IME: Selector<crate::shell::text::Event> =
         Selector::new("druid-builtin.invalidate-ime");
-
-    /// A change that has occured to text state, and needs to be
-    /// communicated to the platform.
-    pub(crate) struct ImeInvalidation {
-        pub widget: WidgetId,
-        pub event: crate::shell::text::Event,
-    }
 }
 
 impl Selector<()> {
