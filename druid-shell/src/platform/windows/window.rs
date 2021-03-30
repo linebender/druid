@@ -54,7 +54,7 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Color, Piet, PietText, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
