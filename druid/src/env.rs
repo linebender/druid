@@ -623,21 +623,21 @@ impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
     }
 }
 
-impl Into<KeyOrValue<Insets>> for f64 {
-    fn into(self) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(self.into())
+impl From<f64> for KeyOrValue<Insets> {
+    fn from(src: f64) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
     }
 }
 
-impl Into<KeyOrValue<Insets>> for (f64, f64) {
-    fn into(self) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(self.into())
+impl From<(f64, f64)> for KeyOrValue<Insets> {
+    fn from(src: (f64, f64)) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
     }
 }
 
-impl Into<KeyOrValue<Insets>> for (f64, f64, f64, f64) {
-    fn into(self) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(self.into())
+impl From<(f64, f64, f64, f64)> for KeyOrValue<Insets> {
+    fn from(src: (f64, f64, f64, f64)) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
     }
 }
 
