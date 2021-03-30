@@ -19,7 +19,7 @@
 // apple's documentation on text editing is also very helpful:
 // https://developer.apple.com/library/archive/documentation/TextFonts/Conceptual/CocoaTextArchitecture/TextEditing/TextEditing.html#//apple_ref/doc/uid/TP40009459-CH3-SW3
 
-#![allow(non_snake_case)]
+#![allow(clippy::clippy::upper_case_acronyms, non_snake_case)]
 
 use std::ffi::c_void;
 use std::ops::Range;
@@ -85,7 +85,7 @@ pub extern "C" fn marked_range(this: &mut Object, _: Sel) -> NSRange {
 
 pub extern "C" fn selected_range(this: &mut Object, _: Sel) -> NSRange {
     with_edit_lock_from_window(this, false, |mut edit_lock| {
-        let range = edit_lock.selection().to_range();
+        let range = edit_lock.selection().range();
         encode_nsrange(&mut edit_lock, range)
     })
     .unwrap_or(NSRange::NONE)
@@ -98,14 +98,14 @@ pub extern "C" fn set_marked_text(
     selected_range: NSRange,
     replacement_range: NSRange,
 ) {
-    with_edit_lock_from_window(this, false, |mut edit_lock| {
+    with_edit_lock_from_window(this, true, |mut edit_lock| {
         let mut composition_range = edit_lock.composition_range().unwrap_or_else(|| {
             // no existing composition range? default to replacement range, interpreted in absolute coordinates
             // undocumented by apple, see
             // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1144-L1146
             decode_nsrange(&*edit_lock, &replacement_range, 0).unwrap_or_else(|| {
                 // no replacement range either? apparently we default to the selection in this case
-                edit_lock.selection().to_range()
+                edit_lock.selection().range()
             })
         });
 
@@ -141,15 +141,9 @@ pub extern "C" fn set_marked_text(
             // preserve ordering of anchor and active
             let existing_selection = edit_lock.selection();
             let new_selection = if existing_selection.anchor < existing_selection.active {
-                Selection {
-                    anchor: selection_range.start,
-                    active: selection_range.end,
-                }
+                Selection::new(selection_range.start, selection_range.end)
             } else {
-                Selection {
-                    active: selection_range.start,
-                    anchor: selection_range.end,
-                }
+                Selection::new(selection_range.end, selection_range.start)
             };
             edit_lock.set_selection(new_selection);
         }
@@ -206,13 +200,13 @@ pub extern "C" fn insert_text(this: &mut Object, _: Sel, text: id, replacement_r
         // https://github.com/yvt/Stella2/blob/076fb6ee2294fcd1c56ed04dd2f4644bf456e947/tcw3/pal/src/macos/window.rs#L1041-L1043
         let converted_range = decode_nsrange(&*edit_lock, &replacement_range, 0)
             .or_else(|| edit_lock.composition_range())
-            .unwrap_or_else(|| edit_lock.selection().to_range());
+            .unwrap_or_else(|| edit_lock.selection().range());
 
         edit_lock.replace_range(converted_range.clone(), text_string);
         edit_lock.set_composition_range(None);
         // move the caret next to the inserted text
         let caret_index = converted_range.start + text_string.len();
-        edit_lock.set_selection(Selection::new_caret(caret_index));
+        edit_lock.set_selection(Selection::caret(caret_index));
     });
 }
 
@@ -385,7 +379,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                 // textedit testing showed that this operation never fully inverts a selection; if this action
                 // would cause a selection's active and anchor to swap order, it makes a caret instead. applying
                 // the operation a second time (on the selection that is now a caret) is required to invert.
-                edit_lock.set_selection(Selection::new_caret(selection.anchor));
+                edit_lock.set_selection(Selection::caret(selection.anchor));
             }
         }
         "moveParagraphForwardAndModifySelection:" => {
@@ -399,7 +393,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                 // textedit testing showed that this operation never fully inverts a selection; if this action
                 // would cause a selection's active and anchor to swap order, it makes a caret instead. applying
                 // the operation a second time (on the selection that is now a caret) is required to invert.
-                edit_lock.set_selection(Selection::new_caret(selection.anchor));
+                edit_lock.set_selection(Selection::caret(selection.anchor));
             }
         }
         "moveRight:" => edit_lock.handle_action(Action::Move(Movement::Grapheme(Direction::Right))),
@@ -531,7 +525,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                 edit_lock.handle_action(Action::MoveSelecting(Movement::Grapheme(
                     Direction::Downstream,
                 )));
-                let new_selection = edit_lock.selection().to_range();
+                let new_selection = edit_lock.selection().range();
                 let next_grapheme = edit_lock.slice(new_selection.clone());
                 let next_char = next_grapheme.chars().next();
 
@@ -545,7 +539,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                     edit_lock.set_selection(old_selection);
                 } else {
                     // normally, end of transpose range will be next grapheme
-                    edit_lock.set_selection(Selection::new_caret(new_selection.end));
+                    edit_lock.set_selection(Selection::caret(new_selection.end));
                 }
             }
 
@@ -562,7 +556,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
             let second_grapheme = edit_lock.slice(middle_idx..selection.max());
             let new_string = format!("{}{}", second_grapheme, first_grapheme);
             // replace_range should automatically set selection to end of inserted range
-            edit_lock.replace_range(selection.to_range(), &new_string);
+            edit_lock.replace_range(selection.range(), &new_string);
         }
         "capitalizeWord:" => {
             // this command expands the selection to words, and then applies titlecase to that selection

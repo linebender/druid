@@ -16,6 +16,9 @@
 
 use std::ops::{Deref, DerefMut};
 
+use druid_shell::Cursor;
+
+use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
 use crate::{
@@ -520,9 +523,31 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
     #[instrument(
         name = "RawLabel",
         level = "trace",
-        skip(self, _ctx, _event, _data, _env)
+        skip(self, ctx, event, _data, _env)
     )]
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
+        match event {
+            Event::MouseUp(event) => {
+                // Account for the padding
+                let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
+                if let Some(link) = self.layout.link_for_pos(pos) {
+                    ctx.submit_command(link.command.clone());
+                }
+            }
+            Event::MouseMove(event) => {
+                // Account for the padding
+                let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
+
+                if self.layout.link_for_pos(pos).is_some() {
+                    ctx.set_cursor(&Cursor::Pointer);
+                } else {
+                    ctx.clear_cursor();
+                }
+            }
+            _ => {}
+        }
+    }
+
     #[instrument(
         name = "RawLabel",
         level = "trace",

@@ -6,12 +6,15 @@ You can find its changes [documented below](#070---2021-01-01).
 # Unreleased
 
 ### Highlights
+- International text input support (IME) on macOS.
+- Rich text and complex script support on Linux.
 
 ### Added
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
 - WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
+- Add `on_added()` method in `WidgetExt` ([#1485] by [@arthmis])
 - RichTextBuilder ([#1520] by [@Maan2003])
 - `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
 - `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
@@ -23,7 +26,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - Support individual corner radii for kurbo::RoundedRect ([#1561] by [@SecondFlight])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
+- New `TextBox` widget with IME integration ([#1636] by [@cmyr])
+- `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
 
 ### Changed
 
@@ -32,15 +38,21 @@ You can find its changes [documented below](#070---2021-01-01).
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
+- Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
+- Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
+- `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
+
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
+- Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 
 ### Visual
 
@@ -619,6 +631,7 @@ Last release without a changelog :(
 [#1448]: https://github.com/linebender/druid/pull/1448
 [#1463]: https://github.com/linebender/druid/pull/1463
 [#1452]: https://github.com/linebender/druid/pull/1452
+[#1485]: https://github.com/linebender/druid/pull/1485
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
 [#1526]: https://github.com/linebender/druid/pull/1526
@@ -634,9 +647,16 @@ Last release without a changelog :(
 [#1600]: https://github.com/linebender/druid/pull/1600
 [#1606]: https://github.com/linebender/druid/pull/1606
 [#1619]: https://github.com/linebender/druid/pull/1619
+[#1625]: https://github.com/linebender/druid/pull/1625
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
+[#1636]: https://github.com/linebender/druid/pull/1636
+[#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1647]: https://github.com/linebender/druid/pull/1647
+[#1660]: https://github.com/linebender/druid/pull/1660
+[#1662]: https://github.com/linebender/druid/pull/1662
+[#1677]: https://github.com/linebender/druid/pull/1677
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

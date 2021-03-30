@@ -472,14 +472,14 @@ fn register_after_adding_child() {
     let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
     let id_7 = WidgetId::next();
 
-    let replacer = ReplaceChild::new(TextBox::new().with_id(id_1), move || {
-        Split::columns(TextBox::new().with_id(id_2), TextBox::new().with_id(id_3)).with_id(id_7)
+    let replacer = ReplaceChild::new(Slider::new().with_id(id_1), move || {
+        Split::columns(Slider::new().with_id(id_2), Slider::new().with_id(id_3)).with_id(id_7)
     })
     .with_id(id_6);
 
     let widget = Split::columns(Label::new("hi").with_id(id_4), replacer).with_id(id_5);
 
-    Harness::create_simple(String::new(), widget, |harness| {
+    Harness::create_simple(0.0, widget, |harness| {
         harness.send_initial_events();
 
         assert!(harness.get_state(id_5).children.may_contain(&id_6));

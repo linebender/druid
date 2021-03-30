@@ -22,6 +22,7 @@ use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PA
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
+use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
@@ -138,6 +139,8 @@ pub(crate) struct WidgetState {
 
     // Port -> Host
     pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
+
+    pub(crate) text_registrations: Vec<TextFieldRegistration>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -683,6 +686,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(widget_id)
                     }
                 }
+                InternalEvent::RouteImeStateChange(widget_id) => {
+                    if *widget_id == self.id() {
+                        modified_event = Some(Event::ImeStateChange);
+                        true
+                    } else {
+                        self.state.children.may_contain(widget_id)
+                    }
+                }
             },
             Event::WindowConnected | Event::WindowCloseRequested => true,
             Event::WindowDisconnected => {
@@ -784,6 +795,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             Event::Paste(_) => self.state.has_focus,
             Event::Zoom(_) => had_active || self.state.is_hot,
             Event::Timer(_) => false, // This event was targeted only to our parent
+            Event::ImeStateChange => true, // once delivered to the focus widget, recurse to the component?
             Event::Command(_) => true,
             Event::Notification(_) => false,
         };
@@ -846,34 +858,32 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             notifications: parent_notifications,
             ..
         } = ctx;
-        let mut sentinal = VecDeque::new();
+        let self_id = self.id();
         let mut inner_ctx = EventCtx {
             state,
-            notifications: &mut sentinal,
+            notifications: parent_notifications,
             widget_state: &mut self.state,
             is_handled: false,
             is_root: false,
         };
 
-        for _ in 0..notifications.len() {
-            let notification = notifications.pop_front().unwrap();
-            let event = Event::Notification(notification);
-            self.inner.event(&mut inner_ctx, &event, data, env);
-            if inner_ctx.is_handled {
-                inner_ctx.is_handled = false;
-            } else if let Event::Notification(notification) = event {
-                // we will try again with the next parent
-                parent_notifications.push_back(notification);
+        for notification in notifications.drain(..) {
+            // skip notifications that were submitted by our child
+            if notification.source() != self_id {
+                let event = Event::Notification(notification);
+                self.inner.event(&mut inner_ctx, &event, data, env);
+                if inner_ctx.is_handled {
+                    inner_ctx.is_handled = false;
+                } else if let Event::Notification(notification) = event {
+                    // we will try again with the next parent
+                    inner_ctx.notifications.push_back(notification);
+                } else {
+                    // could be unchecked but we avoid unsafe in druid :shrug:
+                    unreachable!()
+                }
             } else {
-                unreachable!()
+                inner_ctx.notifications.push_back(notification);
             }
-        }
-
-        if !inner_ctx.notifications.is_empty() {
-            warn!(
-                "A Notification was submitted while handling another \
-            notification; the submitted notification will be ignored."
-            );
         }
     }
 
@@ -1120,6 +1130,7 @@ impl WidgetState {
             cursor_change: CursorChange::Default,
             cursor: None,
             sub_window_hosts: Vec::new(),
+            text_registrations: Vec::new(),
         }
     }
 
@@ -1163,6 +1174,8 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
+        self.text_registrations
+            .extend(child_state.text_registrations.drain(..));
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
@@ -1287,6 +1300,7 @@ mod tests {
         assert!(ctx.widget_state.children.may_contain(&ID_1));
         assert!(ctx.widget_state.children.may_contain(&ID_2));
         assert!(ctx.widget_state.children.may_contain(&ID_3));
-        assert_eq!(ctx.widget_state.children.entry_count(), 7);
+        // A textbox is composed of three components with distinct ids
+        assert_eq!(ctx.widget_state.children.entry_count(), 15);
     }
 }

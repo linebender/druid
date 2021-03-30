@@ -39,7 +39,7 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
@@ -1448,7 +1448,7 @@ impl WindowHandle {
 
     pub fn get_window_state(&self) -> window::WindowState {
         warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
-        window::WindowState::RESTORED
+        window::WindowState::Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
@@ -1589,7 +1589,19 @@ impl WindowHandle {
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
-        error!("HasRawWindowHandle trait not implemented for x11.");
-        RawWindowHandle::Xcb(XcbHandle::empty())
+        let mut handle = XcbHandle {
+            window: self.id,
+            ..XcbHandle::empty()
+        };
+
+        if let Some(window) = self.window.upgrade() {
+            handle.connection = window.app.connection().get_raw_xcb_connection();
+        } else {
+            // Documentation for HasRawWindowHandle encourages filling in all fields possible,
+            // leaving those empty that cannot be derived.
+            error!("Failed to get XCBConnection, returning incomplete handle");
+        }
+
+        RawWindowHandle::Xcb(handle)
     }
 }

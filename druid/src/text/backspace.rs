@@ -27,13 +27,13 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
         BeforeKeycap,
         BeforeVsAndKeycap,
         BeforeEmojiModifier,
-        BeforeVSAndEmojiModifier,
-        BeforeVS,
+        BeforeVsAndEmojiModifier,
+        BeforeVs,
         BeforeEmoji,
         BeforeZwj,
-        BeforeVSAndZWJ,
-        OddNumberedRIS,
-        EvenNumberedRIS,
+        BeforeVsAndZwj,
+        OddNumberedRis,
+        EvenNumberedRis,
         InTagSequence,
         Finished,
     }
@@ -54,9 +54,9 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
                 if code_point == '\n' {
                     state = State::Lf;
                 } else if is_variation_selector(code_point) {
-                    state = State::BeforeVS;
+                    state = State::BeforeVs;
                 } else if code_point.is_regional_indicator_symbol() {
-                    state = State::OddNumberedRIS;
+                    state = State::OddNumberedRis;
                 } else if code_point.is_emoji_modifier() {
                     state = State::BeforeEmojiModifier;
                 } else if code_point.is_emoji_combining_enclosing_keycap() {
@@ -75,18 +75,18 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
                 }
                 state = State::Finished;
             }
-            State::OddNumberedRIS => {
+            State::OddNumberedRis => {
                 if code_point.is_regional_indicator_symbol() {
                     delete_code_point_count += 1;
-                    state = State::EvenNumberedRIS
+                    state = State::EvenNumberedRis
                 } else {
                     state = State::Finished
                 }
             }
-            State::EvenNumberedRIS => {
+            State::EvenNumberedRis => {
                 if code_point.is_regional_indicator_symbol() {
                     delete_code_point_count -= 1;
-                    state = State::OddNumberedRIS;
+                    state = State::OddNumberedRis;
                 } else {
                     state = State::Finished;
                 }
@@ -111,7 +111,7 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
             State::BeforeEmojiModifier => {
                 if is_variation_selector(code_point) {
                     last_seen_vs_code_point_count = 1;
-                    state = State::BeforeVSAndEmojiModifier;
+                    state = State::BeforeVsAndEmojiModifier;
                 } else {
                     if code_point.is_emoji_modifier_base() {
                         delete_code_point_count += 1;
@@ -119,13 +119,13 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
                     state = State::Finished;
                 }
             }
-            State::BeforeVSAndEmojiModifier => {
+            State::BeforeVsAndEmojiModifier => {
                 if code_point.is_emoji_modifier_base() {
                     delete_code_point_count += last_seen_vs_code_point_count + 1;
                 }
                 state = State::Finished;
             }
-            State::BeforeVS => {
+            State::BeforeVs => {
                 if code_point.is_emoji() {
                     delete_code_point_count += 1;
                     state = State::BeforeEmoji;
@@ -154,12 +154,12 @@ fn backspace_offset(text: &impl EditableText, start: usize) -> usize {
                     };
                 } else if is_variation_selector(code_point) {
                     last_seen_vs_code_point_count = 1;
-                    state = State::BeforeVSAndZWJ;
+                    state = State::BeforeVsAndZwj;
                 } else {
                     state = State::Finished;
                 }
             }
-            State::BeforeVSAndZWJ => {
+            State::BeforeVsAndZwj => {
                 if code_point.is_emoji() {
                     delete_code_point_count += last_seen_vs_code_point_count + 2;
                     last_seen_vs_code_point_count = 0;
@@ -198,6 +198,6 @@ pub fn offset_for_delete_backwards(region: &Selection, text: &impl EditableText)
     if !region.is_caret() {
         region.min()
     } else {
-        backspace_offset(text, region.end)
+        backspace_offset(text, region.active)
     }
 }
