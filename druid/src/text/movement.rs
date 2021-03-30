@@ -78,7 +78,17 @@ pub fn movement<T: EditableText + TextStorage>(
                 let lm = layout.line_metric(cur_pos.line).unwrap();
                 let point_above = Point::new(h_pos, cur_pos.point.y - lm.height);
                 let up_pos = layout.hit_test_point(point_above);
-                (up_pos.idx, Some(point_above.x))
+                if up_pos.is_inside {
+                    (up_pos.idx, Some(h_pos))
+                } else {
+                    // because we can't specify affinity, moving up when h_pos
+                    // is wider than both the current line and the previous line
+                    // can result in a cursor position at the visual start of the
+                    // current line; so we handle this as a special-case.
+                    let lm_prev = layout.line_metric(cur_pos.line.saturating_sub(1)).unwrap();
+                    let up_pos = lm_prev.end_offset - lm_prev.trailing_whitespace;
+                    (up_pos, Some(h_pos))
+                }
             }
         }
         Movement::Vertical(VerticalMovement::LineDown) => {
@@ -107,7 +117,7 @@ pub fn movement<T: EditableText + TextStorage>(
             let offset = if d.is_upstream_for_direction(writing_direction) {
                 lm.start_offset
             } else {
-                lm.end_offset
+                lm.end_offset - lm.trailing_whitespace
             };
             (offset, None)
         }
