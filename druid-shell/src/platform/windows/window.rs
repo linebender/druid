@@ -35,8 +35,6 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
-use winapi::um::d2d1_1::ID2D1DeviceContext;
-use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
 use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
