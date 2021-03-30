@@ -38,9 +38,6 @@ use crate::{
     UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
-
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
 
 /// A unique identifier for a window.
@@ -441,14 +438,16 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
-        piet.fill(
-            invalid.bounding_box(),
-            &(if self.transparent {
-                TRANSPARENT
-            } else {
-                env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
-            }),
-        );
+        for r in invalid.rects().to_owned() {
+            piet.clear(
+                Some(r),
+                if self.transparent {
+                    Color::TRANSPARENT
+                } else {
+                    env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
+                },
+            );
+        }
         self.paint(piet, invalid, queue, data, env);
     }
 
