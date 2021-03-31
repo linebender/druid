@@ -928,7 +928,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         if self.state.children_changed {
                             self.state.children.clear();
-                            self.state.focus_chain.clear();
+                            self.state.reset_focus_chain();
                         }
                         self.state.children_changed
                     }
@@ -985,12 +985,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if was_disabled != self.state.is_disabled() {
                         // In case we change but none of our children we still need to update the
                         // focus-chain
-                        self.state.focus_chain.clear();
+                        self.state.reset_focus_chain();
                         extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                         //Each widget needs only one of DisabledChanged and RouteDisabledChanged
                         false
                     } else if self.state.children_disabled_changed {
-                        self.state.focus_chain.clear();
+                        self.state.reset_focus_chain();
                         true
                     } else {
                         false
@@ -1028,10 +1028,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 if was_disabled != self.state.is_disabled() {
                     // In case we change but none of our children does we still need to update the
                     // focus-chain
-                    self.state.focus_chain.clear();
+                    self.state.reset_focus_chain();
                     extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                 } else if self.state.children_disabled_changed {
-                    self.state.focus_chain.clear();
+                    self.state.reset_focus_chain();
                     extra_event =
                         Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
                 }
@@ -1070,11 +1070,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.state.children_disabled_changed = false;
 
             if !self.state.is_disabled() {
-                // Insert our own index at the first position.
-                // We do this at the end to be consistent with the behaviour in WidgetAdded.
-                if self.state.auto_focus {
-                    self.state.focus_chain.insert(0, self.state.id);
-                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
             }
 
@@ -1091,18 +1086,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         ctx.widget_state.merge_up(&mut self.state);
 
+        // If this widget is not already present, autofocus is not set before the event,
+        // since we call register_for_focus in WidgetAdded.
+        // To be consistent with RouteWidgetAdded DisabledChanged and Route DisabledChange we
+        // insert our id at the first position.
+        // This must be called before updating our parents focus_chain!
+        if let LifeCycle::WidgetAdded = event {
+            if self.state.auto_focus {
+                self.state.focus_chain.insert(0, self.state.id);
+            }
+        }
+
         // we need to (re)register children in case of one of the following events
         match event {
             LifeCycle::WidgetAdded | LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded) => {
                 self.state.children_changed = false;
                 ctx.widget_state.children = ctx.widget_state.children.union(self.state.children);
-
-                // Insert our own index at the first position.
-                // We do this at the end since in case of WidgetAdded auto_focus is not set before
-                // the call.
-                if self.state.auto_focus {
-                    self.state.focus_chain.insert(0, self.state.id);
-                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
                 ctx.register_child(self.id());
             }
@@ -1246,6 +1245,15 @@ impl WidgetState {
         self.timers.insert(timer_token, self.id);
     }
 
+    /// removes all elements from the focus chain and adds the id of this widget
+    /// auto_focus is set.
+    pub(crate) fn reset_focus_chain(&mut self) {
+        self.focus_chain.clear();
+        if self.auto_focus {
+            self.focus_chain.push(self.id);
+        }
+    }
+
     /// Update to incorporate state changes from a child.
     ///
     /// This will also clear some requests in the child state.
@@ -1285,8 +1293,8 @@ impl WidgetState {
         self.timers.extend_drain(&mut child_state.timers);
         self.text_registrations
             .extend(child_state.text_registrations.drain(..));
-        ctx.widget_state.children_disabled_changed |=
-            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
+        self.children_disabled_changed |=
+            child_state.is_explicitly_disabled_new != child_state.is_explicitly_disabled;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
