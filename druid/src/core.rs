@@ -859,9 +859,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
         // Doing this conditionally only makes sense when there's a measurable performance boost.
         ctx.widget_state.merge_up(&mut self.state);
-
-        ctx.widget_state.children_disabled_changed |=
-            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
     }
 
     /// Send notifications originating from this widget's children to this
@@ -931,7 +928,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         if self.state.children_changed {
                             self.state.children.clear();
-                            self.state.reset_focus_chain();
+                            self.state.focus_chain.clear();
                         }
                         self.state.children_changed
                     }
@@ -985,21 +982,15 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
                     self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
 
-                    if self.state.is_disabled() && self.state.has_focus {
-                        // This may gets overwritten. This is ok because it still ensures that a
-                        // FocusChange is routed after we updated the focus-chain.
-                        self.state.request_focus = Some(FocusChange::Resign);
-                    }
-
                     if was_disabled != self.state.is_disabled() {
                         // In case we change but none of our children we still need to update the
                         // focus-chain
-                        self.state.reset_focus_chain();
+                        self.state.focus_chain.clear();
                         extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                         //Each widget needs only one of DisabledChanged and RouteDisabledChanged
                         false
                     } else if self.state.children_disabled_changed {
-                        self.state.reset_focus_chain();
+                        self.state.focus_chain.clear();
                         true
                     } else {
                         false
@@ -1035,20 +1026,14 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.ancestor_disabled = *ancestors_disabled;
 
                 if was_disabled != self.state.is_disabled() {
-                    // In case we change but none of our children we still need to update the
+                    // In case we change but none of our children does we still need to update the
                     // focus-chain
-                    self.state.reset_focus_chain();
+                    self.state.focus_chain.clear();
                     extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                 } else if self.state.children_disabled_changed {
-                    self.state.reset_focus_chain();
+                    self.state.focus_chain.clear();
                     extra_event =
                         Some(LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged));
-                }
-
-                if self.state.is_disabled() && self.state.has_focus {
-                    // This may gets overwritten. This is ok because it still ensures that a
-                    // FocusChange is routed after we updated the focus-chain.
-                    self.state.request_focus = Some(FocusChange::Resign);
                 }
 
                 // It is easier to always use the extra event since the widget can disable itself
@@ -1077,37 +1062,47 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, event, data, env);
         }
 
+        // This must happen before merge_up so that the changes to is_explicitly_disabled_new and
+        // focus_chain get merged up!
         if let LifeCycle::DisabledChanged(_)
         | LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged) = event
         {
             self.state.children_disabled_changed = false;
+
             if !self.state.is_disabled() {
+                // Insert our own index at the first position.
+                // We do this at the end to be consistent with the behaviour in WidgetAdded.
+                if self.state.auto_focus {
+                    self.state.focus_chain.insert(0, self.state.id);
+                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
             }
 
-            //Delete changes of disabled state that happened during DisabledChanged
+            if self.state.is_disabled() && self.state.has_focus {
+                // This may gets overwritten. This is ok because it still ensures that a
+                // FocusChange is routed after we updated the focus-chain.
+                self.state.request_focus = Some(FocusChange::Resign);
+            }
+
+            // Delete changes of disabled state that happened during DisabledChanged to avoid
+            // recursions.
             self.state.is_explicitly_disabled_new = self.state.is_explicitly_disabled;
-        } else if self.state.is_explicitly_disabled != self.state.is_explicitly_disabled_new {
-            ctx.widget_state.children_disabled_changed = true;
         }
 
         ctx.widget_state.merge_up(&mut self.state);
 
         // we need to (re)register children in case of one of the following events
-        if let LifeCycle::WidgetAdded = event {
-            // If this widget is not already present, autofocus is not set before the event,
-            // since we call register_for_focus in widget added.
-            // To be consistent with RouteWidgetAdded DisabledChanged and Route DisabledChange we
-            // insert our id at the first position.
-            if self.state.auto_focus {
-                self.state.focus_chain.insert(0, self.state.id);
-            }
-        }
-
         match event {
             LifeCycle::WidgetAdded | LifeCycle::Internal(InternalLifeCycle::RouteWidgetAdded) => {
                 self.state.children_changed = false;
                 ctx.widget_state.children = ctx.widget_state.children.union(self.state.children);
+
+                // Insert our own index at the first position.
+                // We do this at the end since in case of WidgetAdded auto_focus is not set before
+                // the call.
+                if self.state.auto_focus {
+                    self.state.focus_chain.insert(0, self.state.id);
+                }
                 ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
                 ctx.register_child(self.id());
             }
@@ -1177,9 +1172,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
         self.state.request_update = false;
         ctx.widget_state.merge_up(&mut self.state);
-
-        ctx.widget_state.children_disabled_changed |=
-            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
     }
 }
 
@@ -1300,6 +1292,8 @@ impl WidgetState {
         self.timers.extend_drain(&mut child_state.timers);
         self.text_registrations
             .extend(child_state.text_registrations.drain(..));
+        ctx.widget_state.children_disabled_changed |=
+            self.state.is_explicitly_disabled_new != self.state.is_explicitly_disabled;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
