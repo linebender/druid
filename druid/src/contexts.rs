@@ -394,8 +394,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.request_layout();
     }
 
-    /// Sets the explicitly disabled state of this widget.
-    /// The widget may still be disabled if `set_disabled(false)` was called. See [`is_disabled`]
+    /// Set the disabled state for this widget.
+    ///
+    /// Setting this to `false` does not mean a widget is not still disabled; for instance it may
+    /// still be disabled by an ancestor. See [`is_disabled`] for more information.
     ///
     /// Calling this method during [`LifeCycle::DisabledChanged`] has no effect.
     ///
