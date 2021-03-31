@@ -35,8 +35,6 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
-use winapi::um::d2d1_1::ID2D1DeviceContext;
-use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
 use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
@@ -56,7 +54,7 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Color, Piet, PietText, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -298,11 +296,6 @@ impl Drop for HCursor {
 /// Message indicating there are idle tasks to run.
 const DS_RUN_IDLE: UINT = WM_USER;
 
-/// Transparent bg clearing color
-///
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
-
 /// Message relaying a request to destroy the window.
 ///
 /// Calling `DestroyWindow` from inside the handler is problematic
@@ -424,31 +417,7 @@ impl WndState {
 
         rt.begin_draw();
         {
-            // Piet is missing alpha blending setting, so we have to call
-            // ID2D1DeviceContext::SetPrimitiveBlend() manually to clear just
-            // the required pixels
-            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> =
-                self.transparent.then(|| unsafe {
-                    (rt as *mut _ as *mut ComPtr<ID2D1DeviceContext>)
-                        .as_ref()
-                        .unwrap()
-                });
-
             let mut piet_ctx = Piet::new(d2d, text.clone(), rt);
-
-            // Clear the background if transparency DC is found
-            if let Some(dc) = dc_for_transparency {
-                let current_blend = unsafe { dc.GetPrimitiveBlend() };
-                unsafe {
-                    dc.SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-                }
-                for r in invalid.rects().iter() {
-                    piet_ctx.fill(r, &TRANSPARENT);
-                }
-                unsafe {
-                    dc.SetPrimitiveBlend(current_blend);
-                }
-            }
 
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
