@@ -23,6 +23,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
+- Support individual corner radii for kurbo::RoundedRect ([#1561] by [@SecondFlight])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
@@ -639,6 +640,7 @@ Last release without a changelog :(
 [#1534]: https://github.com/linebender/druid/pull/1534
 [#1254]: https://github.com/linebender/druid/pull/1254
 [#1559]: https://github.com/linebender/druid/pull/1559
+[#1561]: https://github.com/linebender/druid/pull/1561
 [#1562]: https://github.com/linebender/druid/pull/1562
 [#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
