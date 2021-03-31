@@ -1246,13 +1246,6 @@ impl WidgetState {
         self.timers.insert(timer_token, self.id);
     }
 
-    pub(crate) fn reset_focus_chain(&mut self) {
-        self.focus_chain.clear();
-        if self.auto_focus {
-            self.focus_chain.push(self.id);
-        }
-    }
-
     /// Update to incorporate state changes from a child.
     ///
     /// This will also clear some requests in the child state.
