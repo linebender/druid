@@ -26,9 +26,10 @@ pub struct EnvScope<T, W> {
     pub(crate) prev_super_env: Option<Env>,
     pub(crate) overrides: Env,
     pub(crate) modify_env: Option<Box<dyn Fn(&T, &mut Env)>>,
-    #[allow(clippy::type_complexity)]
-    pub(crate) should_modify_env_now: Option<Box<dyn Fn(&T, &T, &Env) -> bool>>,
+    pub(crate) should_modify_env_now: EnvInvalidationCheck<T>,
 }
+
+type EnvInvalidationCheck<T> = Option<Box<dyn Fn(&T, &T, &Env) -> bool>>;
 
 impl<T, W: Widget<T>> EnvScope<T, W> {
     /// Create a widget that updates the environment for its descendants.
