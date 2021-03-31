@@ -933,6 +933,25 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children_changed
                     }
                 }
+                InternalLifeCycle::RouteDisabledChanged => {
+                    let was_disabled = self.state.is_disabled();
+
+                    self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
+
+                    if was_disabled != self.state.is_disabled() {
+                        // In case we change but none of our children we still need to update the
+                        // focus-chain
+                        self.state.reset_focus_chain();
+                        extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
+                        //Each widget needs only one of DisabledChanged and RouteDisabledChanged
+                        false
+                    } else if self.state.children_disabled_changed {
+                        self.state.reset_focus_chain();
+                        true
+                    } else {
+                        false
+                    }
+                }
                 InternalLifeCycle::RouteFocusChanged { old, new } => {
                     let this_changed = if *old == Some(self.state.id) {
                         Some(false)
@@ -976,25 +995,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true
-                }
-                InternalLifeCycle::RouteDisabledChanged => {
-                    let was_disabled = self.state.is_disabled();
-
-                    self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
-
-                    if was_disabled != self.state.is_disabled() {
-                        // In case we change but none of our children we still need to update the
-                        // focus-chain
-                        self.state.reset_focus_chain();
-                        extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
-                        //Each widget needs only one of DisabledChanged and RouteDisabledChanged
-                        false
-                    } else if self.state.children_disabled_changed {
-                        self.state.reset_focus_chain();
-                        true
-                    } else {
-                        false
-                    }
                 }
             },
             LifeCycle::WidgetAdded => {
