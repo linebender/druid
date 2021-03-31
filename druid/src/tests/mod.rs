@@ -389,7 +389,7 @@ fn simple_disable() {
             || desired[2] != disabled_2.get()
             || desired[3] != disabled_3.get()
         {
-            panic!(format!(
+            eprintln!(
                 "test \"{}\":\nexpected: {:?}\n got:      {:?}",
                 name,
                 desired,
@@ -399,7 +399,8 @@ fn simple_disable() {
                     disabled_2.get(),
                     disabled_3.get()
                 ]
-            ))
+            );
+            panic!();
         }
     };
 
@@ -572,7 +573,7 @@ fn disable_tree() {
             || desired[4] != disabled_4.get()
             || desired[5] != disabled_5.get()
         {
-            panic!(format!(
+            eprintln!(
                 "test \"{}\":\nexpected: {:?}\n got:      {:?}",
                 name,
                 desired,
@@ -584,7 +585,8 @@ fn disable_tree() {
                     disabled_4.get(),
                     disabled_5.get()
                 ]
-            ));
+            );
+            panic!();
         }
     };
 
