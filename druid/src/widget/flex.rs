@@ -338,11 +338,24 @@ impl FlexParams {
     /// can pass an `f64` to any of the functions that take `FlexParams`.
     ///
     /// By default, the widget uses the alignment of its parent [`Flex`] container.
+    /// If the provided flex value is 0.0 or less, the flex value will default to 1.0.
     ///
     ///
-    /// [`Flex`]: struct.Flex.html
-    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
+    /// [`Flex`]: crate::widget::Flex
+    /// [`CrossAxisAlignment`]: crate::widget::CrossAxisAlignment
     pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
+        let flex = if flex <= 0.0 {
+            debug_assert!(
+                flex <= 0.0,
+                "flex value should not be <= 0.0. Flex given was: {}",
+                flex
+            );
+            tracing::warn!("Provided flex value was <= 0.0: {}", flex);
+            1.0
+        } else {
+            flex
+        };
+
         FlexParams {
             flex,
             alignment: alignment.into(),
@@ -505,9 +518,13 @@ impl<T: Data> Flex<T> {
     ///
     /// See also [`with_child`].
     ///
-    /// [`with_child`]: #method.with_child
+    /// [`with_child`]: crate::widget::Flex::with_child
     pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
-        self.add_flex_child(child, 0.0);
+        let child = Child::Fixed {
+            widget: WidgetPod::new(Box::new(child)),
+            alignment: None,
+        };
+        self.children.push(child);
     }
 
     /// Add a flexible child widget.
@@ -541,17 +558,10 @@ impl<T: Data> Flex<T> {
         params: impl Into<FlexParams>,
     ) {
         let params = params.into();
-        let child = if params.flex == 0.0 {
-            Child::Fixed {
-                widget: WidgetPod::new(Box::new(child)),
-                alignment: params.alignment,
-            }
-        } else {
-            Child::Flex {
-                widget: WidgetPod::new(Box::new(child)),
-                alignment: params.alignment,
-                flex: params.flex,
-            }
+        let child = Child::Flex {
+            widget: WidgetPod::new(Box::new(child)),
+            alignment: params.alignment,
+            flex: params.flex,
         };
         self.children.push(child);
     }
@@ -941,10 +951,7 @@ impl Iterator for Spacing {
 
 impl From<f64> for FlexParams {
     fn from(flex: f64) -> FlexParams {
-        FlexParams {
-            flex,
-            alignment: None,
-        }
+        FlexParams::new(flex, None)
     }
 }
 
@@ -1050,5 +1057,17 @@ mod tests {
         assert_eq!(vec(a, 37., 5), vec![4., 7., 8., 7., 7., 4.]);
         assert_eq!(vec(a, 38., 5), vec![4., 7., 8., 8., 7., 4.]);
         assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
+    }
+    #[test]
+    fn test_invalid_flex_params() {
+        use float_cmp::approx_eq;
+        let params = FlexParams::new(0.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+
+        let params = FlexParams::new(-0.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+
+        let params = FlexParams::new(-1.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
     }
 }
