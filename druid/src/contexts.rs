@@ -745,7 +745,7 @@ impl LifeCycleCtx<'_, '_> {
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
-        self.widget_state.auto_focus = true;
+        self.widget_state.focus_chain.push(self.widget_id());
     }
 
     /// Register this widget as accepting text input.
