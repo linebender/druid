@@ -106,23 +106,24 @@ pub(crate) struct WidgetState {
     pub(crate) viewport_offset: Vec2,
 
     // TODO: consider using bitflags for the booleans.
-    // Any child of this widget changed the disabled state and should either receive
+    // `true` if a descendent of this widget changed its disabled state and should receive
     // LifeCycle::DisabledChanged or InternalLifeCycle::RouteDisabledChanged
     pub(crate) children_disabled_changed: bool,
 
-    // Any of our ancestors are disabled. Therefore we are also disabled.
+    // `true` if one of our ancestors is disabled (meaning we are also disabled).
     pub(crate) ancestor_disabled: bool,
 
-    // explicitly disabled through the usage of EventCtx::set_disabled(true) on this widget.
+    // `true` if this widget has been explicitly disabled.
+    // A widget can be disabled without being *explicitly* disabled if an ancestor is disabled.
     pub(crate) is_explicitly_disabled: bool,
 
-    // A buffer for the value of EventCtx::set_disabled() before this widget receives
+    // `true` if this widget has been explicitly disabled, but has not yet seen one of
     // LifeCycle::DisabledChanged or InternalLifeCycle::RouteDisabledChanged
     pub(crate) is_explicitly_disabled_new: bool,
 
-    // This widget get focused automatically.
-    // We need to store this here since the widget local focus-chain is cleared when the widget is
-    // disabled
+    // `true` if this widget participates in the focus chain.
+    // We store this as a bool because we need to know how to update the focus chain
+    // when disabled/enabled state changes.
     pub(crate) auto_focus: bool,
 
     pub(crate) is_hot: bool,
