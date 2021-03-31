@@ -823,7 +823,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             let color = env.get_debug_color(ctx.widget_id().to_raw());
             let my_baseline = ctx.size().height - ctx.widget_state.baseline_offset;
             let line = crate::kurbo::Line::new((0.0, my_baseline), (ctx.size().width, my_baseline));
-            let stroke_style = crate::piet::StrokeStyle::new().dash(vec![4.0, 4.0], 0.0);
+            let stroke_style = crate::piet::StrokeStyle::new().dash_pattern(&[4.0, 4.0]);
             ctx.stroke_styled(line, &color, 1.0, &stroke_style);
         }
     }

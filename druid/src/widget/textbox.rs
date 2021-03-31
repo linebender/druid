@@ -23,10 +23,10 @@ use crate::text::{EditableText, Selection, TextComponent, TextLayout, TextStorag
 use crate::widget::prelude::*;
 use crate::widget::{Padding, Scroll, WidgetWrapper};
 use crate::{
-    theme, Color, FontDescriptor, KeyOrValue, Point, Rect, TextAlignment, TimerToken, Vec2,
+    theme, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect, SysMods,
+    TextAlignment, TimerToken, Vec2,
 };
 
-const TEXTBOX_INSETS: Insets = Insets::new(4.0, 2.0, 4.0, 2.0);
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
 
@@ -73,7 +73,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
         let mut scroll = Scroll::new(TextComponent::default()).content_must_fill(true);
         scroll.set_enabled_scrollbars(crate::scroll_component::ScrollbarsEnabled::None);
         Self {
-            inner: Padding::new(TEXTBOX_INSETS, scroll),
+            inner: Padding::new(theme::TEXTBOX_INSETS, scroll),
             scroll_to_selection_after_layout: false,
             placeholder,
             multiline: false,
@@ -310,7 +310,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         let text = self.text().borrow();
         let layout = text.layout.layout().unwrap();
 
-        let hit = layout.hit_test_text_position(text.selection().end);
+        let hit = layout.hit_test_text_position(text.selection().active);
         let line = layout.line_metric(hit.line).unwrap();
         let y0 = line.y_offset;
         let y1 = y0 + line.height;
@@ -326,6 +326,35 @@ impl<T: TextStorage + EditableText> TextBox<T> {
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
             self.inner.wrapped_mut().scroll_to(rect + SCROLL_TO_INSETS);
+        }
+    }
+
+    /// These commands may be supplied by menus; but if they aren't, we
+    /// inject them again, here.
+    fn fallback_do_builtin_command(
+        &mut self,
+        ctx: &mut EventCtx,
+        key: &KeyEvent,
+    ) -> Option<Command> {
+        use crate::commands as sys;
+        let our_id = ctx.widget_id();
+        match key {
+            key if HotKey::new(SysMods::Cmd, "c").matches(key) => Some(sys::COPY.to(our_id)),
+            key if HotKey::new(SysMods::Cmd, "x").matches(key) => Some(sys::CUT.to(our_id)),
+            // we have to send paste to the window, in order to get it converted into the `Paste`
+            // event
+            key if HotKey::new(SysMods::Cmd, "v").matches(key) => {
+                Some(sys::PASTE.to(ctx.window_id()))
+            }
+            key if HotKey::new(SysMods::Cmd, "z").matches(key) => Some(sys::UNDO.to(our_id)),
+            key if HotKey::new(SysMods::CmdShift, "Z").matches(key) && !cfg!(windows) => {
+                Some(sys::REDO.to(our_id))
+            }
+            key if HotKey::new(SysMods::Cmd, "y").matches(key) && cfg!(windows) => {
+                Some(sys::REDO.to(our_id))
+            }
+            key if HotKey::new(SysMods::Cmd, "a").matches(key) => Some(sys::SELECT_ALL.to(our_id)),
+            _ => None,
         }
     }
 }
@@ -363,6 +392,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 _ => (),
             },
+            Event::KeyDown(key) if !self.text().is_composing() => {
+                if let Some(cmd) = self.fallback_do_builtin_command(ctx, key) {
+                    ctx.submit_command(cmd);
+                    ctx.set_handled();
+                }
+            }
             Event::MouseDown(mouse) if self.text().can_write() => {
                 if !mouse.focus {
                     ctx.request_focus();
@@ -383,13 +418,17 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
             }
             Event::Command(ref cmd)
-                if self.text().can_read() && ctx.is_focused() && cmd.is(crate::commands::COPY) =>
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::COPY) =>
             {
                 self.text().borrow().set_clipboard();
                 ctx.set_handled();
             }
             Event::Command(cmd)
-                if self.text().can_write() && ctx.is_focused() && cmd.is(crate::commands::CUT) =>
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::CUT) =>
             {
                 if self.text().borrow().set_clipboard() {
                     let inval = self.text_mut().borrow_mut().insert_text(data, "");
@@ -429,6 +468,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
                 }
+                self.inner.wrapped_mut().child_mut().has_focus = true;
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
                 ctx.request_paint();
@@ -436,9 +476,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             LifeCycle::FocusChanged(false) => {
                 if self.text().can_write() && MAC_OR_LINUX && !self.multiline {
                     let selection = self.text().borrow().selection();
-                    let selection = Selection::new(selection.end, selection.end);
+                    let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
+                }
+                self.inner.wrapped_mut().child_mut().has_focus = false;
+                if !self.multiline {
+                    self.inner.wrapped_mut().scroll_to(Rect::ZERO);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -469,6 +513,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             tracing::warn!("Widget::layout called with outstanding IME lock.");
         }
         let min_width = env.get(theme::WIDE_WIDGET_WIDTH);
+        let textbox_insets = env.get(theme::TEXTBOX_INSETS);
 
         self.placeholder.rebuild_if_needed(ctx.text(), env);
         let min_size = bc.constrain((min_width, 0.0));
@@ -486,7 +531,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let baseline_off = layout_baseline
             - (self.inner.wrapped().child_size().height
                 - self.inner.wrapped().viewport_rect().height())
-            + TEXTBOX_INSETS.y1;
+            + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
             self.scroll_to_selection_end();
@@ -511,6 +556,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let background_color = env.get(theme::BACKGROUND_LIGHT);
         let cursor_color = env.get(theme::CURSOR_COLOR);
         let border_width = env.get(theme::TEXTBOX_BORDER_WIDTH);
+        let textbox_insets = env.get(theme::TEXTBOX_INSETS);
 
         let is_focused = ctx.is_focused();
 
@@ -535,7 +581,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             ctx.with_save(|ctx| {
                 ctx.clip(clip_rect);
                 self.placeholder
-                    .draw(ctx, (TEXTBOX_INSETS.x0, TEXTBOX_INSETS.y0));
+                    .draw(ctx, (textbox_insets.x0, textbox_insets.y0));
             })
         }
 
@@ -543,13 +589,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         if is_focused && self.should_draw_cursor() {
             // if there's no data, we always draw the cursor based on
             // our alignment.
-            let cursor_pos = self.text().borrow().selection().end;
+            let cursor_pos = self.text().borrow().selection().active;
             let cursor_line = self
                 .text()
                 .borrow()
                 .cursor_line_for_text_position(cursor_pos);
 
-            let padding_offset = Vec2::new(TEXTBOX_INSETS.x0, TEXTBOX_INSETS.y0);
+            let padding_offset = Vec2::new(textbox_insets.x0, textbox_insets.y0);
 
             let cursor = if data.is_empty() {
                 cursor_line + padding_offset

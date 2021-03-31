@@ -48,9 +48,8 @@ use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
-use crate::window;
 use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+    self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
 use super::application::Application;
@@ -905,16 +904,16 @@ impl WindowHandle {
     }
 
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         let cur_size_state = self.get_window_state();
         if let Some(state) = self.state.upgrade() {
             match (size_state, cur_size_state) {
                 (s1, s2) if s1 == s2 => (),
-                (MAXIMIZED, _) => state.window.maximize(),
-                (MINIMIZED, _) => state.window.iconify(),
-                (RESTORED, MAXIMIZED) => state.window.unmaximize(),
-                (RESTORED, MINIMIZED) => state.window.deiconify(),
-                (RESTORED, RESTORED) => (), // Unreachable
+                (Maximized, _) => state.window.maximize(),
+                (Minimized, _) => state.window.iconify(),
+                (Restored, Maximized) => state.window.unmaximize(),
+                (Restored, Minimized) => state.window.deiconify(),
+                (Restored, Restored) => (), // Unreachable
             }
 
             state.window.unmaximize();
@@ -922,18 +921,18 @@ impl WindowHandle {
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         if let Some(state) = self.state.upgrade() {
             if state.window.is_maximized() {
-                return MAXIMIZED;
+                return Maximized;
             } else if let Some(window) = state.window.get_parent_window() {
                 let state = window.get_state();
                 if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
-                    return MINIMIZED;
+                    return Minimized;
                 }
             }
         }
-        RESTORED
+        Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
@@ -1121,7 +1120,8 @@ impl WindowHandle {
                 .unwrap();
 
             let first_child = &vbox.get_children()[0];
-            if first_child.is::<gtk::MenuBar>() {
+            if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
+                old_menubar.deactivate();
                 vbox.remove(first_child);
             }
             let menubar = menu.into_gtk_menubar(&self, &accel_group);

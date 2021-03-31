@@ -24,16 +24,16 @@ mod input_methods;
 mod layout;
 pub mod movement;
 mod rich_text;
-pub mod selection;
 mod storage;
 
-pub use self::attribute::{Attribute, AttributeSpans};
+pub use druid_shell::text::Selection;
+
+pub use self::attribute::{Attribute, AttributeSpans, Link};
 pub use self::backspace::offset_for_delete_backwards;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
 pub use self::font_descriptor::FontDescriptor;
 pub use self::layout::{LayoutMetrics, TextLayout};
 pub use self::movement::{movement, Movement};
-pub use self::selection::Selection;
 pub use input_component::{EditSession, TextComponent};
 pub use input_methods::ImeHandlerRef;
 pub use rich_text::{AttributesAdder, RichText, RichTextBuilder};
