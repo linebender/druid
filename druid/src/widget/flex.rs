@@ -347,10 +347,10 @@ impl FlexParams {
         let flex = if flex <= 0.0 {
             debug_assert!(
                 flex <= 0.0,
-                "flex value should not be <= 0.0. Flex given was: {}",
+                "flex value should not be less than equal to 0.0. Flex given was: {}",
                 flex
             );
-            tracing::warn!("Provided flex value was <= 0.0: {}", flex);
+            tracing::warn!("Provided flex value was less than equal to 0.0: {}", flex);
             1.0
         } else {
             flex
@@ -550,8 +550,8 @@ impl<T: Data> Flex<T> {
     /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
-    /// [`FlexParams`]: struct.FlexParams.html
-    /// [`with_flex_child`]: #method.with_flex_child
+    /// [`FlexParams`]: crate::widget::FlexParams
+    /// [`with_flex_child`]: crate::widget::Flex::with_flex_child
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
@@ -583,7 +583,7 @@ impl<T: Data> Flex<T> {
     /// If you are laying out standard controls in this container, you should
     /// generally prefer to use [`add_default_spacer`].
     ///
-    /// [`add_default_spacer`]: #method.add_default_spacer
+    /// [`add_default_spacer`]: crate::widget::Flex::add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
         let mut value = len.into();
         if let KeyOrValue::Concrete(ref mut len) = value {
@@ -599,15 +599,17 @@ impl<T: Data> Flex<T> {
 
     /// Add an empty spacer widget with a specific `flex` factor.
     pub fn add_flex_spacer(&mut self, flex: f64) {
-        if flex < 0.0 {
+        let flex = if flex < 0.0 {
             debug_assert!(
                 flex >= 0.0,
-                "flex value for space should be >= 0, received: {}",
+                "flex value for space should be greater than equal to 0, received: {}",
                 flex
             );
-            tracing::warn!("Provided flex value was < 0: {}", flex);
-        }
-        let flex = if flex < 0.0 { 0.0 } else { flex };
+            tracing::warn!("Provided flex value was less than 0: {}", flex);
+            0.0
+        } else {
+            flex
+        };
         let new_child = Child::FlexedSpacer(flex, 0.0);
         self.children.push(new_child);
     }
@@ -679,6 +681,10 @@ impl<T: Data> Widget<T> for Flex<T> {
                 Child::FixedSpacer(kv, calculated_siz) => {
                     *calculated_siz = kv.resolve(env);
                     *calculated_siz = if *calculated_siz < 0.0 {
+                        tracing::warn!(
+                            "Length provided to fixed spacer was les than 0: {}",
+                            *calculated_siz
+                        );
                         0.0
                     } else {
                         *calculated_siz
