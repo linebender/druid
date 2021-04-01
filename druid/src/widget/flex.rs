@@ -585,13 +585,29 @@ impl<T: Data> Flex<T> {
     ///
     /// [`add_default_spacer`]: #method.add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
-        let value = len.into();
+        let mut value = len.into();
+        if let KeyOrValue::Concrete(ref mut len) = value {
+            if *len < 0.0 {
+                tracing::warn!("Provided spacer length was less than 0. Value was: {}", len);
+            }
+            *len = len.clamp(0.0, f64::MAX);
+        }
+
         let new_child = Child::FixedSpacer(value, 0.0);
         self.children.push(new_child);
     }
 
     /// Add an empty spacer widget with a specific `flex` factor.
     pub fn add_flex_spacer(&mut self, flex: f64) {
+        if flex < 0.0 {
+            debug_assert!(
+                flex >= 0.0,
+                "flex value for space should be >= 0, received: {}",
+                flex
+            );
+            tracing::warn!("Provided flex value was < 0: {}", flex);
+        }
+        let flex = if flex < 0.0 { 0.0 } else { flex };
         let new_child = Child::FlexedSpacer(flex, 0.0);
         self.children.push(new_child);
     }
@@ -662,6 +678,11 @@ impl<T: Data> Widget<T> for Flex<T> {
                 }
                 Child::FixedSpacer(kv, calculated_siz) => {
                     *calculated_siz = kv.resolve(env);
+                    *calculated_siz = if *calculated_siz < 0.0 {
+                        0.0
+                    } else {
+                        *calculated_siz
+                    };
                     major_non_flex += *calculated_siz;
                 }
                 Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
