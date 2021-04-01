@@ -20,10 +20,12 @@ use std::sync::{Arc, Weak};
 
 use tracing::instrument;
 
-use super::{EditableText, ImeHandlerRef, Movement, Selection, TextLayout, TextStorage};
+use super::{
+    EditableText, ImeHandlerRef, ImeInvalidation, InputHandler, Movement, Selection, TextAction,
+    TextLayout, TextStorage,
+};
 use crate::kurbo::{Line, Point, Rect, Vec2};
 use crate::piet::TextLayout as _;
-use crate::shell::text::{Action as ImeAction, Event as ImeUpdate, InputHandler};
 use crate::widget::prelude::*;
 use crate::{text, theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
 
@@ -83,9 +85,9 @@ pub struct EditSession<T> {
     external_text_change: Option<T>,
     external_selection_change: Option<Selection>,
     external_scroll_to: Option<bool>,
-    external_action: Option<ImeAction>,
+    external_action: Option<TextAction>,
     /// A flag set in `update` if the text has changed from a non-IME source.
-    pending_ime_invalidation: Option<ImeUpdate>,
+    pending_ime_invalidation: Option<ImeInvalidation>,
     /// If `true`, the component will send the [`TextComponent::RETURN`]
     /// notification when the user enters a newline.
     pub send_notification_on_return: bool,
@@ -283,12 +285,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     self.borrow_mut().layout.set_text(data.clone());
                     self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
                     self.borrow_mut()
-                        .update_pending_invalidation(ImeUpdate::Reset);
+                        .update_pending_invalidation(ImeInvalidation::Reset);
                 }
                 self.borrow_mut()
                     .do_mouse_down(mouse.pos, mouse.mods, mouse.count);
                 self.borrow_mut()
-                    .update_pending_invalidation(ImeUpdate::SelectionChanged);
+                    .update_pending_invalidation(ImeInvalidation::SelectionChanged);
                 ctx.request_update();
                 ctx.request_paint();
             }
@@ -299,7 +301,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     self.borrow_mut().do_drag(mouse.pos);
                     if self.borrow().selection() != pre_sel {
                         self.borrow_mut()
-                            .update_pending_invalidation(ImeUpdate::SelectionChanged);
+                            .update_pending_invalidation(ImeInvalidation::SelectionChanged);
                         ctx.request_update();
                         ctx.request_paint();
                     }
@@ -324,12 +326,14 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 }
                 if let Some(action) = action {
                     match action {
-                        ImeAction::Cancel => ctx.submit_notification(TextComponent::CANCEL),
-                        ImeAction::InsertNewLine { .. } => {
+                        TextAction::Cancel => ctx.submit_notification(TextComponent::CANCEL),
+                        TextAction::InsertNewLine { .. } => {
                             ctx.submit_notification(TextComponent::RETURN)
                         }
-                        ImeAction::InsertTab { .. } => ctx.submit_notification(TextComponent::TAB),
-                        ImeAction::InsertBacktab => ctx.submit_notification(TextComponent::BACKTAB),
+                        TextAction::InsertTab { .. } => ctx.submit_notification(TextComponent::TAB),
+                        TextAction::InsertBacktab => {
+                            ctx.submit_notification(TextComponent::BACKTAB)
+                        }
                         _ => tracing::warn!("unexepcted external action '{:?}'", action),
                     };
                 }
@@ -372,7 +376,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     let new_origin = ctx.window_origin();
                     if prev_origin != new_origin {
                         self.borrow_mut().origin = ctx.window_origin();
-                        ctx.invalidate_text_input(ImeUpdate::LayoutChanged);
+                        ctx.invalidate_text_input(ImeInvalidation::LayoutChanged);
                     }
                 }
             }
@@ -477,11 +481,11 @@ impl<T> EditSession<T> {
     /// invalidte the platform's IME state, by passing it to
     /// [`EventCtx::invalidate_text_input`].
     #[must_use]
-    pub fn set_selection(&mut self, selection: Selection) -> Option<ImeUpdate> {
+    pub fn set_selection(&mut self, selection: Selection) -> Option<ImeInvalidation> {
         if selection != self.selection {
             self.selection = selection;
-            self.update_pending_invalidation(ImeUpdate::SelectionChanged);
-            Some(ImeUpdate::SelectionChanged)
+            self.update_pending_invalidation(ImeInvalidation::SelectionChanged);
+            Some(ImeInvalidation::SelectionChanged)
         } else {
             None
         }
@@ -508,7 +512,7 @@ impl<T> EditSession<T> {
     /// Returns any invalidation action that should be passed to the platform.
     ///
     /// The user of this component *must* check this after calling `update`.
-    pub fn pending_ime_invalidation(&mut self) -> Option<ImeUpdate> {
+    pub fn pending_ime_invalidation(&mut self) -> Option<ImeInvalidation> {
         self.pending_ime_invalidation.take()
     }
 
@@ -524,20 +528,22 @@ impl<T> EditSession<T> {
         self.external_scroll_to.take()
     }
 
-    fn take_external_action(&mut self) -> Option<ImeAction> {
+    fn take_external_action(&mut self) -> Option<TextAction> {
         self.external_action.take()
     }
 
     // we don't want to replace a more aggressive invalidation with a less aggressive one.
-    fn update_pending_invalidation(&mut self, new_invalidation: ImeUpdate) {
+    fn update_pending_invalidation(&mut self, new_invalidation: ImeInvalidation) {
         self.pending_ime_invalidation = match self.pending_ime_invalidation.take() {
             None => Some(new_invalidation),
             Some(prev) => match (prev, new_invalidation) {
-                (ImeUpdate::SelectionChanged, ImeUpdate::SelectionChanged) => {
-                    ImeUpdate::SelectionChanged
+                (ImeInvalidation::SelectionChanged, ImeInvalidation::SelectionChanged) => {
+                    ImeInvalidation::SelectionChanged
                 }
-                (ImeUpdate::LayoutChanged, ImeUpdate::LayoutChanged) => ImeUpdate::LayoutChanged,
-                _ => ImeUpdate::Reset,
+                (ImeInvalidation::LayoutChanged, ImeInvalidation::LayoutChanged) => {
+                    ImeInvalidation::LayoutChanged
+                }
+                _ => ImeInvalidation::Reset,
             }
             .into(),
         }
@@ -558,12 +564,12 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     /// The caller is responsible for notifying the platform of the change in
     /// text state, by calling [`EventCtx::invalidate_text_input`].
     #[must_use]
-    pub fn insert_text(&mut self, data: &mut T, new_text: &str) -> ImeUpdate {
+    pub fn insert_text(&mut self, data: &mut T, new_text: &str) -> ImeInvalidation {
         let new_cursor_pos = self.selection.min() + new_text.len();
         data.edit(self.selection.range(), new_text);
         self.selection = Selection::caret(new_cursor_pos);
         self.scroll_to_selection_end(true);
-        ImeUpdate::Reset
+        ImeInvalidation::Reset
     }
 
     /// Sets the clipboard to the contents of the current selection.
@@ -588,23 +594,23 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         self.external_scroll_to = Some(after_edit);
     }
 
-    fn do_action(&mut self, buffer: &mut T, action: ImeAction) {
+    fn do_action(&mut self, buffer: &mut T, action: TextAction) {
         match action {
-            ImeAction::Move(movement) => {
+            TextAction::Move(movement) => {
                 let sel = text::movement(movement, self.selection, &self.layout, false);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
-            ImeAction::MoveSelecting(movement) => {
+            TextAction::MoveSelecting(movement) => {
                 let sel = text::movement(movement, self.selection, &self.layout, true);
                 self.external_selection_change = Some(sel);
                 self.scroll_to_selection_end(false);
             }
-            ImeAction::SelectAll => {
+            TextAction::SelectAll => {
                 let len = buffer.len();
                 self.external_selection_change = Some(Selection::new(0, len));
             }
-            ImeAction::SelectWord => {
+            TextAction::SelectWord => {
                 if self.selection.is_caret() {
                     let range =
                         text::movement::word_range_for_pos(buffer.as_str(), self.selection.active);
@@ -615,9 +621,9 @@ impl<T: TextStorage + EditableText> EditSession<T> {
                 // is not a caret (and may span multiple words)
             }
             // This requires us to have access to the layout, which might be stale?
-            ImeAction::SelectLine => (),
+            TextAction::SelectLine => (),
             // this assumes our internal selection is consistent with the buffer?
-            ImeAction::SelectParagraph => {
+            TextAction::SelectParagraph => {
                 if !self.selection.is_caret() || buffer.len() < self.selection.active {
                     return;
                 }
@@ -625,7 +631,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
                 let next = buffer.next_line_break(self.selection.active);
                 self.external_selection_change = Some(Selection::new(prev, next));
             }
-            ImeAction::Delete(movement) if self.selection.is_caret() => {
+            TextAction::Delete(movement) if self.selection.is_caret() => {
                 if movement == Movement::Grapheme(druid_shell::text::Direction::Upstream) {
                     self.backspace(buffer);
                 } else {
@@ -634,17 +640,17 @@ impl<T: TextStorage + EditableText> EditSession<T> {
                     self.ime_insert_text(buffer, "")
                 }
             }
-            ImeAction::Delete(_) => self.ime_insert_text(buffer, ""),
-            ImeAction::DecomposingBackspace => {
+            TextAction::Delete(_) => self.ime_insert_text(buffer, ""),
+            TextAction::DecomposingBackspace => {
                 tracing::warn!("Decomposing Backspace is not implemented");
                 self.backspace(buffer);
             }
-            //ImeAction::UppercaseSelection
-            //| ImeAction::LowercaseSelection
-            //| ImeAction::TitlecaseSelection => {
+            //TextAction::UppercaseSelection
+            //| TextAction::LowercaseSelection
+            //| TextAction::TitlecaseSelection => {
             //tracing::warn!("IME transformations are not implemented");
             //}
-            ImeAction::InsertNewLine {
+            TextAction::InsertNewLine {
                 newline_type,
                 ignore_hotkey,
             } => {
@@ -654,21 +660,21 @@ impl<T: TextStorage + EditableText> EditSession<T> {
                     self.ime_insert_text(buffer, &newline_type.to_string());
                 }
             }
-            ImeAction::InsertTab { ignore_hotkey } => {
+            TextAction::InsertTab { ignore_hotkey } => {
                 if ignore_hotkey || self.accepts_tabs {
                     self.ime_insert_text(buffer, "\t");
                 } else if !ignore_hotkey {
                     self.external_action = Some(action);
                 }
             }
-            ImeAction::InsertBacktab => {
+            TextAction::InsertBacktab => {
                 if !self.accepts_tabs {
                     self.external_action = Some(action);
                 }
             }
-            ImeAction::InsertSingleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "'"),
-            ImeAction::InsertDoubleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "\""),
-            ImeAction::Cancel if self.send_notification_on_cancel => {
+            TextAction::InsertSingleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "'"),
+            TextAction::InsertDoubleQuoteIgnoringSmartQuotes => self.ime_insert_text(buffer, "\""),
+            TextAction::Cancel if self.send_notification_on_cancel => {
                 self.external_action = Some(action)
             }
             other => tracing::warn!("unhandled IME action {:?}", other),
@@ -793,7 +799,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
             .map(|t| !t.same(new_data))
             .unwrap_or(true)
         {
-            self.update_pending_invalidation(ImeUpdate::Reset);
+            self.update_pending_invalidation(ImeInvalidation::Reset);
             self.layout.set_text(new_data.clone());
         }
         if self.layout.needs_rebuild_after_update(ctx) {
@@ -802,7 +808,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         let new_sel = self.selection.constrained(new_data.as_str());
         if new_sel != self.selection {
             self.selection = new_sel;
-            self.update_pending_invalidation(ImeUpdate::SelectionChanged);
+            self.update_pending_invalidation(ImeInvalidation::SelectionChanged);
         }
         self.layout.rebuild_if_needed(ctx.text(), env);
     }
@@ -888,7 +894,7 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
         .map(|rect| rect + origin.to_vec2())
     }
 
-    fn handle_action(&mut self, action: ImeAction) {
+    fn handle_action(&mut self, action: TextAction) {
         self.inner.borrow_mut().do_action(&mut self.text, action);
         let text_changed = self
             .inner

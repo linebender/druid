@@ -17,10 +17,7 @@
 use tracing::instrument;
 
 use super::TextBox;
-use crate::text::{
-    format::{Formatter, ValidationError},
-    Selection, TextComponent,
-};
+use crate::text::{Formatter, Selection, TextComponent, ValidationError};
 use crate::widget::prelude::*;
 use crate::{Data, Selector};
 
