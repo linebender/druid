@@ -429,7 +429,7 @@ impl<T: Data> Flex<T> {
     ///
     /// Convenient for assembling a group of widgets in a single expression.
     pub fn with_child(mut self, child: impl Widget<T> + 'static) -> Self {
-        self.add_flex_child(child, 0.0);
+        self.add_child(child);
         self
     }
 
@@ -1086,6 +1086,7 @@ mod tests {
         assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
     }
     #[test]
+    #[should_panic]
     fn test_invalid_flex_params() {
         use float_cmp::approx_eq;
         let params = FlexParams::new(0.0, None);
