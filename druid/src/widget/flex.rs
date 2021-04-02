@@ -1086,14 +1086,8 @@ mod tests {
         assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
     }
     #[test]
-    // #[should_panic]
     #[cfg(not(debug_assertions))]
     fn test_invalid_flex_params() {
-        // if cfg!(debug_assertions) {
-        //     println!("Debugging enabled");
-        // } else {
-        //     println!("Debugging disabled");
-        // }
         use float_cmp::approx_eq;
         let params = FlexParams::new(0.0, None);
         approx_eq!(f64, params.flex, 1.0, ulps = 2);
