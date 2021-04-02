@@ -294,6 +294,9 @@ impl WindowBuilder {
                 handle.set_level(level)
             }
 
+            // set_window_state above could have invalidated the frame size
+            let frame = NSView::frame(content_view);
+
             (*view_state).handler.connect(&handle.clone().into());
             (*view_state).handler.scale(Scale::default());
             (*view_state)
