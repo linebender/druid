@@ -341,20 +341,14 @@ impl FlexParams {
     /// If the provided flex value is 0.0 or less, the flex value will default to 1.0.
     ///
     ///
-    /// [`Flex`]: crate::widget::Flex
-    /// [`CrossAxisAlignment`]: crate::widget::CrossAxisAlignment
+    /// [`Flex`]: Flex
+    /// [`CrossAxisAlignment`]: CrossAxisAlignment
     pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
-        let flex = if flex > 0.0 {
-            flex
-        } else {
-            debug_assert!(
-                flex > 0.0,
-                "flex value should not be less than equal to 0.0. Flex given was: {}",
-                flex
-            );
-            tracing::warn!("Provided flex value was less than equal to 0.0: {}", flex);
-            1.0
-        };
+        if flex <= 0.0 {
+            debug_panic!("Flex value should be > 0.0. Flex given was: {}", flex);
+        }
+
+        let flex = flex.max(0.0);
 
         FlexParams {
             flex,
@@ -518,7 +512,7 @@ impl<T: Data> Flex<T> {
     ///
     /// See also [`with_child`].
     ///
-    /// [`with_child`]: crate::widget::Flex::with_child
+    /// [`with_child`]: Flex::with_child
     pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
         let child = Child::Fixed {
             widget: WidgetPod::new(Box::new(child)),
@@ -550,18 +544,26 @@ impl<T: Data> Flex<T> {
     /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
-    /// [`FlexParams`]: crate::widget::FlexParams
-    /// [`with_flex_child`]: crate::widget::Flex::with_flex_child
+    /// [`FlexParams`]: FlexParams
+    /// [`with_flex_child`]: Flex::with_flex_child
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
         params: impl Into<FlexParams>,
     ) {
         let params = params.into();
-        let child = Child::Flex {
-            widget: WidgetPod::new(Box::new(child)),
-            alignment: params.alignment,
-            flex: params.flex,
+        let child = if params.flex > 0.0 {
+            Child::Flex {
+                widget: WidgetPod::new(Box::new(child)),
+                alignment: params.alignment,
+                flex: params.flex,
+            }
+        } else {
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods. See the Flex docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
+            Child::Fixed {
+                widget: WidgetPod::new(Box::new(child)),
+                alignment: None,
+            }
         };
         self.children.push(child);
     }
@@ -583,7 +585,7 @@ impl<T: Data> Flex<T> {
     /// If you are laying out standard controls in this container, you should
     /// generally prefer to use [`add_default_spacer`].
     ///
-    /// [`add_default_spacer`]: crate::widget::Flex::add_default_spacer
+    /// [`add_default_spacer`]: Flex::add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
         let mut value = len.into();
         if let KeyOrValue::Concrete(ref mut len) = value {
@@ -680,15 +682,10 @@ impl<T: Data> Widget<T> for Flex<T> {
                 }
                 Child::FixedSpacer(kv, calculated_siz) => {
                     *calculated_siz = kv.resolve(env);
-                    *calculated_siz = if *calculated_siz >= 0.0 {
-                        *calculated_siz
-                    } else {
-                        tracing::warn!(
-                            "Length provided to fixed spacer was les than 0: {}",
-                            *calculated_siz
-                        );
-                        0.0
-                    };
+                    if *calculated_siz < 0.0 {
+                        tracing::warn!("Length provided to fixed spacer was less than 0");
+                    }
+                    *calculated_siz = calculated_siz.max(0.0);
                     major_non_flex += *calculated_siz;
                 }
                 Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
