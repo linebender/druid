@@ -1081,22 +1081,8 @@ mod tests {
         assert_eq!(vec(a, 38., 5), vec![4., 7., 8., 8., 7., 4.]);
         assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
     }
-    #[test]
-    #[cfg(not(debug_assertions))]
-    fn test_invalid_flex_params() {
-        use float_cmp::approx_eq;
-        let params = FlexParams::new(0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
-
-        let params = FlexParams::new(-0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
-
-        let params = FlexParams::new(-1.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
-    }
 
     #[test]
-    #[cfg(debug_assertions)]
     #[should_panic]
     fn test_invalid_flex_params() {
         use float_cmp::approx_eq;
