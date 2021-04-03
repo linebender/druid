@@ -20,10 +20,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::kurbo::Point;
 use crate::piet::TextLayout as _;
-pub use crate::shell::text::{Direction, Movement, VerticalMovement, WritingDirection};
-use crate::text::{EditableText, Selection, TextLayout, TextStorage};
+use crate::text::{
+    EditableText, Movement, Selection, TextLayout, TextStorage, VerticalMovement, WritingDirection,
+};
 
-/// Compute the result of movement on a selection.
+/// Compute the result of a [`Movement`] on a [`Selection`].
 ///
 /// returns a new selection representing the state after the movement.
 ///
@@ -163,7 +164,7 @@ pub fn movement<T: EditableText + TextStorage>(
 /// This uses Unicode word boundaries, as defined in [UAX#29].
 ///
 /// [UAX#29]: http://www.unicode.org/reports/tr29/
-pub fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
+pub(crate) fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
     let mut word_iter = text.split_word_bound_indices().peekable();
     let mut word_start = pos;
     while let Some((ix, _)) = word_iter.next() {

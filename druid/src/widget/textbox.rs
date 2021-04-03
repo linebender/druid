@@ -19,7 +19,9 @@ use tracing::{instrument, trace};
 
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
-use crate::text::{EditableText, Selection, TextComponent, TextLayout, TextStorage};
+use crate::text::{
+    EditableText, ImeInvalidation, Selection, TextComponent, TextLayout, TextStorage,
+};
 use crate::widget::prelude::*;
 use crate::widget::{Padding, Scroll, WidgetWrapper};
 use crate::{
@@ -466,7 +468,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 if self.text().can_write() && !self.multiline && !self.was_focused_from_click {
                     let selection = Selection::new(0, data.len());
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
-                    ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
+                    ctx.invalidate_text_input(ImeInvalidation::SelectionChanged);
                 }
                 self.inner.wrapped_mut().child_mut().has_focus = true;
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
@@ -478,7 +480,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
-                    ctx.invalidate_text_input(druid_shell::text::Event::SelectionChanged);
+                    ctx.invalidate_text_input(ImeInvalidation::SelectionChanged);
                 }
                 self.inner.wrapped_mut().child_mut().has_focus = false;
                 if !self.multiline {

@@ -14,7 +14,7 @@
 
 //! Widgets, widget components, and functions for creating widgets
 
-use druid::text::format::ValidationError;
+use druid::text::ValidationError;
 use druid::widget::{
     prelude::*, Controller, Either, Label, SizedBox, TextBoxEvent, ValidationDelegate,
 };
