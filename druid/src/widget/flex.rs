@@ -338,7 +338,6 @@ impl FlexParams {
     /// can pass an `f64` to any of the functions that take `FlexParams`.
     ///
     /// By default, the widget uses the alignment of its parent [`Flex`] container.
-    /// If the provided flex value is 0.0 or less, the flex value will default to 1.0.
     ///
     ///
     /// [`Flex`]: Flex
