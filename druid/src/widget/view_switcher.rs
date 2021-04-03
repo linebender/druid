@@ -18,13 +18,11 @@ use crate::widget::prelude::*;
 use crate::{Data, Point, WidgetPod};
 use tracing::instrument;
 
-/// A widget that can switch dynamically between one of many views depending
-/// on application state.
-
 type ChildPicker<T, U> = dyn Fn(&T, &Env) -> U;
 type ChildBuilder<T, U> = dyn Fn(&U, &T, &Env) -> Box<dyn Widget<T>>;
 
-/// A widget that dynamically switches between two children.
+/// A widget that can switch dynamically between one of many views depending
+/// on application state.
 pub struct ViewSwitcher<T, U> {
     child_picker: Box<ChildPicker<T, U>>,
     child_builder: Box<ChildBuilder<T, U>>,
