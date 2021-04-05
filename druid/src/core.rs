@@ -1027,7 +1027,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // is always the same, or we dont change at all, because we stay disabled if either
                 // we or our parent are disabled.
                 if was_disabled != self.state.is_disabled() {
-                    self.state.focus_chain.clear();
+                    self.state.update_focus_chain = true;
                     true
                 } else {
                     false
@@ -1276,7 +1276,7 @@ impl WidgetState {
         self.timers.extend_drain(&mut child_state.timers);
         self.text_registrations
             .extend(child_state.text_registrations.drain(..));
-        self.update_focus_chain = child_state.update_focus_chain;
+        self.update_focus_chain |= child_state.update_focus_chain;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
