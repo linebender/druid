@@ -289,9 +289,9 @@ pub enum LifeCycle {
     /// It is the only place from witch [`register_for_focus`] should be called.
     /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
     ///
-    /// [`register_for_focus`]: (struct.LifecycleCtx.html#method.register_for_focus)
-    /// [`focus_next`]: (struct.LifecycleCtx.html#method.register_for_focus)
-    /// [`focus_prev`]: (struct.LifecycleCtx.html#method.register_for_focus)
+    /// [`register_for_focus`]: crate::LifecycleCtx::register_for_focus
+    /// [`focus_next`]: crate::EventCtx::focus_next
+    /// [`focus_prev`]: crate::EventCtx::focus_prev
     BuildFocusChain,
     /// Called when the focus status changes.
     ///
