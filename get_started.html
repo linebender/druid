@@ -184,7 +184,7 @@ fn build_ui() -&gt; impl Widget&lt;()&gt; {
 }
 
 fn main() -&gt; Result&lt;(), PlatformError&gt; {
-    AppLauncher::with_window(WindowDesc::new(build_ui)).launch(())?;
+    AppLauncher::with_window(WindowDesc::new(build_ui())).launch(())?;
     Ok(())
 }
 </code></pre>
