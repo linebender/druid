@@ -338,10 +338,6 @@ impl FlexParams {
     /// can pass an `f64` to any of the functions that take `FlexParams`.
     ///
     /// By default, the widget uses the alignment of its parent [`Flex`] container.
-    ///
-    ///
-    /// [`Flex`]: Flex
-    /// [`CrossAxisAlignment`]: CrossAxisAlignment
     pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
         if flex <= 0.0 {
             debug_panic!("Flex value should be > 0.0. Flex given was: {}", flex);
@@ -543,8 +539,8 @@ impl<T: Data> Flex<T> {
     /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
-    /// [`FlexParams`]: FlexParams
     /// [`with_flex_child`]: Flex::with_flex_child
+    #[instrument(name = "Flex", level = "trace", skip(self, child, params))]
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
@@ -558,7 +554,7 @@ impl<T: Data> Flex<T> {
                 flex: params.flex,
             }
         } else {
-            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods. See the Flex docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
             Child::Fixed {
                 widget: WidgetPod::new(Box::new(child)),
                 alignment: None,
