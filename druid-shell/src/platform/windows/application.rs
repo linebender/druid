@@ -32,6 +32,8 @@ use winapi::um::winuser::{
     IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
+use piet_common::D2DLoadedFonts;
+
 use crate::application::AppHandler;
 
 use super::accels;
@@ -43,6 +45,7 @@ use super::window::{self, DS_REQUEST_DESTROY};
 #[derive(Clone)]
 pub(crate) struct Application {
     state: Rc<RefCell<State>>,
+    pub(crate) fonts: D2DLoadedFonts,
 }
 
 struct State {
@@ -57,7 +60,8 @@ impl Application {
             quitting: false,
             windows: HashSet::new(),
         }));
-        Ok(Application { state })
+        let fonts = D2DLoadedFonts::default();
+        Ok(Application { state, fonts })
     }
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.

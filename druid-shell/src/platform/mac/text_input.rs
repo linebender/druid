@@ -19,7 +19,7 @@
 // apple's documentation on text editing is also very helpful:
 // https://developer.apple.com/library/archive/documentation/TextFonts/Conceptual/CocoaTextArchitecture/TextEditing/TextEditing.html#//apple_ref/doc/uid/TP40009459-CH3-SW3
 
-#![allow(non_snake_case)]
+#![allow(clippy::clippy::upper_case_acronyms, non_snake_case)]
 
 use std::ffi::c_void;
 use std::ops::Range;

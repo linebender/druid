@@ -623,6 +623,24 @@ impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
     }
 }
 
+impl From<f64> for KeyOrValue<Insets> {
+    fn from(src: f64) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
+    }
+}
+
+impl From<(f64, f64)> for KeyOrValue<Insets> {
+    fn from(src: (f64, f64)) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
+    }
+}
+
+impl From<(f64, f64, f64, f64)> for KeyOrValue<Insets> {
+    fn from(src: (f64, f64, f64, f64)) -> KeyOrValue<Insets> {
+        KeyOrValue::Concrete(src.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

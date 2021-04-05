@@ -1334,7 +1334,7 @@ impl CursorChange {
 mod tests {
     use super::*;
     use crate::ext_event::ExtEventHost;
-    use crate::text::format::ParseFormatter;
+    use crate::text::ParseFormatter;
     use crate::widget::{Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
     use test_env_log::test;

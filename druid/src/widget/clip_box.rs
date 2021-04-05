@@ -132,7 +132,7 @@ impl<T, W> ClipBox<T, W> {
     ///
     /// This setting affects how a `ClipBox` lays out its child.
     ///
-    /// - When it is `false` (the default), the child does receive any upper
+    /// - When it is `false` (the default), the child does not receive any upper
     ///   bound on its height: the idea is that the child can be as tall as it
     ///   wants, and the viewport will somehow get moved around to see all of it.
     /// - When it is `true`, the viewport's maximum height will be passed down

@@ -176,10 +176,8 @@ mod window;
 
 // Types from kurbo & piet that are required by public API.
 pub use kurbo::{Affine, Insets, Point, Rect, Size, Vec2};
-pub use piet::{
-    Color, FontFamily, FontStyle, FontWeight, ImageBuf, LinearGradient, RadialGradient,
-    RenderContext, TextAlignment, UnitPoint,
-};
+pub use piet::{Color, ImageBuf, LinearGradient, RadialGradient, RenderContext, UnitPoint};
+
 // these are the types from shell that we expose; others we only use internally.
 #[cfg(feature = "image")]
 pub use shell::image;
@@ -206,7 +204,6 @@ pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, Menu, MenuItem};
 pub use mouse::MouseEvent;
-pub use text::{ArcStr, FontDescriptor, TextLayout};
 pub use util::Handled;
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;
@@ -215,6 +212,11 @@ pub use window::{Window, WindowId};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
+
+#[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
+pub use piet::{FontFamily, FontStyle, FontWeight, TextAlignment};
+#[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
+pub use text::{ArcStr, FontDescriptor, TextLayout};
 
 /// The meaning (mapped value) of a keypress.
 ///

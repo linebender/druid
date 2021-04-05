@@ -413,9 +413,18 @@ impl Data for kurbo::Rect {
     }
 }
 
+impl Data for kurbo::RoundedRectRadii {
+    fn same(&self, other: &Self) -> bool {
+        self.top_left.same(&other.top_left)
+            && self.top_right.same(&other.top_right)
+            && self.bottom_left.same(&other.bottom_left)
+            && self.bottom_right.same(&other.bottom_right)
+    }
+}
+
 impl Data for kurbo::RoundedRect {
     fn same(&self, other: &Self) -> bool {
-        self.rect().same(&other.rect()) && self.radius().same(&other.radius())
+        self.rect().same(&other.rect()) && self.radii().same(&other.radii())
     }
 }
 
@@ -577,19 +586,11 @@ impl<T: Data> Data for im::OrdSet<T> {
     }
 }
 
-macro_rules! impl_data_for_array {
-    () => {};
-    ($this:tt $($rest:tt)*) => {
-        impl<T: Data> Data for [T; $this] {
-            fn same(&self, other: &Self) -> bool {
-                self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
-            }
-        }
-        impl_data_for_array!($($rest)*);
+impl<T: Data, const N: usize> Data for [T; N] {
+    fn same(&self, other: &Self) -> bool {
+        self.iter().zip(other.iter()).all(|(a, b)| a.same(b))
     }
 }
-
-impl_data_for_array! { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 }
 
 #[cfg(test)]
 mod test {

@@ -20,10 +20,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::kurbo::Point;
 use crate::piet::TextLayout as _;
-pub use crate::shell::text::{Direction, Movement, VerticalMovement, WritingDirection};
-use crate::text::{EditableText, Selection, TextLayout, TextStorage};
+use crate::text::{
+    EditableText, Movement, Selection, TextLayout, TextStorage, VerticalMovement, WritingDirection,
+};
 
-/// Compute the result of movement on a selection.
+/// Compute the result of a [`Movement`] on a [`Selection`].
 ///
 /// returns a new selection representing the state after the movement.
 ///
@@ -78,7 +79,17 @@ pub fn movement<T: EditableText + TextStorage>(
                 let lm = layout.line_metric(cur_pos.line).unwrap();
                 let point_above = Point::new(h_pos, cur_pos.point.y - lm.height);
                 let up_pos = layout.hit_test_point(point_above);
-                (up_pos.idx, Some(point_above.x))
+                if up_pos.is_inside {
+                    (up_pos.idx, Some(h_pos))
+                } else {
+                    // because we can't specify affinity, moving up when h_pos
+                    // is wider than both the current line and the previous line
+                    // can result in a cursor position at the visual start of the
+                    // current line; so we handle this as a special-case.
+                    let lm_prev = layout.line_metric(cur_pos.line.saturating_sub(1)).unwrap();
+                    let up_pos = lm_prev.end_offset - lm_prev.trailing_whitespace;
+                    (up_pos, Some(h_pos))
+                }
             }
         }
         Movement::Vertical(VerticalMovement::LineDown) => {
@@ -107,7 +118,7 @@ pub fn movement<T: EditableText + TextStorage>(
             let offset = if d.is_upstream_for_direction(writing_direction) {
                 lm.start_offset
             } else {
-                lm.end_offset
+                lm.end_offset - lm.trailing_whitespace
             };
             (offset, None)
         }
@@ -153,7 +164,7 @@ pub fn movement<T: EditableText + TextStorage>(
 /// This uses Unicode word boundaries, as defined in [UAX#29].
 ///
 /// [UAX#29]: http://www.unicode.org/reports/tr29/
-pub fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
+pub(crate) fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
     let mut word_iter = text.split_word_bound_indices().peekable();
     let mut word_start = pos;
     while let Some((ix, _)) = word_iter.next() {

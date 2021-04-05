@@ -17,10 +17,29 @@
 
 use druid::kurbo::Circle;
 use druid::widget::prelude::*;
-use druid::widget::{Button, Flex, Painter, WidgetExt};
-use druid::{AppLauncher, Color, Rect, WindowDesc};
+use druid::widget::{Flex, Label, Painter, TextBox, WidgetExt};
+use druid::{AppLauncher, Color, Lens, Rect, WindowDesc};
+
+#[derive(Clone, Data, Lens)]
+struct HelloState {
+    name: String,
+}
 
 pub fn main() {
+    let window = WindowDesc::new(build_root_widget())
+        .show_titlebar(false)
+        .window_size((512., 512.))
+        .transparent(true)
+        .resizable(true)
+        .title("Transparent background");
+
+    AppLauncher::with_window(window)
+        .log_to_console()
+        .launch(HelloState { name: "".into() })
+        .expect("launch failed");
+}
+
+fn build_root_widget() -> impl Widget<HelloState> {
     // Draw red circle, and two semi-transparent rectangles
     let circle_and_rects = Painter::new(|ctx, _data, _env| {
         let boundaries = ctx.size().to_rect();
@@ -40,22 +59,28 @@ pub fn main() {
         ctx.fill(rect2, &Color::rgba8(0x0, 0x0, 0xff, 125));
     });
 
-    let btn = Button::new("Example button on transparent bg");
+    // This textbox modifies the label, idea here is to test that the background
+    // invalidation works when you type to the textbox
+    let textbox = TextBox::new()
+        .with_placeholder("Type to test clearing")
+        .with_text_size(18.0)
+        .lens(HelloState::name)
+        .fix_width(250.);
 
-    let root_widget = Flex::column()
+    let label = Label::new(|data: &HelloState, _env: &Env| {
+        if data.name.is_empty() {
+            "Text: ".to_string()
+        } else {
+            format!("Text: {}!", data.name)
+        }
+    })
+    .with_text_color(Color::RED)
+    .with_text_size(32.0);
+
+    Flex::column()
         .with_flex_child(circle_and_rects.expand(), 10.0)
-        .with_flex_child(btn, 1.0);
-
-    let window = WindowDesc::new(root_widget)
-        .show_titlebar(false)
-        .set_position((50., 50.))
-        .window_size((823., 823.))
-        .transparent(true)
-        .resizable(true)
-        .title("Transparent background");
-
-    AppLauncher::with_window(window)
-        .log_to_console()
-        .launch("Druid + Piet".to_string())
-        .expect("launch failed");
+        .with_spacer(4.0)
+        .with_child(textbox)
+        .with_spacer(4.0)
+        .with_child(label)
 }
