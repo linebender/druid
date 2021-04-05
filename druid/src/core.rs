@@ -930,22 +930,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
                 InternalLifeCycle::RouteDisabledChanged => {
+                    self.state.update_focus_chain = true;
+
                     let was_disabled = self.state.is_disabled();
 
                     self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
 
                     if was_disabled != self.state.is_disabled() {
-                        // In case we change but none of our children we still need to update the
-                        // focus-chain
-                        self.state.update_focus_chain = true;
                         extra_event = Some(LifeCycle::DisabledChanged(self.state.is_disabled()));
                         //Each widget needs only one of DisabledChanged and RouteDisabledChanged
                         false
-                    } else if self.state.children_disabled_changed {
-                        self.state.update_focus_chain = true;
-                        true
                     } else {
-                        false
+                        self.state.children_disabled_changed
                     }
                 }
                 InternalLifeCycle::RouteFocusChanged { old, new } => {
@@ -1018,6 +1014,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 false
             }
             LifeCycle::DisabledChanged(ancestors_disabled) => {
+                self.state.update_focus_chain = true;
+
                 let was_disabled = self.state.is_disabled();
 
                 self.state.is_explicitly_disabled = self.state.is_explicitly_disabled_new;
@@ -1026,12 +1024,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 // the change direction (true -> false or false -> true) of our parent and ourself
                 // is always the same, or we dont change at all, because we stay disabled if either
                 // we or our parent are disabled.
-                if was_disabled != self.state.is_disabled() {
-                    self.state.update_focus_chain = true;
-                    true
-                } else {
-                    false
-                }
+                was_disabled != self.state.is_disabled()
             }
             //NOTE: this is not sent here, but from the special set_hot_state method
             LifeCycle::HotChanged(_) => false,
@@ -1218,7 +1211,7 @@ impl WidgetState {
             sub_window_hosts: Vec::new(),
             is_explicitly_disabled_new: false,
             text_registrations: Vec::new(),
-            update_focus_chain: true,
+            update_focus_chain: false,
         }
     }
 
