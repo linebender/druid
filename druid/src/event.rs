@@ -267,10 +267,12 @@ pub enum LifeCycle {
     Size(Size),
     /// Called when the Disabled state of the widgets is changed.
     ///
-    /// [`is_disabled`](struct.EventCtx.html#method.is_disabled) returns if the widget is disabled.
+    /// To check if a widget is disabled, see [`is_disabled`].
     ///
-    /// [`set_disabled`](struct.EventCtx.html#method.set_disabled) to change the widgets disabled
-    /// state.
+    /// To change a widget's disabled state, see [`set_disabled`].
+    ///
+    /// [`is_disabled`]: crate::EventCtx::is_disabled
+    /// [`set_disabled`]: crate::EventCtx::set_disabled
     DisabledChanged(bool),
     /// Called when the "hot" status changes.
     ///
