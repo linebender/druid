@@ -357,18 +357,16 @@ fn simple_disable() {
 
     let test_widget_factory = |auto_focus: bool, id: WidgetId, state: Rc<Cell<Option<bool>>>| {
         ModularWidget::new(state)
-            .lifecycle_fn(move |state, ctx, event, _, _| {
-                match event {
-                    LifeCycle::BuildFocusChain => {
-                        if auto_focus {
-                            ctx.register_for_focus();
-                        }
+            .lifecycle_fn(move |state, ctx, event, _, _| match event {
+                LifeCycle::BuildFocusChain => {
+                    if auto_focus {
+                        ctx.register_for_focus();
                     }
-                    LifeCycle::DisabledChanged(disabled) => {
-                        state.set(Some(*disabled));
-                    }
-                    _ => {}
                 }
+                LifeCycle::DisabledChanged(disabled) => {
+                    state.set(Some(*disabled));
+                }
+                _ => {}
             })
             .event_fn(|_, ctx, event, _, _| {
                 if let Event::Command(cmd) = event {
@@ -746,6 +744,10 @@ fn simple_lifecyle() {
     Harness::create_simple(true, widget, |harness| {
         harness.send_initial_events();
         assert!(matches!(record.next(), Record::L(LifeCycle::WidgetAdded)));
+        assert!(matches!(
+            record.next(),
+            Record::L(LifeCycle::BuildFocusChain)
+        ));
         assert!(matches!(record.next(), Record::E(Event::WindowConnected)));
         assert!(matches!(record.next(), Record::E(Event::WindowSize(_))));
         assert!(record.is_empty());
@@ -770,6 +772,10 @@ fn adding_child_lifecycle() {
         harness.send_initial_events();
 
         assert!(matches!(record.next(), Record::L(LifeCycle::WidgetAdded)));
+        assert!(matches!(
+            record.next(),
+            Record::L(LifeCycle::BuildFocusChain)
+        ));
         assert!(matches!(record.next(), Record::E(Event::WindowConnected)));
         assert!(record.is_empty());
 
@@ -782,6 +788,10 @@ fn adding_child_lifecycle() {
         assert!(matches!(
             record_new_child.next(),
             Record::L(LifeCycle::WidgetAdded)
+        ));
+        assert!(matches!(
+            record_new_child.next(),
+            Record::L(LifeCycle::BuildFocusChain)
         ));
         assert!(record_new_child.is_empty());
     })
