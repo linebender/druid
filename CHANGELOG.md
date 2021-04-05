@@ -27,6 +27,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()` 
+  context-methods to implement disabled ([#1632] by [@xarvic])
+- `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
+
 
 ### Changed
 
@@ -36,6 +40,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 - Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
+- `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
 
 ### Deprecated
 
@@ -436,6 +441,7 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@xarvic]: https://github.com/xarvic
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -642,6 +648,7 @@ Last release without a changelog :(
 [#1606]: https://github.com/linebender/druid/pull/1606
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1625]: https://github.com/linebender/druid/pull/1625
+[#1632]: https://github.com/linebender/druid/pull/1632
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1636]: https://github.com/linebender/druid/pull/1636
