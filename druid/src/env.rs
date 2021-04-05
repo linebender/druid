@@ -242,7 +242,15 @@ impl Env {
 
     /// Creates a new empty Env with localization information.
     pub fn new() -> Self {
-        Env::default()
+        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
+
+        let inner = EnvImpl {
+            l10n: Arc::new(l10n),
+            map: HashMap::new(),
+            debug_colors: DEBUG_COLOR.into(),
+        };
+
+        Env(Arc::new(inner))
     }
 
     /// Gets a value from the environment, expecting it to be present.
