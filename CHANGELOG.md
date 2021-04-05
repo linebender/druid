@@ -58,6 +58,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Docs
 
+- Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
+
 ### Examples
 
 ### Maintenance
@@ -441,6 +443,7 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@ccqpein]: https://github.com/ccqpein
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -657,6 +660,7 @@ Last release without a changelog :(
 [#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 [#1677]: https://github.com/linebender/druid/pull/1677
+[#1698]: https://github.com/linebender/druid/pull/1698
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
