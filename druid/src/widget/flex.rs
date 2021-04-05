@@ -540,7 +540,6 @@ impl<T: Data> Flex<T> {
     /// ```
     ///
     /// [`with_flex_child`]: Flex::with_flex_child
-    #[instrument(name = "Flex", level = "trace", skip(self, child, params))]
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
