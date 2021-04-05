@@ -58,7 +58,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Docs
 
-- Fix example code in `Get started with Druid` chapter of book ([#1697] by [@ccqpein])
+- Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 
 ### Examples
 
