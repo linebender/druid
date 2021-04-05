@@ -442,6 +442,7 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@lidin]: https://github.com/lidin
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -658,6 +659,7 @@ Last release without a changelog :(
 [#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 [#1677]: https://github.com/linebender/druid/pull/1677
+[#1696]: https://github.com/linebender/druid/pull/1696
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
