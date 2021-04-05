@@ -552,7 +552,13 @@ impl<T: Data> Window<T> {
             .unwrap()
     }
 
-    fn update_focus(&mut self, widget_state: &mut WidgetState, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn update_focus(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
         if let Some(focus_req) = widget_state.request_focus.take() {
             let old = self.focus;
             let new = self.widget_for_focus_request(focus_req);
