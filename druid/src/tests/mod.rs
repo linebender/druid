@@ -355,32 +355,27 @@ fn focus_changed() {
 fn simple_disable() {
     const CHANGE_DISABLED: Selector<bool> = Selector::new("druid-tests.change-disabled");
 
-    let test_widget_factory = |auto_focus: bool, id: WidgetId, id_inner: WidgetId, state: Rc<Cell<Option<bool>>>| {
-        let inner = WidgetPod::new(
-            ModularWidget::new(())
-            .lifecycle_fn(move |_, ctx, event, _, _|{
-                if let LifeCycle::WidgetAdded = event {
-                    if auto_focus {
-                        ctx.register_for_focus();
+    let test_widget_factory = |auto_focus: bool, id: WidgetId, state: Rc<Cell<Option<bool>>>| {
+        ModularWidget::new(state)
+            .lifecycle_fn(move |state, ctx, event, _, _| {
+                match event {
+                    LifeCycle::BuildFocusChain => {
+                        if auto_focus {
+                            ctx.register_for_focus();
+                        }
                     }
+                    LifeCycle::DisabledChanged(disabled) => {
+                        state.set(Some(*disabled));
+                    }
+                    _ => {}
                 }
             })
-            .with_id(id_inner)
-        );
-        ModularWidget::new((state, inner))
-            .lifecycle_fn(move |state, ctx, event, data, env| {
-                if let LifeCycle::DisabledChanged(disabled) = event {
-                        state.0.set(Some(*disabled));
-                }
-                state.1.lifecycle(ctx, event, data, env);
-            })
-            .event_fn(|state, ctx, event, data, env| {
+            .event_fn(|_, ctx, event, _, _| {
                 if let Event::Command(cmd) = event {
                     if let Some(disabled) = cmd.get(CHANGE_DISABLED) {
                         ctx.set_disabled(*disabled);
                     }
                 }
-                state.1.event(ctx, event, data, env);
             })
             .with_id(id)
     };
@@ -416,38 +411,33 @@ fn simple_disable() {
     let id_2 = WidgetId::next();
     let id_3 = WidgetId::next();
 
-    let id_0_o = WidgetId::next();
-    let id_1_o = WidgetId::next();
-    let id_2_o = WidgetId::next();
-    let id_3_o = WidgetId::next();
-
     let root = Flex::row()
-        .with_child(test_widget_factory(true, id_0_o, id_0, disabled_0.clone()))
-        .with_child(test_widget_factory(true, id_1_o, id_1, disabled_1.clone()))
-        .with_child(test_widget_factory(true, id_2_o, id_2, disabled_2.clone()))
-        .with_child(test_widget_factory(true, id_3_o, id_3, disabled_3.clone()));
+        .with_child(test_widget_factory(true, id_0, disabled_0.clone()))
+        .with_child(test_widget_factory(true, id_1, disabled_1.clone()))
+        .with_child(test_widget_factory(true, id_2, disabled_2.clone()))
+        .with_child(test_widget_factory(true, id_3, disabled_3.clone()));
 
     Harness::create_simple((), root, |harness| {
         harness.send_initial_events();
         check_states("send_initial_events", [None, None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
         check_states("Change 1", [Some(true), None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
         check_states("Change 2", [Some(true), None, Some(true), None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_3_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_3));
         check_states("Change 3", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
         check_states("Change 4", [Some(true), None, Some(false), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
         check_states("Change 5", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
         //This is intended the widget should not receive an event!
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_1_o));
+        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_1));
         check_states("Change 6", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
     })
@@ -462,7 +452,7 @@ fn resign_focus_on_disable() {
         |auto_focus: bool, id: WidgetId, inner: Option<Box<dyn Widget<()>>>| {
             ModularWidget::new(inner.map(WidgetPod::new))
                 .lifecycle_fn(move |state, ctx, event, data, env| {
-                    if let LifeCycle::WidgetAdded = event {
+                    if let LifeCycle::BuildFocusChain = event {
                         if auto_focus {
                             ctx.register_for_focus();
                         }
@@ -536,7 +526,7 @@ fn disable_tree() {
 
     let leaf_factory = |state: Rc<Cell<Option<bool>>>| {
         ModularWidget::new(state).lifecycle_fn(move |state, ctx, event, _, _| match event {
-            LifeCycle::WidgetAdded => {
+            LifeCycle::BuildFocusChain => {
                 ctx.register_for_focus();
             }
             LifeCycle::DisabledChanged(disabled) => {
