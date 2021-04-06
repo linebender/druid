@@ -12,7 +12,6 @@ use std::{
     cell::{Cell, RefCell},
     convert::{TryFrom, TryInto},
     fmt,
-    mem::{self, MaybeUninit},
     ops::{Deref, DerefMut},
     os::{raw::c_void, unix::prelude::RawFd},
     ptr::{self, NonNull},
@@ -23,28 +22,13 @@ use wayland_client::{
     self as wl,
     protocol::{
         wl_buffer::{self, WlBuffer},
-        wl_callback,
-        wl_keyboard::{self, WlKeyboard},
-        wl_output::WlOutput,
-        wl_pointer::{self, WlPointer},
         wl_shm::{self, WlShm},
         wl_shm_pool::WlShmPool,
-        wl_surface::{self, WlSurface},
-    },
-};
-use wayland_cursor::CursorImageBuffer;
-use wayland_protocols::{
-    unstable::xdg_decoration::v1::client::zxdg_toplevel_decoration_v1::{
-        Event as ZxdgToplevelDecorationV1Event, Mode as DecorationMode, ZxdgToplevelDecorationV1,
-    },
-    xdg_shell::client::{
-        xdg_surface::{Event as XdgSurfaceEvent, XdgSurface},
-        xdg_toplevel::{Event as XdgTopLevelEvent, XdgToplevel},
-        xdg_wm_base::XdgWmBase,
+        wl_surface::WlSurface,
     },
 };
 
-use super::{window::WindowData, NUM_FRAMES, PIXEL_WIDTH};
+use super::{window::WindowData, PIXEL_WIDTH};
 
 /// A collection of buffers that can change size.
 ///
@@ -135,7 +119,7 @@ impl<const N: usize> Buffers<N> {
         if self.recreate_buffers.get() {
             // If all buffers are free, destroy and recreate them
             if self.all_buffers_released() {
-                log::debug!("all buffers released, recreating");
+                //log::debug!("all buffers released, recreating");
                 self.deferred_paint.set(false);
                 self.recreate_buffers_unchecked();
                 self.paint_unchecked();
@@ -146,7 +130,7 @@ impl<const N: usize> Buffers<N> {
             // If the next buffer is free, draw & present. If buffers have not been initialized it
             // is a bug in this code.
             if self.pending_buffer_released() {
-                log::debug!("next frame has been released: draw and present");
+                //log::debug!("next frame has been released: draw and present");
                 self.deferred_paint.set(false);
                 self.paint_unchecked();
             } else {
