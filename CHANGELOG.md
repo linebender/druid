@@ -40,6 +40,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 - Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
 - Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
+- Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
 
 ### Deprecated
 
@@ -443,6 +444,7 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -660,6 +662,7 @@ Last release without a changelog :(
 [#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 [#1677]: https://github.com/linebender/druid/pull/1677
+[#1691]: https://github.com/linebender/druid/pull/1691
 [#1698]: https://github.com/linebender/druid/pull/1698
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
