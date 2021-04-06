@@ -7,7 +7,7 @@
 
 use calloop::{
     generic::{Fd, Generic},
-    Dispatcher, EventSource, InsertError, Interest, LoopHandle, Mode, RegistrationToken,
+    Dispatcher, EventSource, Interest, Mode,
 };
 use std::{cell::RefCell, io, rc::Rc};
 use wayland_client::EventQueue;

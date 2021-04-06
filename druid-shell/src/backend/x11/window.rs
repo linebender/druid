@@ -44,6 +44,7 @@ use x11rb::xcb_ffi::XCBConnection;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
+use crate::backend::shared::Timer;
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
@@ -51,7 +52,6 @@ use crate::keyboard::{KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
-use crate::backend::shared::Timer;
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
@@ -62,7 +62,6 @@ use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
 use super::menu::Menu;
-use super::util::Timer;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
