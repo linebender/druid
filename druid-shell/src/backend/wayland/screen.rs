@@ -15,7 +15,7 @@
 //! GTK Monitors and Screen information.
 
 use crate::screen::Monitor;
-use kurbo::{Point, Rect, Size};
+//use kurbo::{Point, Rect, Size};
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     todo!()
