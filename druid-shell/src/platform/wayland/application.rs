@@ -19,13 +19,13 @@ use super::{
     clipboard::Clipboard,
     error::Error,
     events::WaylandSource,
-    pointer::{MouseEvtKind, Pointer, PointerEvent},
-    window::{WindowData, WindowHandle},
+    pointer::{MouseEvtKind, PointerEvent},
+    window::WindowData,
     xkb,
 };
 use crate::{
     application::AppHandler, keyboard_types::KeyState, kurbo::Point, platform::shared::Timer,
-    window::WinHandler, TimerToken,
+    TimerToken, WinHandler,
 };
 
 use calloop::{
@@ -41,7 +41,7 @@ use std::{
     time::{Duration, Instant},
 };
 use wayland_client::{
-    self as wl, event_enum,
+    self as wl,
     protocol::{
         wl_compositor::WlCompositor,
         wl_keyboard::{self, WlKeyboard},
@@ -89,7 +89,7 @@ pub(crate) struct ApplicationData {
     /// Handles to any surfaces that have been created.
     ///
     /// This is where the window data is owned. Other handles should be weak.
-    pub(crate) surfaces: RefCell<BTreeMap<u32, Rc<WindowData>>>,
+    pub(crate) surfaces: RefCell<im::OrdMap<u32, Rc<WindowData>>>,
 
     /// Available pixel formats
     pub(crate) formats: RefCell<Vec<wl_shm::Format>>,
@@ -234,7 +234,7 @@ impl Application {
         });
 
         let xkb_context = xkb::Context::new();
-        xkb_context.set_log_level(log::Level::Trace);
+        //xkb_context.set_log_level(log::Level::Trace);
 
         let timer_source = CalloopTimer::new().unwrap();
         let timer_handle = timer_source.handle();
@@ -258,7 +258,7 @@ impl Application {
             cursor_theme: RefCell::new(cursor_theme),
             outputs,
             seats,
-            surfaces: RefCell::new(BTreeMap::new()),
+            surfaces: RefCell::new(im::OrdMap::new()),
             formats: RefCell::new(vec![]),
             shutdown: Cell::new(false),
             active_surface_id: Cell::new(None),
@@ -425,7 +425,8 @@ impl ApplicationData {
                 data.keyboard_focus.set(true);
                 // (re-entrancy) call user code
                 data.handler.borrow_mut().got_focus();
-                data.check_for_scheduled_paint();
+
+                data.run_deferred_tasks();
             }
             Event::Leave { serial, surface } => {
                 let data = self
@@ -434,7 +435,7 @@ impl ApplicationData {
                 data.keyboard_focus.set(false);
                 // (re-entrancy) call user code
                 data.handler.borrow_mut().lost_focus();
-                data.check_for_scheduled_paint();
+                data.run_deferred_tasks();
             }
             Event::Key {
                 serial,
@@ -450,7 +451,10 @@ impl ApplicationData {
                         _ => panic!("unrecognised key event"),
                     },
                 );
-                for (_, data) in self.surfaces.borrow().iter() {
+                // This clone is necessary because user methods might add more surfaces, which
+                // would then be inserted here which would be 1 mut 1 immut borrows which is not
+                // allowed.
+                for (_, data) in self.surfaces_iter() {
                     if data.keyboard_focus.get() {
                         match event.state {
                             KeyState::Down => {
@@ -461,7 +465,7 @@ impl ApplicationData {
                             KeyState::Up => data.handler.borrow_mut().key_up(event.clone()),
                         }
                     }
-                    data.check_for_scheduled_paint();
+                    data.run_deferred_tasks();
                 }
             }
             Event::Modifiers {
@@ -522,7 +526,7 @@ impl ApplicationData {
                 surface_y,
             } => {
                 let pos = Point::new(surface_x, surface_y);
-                for (_, data) in self.surfaces.borrow().iter() {
+                for (_, data) in self.surfaces_iter() {
                     if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
                         pointer.push(PointerEvent::Motion(pos));
                     }
@@ -534,21 +538,21 @@ impl ApplicationData {
                 button,
                 state,
             } => {
-                for (_, data) in self.surfaces.borrow().iter() {
+                for (_, data) in self.surfaces_iter() {
                     if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
                         pointer.push(PointerEvent::Button { button, state });
                     }
                 }
             }
             Event::Axis { time, axis, value } => {
-                for (_, data) in self.surfaces.borrow().iter() {
+                for (_, data) in self.surfaces_iter() {
                     if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
                         pointer.push(PointerEvent::Axis { axis, value });
                     }
                 }
             }
             Event::Frame => {
-                for (_, data) in self.surfaces.borrow().iter() {
+                for (_, data) in self.surfaces_iter() {
                     // Wait until we're outside the loop, then drop the pointer state.
                     let mut have_left = false;
                     while let Some(event) = data.pop_pointer_event() {
@@ -567,11 +571,11 @@ impl ApplicationData {
                     if have_left {
                         *data.pointer.borrow_mut() = None;
                     }
-                    data.check_for_scheduled_paint();
+                    data.run_deferred_tasks();
                 }
             }
             evt => {
-                //log::warn!("Unhandled pointer event: {:?}", evt);
+                log::warn!("Unhandled pointer event: {:?}", evt);
             }
         }
     }
@@ -598,10 +602,11 @@ impl ApplicationData {
                     continue;
                 }
             };
+            // re-entrancy
             surface.handler.borrow_mut().timer(timer.token());
         }
-        for (_, surface) in self.surfaces.borrow().iter() {
-            surface.check_for_scheduled_paint();
+        for (_, data) in self.surfaces_iter() {
+            data.run_deferred_tasks();
         }
         // Get the deadline soonest and queue it.
         if let Some(timer) = self.timers.borrow().peek() {
@@ -615,6 +620,16 @@ impl ApplicationData {
 
     fn find_surface(&self, id: u32) -> Option<Rc<WindowData>> {
         self.surfaces.borrow().get(&id).cloned()
+    }
+
+    /// Shallow clones surfaces so we can modify it during iteration.
+    fn surfaces_iter(&self) -> impl Iterator<Item = (u32, Rc<WindowData>)> {
+        // make sure the borrow gets dropped.
+        let surfaces = {
+            let surfaces = self.surfaces.borrow();
+            surfaces.clone()
+        };
+        surfaces.into_iter()
     }
 }
 

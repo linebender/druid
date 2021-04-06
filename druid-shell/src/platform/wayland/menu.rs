@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(unused)]
 use super::keycodes;
 use super::window::WindowHandle;
 use crate::common_util::strip_access_key;

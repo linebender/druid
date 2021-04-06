@@ -1,35 +1,14 @@
 use crate::{
-    common_util::{ClickCounter, IdleCallback},
-    dialog::{FileDialogOptions, FileDialogType, FileInfo},
-    error::Error as ShellError,
-    keyboard::{KbKey, KeyEvent, KeyState, Modifiers},
-    kurbo::{Insets, Point, Rect, Size, Vec2},
-    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
-    piet::ImageFormat,
+    keyboard::Modifiers,
+    kurbo::{Point, Vec2},
+    mouse::{Cursor, MouseButton, MouseButtons, MouseEvent},
 };
 use std::collections::VecDeque;
 use wayland_client::{
     self as wl,
     protocol::{
-        wl_buffer::{self, WlBuffer},
-        wl_callback,
-        wl_keyboard::{self, WlKeyboard},
-        wl_output::WlOutput,
         wl_pointer::{self, WlPointer},
-        wl_shm::{self, WlShm},
-        wl_shm_pool::WlShmPool,
-        wl_surface::{self, WlSurface},
-    },
-};
-use wayland_cursor::CursorImageBuffer;
-use wayland_protocols::{
-    unstable::xdg_decoration::v1::client::zxdg_toplevel_decoration_v1::{
-        Event as ZxdgToplevelDecorationV1Event, Mode as DecorationMode, ZxdgToplevelDecorationV1,
-    },
-    xdg_shell::client::{
-        xdg_surface::{Event as XdgSurfaceEvent, XdgSurface},
-        xdg_toplevel::{Event as XdgTopLevelEvent, XdgToplevel},
-        xdg_wm_base::XdgWmBase,
+        wl_surface::WlSurface,
     },
 };
 

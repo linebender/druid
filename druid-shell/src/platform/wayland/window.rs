@@ -13,46 +13,18 @@
 
 #![allow(clippy::single_match)]
 
-use anyhow::{anyhow, format_err};
-use cairo::Surface;
-use nix::{
-    errno::Errno,
-    fcntl::OFlag,
-    sys::{
-        mman::{mmap, munmap, shm_open, MapFlags, ProtFlags},
-        stat::Mode,
-    },
-    unistd::{close, ftruncate},
-};
 use std::{
     any::Any,
     cell::{Cell, RefCell},
-    collections::{BTreeMap, HashSet, VecDeque},
-    convert::{TryFrom, TryInto},
-    ffi::c_void,
-    fmt,
-    ops::Deref,
-    os::{
-        raw::{c_int, c_uint},
-        unix::io::RawFd,
-    },
-    panic::Location,
-    ptr::{self, NonNull},
+    collections::{HashSet, VecDeque},
     rc::{Rc, Weak as WeakRc},
-    slice,
-    sync::{Arc, Mutex, Weak},
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant},
 };
 use wayland_client::{
     self as wl,
     protocol::{
-        wl_buffer::{self, WlBuffer},
         wl_callback,
-        wl_keyboard::{self, WlKeyboard},
-        wl_output::WlOutput,
-        wl_pointer::{self, WlPointer},
-        wl_shm::{self, WlShm},
-        wl_shm_pool::WlShmPool,
+        wl_pointer::WlPointer,
         wl_surface::{self, WlSurface},
     },
 };
@@ -64,30 +36,25 @@ use wayland_protocols::{
     xdg_shell::client::{
         xdg_surface::{Event as XdgSurfaceEvent, XdgSurface},
         xdg_toplevel::{Event as XdgTopLevelEvent, XdgToplevel},
-        xdg_wm_base::XdgWmBase,
     },
 };
 
 use super::{
-    application::{Application, ApplicationData, Output},
-    buffer::{Buffer, Buffers, Mmap, RawRect, RawSize, Shm},
-    dialog, keycodes,
+    application::{Application, ApplicationData},
+    buffer::{Buffers, RawRect, RawSize},
     menu::Menu,
     pointer::{MouseEvtKind, Pointer},
-    util, Changed, NUM_FRAMES, PIXEL_WIDTH,
+    Changed, NUM_FRAMES, PIXEL_WIDTH,
 };
 use crate::{
-    common_util::{ClickCounter, IdleCallback},
-    dialog::{FileDialogOptions, FileDialogType, FileInfo},
+    dialog::FileDialogOptions,
     error::Error as ShellError,
-    keyboard::{KbKey, KeyEvent, KeyState, Modifiers},
-    kurbo::{Insets, Point, Rect, Size, Vec2},
-    mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent},
-    piet::ImageFormat,
+    kurbo::{Insets, Point, Rect, Size},
+    mouse::{Cursor, CursorDesc},
     piet::{Piet, PietText, RenderContext},
     platform::shared::Timer,
     region::Region,
-    scale::{Scalable, Scale, ScaledArea},
+    scale::Scale,
     text::Event,
     window::{self, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel},
     TextFieldToken,
@@ -215,7 +182,7 @@ impl WindowHandle {
                 cb.quick_assign(with_cloned!(data; move |_, event, _| match event {
                     wl_callback::Event::Done { callback_data } => {
                         data.anim_frame_requested.set(false);
-                        data.request_paint();
+                        data.buffers.request_paint();
                     }
                     _ => panic!("done is the only event"),
                 }));
@@ -246,20 +213,16 @@ impl WindowHandle {
     }
 
     pub fn add_text_field(&self) -> TextFieldToken {
-        todo!()
+        // I think it makes sense to leave these until @forloveofcats' work on the pango
+        // integration is complete/merged.
+        TextFieldToken::next()
     }
 
-    pub fn remove_text_field(&self, token: TextFieldToken) {
-        todo!()
-    }
+    pub fn remove_text_field(&self, token: TextFieldToken) {}
 
-    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
-        todo!()
-    }
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {}
 
-    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
-        todo!()
-    }
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {}
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         if let Some(data) = self.data.upgrade() {
@@ -367,16 +330,21 @@ pub struct WindowData {
     pub(crate) pointer: RefCell<Option<Pointer>>,
     /// Whether we have requested an animation frame. This stops us requesting more than 1.
     anim_frame_requested: Cell<bool>,
-    /// Track whether an event handler invalidated any regions. After the event handler has been
-    /// released, repaint if true. TODO refactor this into an enum of evens that might call in to
-    /// user code, and so need to be deferred.
-    paint_scheduled: Cell<bool>,
     /// Contains the callbacks from user code.
     pub(crate) handler: RefCell<Box<dyn WinHandler>>,
     /// Rects of the image that are damaged and need repainting in the logical coordinate space.
     ///
     /// This lives outside `data` because they can be borrowed concurrently without re-entrancy.
     damaged_region: RefCell<Region>,
+    /// Tasks that were requested in user code.
+    ///
+    /// These call back into user code, and so should only be run after all user code has returned,
+    /// to avoid possible re-entrancy.
+    deferred_tasks: RefCell<VecDeque<DeferredTask>>,
+}
+
+pub enum DeferredTask {
+    Paint,
 }
 
 impl WindowData {
@@ -465,31 +433,6 @@ impl WindowData {
         }
     }
 
-    /// Schedule a paint (in response to invalidation).
-    pub(crate) fn schedule_paint(&self) {
-        self.paint_scheduled.set(true);
-    }
-
-    /// If a repaint was scheduled, then execute it.
-    pub(crate) fn check_for_scheduled_paint(&self) {
-        if self.paint_scheduled.get() {
-            self.request_paint();
-        }
-    }
-
-    /// Request to `buffers` that the next frame be painted.
-    ///
-    /// If the next frame is ready, then it will be painted immediately, otherwise a paint will be
-    /// scheduled to take place when a frame is released.
-    ///
-    /// ```text
-    /// self.request_paint -> calls buffers.request_paint -> calls self.paint (possibly not immediately)
-    /// ```
-    fn request_paint(&self) {
-        self.paint_scheduled.set(false);
-        self.buffers.request_paint();
-    }
-
     /// Paint the next frame.
     ///
     /// The buffers object is responsible for calling this function after we called
@@ -566,7 +509,7 @@ impl WindowData {
         // `invalidate_rect`.
         let window_rect = self.logical_size.get().to_rect();
         self.damaged_region.borrow_mut().add_rect(window_rect);
-        self.schedule_paint();
+        self.schedule_deferred_task(DeferredTask::Paint);
     }
 
     /// Request invalidation of one rectangle, which is given in display points relative to the
@@ -585,7 +528,7 @@ impl WindowData {
         );
         */
         self.damaged_region.borrow_mut().add_rect(rect);
-        self.schedule_paint()
+        self.schedule_deferred_task(DeferredTask::Paint);
     }
 
     /// If there are any pending pointer events, get the next one.
@@ -625,6 +568,30 @@ impl WindowData {
             // choices and shouldn't expect it to work.
             let buf = &cursor[cursor.frame_and_duration(0).frame_index];
             self.set_cursor(buf);
+        }
+    }
+
+    // Deferred tasks
+
+    pub fn schedule_deferred_task(&self, task: DeferredTask) {
+        self.deferred_tasks.borrow_mut().push_back(task);
+    }
+
+    pub fn run_deferred_tasks(&self) {
+        while let Some(task) = self.next_deferred_task() {
+            self.run_deferred_task(task);
+        }
+    }
+
+    fn next_deferred_task(&self) -> Option<DeferredTask> {
+        self.deferred_tasks.borrow_mut().pop_front()
+    }
+
+    fn run_deferred_task(&self, task: DeferredTask) {
+        match task {
+            DeferredTask::Paint => {
+                self.buffers.request_paint();
+            }
         }
     }
 }
@@ -750,16 +717,16 @@ impl WindowBuilder {
             keyboard_focus: Cell::new(false),
             pointer: RefCell::new(None),
             anim_frame_requested: Cell::new(false),
-            paint_scheduled: Cell::new(false),
             handler: RefCell::new(handler),
             damaged_region: RefCell::new(Region::EMPTY),
+            deferred_tasks: RefCell::new(VecDeque::new()),
         });
 
         let weak_data = Rc::downgrade(&data);
         // Hook up the child -> parent weak pointer.
         unsafe {
-            // Safety: safe because no other references to the data are dereferenced for the life
-            // of the reference (the only refs are the Rc and the weak Rc we just created).
+            // Safety: No Rust references exist during the life of this reference (satisfies many
+            // read-only xor 1 mutable references).
             let mut buffers: &mut Buffers<{ NUM_FRAMES as usize }> =
                 &mut *(Rc::as_ptr(&data.buffers) as *mut _);
             buffers.set_window_data(weak_data);
@@ -798,7 +765,7 @@ impl WindowBuilder {
                             data.handler.borrow_mut().size(logical_size);
                         }
                         // Check if the client requested a repaint.
-                        data.check_for_scheduled_paint();
+                        data.run_deferred_tasks();
                     }
                 }
                 XdgTopLevelEvent::Close => {
@@ -823,7 +790,7 @@ impl WindowBuilder {
             with_cloned!(data; move |xdg_surface, event, _| match event {
                 XdgSurfaceEvent::Configure { serial } => {
                     xdg_surface.ack_configure(serial);
-                    data.request_paint(); // will also rebuild buffers if needed.
+                    data.buffers.request_paint(); // will also rebuild buffers if needed.
                 }
                 _ => (),
             }),
@@ -852,7 +819,7 @@ impl WindowBuilder {
                     // We also need to change the physical size to match the new scale
                     data.set_physical_size(RawSize::from(data.logical_size.get()).scale(new_scale));
                     // always repaint, because the scale changed.
-                    data.schedule_paint();
+                    data.schedule_deferred_task(DeferredTask::Paint);
                 }
             }));
 

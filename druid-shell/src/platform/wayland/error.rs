@@ -14,7 +14,6 @@
 
 //! GTK platform errors.
 
-use anyhow::Error as AnyError;
 use std::{error::Error as StdError, fmt, sync::Arc};
 use wayland_client as wl;
 

@@ -42,7 +42,4 @@ impl Changed {
     fn is_changed(self) -> bool {
         matches!(self, Changed::Changed)
     }
-    fn is_unchanged(self) -> bool {
-        matches!(self, Changed::Unchanged)
-    }
 }

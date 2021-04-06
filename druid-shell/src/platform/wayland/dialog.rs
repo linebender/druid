@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
 use std::ffi::OsString;
 
-use anyhow::anyhow;
-
-use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
 use crate::Error;
+use crate::{
+    dialog::{FileDialogOptions, FileDialogType, FileSpec},
+    window::WindowHandle,
+};
 
-/*
 pub(crate) fn get_file_dialog_path(
-    window: &Window,
+    window: &WindowHandle,
     ty: FileDialogType,
     options: FileDialogOptions,
 ) -> Result<OsString, Error> {

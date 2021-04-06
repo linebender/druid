@@ -7,13 +7,10 @@ use crate::{
     KeyEvent, KeyState, Modifiers,
 };
 use keyboard_types::{Code, Key};
-use std::{
-    convert::{TryFrom, TryInto},
-    ptr,
-};
+use std::{convert::TryFrom, ptr};
 use xkbcommon_sys::*;
 
-const MAX_KEY_LEN: usize = 32;
+//const MAX_KEY_LEN: usize = 32;
 
 /// A global xkb context object.
 ///
