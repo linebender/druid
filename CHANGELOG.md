@@ -33,7 +33,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()` 
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
-
+- `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -672,6 +672,7 @@ Last release without a changelog :(
 [#1691]: https://github.com/linebender/druid/pull/1691
 [#1693]: https://github.com/linebender/druid/pull/1693
 [#1698]: https://github.com/linebender/druid/pull/1698
+[#1702]: https://github.com/linebender/druid/pull/1702
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
