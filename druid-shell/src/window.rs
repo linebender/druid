@@ -494,7 +494,7 @@ impl WindowBuilder {
 
     /// Set whether the titlebar of the window should appear transparent,
     /// letting the window content fill all available space, with the title
-    /// and controls on top of it.
+    /// and controls overlayed.
     pub fn set_transparent_titlebar(&mut self, transparent_titlebar: bool) {
         self.0.set_transparent_titlebar(transparent_titlebar);
     }

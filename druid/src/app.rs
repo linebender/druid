@@ -59,7 +59,9 @@ pub struct WindowConfig {
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
     pub(crate) transparent: Option<bool>,
+    pub(crate) transparent_titlebar: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
+    pub(crate) show_title: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
     pub(crate) state: Option<WindowState>,
 }
@@ -276,7 +278,9 @@ impl Default for WindowConfig {
             position: None,
             resizable: None,
             show_titlebar: None,
+            show_title: None,
             transparent: None,
+            transparent_titlebar: None,
             level: None,
             state: None,
         }
@@ -348,6 +352,12 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the window title text should be visible.
+    pub fn show_title(mut self, show_title: bool) -> Self {
+        self.show_title = Some(show_title);
+        self
+    }
+
     /// Sets the window position in virtual screen coordinates.
     /// [`position`] Position in pixels.
     ///
@@ -379,6 +389,14 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the titlebar of the window should appear transparent,
+    /// letting the window content fill all available space, with the title
+    /// and controls overlayed.
+    pub fn transparent_titlebar(mut self, transparent_titlebar: bool) -> Self {
+        self.transparent_titlebar = Some(transparent_titlebar);
+        self
+    }
+
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
         if let Some(resizable) = self.resizable {
@@ -387,6 +405,10 @@ impl WindowConfig {
 
         if let Some(show_titlebar) = self.show_titlebar {
             builder.show_titlebar(show_titlebar);
+        }
+
+        if let Some(show_title) = self.show_title {
+            builder.show_title(show_title);
         }
 
         if let Some(size) = self.size {
@@ -401,6 +423,10 @@ impl WindowConfig {
 
         if let Some(transparent) = self.transparent {
             builder.set_transparent(transparent);
+        }
+
+        if let Some(transparent_titlebar) = self.transparent_titlebar {
+            builder.set_transparent_titlebar(transparent_titlebar);
         }
 
         if let Some(level) = self.level {
@@ -550,11 +576,25 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Builder-style method to set whether this window's title text is visible.
+    pub fn show_title(mut self, show_title: bool) -> Self {
+        self.config = self.config.show_title(show_title);
+        self
+    }
+
     /// Builder-style method to set whether this window's background should be
     /// transparent.
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.config = self.config.transparent(transparent);
         self.pending = self.pending.transparent(transparent);
+        self
+    }
+
+    /// Builder-style method to set set whether the titlebar of the window should
+    /// appear transparent, letting the window content fill all available space,
+    /// with the title and controls overlayed.
+    pub fn transparent_titlebar(mut self, transparent_titlebar: bool) -> Self {
+        self.config = self.config.transparent_titlebar(transparent_titlebar);
         self
     }
 
