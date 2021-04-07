@@ -66,11 +66,12 @@ pub trait SliderBounds {
     /// The maximal possible value of a slider
     fn max(&self) -> f64;
 
-    ///
+    /// converts a value to proportion of the range `min()..max()`.
     fn normalize(&self, data: f64) -> f64 {
         (data.max(self.min()).min(self.max()) - self.min()) / (self.max() - self.min())
     }
 
+    /// converts a x-coordinate on the slider into the corresponding value.
     fn calculate_value(&self, mouse_x: f64, knob_width: f64, slider_width: f64) -> f64 {
         let scalar = ((mouse_x - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
