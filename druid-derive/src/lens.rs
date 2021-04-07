@@ -84,13 +84,16 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
         let struct_docs = format!(
-            "Lens for the field `{}` on [`{1}`](super::{1}).",
-            field_name, ty
+            "Lens for the field `{field}` on [`{ty}`](super::{ty}).",
+            field = field_name,
+            ty = ty,
         );
 
         let fn_docs = format!(
-            "Creates a new lens for the field `{}` on [`{1}`](super::{1}). Use [`{1}::{0}`](super::{1}::{0}) instead.",
-            field_name, ty
+            "Creates a new lens for the field `{field}` on [`{ty}`](super::{ty}). \
+            Use [`{ty}::{field}`](super::{ty}::{field}) instead.",
+            field = field_name,
+            ty = ty,
         );
 
         quote! {
