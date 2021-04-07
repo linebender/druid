@@ -158,6 +158,10 @@ impl Application {
         });
         // .. and release the main thread
         util::release_main_thread();
+        // .. and mark as done so a new sequence can start
+        APPLICATION_CREATED
+            .compare_exchange(true, false, Ordering::AcqRel, Ordering::Acquire)
+            .expect("Application marked as not created while still running.");
     }
 
     /// Quit the `Application`.
