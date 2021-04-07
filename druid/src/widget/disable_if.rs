@@ -1,4 +1,7 @@
-use crate::{WidgetPod, Env, Widget, Data, LifeCycle, EventCtx, PaintCtx, LifeCycleCtx, BoxConstraints, Size, LayoutCtx, Event, UpdateCtx, Point};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    Point, Size, UpdateCtx, Widget, WidgetPod,
+};
 
 /// A widget wrapper which disables the inner widget if the provided closure return true.
 pub struct DisabledIf<T, W> {
