@@ -139,7 +139,15 @@ impl WindowBuilder {
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
+    pub fn show_title(&mut self, _show_title: bool) {
+        // Ignored
+    }
+
     pub fn set_transparent(&mut self, _transparent: bool) {
+        // Ignored
+    }
+
+    pub fn set_transparent_titlebar(&mut self, _transparent_titlebar: bool) {
         // Ignored
     }
 

@@ -220,8 +220,16 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
+    pub fn show_title(&mut self, _show_title: bool) {
+        // Ignored
+    }
+
     pub fn set_transparent(&mut self, transparent: bool) {
         self.transparent = transparent;
+    }
+
+    pub fn set_transparent_titlebar(&mut self, _transparent_titlebar: bool) {
+        // Ignored
     }
 
     pub fn set_position(&mut self, position: Point) {

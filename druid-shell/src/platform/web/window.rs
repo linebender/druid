@@ -371,7 +371,15 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn show_title(&mut self, _show_title: bool) {
+        // Ignored
+    }
+
     pub fn set_transparent(&mut self, _transparent: bool) {
+        // Ignored
+    }
+
+    pub fn set_transparent_titlebar(&mut self, _transparent_titlebar: bool) {
         // Ignored
     }
 
@@ -384,7 +392,7 @@ impl WindowBuilder {
     }
 
     pub fn set_level(&mut self, _level: WindowLevel) {
-        // ignored
+        // Ignored
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {

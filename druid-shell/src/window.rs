@@ -482,9 +482,21 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Set whether the window background should be transparent
+    /// Set whether the window title text should be visible.
+    pub fn show_title(&mut self, show_title: bool) {
+        self.0.show_title(show_title);
+    }
+
+    /// Set whether the window background should be transparent.
     pub fn set_transparent(&mut self, transparent: bool) {
         self.0.set_transparent(transparent)
+    }
+
+    /// Set whether the titlebar of the window should appear transparent,
+    /// letting the window content fill all available space, with the title
+    /// and controls on top of it.
+    pub fn set_transparent_titlebar(&mut self, transparent_titlebar: bool) {
+        self.0.set_transparent_titlebar(transparent_titlebar);
     }
 
     /// Sets the initial window position in [display points], relative to the origin of the
