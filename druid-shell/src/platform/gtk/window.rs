@@ -33,7 +33,7 @@ use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
