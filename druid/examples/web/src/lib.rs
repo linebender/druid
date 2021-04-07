@@ -76,6 +76,7 @@ impl_example!(scroll_colors);
 impl_example!(scroll);
 impl_example!(split_demo);
 impl_example!(styled_text.unwrap());
+impl_example!(slider);
 impl_example!(switches);
 impl_example!(timer);
 impl_example!(tabs);

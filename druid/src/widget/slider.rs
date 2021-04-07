@@ -199,6 +199,9 @@ impl Widget<f64> for Slider {
                 self.head.is_active = true;
                 self.head.pos = me.pos;
                 *data = self.calculate_value(me.pos.x, knob_size, slider_width);
+                if let Some(snap) = self.snap {
+                    *data = (*data / snap).round() * snap;
+                }
             }
         }
     }
@@ -267,11 +270,19 @@ impl Widget<(f64, f64)> for RangeSlider {
                         self.min_knob.is_active = true;
                         self.min_knob.pos = me.pos;
                         data.0 = self.calculate_value(me.pos.x, knob_size, slider_width);
+                        if let Some(snap) = self.snap {
+                            data.0 = (data.0 / snap).round() * snap;
+                        }
+                        data.0 = data.0.min(data.1 - self.min_range);
                     } else {
                         self.max_knob.x_offset = 0.0;
                         self.max_knob.is_active = true;
                         self.max_knob.pos = me.pos;
                         data.1 = self.calculate_value(me.pos.x, knob_size, slider_width);
+                        if let Some(snap) = self.snap {
+                            data.1 = (data.1 / snap).round() * snap;
+                        }
+                        data.1 = data.1.max(data.0 + self.min_range);
                     }
                 }
             }

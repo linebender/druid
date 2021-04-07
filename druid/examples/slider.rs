@@ -22,10 +22,10 @@ pub fn build_widget() -> impl Widget<((f64, f64), f64)> {
                     SliderAnnotation::new(
                         Slider::new()
                             .with_range(data.0, data.1)
-                            .snap(0.1)
+                            .snap(0.5)
                             .view_track(),
-                        0.2,
-                        1
+                        0.5,
+                        0
                     ).lens(lens!(((f64, f64), f64), 1))
                 ) as Box<dyn Widget<((f64, f64), f64)>>
             )
