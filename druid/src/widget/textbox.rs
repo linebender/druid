@@ -460,9 +460,11 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
+                ctx.register_text_input(self.text().input_handler());
+            }
+            LifeCycle::BuildFocusChain => {
                 //TODO: make this a configurable option? maybe?
                 ctx.register_for_focus();
-                ctx.register_text_input(self.text().input_handler());
             }
             LifeCycle::FocusChanged(true) => {
                 if self.text().can_write() && !self.multiline && !self.was_focused_from_click {
