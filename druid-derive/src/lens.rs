@@ -89,7 +89,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         );
 
         let fn_docs = format!(
-            "Creates a new lens for the field `{}` on [`{1}`](super::{1}).",
+            "Creates a new lens for the field `{}` on [`{1}`](super::{1}). Use [`{1}::{0}`](super::{1}::{0}) instead.",
             field_name, ty
         );
 
