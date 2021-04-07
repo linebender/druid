@@ -53,6 +53,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Fixed
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
+- GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
 
 
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
@@ -671,6 +672,7 @@ Last release without a changelog :(
 [#1677]: https://github.com/linebender/druid/pull/1677
 [#1691]: https://github.com/linebender/druid/pull/1691
 [#1693]: https://github.com/linebender/druid/pull/1693
+[#1695]: https://github.com/linebender/druid/pull/1695
 [#1698]: https://github.com/linebender/druid/pull/1698
 [#1702]: https://github.com/linebender/druid/pull/1702
 
