@@ -17,7 +17,7 @@
 use crate::kurbo::{Circle, Shape, Line};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint, WidgetPod};
-use druid_shell::piet::{Text, TextLayoutBuilder, TextLayout, FontFamily, PietTextLayout};
+use druid_shell::piet::{Text, TextLayoutBuilder, TextLayout, FontFamily, PietTextLayout, PietText};
 
 const TRACK_THICKNESS: f64 = 4.0;
 const BORDER_WIDTH: f64 = 2.0;
@@ -31,9 +31,10 @@ const KNOB_STROKE_WIDTH: f64 = 2.0;
 pub struct Slider {
     min: f64,
     max: f64,
-    knob_pos: Point,
-    knob_hovered: bool,
-    x_offset: f64,
+    fill_track: bool,
+    snap: Option<f64>,
+
+    head: SliderHead,
 }
 
 /// A range slider, allowing interactive update of two numeric values.
@@ -47,16 +48,11 @@ pub struct RangeSlider {
     min: f64,
     max: f64,
     min_range: f64,
+    fill_track: bool,
+    snap: Option<f64>,
 
-    min_knob_pos: Point,
-    min_knob_hovered: bool,
-    min_knob_active: bool,
-
-    max_knob_pos: Point,
-    max_knob_hovered: bool,
-    max_knob_active: bool,
-
-    x_offset: f64,
+    min_knob: SliderHead,
+    max_knob: SliderHead,
 }
 
 /// A trait to access the range of a slider and do associated computations.
@@ -100,15 +96,21 @@ impl SliderBounds for RangeSlider {
     }
 }
 
+impl SliderBounds for (f64, f64) {
+    fn min(&self) -> f64 {self.0}
+
+    fn max(&self) -> f64 {self.1}
+}
+
 impl Slider {
     /// Create a new `Slider`.
     pub fn new() -> Slider {
         Slider {
             min: 0.,
             max: 1.,
-            knob_pos: Default::default(),
-            knob_hovered: Default::default(),
-            x_offset: Default::default(),
+            fill_track: false,
+            snap: None,
+            head: SliderHead::new(),
         }
     }
 
@@ -120,6 +122,18 @@ impl Slider {
         self.max = max;
         self
     }
+
+    /// Fill the active area with the foreground color.
+    pub fn view_track(mut self) -> Self {
+        self.fill_track = true;
+        self
+    }
+
+    /// snaps the slider to values at the given precision
+    pub fn snap(mut self, snap: f64) -> Self {
+        self.snap = Some(snap.abs());
+        self
+    }
 }
 
 impl RangeSlider {
@@ -129,16 +143,11 @@ impl RangeSlider {
             min: 0.,
             max: 1.,
             min_range: 0.,
+            fill_track: false,
 
-            min_knob_pos: Default::default(),
-            min_knob_active: Default::default(),
-            min_knob_hovered: Default::default(),
-
-            max_knob_pos: Default::default(),
-            max_knob_hovered: false,
-            max_knob_active: false,
-
-            x_offset: Default::default(),
+            snap: None,
+            min_knob: SliderHead::new(),
+            max_knob: SliderHead::new(),
         }
     }
 
@@ -158,45 +167,39 @@ impl RangeSlider {
         self.min_range = min_range.max(0.0);
         self
     }
+
+    /// Fill the active area with the foreground color.
+    pub fn view_track(mut self) -> Self {
+        self.fill_track = true;
+        self
+    }
+
+    /// snaps the slider to values at the given precision
+    pub fn snap(mut self, snap: f64) -> Self {
+        self.snap = Some(snap.abs());
+        self
+    }
 }
 
 impl Widget<f64> for Slider {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
-        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let slider_width = ctx.size().width;
+        self.head.handle_event(ctx, event, data, env, (self.min, self.max));
 
-        match event {
-            Event::MouseDown(mouse) => {
+        if let Some(snap) = self.snap {
+            *data = (*data / snap).round() * snap;
+        }
+
+        if !self.head.is_active() {
+            if let Event::MouseDown(me) = event {
+                let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+                let slider_width = ctx.size().width;
+
                 ctx.set_active(true);
-                if knob_hit_test(self.knob_pos, knob_size, mouse.pos) {
-                    self.x_offset = self.knob_pos.x - mouse.pos.x
-                } else {
-                    self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x + self.x_offset, knob_size, slider_width);
-                }
-                ctx.request_paint();
+                self.head.x_offset = 0.0;
+                self.head.is_active = true;
+                self.head.pos = me.pos;
+                *data = self.calculate_value(me.pos.x, knob_size, slider_width);
             }
-            Event::MouseUp(mouse) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    *data = self.calculate_value(mouse.pos.x + self.x_offset, knob_size, slider_width);
-                    ctx.request_paint();
-                }
-            }
-            Event::MouseMove(mouse) => {
-                if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x + self.x_offset, knob_size, slider_width);
-                    ctx.request_paint();
-                }
-                if ctx.is_hot() {
-                    let knob_hover = knob_hit_test(self.knob_pos, knob_size, mouse.pos);
-                    if knob_hover != self.knob_hovered {
-                        self.knob_hovered = knob_hover;
-                        ctx.request_paint();
-                    }
-                }
-            }
-            _ => (),
         }
     }
 
@@ -218,79 +221,61 @@ impl Widget<f64> for Slider {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         draw_background(ctx, env);
 
-        //Get ready to paint the knob
-        let is_active = ctx.is_active();
-        let is_hovered = self.knob_hovered;
-        let clamped = self.normalize(*data);
+        if self.fill_track {
+            let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+            let x1 = (ctx.size().width - knob_size) * self.normalize(*data) + knob_size / 2.;
+            let background_rect = Rect::from_points(
+                (knob_size / 2.0, (knob_size - TRACK_THICKNESS) / 2.),
+                (x1, (knob_size + TRACK_THICKNESS) / 2.)
+            )
+                .to_rounded_rect(2.);
 
-        draw_knob(ctx, clamped, &mut self.knob_pos, is_hovered, is_active, env);
+            ctx.fill(background_rect, &env.get(theme::SELECTION_COLOR));
+        }
+
+        self.head.draw(ctx, self.normalize(*data), env);
     }
 }
 
 impl Widget<(f64, f64)> for RangeSlider {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (f64, f64), env: &Env) {
-        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let slider_width = ctx.size().width;
+        self.max_knob.handle_event(ctx, event, &mut data.1, env, (self.min, self.max));
 
-        let mut mouse_position = None;
+        if let Some(snap) = self.snap {
+            data.1 = (data.1 / snap).round() * snap;
+        }
+        data.1 = data.1.max(data.0 + self.min_range);
 
-        match event {
-            Event::MouseDown(me) => {
-                ctx.set_active(true);
-                // Check max first since it is painted above min
-                if knob_hit_test(self.max_knob_pos, knob_size, me.pos) {
-                    self.max_knob_active = true;
-                    self.x_offset = self.max_knob_pos.x - me.pos.x;
-                } else if knob_hit_test(self.min_knob_pos, knob_size, me.pos) {
-                    self.min_knob_active = true;
-                    self.x_offset = self.min_knob_pos.x - me.pos.x;
-                } else {
-                    let center = (self.min_knob_pos.x + self.max_knob_pos.x) / 2.0;
-                    self.x_offset = 0.0;
-                    mouse_position = Some(me.pos);
+        if !self.max_knob.is_active() {
+            self.min_knob.handle_event(ctx, event, &mut data.0, env, (self.min, self.max));
+
+            if let Some(snap) = self.snap {
+                data.0 = (data.0 / snap).round() * snap;
+            }
+            data.0 = data.0.min(data.1 - self.min_range);
+
+            if !self.min_knob.is_active() {
+                if let Event::MouseDown(me) = event {
+                    let center = (self.min_knob.pos.x + self.max_knob.pos.x) / 2.0;
+
+                    let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+                    let slider_width = ctx.size().width;
+
+                    ctx.set_active(true);
                     if me.pos.x <= center {
-                        println!("select min: {} < {} ({}, {})", me.pos.x, center, self.min_knob_pos.x, self.max_knob_pos.x);
-                        self.min_knob_active = true;
+                        self.min_knob.x_offset = 0.0;
+                        self.min_knob.is_active = true;
+                        self.min_knob.pos = me.pos;
+                        data.0 = self.calculate_value(me.pos.x, knob_size, slider_width);
                     } else {
-                        println!("select min: {} > {} ({}, {})", me.pos.x, center, self.min_knob_pos.x, self.max_knob_pos.x);
-                        self.max_knob_active = true;
+                        self.max_knob.x_offset = 0.0;
+                        self.max_knob.is_active = true;
+                        self.max_knob.pos = me.pos;
+                        data.1 = self.calculate_value(me.pos.x, knob_size, slider_width);
                     }
                 }
             }
-            Event::MouseMove(me) => {
-                mouse_position = Some(me.pos);
-                let new_min_hover = knob_hit_test(self.min_knob_pos, knob_size, me.pos);
-                let new_max_hover = knob_hit_test(self.max_knob_pos, knob_size, me.pos);
 
-                if new_min_hover != self.min_knob_hovered || new_max_hover != self.max_knob_hovered {
-                    ctx.request_paint();
-                }
-                self.min_knob_hovered = new_min_hover;
-                self.max_knob_hovered = new_max_hover;
-            }
-            Event::MouseUp(me) => {
-                mouse_position = Some(me.pos);
-            }
-            _ => {}
-        }
-
-        if let Some(position) = mouse_position {
-            if self.min_knob_active {
-                data.0 = self.calculate_value(position.x + self.x_offset, knob_size, slider_width).min(data.1 - self.min_range);
-            }
-            if self.max_knob_active {
-                data.1 = self.calculate_value(position.x + self.x_offset, knob_size, slider_width).max(data.0 + self.min_range);
-            }
-        }
-
-        if let Event::MouseUp(_) = event {
-            if self.min_knob_active || self.max_knob_active {
-                ctx.request_paint();
-            }
-
-            self.min_knob_active = false;
-            self.max_knob_active = false;
-            ctx.set_active(false);
         }
     }
 
@@ -312,63 +297,122 @@ impl Widget<(f64, f64)> for RangeSlider {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &(f64, f64), env: &Env) {
         draw_background(ctx, env);
 
-        //Get ready to paint the left knob
-        let is_active = self.min_knob_active;
-        let is_hovered = self.min_knob_hovered;
-        let clamped = self.normalize(data.0);
+        if self.fill_track {
+            let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+            let x0 = (ctx.size().width - knob_size) * self.normalize(data.0) + knob_size / 2.;
+            let x1 = (ctx.size().width - knob_size) * self.normalize(data.1) + knob_size / 2.;
 
-        draw_knob(ctx, clamped, &mut self.min_knob_pos, is_hovered, is_active, env);
+            let background_rect = Rect::from_points(
+                    (x0, (knob_size - TRACK_THICKNESS) / 2.),
+                    (x1, (knob_size + TRACK_THICKNESS) / 2.)
+                );
 
-        //Get ready to paint the right knob
-        let is_active = self.max_knob_active;
-        let is_hovered = self.max_knob_hovered;
-        let clamped = self.normalize(data.1);
+            ctx.fill(background_rect, &env.get(theme::SELECTION_COLOR));
+        }
 
-        draw_knob(ctx, clamped, &mut self.max_knob_pos, is_hovered, is_active, env);
+        self.min_knob.draw(ctx, self.normalize(data.0), env);
+        self.max_knob.draw(ctx, self.normalize(data.1), env);
     }
 }
 
-fn draw_knob(ctx: &mut PaintCtx, clamped: f64, pos: &mut Point, is_hovered: bool, is_active: bool, env: &Env) {
-    let rect = ctx.size().to_rect();
-    let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-    let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
-    *pos = Point::new(knob_position, knob_size / 2.);
-    let knob_circle = Circle::new(*pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
+#[derive(Debug, Clone, Default)]
+struct SliderHead {
+    pos: Point,
+    x_offset: f64,
+    is_hovered: bool,
+    is_active: bool,
+}
 
-    let normal_knob_gradient = LinearGradient::new(
-        UnitPoint::TOP,
-        UnitPoint::BOTTOM,
-        (
-            env.get(theme::FOREGROUND_LIGHT),
-            env.get(theme::FOREGROUND_DARK),
-        ),
-    );
-    let flipped_knob_gradient = LinearGradient::new(
-        UnitPoint::TOP,
-        UnitPoint::BOTTOM,
-        (
-            env.get(theme::FOREGROUND_DARK),
-            env.get(theme::FOREGROUND_LIGHT),
-        ),
-    );
+impl SliderHead {
+    fn new() -> Self {
+        SliderHead {
+            pos: Default::default(),
+            x_offset: 0.0,
+            is_hovered: false,
+            is_active: false
+        }
+    }
+    pub fn handle_event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env, slider_bounds: (f64, f64)) {
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let slider_width = ctx.size().width;
 
-    let knob_gradient = if is_active {
-        flipped_knob_gradient
-    } else {
-        normal_knob_gradient
-    };
+        match event {
+            Event::MouseDown(mouse) => {
+                if knob_hit_test(self.pos, knob_size, mouse.pos) {
+                    self.is_active = true;
+                    ctx.set_active(true);
+                    self.x_offset = self.pos.x - mouse.pos.x
+                }
+            }
+            Event::MouseUp(mouse) => {
+                if self.is_active {
+                    *data = slider_bounds.calculate_value(mouse.pos.x + self.x_offset, knob_size, slider_width);
+                    ctx.request_paint();
+                    self.is_active = false;
+                    ctx.set_active(false);
+                }
+            }
+            Event::MouseMove(mouse) => {
+                if self.is_active {
+                    *data = slider_bounds.calculate_value(mouse.pos.x + self.x_offset, knob_size, slider_width);
+                    ctx.request_paint();
+                }
+                if ctx.is_hot() {
+                    let knob_hover = knob_hit_test(self.pos, knob_size, mouse.pos);
+                    if knob_hover != self.is_hovered {
+                        self.is_hovered = knob_hover;
+                        ctx.request_paint();
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+    pub fn is_active(&self) -> bool {
+        self.is_active
+    }
+    fn draw(&mut self, ctx: &mut PaintCtx, clamped: f64, env: &Env) {
+        let rect = ctx.size().to_rect();
+        let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let knob_position = (rect.width() - knob_size) * clamped + knob_size / 2.;
+        self.pos = Point::new(knob_position, knob_size / 2.);
+        let knob_circle = Circle::new(self.pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
 
-    //Paint the border
-    let border_color = if is_hovered || is_active {
-        env.get(theme::FOREGROUND_LIGHT)
-    } else {
-        env.get(theme::FOREGROUND_DARK)
-    };
+        let normal_knob_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::FOREGROUND_LIGHT),
+                env.get(theme::FOREGROUND_DARK),
+            ),
+        );
+        let flipped_knob_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::FOREGROUND_DARK),
+                env.get(theme::FOREGROUND_LIGHT),
+            ),
+        );
 
-    ctx.stroke(knob_circle, &border_color, KNOB_STROKE_WIDTH);
+        let knob_gradient = if self.is_active {
+            flipped_knob_gradient
+        } else {
+            normal_knob_gradient
+        };
 
-    //Actually paint the knob
-    ctx.fill(knob_circle, &knob_gradient);
+        //Paint the border
+        let border_color = if self.is_hovered || self.is_active {
+            env.get(theme::FOREGROUND_LIGHT)
+        } else {
+            env.get(theme::FOREGROUND_DARK)
+        };
+
+        ctx.stroke(knob_circle, &border_color, KNOB_STROKE_WIDTH);
+
+        //Actually paint the knob
+        ctx.fill(knob_circle, &knob_gradient);
+    }
 }
 
 fn draw_background(ctx: &mut PaintCtx, env: &Env) {
@@ -426,16 +470,20 @@ impl<T: Data, W: Widget<T> + SliderBounds> SliderAnnotation<T, W> {
             first: 0.0,
         }
     }
-    fn build_annotation(&mut self, ctx: &mut PaintCtx, env: &Env) {
+    fn build_annotation(&mut self, ctx: &mut PietText, env: &Env) {
         let inner = self.slider.widget();
         let low = (inner.min() / self.step_size).ceil() * self.step_size;
         let high = (inner.max() / self.step_size).floor() * self.step_size;
 
         self.annotations.clear();
 
-        let mut current = low;
-        while current <= high {
-            let text = ctx.text().new_text_layout(format!("{}", current))
+        let mut current = low + 0.0000000001;
+        while current <= high + 0.0000000002 {
+            let mut text = format!("{}", current);
+            while text.len() > 5 || text.ends_with("0") || text.ends_with(".") {
+                text.pop();
+            }
+            let text = ctx.new_text_layout(text)
                 .font(FontFamily::SANS_SERIF, 15.0)
                 .text_color(env.get(theme::LABEL_COLOR))
                 .build()
@@ -445,6 +493,8 @@ impl<T: Data, W: Widget<T> + SliderBounds> SliderAnnotation<T, W> {
 
             current += self.step_size;
         }
+
+        self.first = low;
 
         self.rebuild = false;
     }
@@ -491,7 +541,7 @@ impl<T: Data, W: Widget<T> + SliderBounds> Widget<T> for SliderAnnotation<T, W> 
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
 
         if self.rebuild {
-            self.build_annotation(ctx, env);
+            self.build_annotation(ctx.text(), env);
         }
 
         let slider = self.slider.widget();
@@ -516,7 +566,10 @@ impl<T: Data, W: Widget<T> + SliderBounds> Widget<T> for SliderAnnotation<T, W> 
         for layout in &self.annotations {
             let knob_position = (rect.width() - knob_size) * slider.normalize(current) + knob_size / 2.;
             ctx.stroke(Line::new((knob_position, top), (knob_position, large_bottom)), &color, 1.0);
-            let text_pos = Point::new(knob_position - layout.size().width / 2.0, large_bottom);
+            let text_pos = Point::new(
+                (knob_position - layout.size().width / 2.0).max(0.0).min(ctx.size().width - layout.size().width),
+                large_bottom
+            );
             ctx.draw_text(layout, text_pos);
 
             let mut sub = current;
