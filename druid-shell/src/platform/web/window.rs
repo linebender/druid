@@ -25,6 +25,9 @@ use tracing::{error, warn};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
 use crate::piet::{PietText, RenderContext};
@@ -41,8 +44,11 @@ use crate::scale::{Scale, ScaledArea};
 use crate::keyboard::{KbKey, KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+};
 
 // This is a macro instead of a function since KeyboardEvent and MouseEvent has identical functions
 // to query modifier key states.
@@ -75,6 +81,14 @@ pub(crate) struct WindowBuilder {
 #[derive(Clone, Default)]
 pub struct WindowHandle(Weak<WindowState>);
 
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        error!("HasRawWindowHandle trait not implemented for wasm.");
+        RawWindowHandle::Web(WebHandle::empty())
+    }
+}
+
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle is thread safe.
 #[derive(Clone)]
@@ -98,6 +112,7 @@ struct WindowState {
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
+    active_text_input: Cell<Option<TextFieldToken>>,
 }
 
 // TODO: support custom cursors
@@ -284,7 +299,10 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
             // Prevent the browser from going back a page by default.
             event.prevent_default();
         }
-        state.handler.borrow_mut().key_down(kb_event);
+        let mut handler = state.handler.borrow_mut();
+        if !handler.key_down(kb_event.clone()) {
+            simulate_input(&mut **handler, state.active_text_input.get(), kb_event);
+        }
     });
 }
 
@@ -425,6 +443,7 @@ impl WindowBuilder {
             context,
             invalid: RefCell::new(Region::EMPTY),
             click_counter: ClickCounter::default(),
+            active_text_input: Cell::new(None),
         });
 
         setup_web_callbacks(&window);
@@ -492,7 +511,7 @@ impl WindowHandle {
 
     pub fn get_window_state(&self) -> window::WindowState {
         warn!("WindowHandle::get_window_state unimplemented for web.");
-        window::WindowState::RESTORED
+        window::WindowState::Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
@@ -534,6 +553,28 @@ impl WindowHandle {
             .unwrap_or_else(|| panic!("Failed to produce a text context"));
 
         PietText::new(s.context.clone())
+    }
+
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
+    }
+
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(state) = self.0.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None);
+            }
+        }
+    }
+
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(state) = self.0.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // no-op for now, until we get a properly implemented text input
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -715,9 +756,11 @@ fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {
         .style()
         .set_property(
             "cursor",
+            #[allow(deprecated)]
             match cursor {
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
+                Cursor::Pointer => "pointer",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

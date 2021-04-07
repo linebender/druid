@@ -33,6 +33,9 @@ use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 use tracing::{error, warn};
 
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
@@ -44,8 +47,10 @@ use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
-use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::text::{simulate_input, Event};
+use crate::window::{
+    self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+};
 
 use super::application::Application;
 use super::dialog;
@@ -93,6 +98,15 @@ pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
     // Ensure that we don't implement Send, because it isn't actually safe to send the WindowState.
     marker: std::marker::PhantomData<*const ()>,
+}
+
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        error!("HasRawWindowHandle trait not implemented for gtk.");
+        // GTK is not a platform, and there's no empty generic handle. Pick XCB randomly as fallback.
+        RawWindowHandle::Xcb(XcbHandle::empty())
+    }
 }
 
 /// Operations that we defer in order to avoid re-entrancy. See the documentation in the windows
@@ -162,6 +176,7 @@ pub(crate) struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     current_keycode: Cell<Option<u16>>,
     click_counter: ClickCounter,
+    active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
 }
 
@@ -280,6 +295,7 @@ impl WindowBuilder {
             idle_queue: Arc::new(Mutex::new(vec![])),
             current_keycode: Cell::new(None),
             click_counter: ClickCounter::default(),
+            active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
         });
 
@@ -575,7 +591,7 @@ impl WindowBuilder {
                             Some(Vec2::new(delta_x, delta_y))
                         }
                         e => {
-                            eprintln!(
+                            warn!(
                                 "Warning: the Druid widget got some whacky scroll direction {:?}",
                                 e
                             );
@@ -612,7 +628,7 @@ impl WindowBuilder {
                     state.current_keycode.set(Some(hw_keycode));
 
                     state.with_handler(|h|
-                        h.key_down(make_key_event(key, repeat, KeyState::Down))
+                        simulate_input(h, state.active_text_input.get(), make_key_event(key, repeat, KeyState::Down))
                     );
                 }
 
@@ -888,16 +904,16 @@ impl WindowHandle {
     }
 
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         let cur_size_state = self.get_window_state();
         if let Some(state) = self.state.upgrade() {
             match (size_state, cur_size_state) {
                 (s1, s2) if s1 == s2 => (),
-                (MAXIMIZED, _) => state.window.maximize(),
-                (MINIMIZED, _) => state.window.iconify(),
-                (RESTORED, MAXIMIZED) => state.window.unmaximize(),
-                (RESTORED, MINIMIZED) => state.window.deiconify(),
-                (RESTORED, RESTORED) => (), // Unreachable
+                (Maximized, _) => state.window.maximize(),
+                (Minimized, _) => state.window.iconify(),
+                (Restored, Maximized) => state.window.unmaximize(),
+                (Restored, Minimized) => state.window.deiconify(),
+                (Restored, Restored) => (), // Unreachable
             }
 
             state.window.unmaximize();
@@ -905,18 +921,18 @@ impl WindowHandle {
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         if let Some(state) = self.state.upgrade() {
             if state.window.is_maximized() {
-                return MAXIMIZED;
+                return Maximized;
             } else if let Some(window) = state.window.get_parent_window() {
                 let state = window.get_state();
                 if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
-                    return MINIMIZED;
+                    return Minimized;
                 }
             }
         }
-        RESTORED
+        Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
@@ -964,6 +980,28 @@ impl WindowHandle {
 
     pub fn text(&self) -> PietText {
         PietText::new()
+    }
+
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
+    }
+
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(state) = self.state.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None)
+            }
+        }
+    }
+
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(state) = self.state.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // noop until we get a real text input implementation
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
@@ -1082,7 +1120,8 @@ impl WindowHandle {
                 .unwrap();
 
             let first_child = &vbox.get_children()[0];
-            if first_child.is::<gtk::MenuBar>() {
+            if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
+                old_menubar.deactivate();
                 vbox.remove(first_child);
             }
             let menubar = menu.into_gtk_menubar(&self, &accel_group);
@@ -1176,10 +1215,12 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
     } else {
         gdk::Cursor::from_name(
             &gdk_window.get_display(),
+            #[allow(deprecated)]
             match cursor {
                 // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
                 Cursor::Arrow => "default",
                 Cursor::IBeam => "text",
+                Cursor::Pointer => "pointer",
                 Cursor::Crosshair => "crosshair",
                 Cursor::OpenHand => "grab",
                 Cursor::NotAllowed => "not-allowed",

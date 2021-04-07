@@ -254,7 +254,10 @@ pub enum Cursor {
     Arrow,
     /// A vertical I-beam, for indicating insertion points in text.
     IBeam,
+    Pointer,
     Crosshair,
+
+    #[deprecated(note = "this will be removed in future because it is not available on windows")]
     OpenHand,
     NotAllowed,
     ResizeLeftRight,
@@ -288,9 +291,11 @@ impl CursorDesc {
 
 impl std::fmt::Debug for Cursor {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        #[allow(deprecated)]
         match self {
             Cursor::Arrow => write!(f, "Cursor::Arrow"),
             Cursor::IBeam => write!(f, "Cursor::IBeam"),
+            Cursor::Pointer => write!(f, "Cursor::Pointer"),
             Cursor::Crosshair => write!(f, "Cursor::Crosshair"),
             Cursor::OpenHand => write!(f, "Cursor::OpenHand"),
             Cursor::NotAllowed => write!(f, "Cursor::NotAllowed"),

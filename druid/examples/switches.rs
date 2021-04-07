@@ -70,7 +70,7 @@ pub fn main() {
     let window = WindowDesc::new(build_widget())
         .title(LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo"));
     AppLauncher::with_window(window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(DemoState {
             value: true,
             stepper_value: 1.0,

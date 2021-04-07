@@ -16,8 +16,8 @@
 
 use crate::kurbo::common::FloatExt;
 use crate::widget::prelude::*;
-use crate::widget::SizedBox;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
+use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.
 ///
@@ -140,18 +140,7 @@ pub struct Flex<T> {
     cross_alignment: CrossAxisAlignment,
     main_alignment: MainAxisAlignment,
     fill_major_axis: bool,
-    children: Vec<ChildWidget<T>>,
-}
-
-struct ChildWidget<T> {
-    widget: WidgetPod<T, Box<dyn Widget<T>>>,
-    params: FlexParams,
-}
-
-/// A dummy widget we use to do spacing.
-struct Spacer {
-    axis: Axis,
-    len: KeyOrValue<f64>,
+    children: Vec<Child<T>>,
 }
 
 /// Optional parameters for an item in a [`Flex`] container (row or column).
@@ -349,23 +338,16 @@ impl FlexParams {
     /// can pass an `f64` to any of the functions that take `FlexParams`.
     ///
     /// By default, the widget uses the alignment of its parent [`Flex`] container.
-    ///
-    ///
-    /// [`Flex`]: struct.Flex.html
-    /// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
     pub fn new(flex: f64, alignment: impl Into<Option<CrossAxisAlignment>>) -> Self {
+        if flex <= 0.0 {
+            debug_panic!("Flex value should be > 0.0. Flex given was: {}", flex);
+        }
+
+        let flex = flex.max(0.0);
+
         FlexParams {
             flex,
             alignment: alignment.into(),
-        }
-    }
-}
-
-impl<T> ChildWidget<T> {
-    fn new(child: impl Widget<T> + 'static, params: FlexParams) -> Self {
-        ChildWidget {
-            widget: WidgetPod::new(Box::new(child)),
-            params,
         }
     }
 }
@@ -436,7 +418,7 @@ impl<T: Data> Flex<T> {
     ///
     /// Convenient for assembling a group of widgets in a single expression.
     pub fn with_child(mut self, child: impl Widget<T> + 'static) -> Self {
-        self.add_flex_child(child, 0.0);
+        self.add_child(child);
         self
     }
 
@@ -525,9 +507,13 @@ impl<T: Data> Flex<T> {
     ///
     /// See also [`with_child`].
     ///
-    /// [`with_child`]: #method.with_child
+    /// [`with_child`]: Flex::with_child
     pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
-        self.add_flex_child(child, 0.0);
+        let child = Child::Fixed {
+            widget: WidgetPod::new(Box::new(child)),
+            alignment: None,
+        };
+        self.children.push(child);
     }
 
     /// Add a flexible child widget.
@@ -553,14 +539,26 @@ impl<T: Data> Flex<T> {
     /// my_row.add_flex_child(Slider::new(), FlexParams::new(1.0, CrossAxisAlignment::End));
     /// ```
     ///
-    /// [`FlexParams`]: struct.FlexParams.html
-    /// [`with_flex_child`]: #method.with_flex_child
+    /// [`with_flex_child`]: Flex::with_flex_child
     pub fn add_flex_child(
         &mut self,
         child: impl Widget<T> + 'static,
         params: impl Into<FlexParams>,
     ) {
-        let child = ChildWidget::new(child, params.into());
+        let params = params.into();
+        let child = if params.flex > 0.0 {
+            Child::Flex {
+                widget: WidgetPod::new(Box::new(child)),
+                alignment: params.alignment,
+                flex: params.flex,
+            }
+        } else {
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
+            Child::Fixed {
+                widget: WidgetPod::new(Box::new(child)),
+                alignment: None,
+            }
+        };
         self.children.push(child);
     }
 
@@ -581,44 +579,61 @@ impl<T: Data> Flex<T> {
     /// If you are laying out standard controls in this container, you should
     /// generally prefer to use [`add_default_spacer`].
     ///
-    /// [`add_default_spacer`]: #method.add_default_spacer
+    /// [`add_default_spacer`]: Flex::add_default_spacer
     pub fn add_spacer(&mut self, len: impl Into<KeyOrValue<f64>>) {
-        let spacer = Spacer {
-            axis: self.direction,
-            len: len.into(),
-        };
-        self.add_flex_child(spacer, 0.0);
+        let mut value = len.into();
+        if let KeyOrValue::Concrete(ref mut len) = value {
+            if *len < 0.0 {
+                tracing::warn!("Provided spacer length was less than 0. Value was: {}", len);
+            }
+            *len = len.clamp(0.0, f64::MAX);
+        }
+
+        let new_child = Child::FixedSpacer(value, 0.0);
+        self.children.push(new_child);
     }
 
     /// Add an empty spacer widget with a specific `flex` factor.
     pub fn add_flex_spacer(&mut self, flex: f64) {
-        let child = match self.direction {
-            Axis::Vertical => SizedBox::empty().expand_height(),
-            Axis::Horizontal => SizedBox::empty().expand_width(),
+        let flex = if flex >= 0.0 {
+            flex
+        } else {
+            debug_assert!(
+                flex >= 0.0,
+                "flex value for space should be greater than equal to 0, received: {}",
+                flex
+            );
+            tracing::warn!("Provided flex value was less than 0: {}", flex);
+            0.0
         };
-        self.add_flex_child(child, flex);
+        let new_child = Child::FlexedSpacer(flex, 0.0);
+        self.children.push(new_child);
     }
 }
 
 impl<T: Data> Widget<T> for Flex<T> {
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        for child in &mut self.children {
-            child.widget.event(ctx, event, data, env);
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.event(ctx, event, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        for child in &mut self.children {
-            child.widget.lifecycle(ctx, event, data, env);
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.lifecycle(ctx, event, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        for child in &mut self.children {
-            child.widget.update(ctx, data, env);
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.update(ctx, data, env);
         }
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Flex");
         // we loosen our constraints when passing to children.
@@ -633,55 +648,75 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
+        let mut flex_sum = 0.0;
         for child in &mut self.children {
-            any_use_baseline &= child.params.alignment == Some(CrossAxisAlignment::Baseline);
+            match child {
+                Child::Fixed { widget, alignment } => {
+                    any_use_baseline &= *alignment == Some(CrossAxisAlignment::Baseline);
 
-            if child.params.flex == 0.0 {
-                let child_bc = self
-                    .direction
-                    .constraints(&loosened_bc, 0., std::f64::INFINITY);
-                let child_size = child.widget.layout(ctx, &child_bc, data, env);
-                let baseline_offset = child.widget.baseline_offset();
+                    let child_bc =
+                        self.direction
+                            .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
+                    let child_size = widget.layout(ctx, &child_bc, data, env);
+                    let baseline_offset = widget.baseline_offset();
 
-                if child_size.width.is_infinite() {
-                    tracing::warn!("A non-Flex child has an infinite width.");
+                    if child_size.width.is_infinite() {
+                        tracing::warn!("A non-Flex child has an infinite width.");
+                    }
+
+                    if child_size.height.is_infinite() {
+                        tracing::warn!("A non-Flex child has an infinite height.");
+                    }
+
+                    major_non_flex += self.direction.major(child_size).expand();
+                    minor = minor.max(self.direction.minor(child_size).expand());
+                    max_above_baseline =
+                        max_above_baseline.max(child_size.height - baseline_offset);
+                    max_below_baseline = max_below_baseline.max(baseline_offset);
                 }
-
-                if child_size.height.is_infinite() {
-                    tracing::warn!("A non-Flex child has an infinite height.");
+                Child::FixedSpacer(kv, calculated_siz) => {
+                    *calculated_siz = kv.resolve(env);
+                    if *calculated_siz < 0.0 {
+                        tracing::warn!("Length provided to fixed spacer was less than 0");
+                    }
+                    *calculated_siz = calculated_siz.max(0.0);
+                    major_non_flex += *calculated_siz;
                 }
-
-                major_non_flex += self.direction.major(child_size).expand();
-                minor = minor.max(self.direction.minor(child_size).expand());
-                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
-                max_below_baseline = max_below_baseline.max(baseline_offset);
+                Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => flex_sum += *flex,
             }
         }
 
         let total_major = self.direction.major(bc.max());
         let remaining = (total_major - major_non_flex).max(0.0);
         let mut remainder: f64 = 0.0;
-        let flex_sum: f64 = self.children.iter().map(|child| child.params.flex).sum();
-        let mut major_flex: f64 = 0.0;
 
+        let mut major_flex: f64 = 0.0;
+        let px_per_flex = remaining / flex_sum;
         // Measure flex children.
         for child in &mut self.children {
-            if child.params.flex != 0.0 {
-                let desired_major = remaining * child.params.flex / flex_sum + remainder;
-                let actual_major = desired_major.round();
-                remainder = desired_major - actual_major;
-                let min_major = 0.0;
+            match child {
+                Child::Flex { widget, flex, .. } => {
+                    let desired_major = (*flex) * px_per_flex + remainder;
+                    let actual_major = desired_major.round();
+                    remainder = desired_major - actual_major;
 
-                let child_bc = self
-                    .direction
-                    .constraints(&loosened_bc, min_major, actual_major);
-                let child_size = child.widget.layout(ctx, &child_bc, data, env);
-                let baseline_offset = child.widget.baseline_offset();
+                    let child_bc = self.direction.constraints(&loosened_bc, 0.0, actual_major);
+                    let child_size = widget.layout(ctx, &child_bc, data, env);
+                    let baseline_offset = widget.baseline_offset();
 
-                major_flex += self.direction.major(child_size).expand();
-                minor = minor.max(self.direction.minor(child_size).expand());
-                max_above_baseline = max_above_baseline.max(child_size.height - baseline_offset);
-                max_below_baseline = max_below_baseline.max(baseline_offset);
+                    major_flex += self.direction.major(child_size).expand();
+                    minor = minor.max(self.direction.minor(child_size).expand());
+                    max_above_baseline =
+                        max_above_baseline.max(child_size.height - baseline_offset);
+                    max_below_baseline = max_below_baseline.max(baseline_offset);
+                }
+                Child::FlexedSpacer(flex, calculated_size) => {
+                    let desired_major = (*flex) * px_per_flex + remainder;
+                    *calculated_size = desired_major.round();
+                    remainder = desired_major - *calculated_size;
+                    major_flex += *calculated_size;
+                }
+                _ => {}
             }
         }
 
@@ -703,40 +738,55 @@ impl<T: Data> Widget<T> for Flex<T> {
             _ => minor,
         };
 
+        let extra_height = minor - minor_dim.min(minor);
+
         let mut major = spacing.next().unwrap_or(0.);
         let mut child_paint_rect = Rect::ZERO;
-        for child in &mut self.children {
-            let child_size = child.widget.layout_rect().size();
-            let alignment = child.params.alignment.unwrap_or(self.cross_alignment);
-            let child_minor_offset = match alignment {
-                // This will ignore baseline alignment if it is overridden on children,
-                // but is not the default for the container. Is this okay?
-                CrossAxisAlignment::Baseline if matches!(self.direction, Axis::Horizontal) => {
-                    let extra_height = minor - minor_dim.min(minor);
-                    let child_baseline = child.widget.baseline_offset();
-                    let child_above_baseline = child_size.height - child_baseline;
-                    extra_height + (max_above_baseline - child_above_baseline)
-                }
-                CrossAxisAlignment::Fill => {
-                    let fill_size: Size = self
-                        .direction
-                        .pack(self.direction.major(child_size), minor_dim)
-                        .into();
-                    let child_bc = BoxConstraints::tight(fill_size);
-                    child.widget.layout(ctx, &child_bc, data, env);
-                    0.0
-                }
-                _ => {
-                    let extra_minor = minor_dim - self.direction.minor(child_size);
-                    alignment.align(extra_minor)
-                }
-            };
 
-            let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
-            child.widget.set_origin(ctx, data, env, child_pos);
-            child_paint_rect = child_paint_rect.union(child.widget.paint_rect());
-            major += self.direction.major(child_size).expand();
-            major += spacing.next().unwrap_or(0.);
+        for child in &mut self.children {
+            match child {
+                Child::Fixed { widget, alignment }
+                | Child::Flex {
+                    widget, alignment, ..
+                } => {
+                    let child_size = widget.layout_rect().size();
+                    let alignment = alignment.unwrap_or(self.cross_alignment);
+                    let child_minor_offset = match alignment {
+                        // This will ignore baseline alignment if it is overridden on children,
+                        // but is not the default for the container. Is this okay?
+                        CrossAxisAlignment::Baseline
+                            if matches!(self.direction, Axis::Horizontal) =>
+                        {
+                            let child_baseline = widget.baseline_offset();
+                            let child_above_baseline = child_size.height - child_baseline;
+                            extra_height + (max_above_baseline - child_above_baseline)
+                        }
+                        CrossAxisAlignment::Fill => {
+                            let fill_size: Size = self
+                                .direction
+                                .pack(self.direction.major(child_size), minor_dim)
+                                .into();
+                            let child_bc = BoxConstraints::tight(fill_size);
+                            widget.layout(ctx, &child_bc, data, env);
+                            0.0
+                        }
+                        _ => {
+                            let extra_minor = minor_dim - self.direction.minor(child_size);
+                            alignment.align(extra_minor)
+                        }
+                    };
+
+                    let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
+                    widget.set_origin(ctx, data, env, child_pos);
+                    child_paint_rect = child_paint_rect.union(widget.paint_rect());
+                    major += self.direction.major(child_size).expand();
+                    major += spacing.next().unwrap_or(0.);
+                }
+                Child::FlexedSpacer(_, calculated_size)
+                | Child::FixedSpacer(_, calculated_size) => {
+                    major += *calculated_size;
+                }
+            }
         }
 
         if flex_sum > 0.0 && total_major.is_infinite() {
@@ -765,25 +815,35 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         let baseline_offset = match self.direction {
             Axis::Horizontal => max_below_baseline,
-            Axis::Vertical => self
-                .children
+            Axis::Vertical => (&self.children)
                 .last()
                 .map(|last| {
-                    let child_bl = last.widget.baseline_offset();
-                    let child_max_y = last.widget.layout_rect().max_y();
-                    let extra_bottom_padding = my_size.height - child_max_y;
-                    child_bl + extra_bottom_padding
+                    let child = last.widget();
+                    if let Some(widget) = child {
+                        let child_bl = widget.baseline_offset();
+                        let child_max_y = widget.layout_rect().max_y();
+                        let extra_bottom_padding = my_size.height - child_max_y;
+                        child_bl + extra_bottom_padding
+                    } else {
+                        0.0
+                    }
                 })
                 .unwrap_or(0.0),
         };
 
         ctx.set_baseline_offset(baseline_offset);
+        trace!(
+            "Computed layout: size={}, baseline_offset={}",
+            my_size,
+            baseline_offset
+        );
         my_size
     }
 
+    #[instrument(name = "Flex", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        for child in &mut self.children {
-            child.widget.paint(ctx, data, env);
+        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
+            child.paint(ctx, data, env);
         }
 
         // paint the baseline if we're debugging layout
@@ -791,7 +851,7 @@ impl<T: Data> Widget<T> for Flex<T> {
             let color = env.get_debug_color(ctx.widget_id().to_raw());
             let my_baseline = ctx.size().height - ctx.widget_state.baseline_offset;
             let line = crate::kurbo::Line::new((0.0, my_baseline), (ctx.size().width, my_baseline));
-            let stroke_style = crate::piet::StrokeStyle::new().dash(vec![4.0, 4.0], 0.0);
+            let stroke_style = crate::piet::StrokeStyle::new().dash_pattern(&[4.0, 4.0]);
             ctx.stroke_styled(line, &color, 1.0, &stroke_style);
         }
     }
@@ -907,22 +967,37 @@ impl Iterator for Spacing {
     }
 }
 
-impl<T: Data> Widget<T> for Spacer {
-    fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
-    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
-    fn update(&mut self, _: &mut UpdateCtx, _: &T, _: &T, _: &Env) {}
-    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &T, env: &Env) -> Size {
-        let major = self.len.resolve(env);
-        self.axis.pack(major, 0.0).into()
-    }
-    fn paint(&mut self, _: &mut PaintCtx, _: &T, _: &Env) {}
-}
-
 impl From<f64> for FlexParams {
     fn from(flex: f64) -> FlexParams {
-        FlexParams {
-            flex,
-            alignment: None,
+        FlexParams::new(flex, None)
+    }
+}
+
+enum Child<T> {
+    Fixed {
+        widget: WidgetPod<T, Box<dyn Widget<T>>>,
+        alignment: Option<CrossAxisAlignment>,
+    },
+    Flex {
+        widget: WidgetPod<T, Box<dyn Widget<T>>>,
+        alignment: Option<CrossAxisAlignment>,
+        flex: f64,
+    },
+    FixedSpacer(KeyOrValue<f64>, f64),
+    FlexedSpacer(f64, f64),
+}
+
+impl<T> Child<T> {
+    fn widget_mut(&mut self) -> Option<&mut WidgetPod<T, Box<dyn Widget<T>>>> {
+        match self {
+            Child::Fixed { widget, .. } | Child::Flex { widget, .. } => Some(widget),
+            _ => None,
+        }
+    }
+    fn widget(&self) -> Option<&WidgetPod<T, Box<dyn Widget<T>>>> {
+        match self {
+            Child::Fixed { widget, .. } | Child::Flex { widget, .. } => Some(widget),
+            _ => None,
         }
     }
 }
@@ -1000,5 +1075,19 @@ mod tests {
         assert_eq!(vec(a, 37., 5), vec![4., 7., 8., 7., 7., 4.]);
         assert_eq!(vec(a, 38., 5), vec![4., 7., 8., 8., 7., 4.]);
         assert_eq!(vec(a, 39., 5), vec![4., 8., 7., 8., 8., 4.]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_flex_params() {
+        use float_cmp::approx_eq;
+        let params = FlexParams::new(0.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+
+        let params = FlexParams::new(-0.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+
+        let params = FlexParams::new(-1.0, None);
+        approx_eq!(f64, params.flex, 1.0, ulps = 2);
     }
 }

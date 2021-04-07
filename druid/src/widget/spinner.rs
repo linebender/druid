@@ -15,6 +15,7 @@
 //! An animated spinner widget.
 
 use std::f64::consts::PI;
+use tracing::{instrument, trace};
 
 use druid::kurbo::Line;
 use druid::widget::prelude::*;
@@ -67,6 +68,7 @@ impl Default for Spinner {
 }
 
 impl<T: Data> Widget<T> for Spinner {
+    #[instrument(name = "Spinner", level = "trace", skip(self, ctx, event, _data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         if let Event::AnimFrame(interval) = event {
             self.t += (*interval as f64) * 1e-9;
@@ -78,6 +80,7 @@ impl<T: Data> Widget<T> for Spinner {
         }
     }
 
+    #[instrument(name = "Spinner", level = "trace", skip(self, ctx, event, _data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, _env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             ctx.request_anim_frame();
@@ -85,8 +88,18 @@ impl<T: Data> Widget<T> for Spinner {
         }
     }
 
+    #[instrument(
+        name = "Spinner",
+        level = "trace",
+        skip(self, _ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
+    #[instrument(
+        name = "Spinner",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -96,16 +109,20 @@ impl<T: Data> Widget<T> for Spinner {
     ) -> Size {
         bc.debug_check("Spinner");
 
-        if bc.is_width_bounded() && bc.is_height_bounded() {
+        let size = if bc.is_width_bounded() && bc.is_height_bounded() {
             bc.max()
         } else {
             bc.constrain(Size::new(
                 env.get(theme::BASIC_WIDGET_HEIGHT),
                 env.get(theme::BASIC_WIDGET_HEIGHT),
             ))
-        }
+        };
+
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Spinner", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         let t = self.t;
         let (width, height) = (ctx.size().width, ctx.size().height);

@@ -14,7 +14,7 @@
 
 //! File open/save dialogs, macOS implementation.
 
-#![allow(non_upper_case_globals)]
+#![allow(non_upper_case_globals, clippy::clippy::upper_case_acronyms)]
 
 use std::ffi::OsString;
 

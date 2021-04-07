@@ -17,6 +17,7 @@
 use crate::kurbo::{Circle, Shape};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
+use tracing::{instrument, trace};
 
 const TRACK_THICKNESS: f64 = 4.0;
 const BORDER_WIDTH: f64 = 2.0;
@@ -76,6 +77,7 @@ impl Slider {
 }
 
 impl Widget<f64> for Slider {
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let slider_width = ctx.size().width;
@@ -115,21 +117,39 @@ impl Widget<f64> for Slider {
         }
     }
 
+    #[instrument(
+        name = "Slider",
+        level = "trace",
+        skip(self, _ctx, _event, _data, _env)
+    )]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
 
+    #[instrument(
+        name = "Slider",
+        level = "trace",
+        skip(self, ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
         ctx.request_paint();
     }
 
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, bc, _data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &f64, env: &Env) -> Size {
         bc.debug_check("Slider");
         let height = env.get(theme::BASIC_WIDGET_HEIGHT);
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
         let baseline_offset = (height / 2.0) - TRACK_THICKNESS;
         ctx.set_baseline_offset(baseline_offset);
-        bc.constrain((width, height))
+        let size = bc.constrain((width, height));
+        trace!(
+            "Computed layout: size={}, baseline_offset={:?}",
+            size,
+            baseline_offset
+        );
+        size
     }
 
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
         let rect = ctx.size().to_rect();
