@@ -30,6 +30,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
+- Added missing documentation on derived lens items ([#1696] by [@lidin])
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()` 
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
@@ -450,6 +451,7 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@lidin]: https://github.com/lidin
 [@xarvic]: https://github.com/xarvic
 [@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
@@ -672,6 +674,7 @@ Last release without a changelog :(
 [#1677]: https://github.com/linebender/druid/pull/1677
 [#1691]: https://github.com/linebender/druid/pull/1691
 [#1693]: https://github.com/linebender/druid/pull/1693
+[#1696]: https://github.com/linebender/druid/pull/1696
 [#1698]: https://github.com/linebender/druid/pull/1698
 [#1695]: https://github.com/linebender/druid/pull/1695
 
