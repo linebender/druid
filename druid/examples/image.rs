@@ -17,7 +17,7 @@
 //! everything behaves.
 
 use druid::piet::InterpolationMode;
-use druid::text::format::ParseFormatter;
+use druid::text::ParseFormatter;
 use druid::widget::{prelude::*, FillStrat, Image};
 use druid::widget::{
     Checkbox, CrossAxisAlignment, Flex, Label, RadioGroup, SizedBox, TextBox, WidgetExt,
@@ -219,7 +219,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(state)
         .expect("Failed to launch application");
 }

@@ -15,10 +15,11 @@
 //! An SVG widget.
 
 use std::{collections::HashMap, error::Error, rc::Rc, str::FromStr, sync::Arc};
+use tracing::{instrument, trace};
 
 use crate::{
     kurbo::BezPath,
-    piet::{self, FixedLinearGradient, GradientStop},
+    piet::{self, FixedLinearGradient, GradientStop, LineCap, LineJoin, StrokeStyle},
     widget::common::FillStrat,
     widget::prelude::*,
     Affine, Color, Data, Point, Rect,
@@ -54,12 +55,24 @@ impl Svg {
 }
 
 impl<T: Data> Widget<T> for Svg {
+    #[instrument(name = "Svg", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
+    #[instrument(name = "Svg", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
+    #[instrument(
+        name = "Svg",
+        level = "trace",
+        skip(self, _ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
+    #[instrument(
+        name = "Svg",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, _env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -70,9 +83,12 @@ impl<T: Data> Widget<T> for Svg {
         bc.debug_check("SVG");
         // preferred size comes from the svg
         let size = self.svg_data.size();
-        bc.constrain_aspect_ratio(size.height / size.width, size.width)
+        let constrained_size = bc.constrain_aspect_ratio(size.height / size.width, size.width);
+        trace!("Computed size: {}", constrained_size);
+        constrained_size
     }
 
+    #[instrument(name = "Svg", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.svg_data.size());
 
@@ -293,7 +309,24 @@ impl SvgRenderer {
         match &p.stroke {
             Some(stroke) => {
                 let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity, ctx);
-                ctx.stroke(path, &*brush, stroke.width.value());
+                let mut stroke_style = StrokeStyle::new()
+                    .line_join(match stroke.linejoin {
+                        usvg::LineJoin::Miter => LineJoin::Miter {
+                            limit: stroke.miterlimit.value(),
+                        },
+                        usvg::LineJoin::Round => LineJoin::Round,
+                        usvg::LineJoin::Bevel => LineJoin::Bevel,
+                    })
+                    .line_cap(match stroke.linecap {
+                        usvg::LineCap::Butt => LineCap::Butt,
+                        usvg::LineCap::Round => LineCap::Round,
+                        usvg::LineCap::Square => LineCap::Square,
+                    });
+                if let Some(dash_array) = &stroke.dasharray {
+                    stroke_style.set_dash_pattern(dash_array.as_slice());
+                    stroke_style.set_dash_offset(stroke.dashoffset as f64);
+                }
+                ctx.stroke_styled(path, &*brush, stroke.width.value(), &stroke_style);
             }
             None => {}
         }
@@ -316,7 +349,7 @@ impl SvgRenderer {
 
         // TODO error handling
         let gradient = FixedLinearGradient { start, end, stops };
-        println!("{} => {:?}", lg.id, gradient);
+        trace!("gradient: {} => {:?}", lg.id, gradient);
         let gradient = ctx.gradient(gradient).unwrap();
         self.defs.add_def(lg.id.clone(), gradient);
     }

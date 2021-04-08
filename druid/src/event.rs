@@ -176,6 +176,15 @@ pub enum Event {
     ///
     /// [`EventCtx::set_handled`]: crate::EventCtx::set_handled
     Notification(Notification),
+    /// Sent to a widget when the platform may have mutated shared IME state.
+    ///
+    /// This is sent to a widget that has an attached IME session anytime the
+    /// platform has released a mutable lock on shared state.
+    ///
+    /// This does not *mean* that any state has changed, but the widget
+    /// should check the shared state, perform invalidation, and update `Data`
+    /// as necessary.
+    ImeStateChange,
     /// Internal druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -202,6 +211,8 @@ pub enum InternalEvent {
     TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
+    /// Route an IME change event.
+    RouteImeStateChange(WidgetId),
 }
 
 /// Application life cycle events.
@@ -254,6 +265,15 @@ pub enum LifeCycle {
     /// [`Size`]: struct.Size.html
     /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
     Size(Size),
+    /// Called when the Disabled state of the widgets is changed.
+    ///
+    /// To check if a widget is disabled, see [`is_disabled`].
+    ///
+    /// To change a widget's disabled state, see [`set_disabled`].
+    ///
+    /// [`is_disabled`]: crate::EventCtx::is_disabled
+    /// [`set_disabled`]: crate::EventCtx::set_disabled
+    DisabledChanged(bool),
     /// Called when the "hot" status changes.
     ///
     /// This will always be called _before_ the event that triggered it; that is,
@@ -263,6 +283,16 @@ pub enum LifeCycle {
     /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
+    /// This is called when the widget-tree changes and druid wants to rebuild the
+    /// Focus-chain.
+    ///
+    /// It is the only place from witch [`register_for_focus`] should be called.
+    /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
+    ///
+    /// [`register_for_focus`]: crate::LifeCycleCtx::register_for_focus
+    /// [`focus_next`]: crate::EventCtx::focus_next
+    /// [`focus_prev`]: crate::EventCtx::focus_prev
+    BuildFocusChain,
     /// Called when the focus status changes.
     ///
     /// This will always be called immediately after a new widget gains focus.
@@ -299,6 +329,8 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
+    /// Used to route the `DisabledChanged` event to the required widgets.
+    RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,
     /// Testing only: request the `WidgetState` of a specific widget.
@@ -384,6 +416,7 @@ impl Event {
             | Event::KeyDown(_)
             | Event::KeyUp(_)
             | Event::Paste(_)
+            | Event::ImeStateChange
             | Event::Zoom(_) => false,
         }
     }
@@ -395,7 +428,9 @@ impl LifeCycle {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             LifeCycle::Internal(internal) => internal.should_propagate_to_hidden(),
-            LifeCycle::WidgetAdded => true,
+            LifeCycle::WidgetAdded | LifeCycle::DisabledChanged(_) | LifeCycle::BuildFocusChain => {
+                true
+            }
             LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
         }
     }
@@ -406,9 +441,9 @@ impl InternalLifeCycle {
     /// (for example the hidden tabs in a tabs widget).
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            InternalLifeCycle::RouteWidgetAdded | InternalLifeCycle::RouteFocusChanged { .. } => {
-                true
-            }
+            InternalLifeCycle::RouteWidgetAdded
+            | InternalLifeCycle::RouteFocusChanged { .. }
+            | InternalLifeCycle::RouteDisabledChanged => true,
             InternalLifeCycle::ParentWindowOrigin => false,
             #[cfg(test)]
             InternalLifeCycle::DebugRequestState { .. }

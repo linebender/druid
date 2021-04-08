@@ -17,7 +17,7 @@
 //! knobs to change all the parameters. 99% of the time you will want to
 //! hard-code these parameters, which will simplify your code considerably.
 
-use druid::text::format::ParseFormatter;
+use druid::text::ParseFormatter;
 use druid::widget::prelude::*;
 use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, MainAxisAlignment, ProgressBar, RadioGroup,
@@ -341,7 +341,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(AppState { demo_state, params })
         .expect("Failed to launch application");
 }

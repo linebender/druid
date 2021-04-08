@@ -333,7 +333,7 @@ pub fn main() {
 
     //start the application
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
             env.set(theme::LABEL_COLOR, TEXT_COLOR);

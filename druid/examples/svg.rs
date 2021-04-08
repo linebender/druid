@@ -26,7 +26,7 @@ pub fn main() {
         .title(LocalizedString::new("svg-demo-window-title").with_placeholder("Rawr!"));
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_env_tracing()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

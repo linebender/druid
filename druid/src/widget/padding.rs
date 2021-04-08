@@ -14,23 +14,24 @@
 
 //! A widget that just adds padding during layout.
 
-use crate::widget::prelude::*;
-use crate::{Data, Insets, Point, WidgetPod};
+use crate::widget::{prelude::*, WidgetWrapper};
+use crate::{Data, Insets, KeyOrValue, Point, WidgetPod};
+
+use tracing::{instrument, trace};
 
 /// A widget that just adds padding around its child.
-pub struct Padding<T> {
-    left: f64,
-    right: f64,
-    top: f64,
-    bottom: f64,
-
-    child: WidgetPod<T, Box<dyn Widget<T>>>,
+pub struct Padding<T, W> {
+    insets: KeyOrValue<Insets>,
+    child: WidgetPod<T, W>,
 }
 
-impl<T> Padding<T> {
-    /// Create a new widget with the specified padding. This can either be an instance
-    /// of [`kurbo::Insets`], a f64 for uniform padding, a 2-tuple for axis-uniform padding
-    /// or 4-tuple with (left, top, right, bottom) values.
+impl<T, W: Widget<T>> Padding<T, W> {
+    /// Create a new `Padding` with the specified padding and child.
+    ///
+    /// The `insets` argument can either be an instance of [`Insets`],
+    /// a [`Key`] referring to [`Insets`] in the [`Env`],
+    /// an `f64` for uniform padding, an `(f64, f64)` for axis-uniform padding,
+    /// or `(f64, f64, f64, f64)` (left, top, right, bottom) values.
     ///
     /// # Examples
     ///
@@ -40,8 +41,8 @@ impl<T> Padding<T> {
     /// use druid::widget::{Label, Padding};
     /// use druid::kurbo::Insets;
     ///
-    /// let _: Padding<()> = Padding::new(10.0, Label::new("uniform!"));
-    /// let _: Padding<()> = Padding::new(Insets::uniform(10.0), Label::new("uniform!"));
+    /// let _: Padding<(), _> = Padding::new(10.0, Label::new("uniform!"));
+    /// let _: Padding<(), _> = Padding::new(Insets::uniform(10.0), Label::new("uniform!"));
     /// ```
     ///
     /// Uniform padding across each axis:
@@ -51,54 +52,64 @@ impl<T> Padding<T> {
     /// use druid::kurbo::Insets;
     ///
     /// let child: Label<()> = Label::new("I need my space!");
-    /// let _: Padding<()> = Padding::new((10.0, 20.0), Label::new("more y than x!"));
+    /// let _: Padding<(), _> = Padding::new((10.0, 20.0), Label::new("more y than x!"));
     /// // equivalent:
-    /// let _: Padding<()> = Padding::new(Insets::uniform_xy(10.0, 20.0), Label::new("ditto :)"));
+    /// let _: Padding<(), _> = Padding::new(Insets::uniform_xy(10.0, 20.0), Label::new("ditto :)"));
     /// ```
     ///
-    /// [`kurbo::Insets`]: https://docs.rs/kurbo/0.5.3/kurbo/struct.Insets.html
-    pub fn new(insets: impl Into<Insets>, child: impl Widget<T> + 'static) -> Padding<T> {
-        let insets = insets.into();
+    /// [`Key`]: crate::Key
+    pub fn new(insets: impl Into<KeyOrValue<Insets>>, child: W) -> Padding<T, W> {
         Padding {
-            left: insets.x0,
-            right: insets.x1,
-            top: insets.y0,
-            bottom: insets.y1,
-            child: WidgetPod::new(child).boxed(),
+            insets: insets.into(),
+            child: WidgetPod::new(child),
         }
     }
 }
 
-impl<T: Data> Widget<T> for Padding<T> {
+impl<T, W> WidgetWrapper for Padding<T, W> {
+    widget_wrapper_pod_body!(W, child);
+}
+
+impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env)
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         self.child.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, _old, data, env))]
+    fn update(&mut self, ctx: &mut UpdateCtx, _old: &T, data: &T, env: &Env) {
+        if ctx.env_key_changed(&self.insets) {
+            ctx.request_layout();
+        }
         self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Padding");
+        let insets = self.insets.resolve(env);
 
-        let hpad = self.left + self.right;
-        let vpad = self.top + self.bottom;
+        let hpad = insets.x0 + insets.x1;
+        let vpad = insets.y0 + insets.y1;
 
         let child_bc = bc.shrink((hpad, vpad));
         let size = self.child.layout(ctx, &child_bc, data, env);
-        let origin = Point::new(self.left, self.top);
+        let origin = Point::new(insets.x0, insets.y0);
         self.child.set_origin(ctx, data, env, origin);
 
         let my_size = Size::new(size.width + hpad, size.height + vpad);
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, my_insets);
         my_size
     }
 
+    #[instrument(name = "Padding", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
     }

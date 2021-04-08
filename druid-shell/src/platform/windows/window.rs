@@ -35,8 +35,6 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
-use winapi::um::d2d1_1::ID2D1DeviceContext;
-use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
 use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
@@ -56,7 +54,7 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Color, Piet, PietText, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -76,8 +74,11 @@ use crate::keyboard::{KbKey, KeyState};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
+use crate::text::{simulate_input, Event};
 use crate::window;
-use crate::window::{FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel};
+use crate::window::{
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+};
 
 /// The platform target DPI.
 ///
@@ -164,7 +165,7 @@ enum DeferredOp {
 
 #[derive(Clone)]
 pub struct WindowHandle {
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: Weak<WindowState>,
 }
 
@@ -221,6 +222,7 @@ struct WindowState {
     // For resizable borders, window can still be resized with code.
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
+    active_text_input: Cell<Option<TextFieldToken>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -239,7 +241,7 @@ struct MyWndProc {
     app: Application,
     handle: RefCell<WindowHandle>,
     d2d_factory: D2DFactory,
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: RefCell<Option<WndState>>,
     present_strategy: PresentStrategy,
 }
@@ -293,11 +295,6 @@ impl Drop for HCursor {
 
 /// Message indicating there are idle tasks to run.
 const DS_RUN_IDLE: UINT = WM_USER;
-
-/// Transparent bg clearing color
-///
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// Message relaying a request to destroy the window.
 ///
@@ -415,36 +412,12 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, invalid: &Region) {
+    fn render(&mut self, d2d: &D2DFactory, text: &PietText, invalid: &Region) {
         let rt = self.render_target.as_mut().unwrap();
 
         rt.begin_draw();
         {
-            // Piet is missing alpha blending setting, so we have to call
-            // ID2D1DeviceContext::SetPrimitiveBlend() manually to clear just
-            // the required pixels
-            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> =
-                self.transparent.then(|| unsafe {
-                    (rt as *mut _ as *mut ComPtr<ID2D1DeviceContext>)
-                        .as_ref()
-                        .unwrap()
-                });
-
-            let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
-
-            // Clear the background if transparency DC is found
-            if let Some(dc) = dc_for_transparency {
-                let current_blend = unsafe { dc.GetPrimitiveBlend() };
-                unsafe {
-                    dc.SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-                }
-                for r in invalid.rects().iter() {
-                    piet_ctx.fill(r, &TRANSPARENT);
-                }
-                unsafe {
-                    dc.SetPrimitiveBlend(current_blend);
-                }
-            }
+            let mut piet_ctx = Piet::new(d2d, text.clone(), rt);
 
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
@@ -605,9 +578,9 @@ impl MyWndProc {
                 }
                 DeferredOp::SetWindowState(val) => unsafe {
                     let s = match val {
-                        window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                        window::WindowState::MINIMIZED => SW_MINIMIZE,
-                        window::WindowState::RESTORED => SW_RESTORE,
+                        window::WindowState::Maximized => SW_MAXIMIZE,
+                        window::WindowState::Minimized => SW_MINIMIZE,
+                        window::WindowState::Restored => SW_RESTORE,
                     };
                     ShowWindow(hwnd, s);
                 },
@@ -810,7 +783,7 @@ impl WndProc for MyWndProc {
                     let invalid = self.take_invalid();
                     if !invalid.rects().is_empty() {
                         s.handler.rebuild_resources();
-                        s.render(&self.d2d_factory, &self.dwrite_factory, &invalid);
+                        s.render(&self.d2d_factory, &self.text, &invalid);
                         if let Some(ref mut ds) = s.dxgi_state {
                             let mut dirty_rects = util::region_to_rectis(&invalid, self.scale());
                             let params = DXGI_PRESENT_PARAMETERS {
@@ -845,7 +818,7 @@ impl WndProc for MyWndProc {
             WM_NCCALCSIZE => unsafe {
                 if wparam != 0 && !self.has_titlebar() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() == window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() == window::WindowState::Maximized {
                             // When maximized, windows still adds offsets for the frame
                             // so we counteract them here.
                             let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
@@ -867,7 +840,7 @@ impl WndProc for MyWndProc {
                 let mut hit = DefWindowProcW(hwnd, msg, wparam, lparam);
                 if !self.has_titlebar() && self.resizable() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() != window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() != window::WindowState::Maximized {
                             let mut rect = RECT {
                                 left: 0,
                                 top: 0,
@@ -945,11 +918,7 @@ impl WndProc for MyWndProc {
                         if let Err(e) = s.rebuild_render_target(&self.d2d_factory, scale) {
                             error!("error building render target: {}", e);
                         }
-                        s.render(
-                            &self.d2d_factory,
-                            &self.dwrite_factory,
-                            &size_dp.to_rect().into(),
-                        );
+                        s.render(&self.d2d_factory, &self.text, &size_dp.to_rect().into());
                         let present_after = match self.present_strategy {
                             PresentStrategy::Sequential => 1,
                             _ => 0,
@@ -983,7 +952,14 @@ impl WndProc for MyWndProc {
                                 && (event.key == KbKey::Alt || event.key == KbKey::F10);
                             match event.state {
                                 KeyState::Down => {
-                                    if s.handler.key_down(event) || handle_menu {
+                                    let keydown_handled = self.with_window_state(|window_state| {
+                                        simulate_input(
+                                            &mut *s.handler,
+                                            window_state.active_text_input.get(),
+                                            event,
+                                        )
+                                    });
+                                    if keydown_handled || handle_menu {
                                         return true;
                                     }
                                 }
@@ -1256,7 +1232,7 @@ impl WindowBuilder {
             size: None,
             min_size: None,
             position: None,
-            state: window::WindowState::RESTORED,
+            state: window::WindowState::Restored,
         }
     }
 
@@ -1318,12 +1294,13 @@ impl WindowBuilder {
         unsafe {
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
-            let dw_clone = dwrite_factory.clone();
+            let fonts = self.app.fonts.clone();
+            let text = PietText::new_with_shared_fonts(dwrite_factory, Some(fonts));
             let wndproc = MyWndProc {
                 app: self.app.clone(),
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
-                dwrite_factory: dw_clone,
+                text: text.clone(),
                 state: RefCell::new(None),
                 present_strategy: self.present_strategy,
             };
@@ -1366,10 +1343,11 @@ impl WindowBuilder {
                 is_resizable: Cell::new(self.resizable),
                 is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
+                active_text_input: Cell::new(None),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
-                dwrite_factory,
+                text,
                 state: Rc::downgrade(&win),
             };
 
@@ -1401,8 +1379,8 @@ impl WindowBuilder {
             }
 
             match self.state {
-                window::WindowState::MAXIMIZED => dwStyle |= WS_MAXIMIZE,
-                window::WindowState::MINIMIZED => dwStyle |= WS_MINIMIZE,
+                window::WindowState::Maximized => dwStyle |= WS_MAXIMIZE,
+                window::WindowState::Minimized => dwStyle |= WS_MINIMIZE,
                 _ => (),
             };
 
@@ -1703,8 +1681,8 @@ impl WindowHandle {
             let hwnd = w.hwnd.get();
             unsafe {
                 let show = match self.get_window_state() {
-                    window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                    window::WindowState::MINIMIZED => SW_MINIMIZE,
+                    window::WindowState::Maximized => SW_MAXIMIZE,
+                    window::WindowState::Minimized => SW_MINIMIZE,
                     _ => SW_SHOWNORMAL,
                 };
                 ShowWindow(hwnd, show);
@@ -1791,7 +1769,7 @@ impl WindowHandle {
 
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
-        self.defer(DeferredOp::SetWindowState(window::WindowState::RESTORED));
+        self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         self.defer(DeferredOp::SetPosition(position));
     }
 
@@ -1905,15 +1883,15 @@ impl WindowHandle {
                     );
                 }
                 if (style & WS_MAXIMIZE) != 0 {
-                    window::WindowState::MAXIMIZED
+                    window::WindowState::Maximized
                 } else if (style & WS_MINIMIZE) != 0 {
-                    window::WindowState::MINIMIZED
+                    window::WindowState::Minimized
                 } else {
-                    window::WindowState::RESTORED
+                    window::WindowState::Restored
                 }
             }
         } else {
-            window::WindowState::RESTORED
+            window::WindowState::Restored
         }
     }
 
@@ -1949,7 +1927,29 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> PietText {
-        PietText::new(self.dwrite_factory.clone())
+        self.text.clone()
+    }
+
+    pub fn add_text_field(&self) -> TextFieldToken {
+        TextFieldToken::next()
+    }
+
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(state) = self.state.upgrade() {
+            if state.active_text_input.get() == Some(token) {
+                state.active_text_input.set(None);
+            }
+        }
+    }
+
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(state) = self.state.upgrade() {
+            state.active_text_input.set(active_field);
+        }
+    }
+
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // noop until we get a real text input implementation
     }
 
     /// Request a timer event.
@@ -2141,7 +2141,7 @@ impl Default for WindowHandle {
     fn default() -> Self {
         WindowHandle {
             state: Default::default(),
-            dwrite_factory: DwriteFactory::new().unwrap(),
+            text: PietText::new_with_shared_fonts(DwriteFactory::new().unwrap(), None),
         }
     }
 }

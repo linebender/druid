@@ -16,11 +16,12 @@
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::{Point, Size};
+use crate::menu::MenuManager;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle, WindowLevel};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
+use crate::{AppDelegate, Data, Env, LocalizedString, Menu, Widget};
 
 use druid_shell::WindowState;
 
@@ -81,7 +82,7 @@ pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
     pub(crate) transparent: bool,
-    pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) menu: Option<MenuManager<T>>,
     pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
                                               // when the native window is constructed.
 }
@@ -96,7 +97,7 @@ impl<T: Data> PendingWindow<T> {
         PendingWindow {
             root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
-            menu: MenuDesc::platform_default(),
+            menu: MenuManager::platform_default(),
             transparent: false,
             size_policy: WindowSizePolicy::User,
         }
@@ -120,8 +121,15 @@ impl<T: Data> PendingWindow<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
-        self.menu = Some(menu);
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
+        self.menu = Some(MenuManager::new(menu));
         self
     }
 }
@@ -162,20 +170,13 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[deprecated(since = "0.7.0", note = "Use use_env_tracing instead")]
+    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::SimpleLogger::new()
-            .with_level(log::LevelFilter::Debug)
-            .init()
-            .expect("Failed to initialize logger.");
-        #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Debug).expect("Failed to initialize logger.");
-        self
+        self.log_to_console()
     }
 
     /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
-    /// stderr, controlled by ENV variables.
+    /// stderr.
     ///
     /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
     /// it's probably better to implement it yourself.
@@ -183,14 +184,14 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the subscriber fails to initialize.
-    pub fn use_env_tracing(self) -> Self {
+    pub fn log_to_console(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
-            let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
-            let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-                .or_else(|_| tracing_subscriber::EnvFilter::try_new("debug"))
-                .expect("Failed to initialize tracing subscriber");
+            let filter_layer = tracing_subscriber::filter::LevelFilter::DEBUG;
+            let fmt_layer = tracing_subscriber::fmt::layer()
+                // Display target (eg "my_crate::some_mod::submod") with logs
+                .with_target(true);
 
             tracing_subscriber::registry()
                 .with(filter_layer)
@@ -198,7 +199,7 @@ impl<T: Data> AppLauncher<T> {
                 .init();
         }
         // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
-        // because wasm targets will virtually always be browsers.
+        // because this is a GUI framework, so wasm targets will virtually always be browsers.
         #[cfg(target_arch = "wasm32")]
         {
             console_error_panic_hook::set_once();
@@ -472,7 +473,14 @@ impl<T: Data> WindowDesc<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
         self.pending = self.pending.menu(menu);
         self
     }

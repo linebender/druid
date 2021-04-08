@@ -37,7 +37,7 @@ jobs:
       - name: install libx11-dev
         run: |
           sudo apt update
-          sudo apt install libx11-dev
+          sudo apt install libx11-dev libpango1.0-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
@@ -263,7 +263,7 @@ jobs:
       - name: install libx11-dev
         run: |
           sudo apt update
-          sudo apt install libx11-dev
+          sudo apt install libx11-dev libpango1.0-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
