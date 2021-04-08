@@ -19,16 +19,36 @@ use gtk::{TargetEntry, TargetFlags};
 
 use crate::clipboard::{ClipboardFormat, FormatId};
 
+const CLIPBOARD_TARGETS: [&str; 5] = [
+    "UTF8_STRING",
+    "TEXT",
+    "STRING",
+    "text/plain;charset=utf-8",
+    "text/plain",
+];
+
 /// The system clipboard.
 #[derive(Debug, Clone)]
 pub struct Clipboard;
 
 impl Clipboard {
     /// Put a string onto the system clipboard.
-    pub fn put_string(&mut self, s: impl AsRef<str>) {
+    pub fn put_string(&mut self, string: impl AsRef<str>) {
+        let string = string.as_ref().to_string();
+
         let display = gdk::Display::get_default().unwrap();
         let clipboard = gtk::Clipboard::get_default(&display).unwrap();
-        clipboard.set_text(s.as_ref())
+
+        let targets: Vec<TargetEntry> = CLIPBOARD_TARGETS
+            .iter()
+            .enumerate()
+            .map(|(i, target)| TargetEntry::new(target, TargetFlags::all(), i as u32))
+            .collect();
+
+        clipboard.set_with_data(&targets, move |_, selection, _| {
+            const STRIDE_BITS: i32 = 8;
+            selection.set(&selection.get_target(), STRIDE_BITS, string.as_bytes());
+        });
     }
 
     /// Put multi-format data on the system clipboard.
@@ -62,7 +82,15 @@ impl Clipboard {
     pub fn get_string(&self) -> Option<String> {
         let display = gdk::Display::get_default().unwrap();
         let clipboard = gtk::Clipboard::get_default(&display).unwrap();
-        clipboard.wait_for_text().map(|s| s.to_string())
+
+        for target in &CLIPBOARD_TARGETS {
+            let atom = Atom::intern(target);
+            if let Some(selection) = clipboard.wait_for_contents(&atom) {
+                return String::from_utf8(selection.get_data()).ok();
+            }
+        }
+
+        None
     }
 
     /// Given a list of supported clipboard types, returns the supported type which has
