@@ -17,8 +17,10 @@
 //! respond. Pressing Tab should only focus widgets not marked as disabled. If a widget
 //! is focused while getting disabled it should resign the focus.
 
-use druid::widget::{Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox, Button};
 use druid::{AppLauncher, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc};
+use druid::widget::{
+    Button, Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox,
+};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
@@ -92,19 +94,19 @@ fn main_widget() -> impl Widget<AppData> {
             Flex::row()
                 .with_child(
                     Button::new("-")
-                        .on_click(|_, data: &mut f64, _|*data -= 1.0)
-                        .disabled_if(|data, _|*data < 1.0)
+                        .on_click(|_, data: &mut f64, _| *data -= 1.0)
+                        .disabled_if(|data, _| *data < 1.0),
                 )
                 .with_default_spacer()
-                .with_child(Label::dynamic(|data: &f64, _|data.to_string()))
+                .with_child(Label::dynamic(|data: &f64, _| data.to_string()))
                 .with_default_spacer()
                 .with_child(
                     Button::new("+")
-                        .on_click(|_, data: &mut f64, _|*data += 1.0)
-                        .disabled_if(|data, _|*data > 9.0)
+                        .on_click(|_, data: &mut f64, _| *data += 1.0)
+                        .disabled_if(|data, _| *data > 9.0),
                 )
                 .lens(AppData::value)
-                .disabled_if(|data: &AppData, _|data.disabled)
+                .disabled_if(|data: &AppData, _| data.disabled),
         )
         .with_default_spacer()
         .with_default_spacer()
