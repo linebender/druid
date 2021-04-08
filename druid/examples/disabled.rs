@@ -17,10 +17,10 @@
 //! respond. Pressing Tab should only focus widgets not marked as disabled. If a widget
 //! is focused while getting disabled it should resign the focus.
 
-use druid::{AppLauncher, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc};
 use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox,
 };
+use druid::{AppLauncher, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
