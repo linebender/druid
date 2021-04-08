@@ -1,9 +1,28 @@
+// Copyright 2020 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
     Point, Size, UpdateCtx, Widget, WidgetPod,
 };
 
 /// A widget wrapper which disables the inner widget if the provided closure return true.
+///
+/// See [`is_disabled`] or [`set_disabled`] for more info about disabled state.
+///
+/// [`is_disabled`]: crate::EventCtx::is_disabled
+/// [`set_disabled`]: crate::EventCtx::set_disabled
 pub struct DisabledIf<T, W> {
     inner: WidgetPod<T, W>,
     disabled_if: Box<dyn Fn(&T, &Env) -> bool>,
@@ -11,7 +30,9 @@ pub struct DisabledIf<T, W> {
 
 impl<T: Data, W: Widget<T>> DisabledIf<T, W> {
     /// Creates a new `DisabledIf` widget with the inner widget and the closure to decide if the
-    /// widget should be disabled.
+    /// widget should be [`disabled`].
+    ///
+    /// [`disabled`]: crate::EventCtx::is_disabled
     pub fn new(widget: W, disabled_if: impl Fn(&T, &Env) -> bool + 'static) -> Self {
         DisabledIf {
             inner: WidgetPod::new(widget),
