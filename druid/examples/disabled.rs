@@ -1,4 +1,23 @@
-use druid::widget::{Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox};
+// Copyright 2020 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! An example showing the effect of the disabled state on focus-chain and the widgets.
+//! When the disabled checkbox is clicked only the widgets not marked as disabled should
+//! respond. Pressing Tab should only focus widgets not marked as disabled. If a widget
+//! is focused while getting disabled it should resign the focus.
+
+use druid::widget::{Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox, Button};
 use druid::{AppLauncher, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
@@ -68,6 +87,25 @@ fn main_widget() -> impl Widget<AppData> {
                 .lens(AppData::option)
                 .disabled_if(|data, _| data.disabled),
         ))
+        .with_default_spacer()
+        .with_child(
+            Flex::row()
+                .with_child(
+                    Button::new("-")
+                        .on_click(|_, data: &mut f64, _|*data -= 1.0)
+                        .disabled_if(|data, _|*data < 1.0)
+                )
+                .with_default_spacer()
+                .with_child(Label::dynamic(|data: &f64, _|data.to_string()))
+                .with_default_spacer()
+                .with_child(
+                    Button::new("+")
+                        .on_click(|_, data: &mut f64, _|*data += 1.0)
+                        .disabled_if(|data, _|*data > 9.0)
+                )
+                .lens(AppData::value)
+                .disabled_if(|data: &AppData, _|data.disabled)
+        )
         .with_default_spacer()
         .with_default_spacer()
         .with_default_spacer()
