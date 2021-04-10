@@ -48,6 +48,42 @@ impl ScrollbarsEnabled {
     fn is_none(self) -> bool {
         matches!(self, ScrollbarsEnabled::None)
     }
+
+    /// Set whether the horizontal scrollbar is enabled.
+    pub fn set_horizontal_scrollbar_enabled(&mut self, enabled: bool) {
+        *self = match (*self, enabled) {
+            (ScrollbarsEnabled::None, true) | (ScrollbarsEnabled::Horizontal, true) => {
+                ScrollbarsEnabled::Horizontal
+            }
+            (ScrollbarsEnabled::Both, true) | (ScrollbarsEnabled::Vertical, true) => {
+                ScrollbarsEnabled::Both
+            }
+            (ScrollbarsEnabled::None, false) | (ScrollbarsEnabled::Horizontal, false) => {
+                ScrollbarsEnabled::None
+            }
+            (ScrollbarsEnabled::Vertical, false) | (ScrollbarsEnabled::Both, false) => {
+                ScrollbarsEnabled::Vertical
+            }
+        }
+    }
+
+    /// Set whether the vertical scrollbar is enabled.
+    pub fn set_vertical_scrollbar_enabled(&mut self, enabled: bool) {
+        *self = match (*self, enabled) {
+            (ScrollbarsEnabled::None, true) | (ScrollbarsEnabled::Vertical, true) => {
+                ScrollbarsEnabled::Vertical
+            }
+            (ScrollbarsEnabled::Both, true) | (ScrollbarsEnabled::Horizontal, true) => {
+                ScrollbarsEnabled::Both
+            }
+            (ScrollbarsEnabled::None, false) | (ScrollbarsEnabled::Vertical, false) => {
+                ScrollbarsEnabled::None
+            }
+            (ScrollbarsEnabled::Horizontal, false) | (ScrollbarsEnabled::Both, false) => {
+                ScrollbarsEnabled::Horizontal
+            }
+        }
+    }
 }
 
 impl Default for ScrollbarsEnabled {
