@@ -200,12 +200,13 @@ impl ScrollComponent {
         let percent_visible = viewport_major / content_major;
         let percent_scrolled = axis.major_vec(scroll_offset) / (content_major - viewport_major);
 
-        let length = (percent_visible * viewport_major).ceil();
-        let length = length.max(bar_min_size);
-
         let major_padding = bar_pad + bar_pad + bar_width;
+        let usable_space = viewport_major - major_padding;
 
-        let left_x_offset = ((viewport_major - length - major_padding) * percent_scrolled).ceil();
+        let length = (percent_visible * viewport_major).ceil();
+        let length = length.max(bar_min_size).min(usable_space);
+
+        let left_x_offset = ((usable_space - length) * percent_scrolled).ceil();
         let right_x_offset = left_x_offset + length;
 
         let (x0, y0) = axis.pack(
@@ -214,6 +215,10 @@ impl ScrollComponent {
         );
 
         let (x1, y1) = axis.pack(right_x_offset, axis.minor(viewport_size) - bar_pad);
+
+        if x0 >= x1 || y0 >= y1 {
+            return None;
+        }
 
         Some(Rect::new(x0, y0, x1, y1) + scroll_offset)
     }
