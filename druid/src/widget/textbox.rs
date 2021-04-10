@@ -606,7 +606,11 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             } else {
                 cursor_line + padding_offset - self.inner.wrapped().offset()
             };
-            ctx.stroke(cursor, &cursor_color, 1.);
+
+            ctx.with_save(|ctx| {
+                ctx.clip(clip_rect);
+                ctx.stroke(cursor, &cursor_color, 1.);
+            })
         }
 
         // Paint the border
