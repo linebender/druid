@@ -172,47 +172,24 @@ impl ScrollComponent {
     /// Calculates the paint rect of the vertical scrollbar, or `None` if the vertical scrollbar is
     /// not visible.
     pub fn calc_vertical_bar_bounds(&self, port: &Viewport, env: &Env) -> Option<Rect> {
-        let viewport_size = port.rect.size();
-        let content_size = port.content_size;
-        let scroll_offset = port.rect.origin().to_vec2();
-
-        if viewport_size.height >= content_size.height {
-            return None;
-        }
-
-        let bar_width = env.get(theme::SCROLLBAR_WIDTH);
-        let bar_pad = env.get(theme::SCROLLBAR_PAD);
-        let bar_min_size = env.get(theme::SCROLLBAR_MIN_SIZE);
-
-        let percent_visible = viewport_size.height / content_size.height;
-        let percent_scrolled = scroll_offset.y / (content_size.height - viewport_size.height);
-
-        let length = (percent_visible * viewport_size.height).ceil();
-        let length = length.max(bar_min_size);
-
-        let vertical_padding = bar_pad + bar_pad + bar_width;
-
-        let top_y_offset =
-            ((viewport_size.height - length - vertical_padding) * percent_scrolled).ceil();
-        let bottom_y_offset = top_y_offset + length;
-
-        let x0 = scroll_offset.x + viewport_size.width - bar_width - bar_pad;
-        let y0 = scroll_offset.y + top_y_offset + bar_pad;
-
-        let x1 = scroll_offset.x + viewport_size.width - bar_pad;
-        let y1 = scroll_offset.y + bottom_y_offset;
-
-        Some(Rect::new(x0, y0, x1, y1))
+        self.calc_bar_bounds(Axis::Vertical, port, env)
     }
 
     /// Calculates the paint rect of the horizontal scrollbar, or `None` if the horizontal
     /// scrollbar is not visible.
     pub fn calc_horizontal_bar_bounds(&self, port: &Viewport, env: &Env) -> Option<Rect> {
+        self.calc_bar_bounds(Axis::Horizontal, port, env)
+    }
+
+    fn calc_bar_bounds(&self, axis: Axis, port: &Viewport, env: &Env) -> Option<Rect> {
         let viewport_size = port.rect.size();
         let content_size = port.content_size;
         let scroll_offset = port.rect.origin().to_vec2();
 
-        if viewport_size.width >= content_size.width {
+        let viewport_major = axis.major(viewport_size);
+        let content_major = axis.major(content_size);
+
+        if viewport_major >= content_major {
             return None;
         }
 
@@ -220,25 +197,25 @@ impl ScrollComponent {
         let bar_pad = env.get(theme::SCROLLBAR_PAD);
         let bar_min_size = env.get(theme::SCROLLBAR_MIN_SIZE);
 
-        let percent_visible = viewport_size.width / content_size.width;
-        let percent_scrolled = scroll_offset.x / (content_size.width - viewport_size.width);
+        let percent_visible = viewport_major / content_major;
+        let percent_scrolled = axis.major_vec(scroll_offset) / (content_major - viewport_major);
 
-        let length = (percent_visible * viewport_size.width).ceil();
+        let length = (percent_visible * viewport_major).ceil();
         let length = length.max(bar_min_size);
 
-        let horizontal_padding = bar_pad + bar_pad + bar_width;
+        let major_padding = bar_pad + bar_pad + bar_width;
 
-        let left_x_offset =
-            ((viewport_size.width - length - horizontal_padding) * percent_scrolled).ceil();
+        let left_x_offset = ((viewport_major - length - major_padding) * percent_scrolled).ceil();
         let right_x_offset = left_x_offset + length;
 
-        let x0 = scroll_offset.x + left_x_offset + bar_pad;
-        let y0 = scroll_offset.y + viewport_size.height - bar_width - bar_pad;
+        let (x0, y0) = axis.pack(
+            left_x_offset + bar_pad,
+            axis.minor(viewport_size) - bar_width - bar_pad,
+        );
 
-        let x1 = scroll_offset.x + right_x_offset;
-        let y1 = scroll_offset.y + viewport_size.height - bar_pad;
+        let (x1, y1) = axis.pack(right_x_offset, axis.minor(viewport_size) - bar_pad);
 
-        Some(Rect::new(x0, y0, x1, y1))
+        Some(Rect::new(x0, y0, x1, y1) + scroll_offset)
     }
 
     /// Draw scroll bars.
