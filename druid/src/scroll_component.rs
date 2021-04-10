@@ -200,7 +200,11 @@ impl ScrollComponent {
         let percent_visible = viewport_major / content_major;
         let percent_scrolled = axis.major_vec(scroll_offset) / (content_major - viewport_major);
 
-        let major_padding = bar_pad + bar_pad + bar_width;
+        let major_padding = if self.enabled.is_enabled(axis.cross()) {
+            bar_pad + bar_pad + bar_width
+        } else {
+            bar_pad + bar_pad
+        };
         let usable_space = viewport_major - major_padding;
 
         let length = (percent_visible * viewport_major).ceil();
