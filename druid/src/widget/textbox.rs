@@ -284,7 +284,7 @@ impl<T> TextBox<T> {
         self.inner.child().wrapped()
     }
 
-    /// An mutable reference to the inner [`TextComponent`].
+    /// A mutable reference to the inner [`TextComponent`].
     ///
     /// Using this correctly is difficult; please see the [`TextComponent`]
     /// docs for more information.
