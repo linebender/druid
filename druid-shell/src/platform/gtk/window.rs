@@ -698,6 +698,10 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
+        if let Some(level) = self.level {
+            handle.set_override_redirect(level);
+        }
+
         let size = self.size;
         win_state.with_handler(|h| {
             h.connect(&handle.clone().into());
@@ -884,6 +888,25 @@ impl WindowHandle {
             };
 
             state.window.set_type_hint(hint);
+        }
+
+        self.set_override_redirect(level);
+    }
+
+    /// The override-redirect flag tells the window manager not to mess with the window; it should
+    /// be set for things like tooltips, dropdowns, etc.
+    ///
+    /// Note that this is exposed on the GDK window, so we can't set it until the GTK window is
+    /// realized.
+    fn set_override_redirect(&self, level: WindowLevel) {
+        let override_redirect = match level {
+            WindowLevel::AppWindow => false,
+            WindowLevel::Tooltip | WindowLevel::DropDown | WindowLevel::Modal => true,
+        };
+        if let Some(state) = self.state.upgrade() {
+            if let Some(window) = state.window.get_window() {
+                window.set_override_redirect(override_redirect);
+            }
         }
     }
 
