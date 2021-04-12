@@ -30,7 +30,6 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
-- Added missing documentation on derived lens items ([#1696] by [@lidin])
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()` 
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
@@ -55,9 +54,6 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
-
-
-- Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
@@ -67,6 +63,9 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Docs
 
+- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
+- Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 
 ### Examples
