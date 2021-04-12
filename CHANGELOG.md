@@ -61,6 +61,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
+- Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
 
 ### Visual
 
@@ -677,6 +678,7 @@ Last release without a changelog :(
 [#1696]: https://github.com/linebender/druid/pull/1696
 [#1698]: https://github.com/linebender/druid/pull/1698
 [#1695]: https://github.com/linebender/druid/pull/1695
+[#1715]: https://github.com/linebender/druid/pull/1715
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
