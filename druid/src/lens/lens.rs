@@ -568,26 +568,65 @@ impl<A, B: Clone> Lens<A, B> for Constant<B> {
     }
 }
 
-impl<A, L1B, L2B, L1, L2> Lens<A, (L1B, L2B)> for (L1, L2)
-where
-    L1B: Clone,
-    L2B: Clone,
-    L1: Lens<A, L1B>,
-    L2: Lens<A, L2B>,
-{
-    fn with<V, F: FnOnce(&(L1B, L2B)) -> V>(&self, data: &A, f: F) -> V {
-        let l1b = self.0.with(data, |v| v.clone());
-        let l2b = self.1.with(data, |v| v.clone());
-        f(&(l1b, l2b))
-    }
-    fn with_mut<V, F: FnOnce(&mut (L1B, L2B)) -> V>(&self, data: &mut A, f: F) -> V {
-        let l1b = self.0.with(data, |v| v.clone());
-        let l2b = self.1.with(data, |v| v.clone());
-        let mut tuple = (l1b, l2b);
-        let out = f(&mut tuple);
-        let (l1b, l2b) = tuple;
-        self.0.with_mut(data, |v| *v = l1b);
-        self.1.with_mut(data, |v| *v = l2b);
-        out
-    }
+macro_rules! impl_lens_for_tuple {
+    ($(($Lens:ident, $B:ident, $i:tt)),*) => {
+        #[allow(non_snake_case)]
+        impl<A, $($Lens,)* $($B,)*> Lens<A, ($($B,)*)> for ($($Lens,)*)
+        where
+            $($B: Clone,)*
+            $($Lens: Lens<A, $B>,)*
+        {
+            fn with<V, F: FnOnce(&($($B,)*)) -> V>(&self, data: &A, f: F) -> V {
+                $(let $B = self.$i.with(data, |v| v.clone());)*
+                let tuple = ($($B,)*);
+                f(&tuple)
+            }
+            fn with_mut<V, F: FnOnce(&mut ($($B,)*)) -> V>(&self, data: &mut A, f: F) -> V {
+                $(let $B = self.$i.with(data, |v| v.clone());)*
+                let mut tuple = ($($B,)*);
+                let out = f(&mut tuple);
+                let ($($B,)*) = tuple;
+                $(self.$i.with_mut(data, |v| *v = $B);)*
+                out
+            }
+        }
+    };
 }
+
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1));
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1), (L2, L2B, 2));
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1), (L2, L2B, 2), (L3, L3B, 3));
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5),
+    (L6, L6B, 6)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5),
+    (L6, L6B, 6),
+    (L7, L7B, 7)
+);
