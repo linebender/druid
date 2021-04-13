@@ -273,38 +273,45 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse) if self.can_write() => {
-                ctx.set_active(true);
-                // ensure data is up to date before a click
-                let needs_rebuild = self
-                    .borrow()
-                    .layout
-                    .text()
-                    .map(|old| !old.same(data))
-                    .unwrap_or(true);
-                if needs_rebuild {
-                    self.borrow_mut().layout.set_text(data.clone());
-                    self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    // ensure data is up to date before a click
+                    let needs_rebuild = self
+                        .borrow()
+                        .layout
+                        .text()
+                        .map(|old| !old.same(data))
+                        .unwrap_or(true);
+                    if needs_rebuild {
+                        self.borrow_mut().layout.set_text(data.clone());
+                        self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+                        self.borrow_mut()
+                            .update_pending_invalidation(ImeInvalidation::Reset);
+                    }
                     self.borrow_mut()
-                        .update_pending_invalidation(ImeInvalidation::Reset);
+                        .do_mouse_down(mouse.pos, mouse.mods, mouse.count);
+                    self.borrow_mut()
+                        .update_pending_invalidation(ImeInvalidation::SelectionChanged);
+                    ctx.request_update();
+                    ctx.request_paint();
                 }
-                self.borrow_mut()
-                    .do_mouse_down(mouse.pos, mouse.mods, mouse.count);
-                self.borrow_mut()
-                    .update_pending_invalidation(ImeInvalidation::SelectionChanged);
-                ctx.request_update();
-                ctx.request_paint();
             }
             Event::MouseMove(mouse) if self.can_write() => {
-                ctx.set_cursor(&Cursor::IBeam);
-                if ctx.is_active() {
-                    let pre_sel = self.borrow().selection();
-                    self.borrow_mut().do_drag(mouse.pos);
-                    if self.borrow().selection() != pre_sel {
-                        self.borrow_mut()
-                            .update_pending_invalidation(ImeInvalidation::SelectionChanged);
-                        ctx.request_update();
-                        ctx.request_paint();
+                if !ctx.is_disabled() {
+                    ctx.set_cursor(&Cursor::IBeam);
+                    if ctx.is_active() {
+                        let pre_sel = self.borrow().selection();
+                        self.borrow_mut().do_drag(mouse.pos);
+                        if self.borrow().selection() != pre_sel {
+                            self.borrow_mut()
+                                .update_pending_invalidation(ImeInvalidation::SelectionChanged);
+                            ctx.request_update();
+                            ctx.request_paint();
+                        }
                     }
+                } else {
+                    ctx.set_disabled(false);
+                    ctx.clear_cursor();
                 }
             }
             Event::MouseUp(_) => {
@@ -379,6 +386,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                         ctx.invalidate_text_input(ImeInvalidation::LayoutChanged);
                     }
                 }
+            }
+            LifeCycle::DisabledChanged(_) => {
+                ctx.request_paint();
             }
             _ => (),
         }

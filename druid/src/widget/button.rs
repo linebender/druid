@@ -17,7 +17,7 @@
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
 use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
-use tracing::{instrument, trace, Instrument};
+use tracing::{instrument, trace};
 
 // the minimum padding added to a button.
 // NOTE: these values are chosen to match the existing look of TextBox; these
@@ -181,7 +181,7 @@ impl<T: Data> Widget<T> for Button<T> {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
-                (env.get(theme::BACKGROUND_LIGHT), env.get(theme::BACKGROUND_DARK)),
+                (env.get(theme::DISABLED_FOREGROUND_LIGHT), env.get(theme::DISABLED_FOREGROUND_DARK)),
             )
         } else if is_active {
             LinearGradient::new(
@@ -197,7 +197,7 @@ impl<T: Data> Widget<T> for Button<T> {
             )
         };
 
-        let border_color = if is_hot {
+        let border_color = if is_hot && !ctx.is_disabled() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)

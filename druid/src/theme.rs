@@ -34,6 +34,8 @@ pub const BACKGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.ba
 pub const BACKGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.background_dark");
 pub const FOREGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.foreground_light");
 pub const FOREGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.foreground_dark");
+pub const DISABLED_FOREGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.disabled_foreground_light");
+pub const DISABLED_FOREGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.disabled_foreground_dark");
 pub const BUTTON_DARK: Key<Color> = Key::new("org.linebender.druid.theme.button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.button_radius");
@@ -116,6 +118,8 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BACKGROUND_DARK, Color::rgb8(0x31, 0x31, 0x31))
         .adding(FOREGROUND_LIGHT, Color::rgb8(0xf9, 0xf9, 0xf9))
         .adding(FOREGROUND_DARK, Color::rgb8(0xbf, 0xbf, 0xbf))
+        .adding(DISABLED_FOREGROUND_LIGHT, Color::rgb8(0x49, 0x49, 0x49))
+        .adding(DISABLED_FOREGROUND_DARK, Color::rgb8(0x2f, 0x2f, 0x2f))
         .adding(BUTTON_DARK, Color::BLACK)
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
         .adding(BUTTON_BORDER_RADIUS, 4.)

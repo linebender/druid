@@ -401,19 +401,26 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
             }
             Event::MouseDown(mouse) if self.text().can_write() => {
-                if !mouse.focus {
-                    ctx.request_focus();
-                    self.was_focused_from_click = true;
-                    self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
-                } else {
-                    ctx.set_handled();
+                if !ctx.is_disabled() {
+                    if !mouse.focus {
+                        ctx.request_focus();
+                        self.was_focused_from_click = true;
+                        self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
+                    } else {
+                        ctx.set_handled();
+                    }
                 }
             }
             Event::Timer(id) => {
-                if *id == self.cursor_timer && ctx.has_focus() {
-                    self.cursor_on = !self.cursor_on;
+                if !ctx.is_disabled() {
+                    if *id == self.cursor_timer && ctx.has_focus() {
+                        self.cursor_on = !self.cursor_on;
+                        ctx.request_paint();
+                        self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
+                    }
+                } else if self.cursor_on {
+                    self.cursor_on = false;
                     ctx.request_paint();
-                    self.cursor_timer = ctx.request_timer(CURSOR_BLINK_DURATION);
                 }
             }
             Event::ImeStateChange => {
