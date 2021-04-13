@@ -17,7 +17,7 @@
 //! [`Controller`]: struct.Controller.html
 
 use crate::widget::Controller;
-use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
+use crate::{Data, Env, EventCtx, LifeCycle, LifeCycleCtx, Widget, MouseButton, Event};
 use tracing::{instrument, trace};
 
 /// A clickable [`Controller`] widget. Pass this and a child widget to a
@@ -59,12 +59,10 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
-                    if !ctx.is_disabled() {
-                        ctx.set_active(true);
-                        ctx.request_paint();
-                        trace!("Widget {:?} pressed", ctx.widget_id());
-                    }
+                if mouse_event.button == MouseButton::Left && !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    ctx.request_paint();
+                    trace!("Widget {:?} pressed", ctx.widget_id());
                 }
             }
             Event::MouseUp(mouse_event) => {
