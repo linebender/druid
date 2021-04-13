@@ -17,7 +17,7 @@
 //! [`Controller`]: struct.Controller.html
 
 use crate::widget::Controller;
-use crate::{Data, Env, EventCtx, LifeCycle, LifeCycleCtx, Widget, MouseButton, Event};
+use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
 use tracing::{instrument, trace};
 
 /// A clickable [`Controller`] widget. Pass this and a child widget to a
