@@ -123,11 +123,7 @@ impl Widget<f64> for Slider {
         }
     }
 
-    #[instrument(
-        name = "Slider",
-        level = "trace",
-        skip(self, ctx, event, _data, _env)
-    )]
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
         if let LifeCycle::DisabledChanged(_) = event {
             ctx.request_paint();

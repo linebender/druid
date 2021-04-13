@@ -142,7 +142,10 @@ impl Widget<f64> for Stepper {
         let disabled_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
-            (env.get(theme::DISABLED_FOREGROUND_LIGHT), env.get(theme::DISABLED_FOREGROUND_DARK)),
+            (
+                env.get(theme::DISABLED_FOREGROUND_LIGHT),
+                env.get(theme::DISABLED_FOREGROUND_DARK),
+            ),
         );
 
         let active_gradient = LinearGradient::new(

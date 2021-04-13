@@ -176,7 +176,6 @@ impl Widget<bool> for Switch {
                 self.knob_dragged = false;
                 self.animation_in_progress = true;
                 ctx.request_anim_frame();
-
             }
             LifeCycle::DisabledChanged(_) => {
                 ctx.request_paint();
