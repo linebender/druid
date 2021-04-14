@@ -30,8 +30,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
-- Added missing documentation on derived lens items ([#1696] by [@lidin])
-- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()` 
+- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
@@ -46,6 +45,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
 - `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
 - Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
+- Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
 
 ### Deprecated
 
@@ -55,17 +55,16 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
-
-
-- Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
-- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
 
 ### Visual
 
 ### Docs
 
+- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
+- Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 
 ### Examples
@@ -669,6 +668,7 @@ Last release without a changelog :(
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1654]: https://github.com/linebender/druid/pull/1654
 [#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 [#1677]: https://github.com/linebender/druid/pull/1677
