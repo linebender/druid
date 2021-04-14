@@ -34,6 +34,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
+- Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
 
 ### Deprecated
 
@@ -644,6 +645,7 @@ Last release without a changelog :(
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1654]: https://github.com/linebender/druid/pull/1654
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
