@@ -55,7 +55,7 @@ use crate::{IntoKey, KbKey, KeyEvent, Modifiers};
 /// ```
 ///
 /// [`SysMods`]: enum.SysMods.html
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HotKey {
     pub(crate) mods: RawMods,
     pub(crate) key: KbKey,
@@ -140,7 +140,7 @@ pub enum SysMods {
 /// A representation of the active modifier keys.
 ///
 /// This is intended to be clearer than `Modifiers`, when describing hotkeys.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RawMods {
     None,
     Alt,

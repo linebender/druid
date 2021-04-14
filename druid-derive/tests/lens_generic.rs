@@ -57,51 +57,51 @@ fn one_lifetime_param() {
     assert_eq!(wrap.x, val)
 }
 
-trait XT {
-    type I: YT;
+trait Xt {
+    type I: Yt;
 }
 
-trait YT {
+trait Yt {
     type P;
 }
 
 #[derive(Lens)]
 struct WhereWrapper<T, U, W>
 where
-    T: XT<I = U>,
-    U: YT,
+    T: Xt<I = U>,
+    U: Yt,
 {
     t: T,
     u: U,
     w: W,
 }
 
-impl XT for u64 {
+impl Xt for u64 {
     type I = i32;
 }
 
-impl YT for i32 {
+impl Yt for i32 {
     type P = bool;
 }
 
 #[test]
 fn where_clause() {
-    type WW = WhereWrapper<u64, i32, bool>;
+    type Ww = WhereWrapper<u64, i32, bool>;
 
-    let mut wrap = WW {
+    let mut wrap = Ww {
         t: 45,
         u: 1_000_000,
         w: true,
     };
     let ext = (
-        WW::t.with(&wrap, |val| *val),
-        WW::u.with(&wrap, |val| *val),
-        WW::w.with(&wrap, |val| *val),
+        Ww::t.with(&wrap, |val| *val),
+        Ww::u.with(&wrap, |val| *val),
+        Ww::w.with(&wrap, |val| *val),
     );
 
     assert_eq!((wrap.t, wrap.u, wrap.w), ext);
 
-    WW::t.with_mut(&mut wrap, |val| *val = 67);
+    Ww::t.with_mut(&mut wrap, |val| *val = 67);
 
     assert_eq!(wrap.t, 67)
 }

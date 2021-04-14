@@ -253,7 +253,7 @@ impl<T: Data> Harness<'_, T> {
         }
     }
 
-    fn lifecycle(&mut self, event: LifeCycle) {
+    pub(crate) fn lifecycle(&mut self, event: LifeCycle) {
         self.inner.lifecycle(event)
     }
 

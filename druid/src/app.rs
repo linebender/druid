@@ -16,11 +16,12 @@
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::{Point, Size};
+use crate::menu::MenuManager;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle, WindowLevel};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
+use crate::{AppDelegate, Data, Env, LocalizedString, Menu, Widget};
 
 use druid_shell::WindowState;
 
@@ -81,7 +82,7 @@ pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
     pub(crate) transparent: bool,
-    pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) menu: Option<MenuManager<T>>,
     pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
                                               // when the native window is constructed.
 }
@@ -96,7 +97,7 @@ impl<T: Data> PendingWindow<T> {
         PendingWindow {
             root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
-            menu: MenuDesc::platform_default(),
+            menu: MenuManager::platform_default(),
             transparent: false,
             size_policy: WindowSizePolicy::User,
         }
@@ -120,8 +121,15 @@ impl<T: Data> PendingWindow<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
-        self.menu = Some(menu);
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
+        self.menu = Some(MenuManager::new(menu));
         self
     }
 }
@@ -465,7 +473,14 @@ impl<T: Data> WindowDesc<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
         self.pending = self.pending.menu(menu);
         self
     }

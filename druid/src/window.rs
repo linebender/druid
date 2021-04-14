@@ -27,18 +27,16 @@ use crate::shell::{text::InputHandler, Counter, Cursor, Region, TextFieldToken, 
 use crate::app::{PendingWindow, WindowSizePolicy};
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
-    BoxConstraints, Command, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, MenuDesc, PaintCtx, Point, Size,
-    TimerToken, UpdateCtx, Widget, WidgetId, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken,
+    UpdateCtx, Widget, WidgetId, WidgetPod,
 };
-
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
 
@@ -54,8 +52,8 @@ pub struct Window<T> {
     size_policy: WindowSizePolicy,
     size: Size,
     invalid: Region,
-    pub(crate) menu: Option<MenuDesc<T>>,
-    pub(crate) context_menu: Option<MenuDesc<T>>,
+    pub(crate) menu: Option<MenuManager<T>>,
+    pub(crate) context_menu: Option<(MenuManager<T>, Point)>,
     // This will be `Some` whenever the most recently displayed frame was an animation frame.
     pub(crate) last_anim: Option<Instant>,
     pub(crate) last_mouse_pos: Option<Point>,
@@ -115,30 +113,34 @@ impl<T: Data> Window<T> {
         widget_id == self.root.id() || self.root.state().children.may_contain(&widget_id)
     }
 
-    pub(crate) fn set_menu(&mut self, mut menu: MenuDesc<T>, data: &T, env: &Env) {
-        let platform_menu = menu.build_window_menu(data, env);
-        self.handle.set_menu(platform_menu);
-        self.menu = Some(menu);
-    }
-
-    pub(crate) fn show_context_menu(
+    pub(crate) fn menu_cmd(
         &mut self,
-        mut menu: MenuDesc<T>,
-        point: Point,
-        data: &T,
+        queue: &mut CommandQueue,
+        cmd_id: MenuItemId,
+        data: &mut T,
         env: &Env,
     ) {
-        let platform_menu = menu.build_popup_menu(data, env);
-        self.handle.show_context_menu(platform_menu, point);
-        self.context_menu = Some(menu);
+        if let Some(menu) = &mut self.menu {
+            menu.event(queue, Some(self.id), cmd_id, data, env);
+        }
+        if let Some((menu, _)) = &mut self.context_menu {
+            menu.event(queue, Some(self.id), cmd_id, data, env);
+        }
+    }
+
+    pub(crate) fn show_context_menu(&mut self, menu: Menu<T>, point: Point, data: &T, env: &Env) {
+        let mut manager = MenuManager::new_for_popup(menu);
+        self.handle
+            .show_context_menu(manager.initialize(Some(self.id), data, env), point);
+        self.context_menu = Some((manager, point));
     }
 
     /// On macos we need to update the global application menu to be the menu
     /// for the current window.
     #[cfg(target_os = "macos")]
     pub(crate) fn macos_update_app_menu(&mut self, data: &T, env: &Env) {
-        if let Some(menu) = self.menu.as_mut().map(|m| m.build_window_menu(data, env)) {
-            self.handle.set_menu(menu);
+        if let Some(menu) = self.menu.as_mut() {
+            self.handle.set_menu(menu.refresh(data, env));
         }
     }
 
@@ -177,6 +179,23 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+
+        // Update the disabled state if necessary
+        // Always do this before updating the focus-chain
+        if self.root.state().tree_disabled_changed() {
+            let event = LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged);
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
+        // Update the focus-chain if necessary
+        // Always do this before sending focus change, since this event updates the focus chain.
+        if self.root.state().update_focus_chain {
+            let event = LifeCycle::BuildFocusChain;
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
+        self.update_focus(widget_state, queue, data, env);
+
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
 
@@ -273,42 +292,6 @@ impl<T: Data> Window<T> {
         // because the token may be reused and re-added in a lifecycle pass below.
         if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
             self.timers.remove(&token);
-        }
-
-        if let Some(focus_req) = widget_state.request_focus.take() {
-            let old = self.focus;
-            let new = self.widget_for_focus_request(focus_req);
-            // Only send RouteFocusChanged in case there's actual change
-            if old != new {
-                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
-                self.lifecycle(queue, &event, data, env, false);
-                self.focus = new;
-                // check if the newly focused widget has an IME session, and
-                // notify the system if so.
-                //
-                // If you're here because a profiler sent you: I guess I should've
-                // used a hashmap?
-                let old_was_ime = old
-                    .map(|old| {
-                        self.ime_handlers
-                            .iter()
-                            .any(|(_, sesh)| sesh.widget_id == old)
-                    })
-                    .unwrap_or(false);
-                let maybe_active_text_field = self
-                    .ime_handlers
-                    .iter()
-                    .find(|(_, sesh)| Some(sesh.widget_id) == self.focus)
-                    .map(|(token, _)| *token);
-                // we call this on every focus change; we could call it less but does it matter?
-                self.ime_focus_change = if maybe_active_text_field.is_some() {
-                    Some(maybe_active_text_field)
-                } else if old_was_ime {
-                    Some(None)
-                } else {
-                    None
-                };
-            }
         }
 
         if let Some(cursor) = &widget_state.cursor {
@@ -436,14 +419,16 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
-        piet.fill(
-            invalid.bounding_box(),
-            &(if self.transparent {
-                TRANSPARENT
-            } else {
-                env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
-            }),
-        );
+        for r in invalid.rects().to_owned() {
+            piet.clear(
+                Some(r),
+                if self.transparent {
+                    Color::TRANSPARENT
+                } else {
+                    env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
+                },
+            );
+        }
         self.paint(piet, invalid, queue, data, env);
     }
 
@@ -542,11 +527,17 @@ impl<T: Data> Window<T> {
         }
     }
 
-    pub(crate) fn get_menu_cmd(&self, cmd_id: u32) -> Option<Command> {
-        self.context_menu
-            .as_ref()
-            .and_then(|m| m.command_for_id(cmd_id))
-            .or_else(|| self.menu.as_ref().and_then(|m| m.command_for_id(cmd_id)))
+    pub(crate) fn update_menu(&mut self, data: &T, env: &Env) {
+        if let Some(menu) = &mut self.menu {
+            if let Some(new_menu) = menu.update(Some(self.id), data, env) {
+                self.handle.set_menu(new_menu);
+            }
+        }
+        if let Some((menu, point)) = &mut self.context_menu {
+            if let Some(new_menu) = menu.update(Some(self.id), data, env) {
+                self.handle.show_context_menu(new_menu, *point);
+            }
+        }
     }
 
     pub(crate) fn get_ime_handler(
@@ -559,6 +550,50 @@ impl<T: Data> Window<T> {
             .find(|(token, _)| req_token == *token)
             .and_then(|(_, reg)| reg.document.acquire(mutable))
             .unwrap()
+    }
+
+    fn update_focus(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
+        if let Some(focus_req) = widget_state.request_focus.take() {
+            let old = self.focus;
+            let new = self.widget_for_focus_request(focus_req);
+            // Only send RouteFocusChanged in case there's actual change
+            if old != new {
+                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
+                self.lifecycle(queue, &event, data, env, false);
+                self.focus = new;
+                // check if the newly focused widget has an IME session, and
+                // notify the system if so.
+                //
+                // If you're here because a profiler sent you: I guess I should've
+                // used a hashmap?
+                let old_was_ime = old
+                    .map(|old| {
+                        self.ime_handlers
+                            .iter()
+                            .any(|(_, sesh)| sesh.widget_id == old)
+                    })
+                    .unwrap_or(false);
+                let maybe_active_text_field = self
+                    .ime_handlers
+                    .iter()
+                    .find(|(_, sesh)| Some(sesh.widget_id) == self.focus)
+                    .map(|(token, _)| *token);
+                // we call this on every focus change; we could call it less but does it matter?
+                self.ime_focus_change = if maybe_active_text_field.is_some() {
+                    Some(maybe_active_text_field)
+                } else if old_was_ime {
+                    Some(None)
+                } else {
+                    None
+                };
+            }
+        }
     }
 
     /// Create a function that can invalidate the provided widget's text state.

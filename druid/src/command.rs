@@ -224,7 +224,7 @@ pub mod sys {
     /// object to be displayed.
     ///
     /// [`ContextMenu`]: ../struct.ContextMenu.html
-    pub(crate) const SHOW_CONTEXT_MENU: Selector<Box<dyn Any>> =
+    pub(crate) const SHOW_CONTEXT_MENU: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.show-context-menu");
 
     /// This is sent to the window handler to create a new sub window.
@@ -239,12 +239,6 @@ pub mod sys {
     /// if that processing changed the data value.
     pub(crate) const SUB_WINDOW_HOST_TO_PARENT: Selector<Box<dyn Any>> =
         Selector::new("druid-builtin.host_to_parent");
-
-    /// The selector for a command to set the window's menu. The payload should
-    /// be a [`MenuDesc`] object.
-    ///
-    /// [`MenuDesc`]: ../struct.MenuDesc.html
-    pub(crate) const SET_MENU: Selector<Box<dyn Any>> = Selector::new("druid-builtin.set-menu");
 
     /// Show the application preferences.
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
@@ -324,6 +318,9 @@ pub mod sys {
 
     /// Redo.
     pub const REDO: Selector = Selector::new("druid-builtin.menu-redo");
+
+    /// Select all.
+    pub const SELECT_ALL: Selector = Selector::new("druid-builtin.menu-select-all");
 
     /// Text input state has changed, and we need to notify the platform.
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =

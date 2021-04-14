@@ -25,14 +25,15 @@ use tracing::{error, trace, warn};
 
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
+use crate::menu::ContextMenu;
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::shell::text::Event as ImeInvalidation;
 use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
-    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, ContextMenu, Cursor,
-    Data, Env, ExtEventSink, Insets, MenuDesc, Notification, Point, Rect, SingleUse, Size, Target,
-    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
+    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -275,6 +276,23 @@ impl_context_method!(
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus
         }
+
+        /// The disabled state of a widget.
+        ///
+        /// Returns `true` if this widget or any of its ancestors is explicitly disabled.
+        /// To make this widget explicitly disabled use [`set_disabled`].
+        ///
+        /// Disabled means that this widget should not change the state of the application. What
+        /// that means is not entirely clear but in any it should not change its data. Therefore
+        /// others can use this as a safety mechanism to prevent the application from entering an
+        /// illegal state.
+        /// For an example the decrease button of a counter of type `usize` should be disabled if the
+        /// value is `0`.
+        ///
+        /// [`set_disabled`]: EventCtx::set_disabled
+        pub fn is_disabled(&self) -> bool {
+            self.widget_state.is_disabled()
+        }
     }
 );
 
@@ -373,16 +391,23 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     pub fn children_changed(&mut self) {
         trace!("children_changed");
         self.widget_state.children_changed = true;
+        self.widget_state.update_focus_chain = true;
         self.request_layout();
     }
 
-    /// Set the menu of the window containing the current widget.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+    /// Set the disabled state for this widget.
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        trace!("set_menu");
-        self.state.set_menu(menu);
+    /// Setting this to `false` does not mean a widget is not still disabled; for instance it may
+    /// still be disabled by an ancestor. See [`is_disabled`] for more information.
+    ///
+    /// Calling this method during [`LifeCycle::DisabledChanged`] has no effect.
+    ///
+    /// [`LifeCycle::DisabledChanged`]: struct.LifeCycle.html#variant.DisabledChanged
+    /// [`is_disabled`]: EventCtx::is_disabled
+    pub fn set_disabled(&mut self, disabled: bool) {
+        // widget_state.children_disabled_changed is not set because we want to be able to delete
+        // changes that happened during DisabledChanged.
+        self.widget_state.is_explicitly_disabled_new = disabled;
     }
 
     /// Indicate that text input state has changed.
@@ -530,12 +555,13 @@ impl EventCtx<'_, '_> {
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
     /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn show_context_menu<T: Any>(&mut self, menu: ContextMenu<T>) {
+    pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
         trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
+            let menu = ContextMenu { menu, location };
             self.submit_command(
                 commands::SHOW_CONTEXT_MENU
-                    .with(Box::new(menu))
+                    .with(SingleUse::new(Box::new(menu)))
                     .to(Target::Window(self.state.window_id)),
             );
         } else {
@@ -879,19 +905,6 @@ impl<'a> ContextState<'a> {
         trace!("submit_command");
         self.command_queue
             .push_back(command.default_to(self.window_id.into()));
-    }
-
-    fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>) {
-        trace!("set_menu");
-        if self.root_app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                commands::SET_MENU
-                    .with(Box::new(menu))
-                    .to(Target::Window(self.window_id)),
-            );
-        } else {
-            debug_panic!("EventCtx::set_menu<T> - T must match the application data type.");
-        }
     }
 
     fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {

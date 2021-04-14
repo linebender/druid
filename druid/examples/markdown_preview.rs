@@ -21,7 +21,8 @@ use druid::widget::prelude::*;
 use druid::widget::{Controller, LineBreaking, RawLabel, Scroll, Split, TextBox};
 use druid::{
     AppDelegate, AppLauncher, Color, Command, Data, DelegateCtx, FontFamily, FontStyle, FontWeight,
-    Handled, Lens, LocalizedString, MenuDesc, Selector, Target, Widget, WidgetExt, WindowDesc,
+    Handled, Lens, LocalizedString, Menu, Selector, Target, Widget, WidgetExt, WindowDesc,
+    WindowId,
 };
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Minimal Markdown");
@@ -93,7 +94,7 @@ pub fn main() {
     // describe the main window
     let main_window = WindowDesc::new(build_root_widget())
         .title(WINDOW_TITLE)
-        .menu(make_menu())
+        .menu(make_menu)
         .window_size((700.0, 600.0));
 
     // create the initial app state
@@ -228,23 +229,23 @@ fn add_attribute_for_tag(tag: &Tag, mut attrs: AttributesAdder) {
 }
 
 #[allow(unused_assignments, unused_mut)]
-fn make_menu<T: Data>() -> MenuDesc<T> {
-    let mut base = MenuDesc::empty();
+fn make_menu<T: Data>(_window_id: Option<WindowId>, _app_state: &AppState, _env: &Env) -> Menu<T> {
+    let mut base = Menu::empty();
     #[cfg(target_os = "macos")]
     {
-        base = base.append(druid::platform_menus::mac::application::default())
+        base = base.entry(druid::platform_menus::mac::application::default())
     }
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
-        base = base.append(druid::platform_menus::win::file::default());
+        base = base.entry(druid::platform_menus::win::file::default());
     }
-    base.append(
-        MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
-            .append(druid::platform_menus::common::undo())
-            .append(druid::platform_menus::common::redo())
-            .append_separator()
-            .append(druid::platform_menus::common::cut().disabled())
-            .append(druid::platform_menus::common::copy())
-            .append(druid::platform_menus::common::paste()),
+    base.entry(
+        Menu::new(LocalizedString::new("common-menu-edit-menu"))
+            .entry(druid::platform_menus::common::undo())
+            .entry(druid::platform_menus::common::redo())
+            .separator()
+            .entry(druid::platform_menus::common::cut().enabled(false))
+            .entry(druid::platform_menus::common::copy())
+            .entry(druid::platform_menus::common::paste()),
     )
 }

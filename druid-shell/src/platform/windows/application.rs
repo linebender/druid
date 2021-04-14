@@ -19,6 +19,7 @@ use std::collections::HashSet;
 use std::mem;
 use std::ptr;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use winapi::shared::minwindef::{FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
@@ -32,6 +33,8 @@ use winapi::um::winuser::{
     IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
+use piet_common::D2DLoadedFonts;
+
 use crate::application::AppHandler;
 
 use super::accels;
@@ -43,12 +46,16 @@ use super::window::{self, DS_REQUEST_DESTROY};
 #[derive(Clone)]
 pub(crate) struct Application {
     state: Rc<RefCell<State>>,
+    pub(crate) fonts: D2DLoadedFonts,
 }
 
 struct State {
     quitting: bool,
     windows: HashSet<HWND>,
 }
+
+/// Used to ensure the window class is registered only once per process.
+static WINDOW_CLASS_REGISTERED: AtomicBool = AtomicBool::new(false);
 
 impl Application {
     pub fn new() -> Result<Application, Error> {
@@ -57,7 +64,8 @@ impl Application {
             quitting: false,
             windows: HashSet::new(),
         }));
-        Ok(Application { state })
+        let fonts = D2DLoadedFonts::default();
+        Ok(Application { state, fonts })
     }
 
     /// Initialize the app. At the moment, this is mostly needed for hi-dpi.
@@ -75,24 +83,29 @@ impl Application {
                 func(PROCESS_PER_MONITOR_DPI_AWARE);
             }
         }
-        unsafe {
-            let class_name = CLASS_NAME.to_wide();
-            let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-            let wnd = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(window::win_proc_dispatch),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: 0 as HINSTANCE,
-                hIcon: icon,
-                hCursor: 0 as HCURSOR,
-                hbrBackground: ptr::null_mut(), // We control all the painting
-                lpszMenuName: 0 as LPCWSTR,
-                lpszClassName: class_name.as_ptr(),
-            };
-            let class_atom = RegisterClassW(&wnd);
-            if class_atom == 0 {
-                panic!("Error registering class");
+        if WINDOW_CLASS_REGISTERED
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            unsafe {
+                let class_name = CLASS_NAME.to_wide();
+                let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
+                let wnd = WNDCLASSW {
+                    style: 0,
+                    lpfnWndProc: Some(window::win_proc_dispatch),
+                    cbClsExtra: 0,
+                    cbWndExtra: 0,
+                    hInstance: 0 as HINSTANCE,
+                    hIcon: icon,
+                    hCursor: 0 as HCURSOR,
+                    hbrBackground: ptr::null_mut(), // We control all the painting
+                    lpszMenuName: 0 as LPCWSTR,
+                    lpszClassName: class_name.as_ptr(),
+                };
+                let class_atom = RegisterClassW(&wnd);
+                if class_atom == 0 {
+                    panic!("Error registering class");
+                }
             }
         }
         Ok(())
