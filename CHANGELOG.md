@@ -46,6 +46,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
 - Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
 - Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
+- Window size and positioning code is now in display points ([#1713] by [@jneem])
 
 ### Deprecated
 
@@ -678,6 +679,7 @@ Last release without a changelog :(
 [#1696]: https://github.com/linebender/druid/pull/1696
 [#1698]: https://github.com/linebender/druid/pull/1698
 [#1702]: https://github.com/linebender/druid/pull/1702
+[#1713]: https://github.com/linebender/druid/pull/1713
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
