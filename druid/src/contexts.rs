@@ -176,7 +176,7 @@ impl_context_method!(
     }
 );
 
-/// Convenience trait for code generic over contexts. Methods provided by all contexts.
+/// Convenience trait for methods available on all contexts.
 pub trait AnyCtx {
     /// get the `WidgetId` of the current widget.
     fn widget_id(&self) -> WidgetId;
@@ -322,39 +322,43 @@ impl_context_method!(
     }
 );
 
-/// Convenience trait for code generic over contexts. Methods providing layout information: available on all but LayoutCtx.
+/// Convenience trait for methods related to geometry and window position, available after [`layout`].
+///
+/// These methods are available on [`EventCtx`], [`LifeCycleCtx`], [`UpdateCtx`], and [`PaintCtx`].
+///
+/// [`layout`]: Widget::layout
 pub trait LaidOutCtx {
-    /// The layout size.
+    /// The layout size. See [`size`].
     ///
-    /// ['size']: EventCtx::size
+    /// [`size`]: EventCtx::size
     fn size(&self) -> Size;
-    /// The origin of the widget in window coordinates. See ['window_origin']
+    /// The origin of the widget in window coordinates. See [`window_origin`].
     ///
-    /// [window_origin]: EventCtx::window_origin
+    /// [`window_origin`]: EventCtx::window_origin
     fn window_origin(&self) -> Point;
-    /// Convert a point from the widget's coordinate space to the window's. See ['to_window']
+    /// Convert a point from the widget's coordinate space to the window's. See [`to_window`].
     ///
-    /// [to_window]: EventCtx::to_window
+    /// [`to_window`]: EventCtx::to_window
     fn to_window(&self, widget_point: Point) -> Point;
-    /// Convert a point from the widget's coordinate space to the screen's. See ['to_screen']
+    /// Convert a point from the widget's coordinate space to the screen's. See [`to_screen`].
     ///
-    /// ['to_screen']: EventCtx::to_screen
+    /// [`to_screen`]: EventCtx::to_screen
     fn to_screen(&self, widget_point: Point) -> Point;
-    /// The "hot" status of a widget. See ['is_hot']
+    /// The "hot" status of a widget. See [`is_hot`].
     ///
-    /// ['is_hot']: EventCtx::is_hot
+    /// [`is_hot`]: EventCtx::is_hot
     fn is_hot(&self) -> bool;
-    /// The active status of a widget. See ['is_active']
+    /// The active status of a widget. See [`is_active`]
     ///
-    /// ['is_active']: EventCtx::is_active
+    /// [`is_active`]: EventCtx::is_active
     fn is_active(&self) -> bool;
-    /// The focus status of a widget. See ['is_focused']
+    /// The focus status of a widget. See [`is_focused`].
     ///
-    /// ['is_focused']: EventCtx::is_focused
+    /// [`is_focused`]: EventCtx::is_focused
     fn is_focused(&self) -> bool;
-    /// The focus status of a widget or any of its descendents. See ['has_focus']
+    /// The focus status of a widget or any of its descendents. See [`has_focus`].
     ///
-    /// ['has_focus']: EventCtx::has_focus
+    /// [`has_focus`]: EventCtx::has_focus
     fn has_focus(&self) -> bool;
 }
 
@@ -436,19 +440,21 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     }
 });
 
-/// Convenience trait for code generic over contexts. Methods for contexts that allow cursor manipulation.
+/// Convenience trait for cursor manipulation methods available on multiple contexts.
+///
+/// Available on [`EventCtx`] and [`UpdateCtx`].
 pub trait CursorCtx {
-    /// Set the cursor icon. See ['set_cursor']
+    /// Set the cursor icon. See [`set_cursor`].
     ///
     /// ['set_cursor']: EventCtx::set_cursor
     fn set_cursor(&mut self, cursor: &Cursor);
-    /// Override the cursor icon. See ['override_cursor']
+    /// Override the cursor icon. See [`override_cursor`].
     ///
-    /// ['override_cursor']: EventCtx::override_cursor
+    /// [`override_cursor`]: EventCtx::override_cursor
     fn override_cursor(&mut self, cursor: &Cursor);
-    /// Set the cursor icon. See ['set_cursor']
+    /// Clear the cursor icon. See [`clear_cursor`]
     ///
-    /// ['set_cursor']: EventCtx::set_cursor
+    /// [`clear_cursor`]: EventCtx::clear_cursor
     fn clear_cursor(&mut self);
 }
 
@@ -549,37 +555,38 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     }
 });
 
-/// Convenience trait for code generic over contexts. Methods to do with requesting other events or actions to occur.
+/// Convenience trait for invalidation and request methods available on multiple contexts.
 ///
-/// Available on all contexts but PaintCtx and LayoutCtx
+/// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
 pub trait RequestCtx {
     /// Request a [`paint`] pass. See ['request_paint']
     ///
     /// ['request_paint']: EventCtx::request_paint
     fn request_paint(&mut self);
-    /// Request a [`paint`] pass for redrawing a rectangle. See ['request_paint_rect']
+    /// Request a [`paint`] pass for redrawing a rectangle. See [`request_paint_rect`].
     ///
-    /// ['request_paint_rect']: EventCtx::request_paint_rect
+    /// [`request_paint_rect`]: EventCtx::request_paint_rect
+    /// [`paint`]: Widget::paint
     fn request_paint_rect(&mut self, rect: Rect);
-    /// Request a layout pass. See ['request_layout']
+    /// Request a layout pass. See [`request_layout`].
     ///
-    /// ['request_layout']: EventCtx::request_layout
+    /// [`request_layout`]: EventCtx::request_layout
     fn request_layout(&mut self);
-    /// Request an animation frame. See ['request_anim_frame']
+    /// Request an animation frame. See [`request_anim_frame`].
     ///
-    /// ['request_anim_frame']: EventCtx::request_anim_frame
+    /// [`request_anim_frame`]: EventCtx::request_anim_frame
     fn request_anim_frame(&mut self);
-    /// Indicate that your children have changed. See ['children_changed']
+    /// Indicate that your children have changed. See [`children_changed`].
     ///
-    /// ['children_changed']: EventCtx::children_changed
+    /// [`children_changed`]: EventCtx::children_changed
     fn children_changed(&mut self);
-    /// Set the menu of the window containing the current widget. See ['set_menu']
+    /// Set the menu of the window containing the current widget. See [`set_menu`].
     ///
-    /// ['set_menu']: EventCtx::set_menu
+    /// [`set_menu`]: EventCtx::set_menu
     fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>);
-    /// Create a new sub-window. See ['new_sub_window']
+    /// Create a new sub-window. See [`new_sub_window`].
     ///
-    /// ['new_sub_window']: EventCtx::new_sub_window
+    /// [`new_sub_window`]: EventCtx::new_sub_window
     fn new_sub_window<W: Widget<U> + 'static, U: Data>(
         &mut self,
         window_config: WindowConfig,
@@ -667,17 +674,17 @@ impl_context_method!(
 /// Methods to do with commands and timers.
 /// Available to all contexts but PaintCtx.
 pub trait CommandCtx {
-    /// Submit a [`Command`] to be run after this event is handled. See ['submit_command']
+    /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
     ///
-    /// ['submit_command']: EventCtx::submit_command
+    /// [`submit_command`]: EventCtx::submit_command
     fn submit_command(&mut self, cmd: impl Into<Command>);
-    /// Returns an [`ExtEventSink`] for submitting commands from other threads. See ['get_external_handle']
+    /// Returns an [`ExtEventSink`] for submitting commands from other threads. See ['get_external_handle'].
     ///
-    /// ['get_external_handle']: EventCtx::get_external_handle
+    /// [`get_external_handle`]: EventCtx::get_external_handle
     fn get_external_handle(&self) -> ExtEventSink;
-    /// Request a timer event. See ['request_timer']
+    /// Request a timer event. See [`request_timer`]
     ///
-    /// ['request_timer']: EventCtx::request_timer
+    /// [`request_timer`]: EventCtx::request_timer
     fn request_timer(&mut self, deadline: Duration) -> TimerToken;
 }
 
