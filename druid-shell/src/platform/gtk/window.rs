@@ -356,9 +356,10 @@ impl WindowBuilder {
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
-            win_state
-                .drawing_area
-                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
+            win_state.drawing_area.set_size_request(
+                min_size_px.width.round() as i32,
+                min_size_px.height.round() as i32,
+            );
         }
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
@@ -914,7 +915,9 @@ impl WindowHandle {
     pub fn set_size(&self, size: Size) {
         if let Some(state) = self.state.upgrade() {
             let px = size.to_px(state.scale.get());
-            state.window.resize(px.width as i32, px.height as i32)
+            state
+                .window
+                .resize(px.width.round() as i32, px.height.round() as i32)
         }
     }
 
