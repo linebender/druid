@@ -912,7 +912,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // we may send an extra event after the actual event
         let mut extra_event = None;
 
-        let mut had_focus = self.state.has_focus;
+        let had_focus = self.state.has_focus;
 
         let recurse = match event {
             LifeCycle::Internal(internal) => match internal {
