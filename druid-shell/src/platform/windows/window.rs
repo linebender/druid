@@ -534,14 +534,15 @@ impl MyWndProc {
     fn handle_deferred(&self, op: DeferredOp) {
         if let Some(hwnd) = self.handle.borrow().get_hwnd() {
             match op {
-                DeferredOp::SetSize(size) => unsafe {
+                DeferredOp::SetSize(size_dp) => unsafe {
+                    let size_px = size_dp.to_px(self.scale());
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        (size.width * self.scale().x()) as i32,
-                        (size.height * self.scale().y()) as i32,
+                        size_px.width.round() as i32,
+                        size_px.height.round() as i32,
                         SWP_NOMOVE | SWP_NOZORDER,
                     ) == 0
                     {
@@ -551,12 +552,13 @@ impl MyWndProc {
                         );
                     };
                 },
-                DeferredOp::SetPosition(position) => unsafe {
+                DeferredOp::SetPosition(pos_dp) => unsafe {
+                    let pos_px = pos_dp.to_px(self.scale());
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
-                        position.x as i32,
-                        position.y as i32,
+                        pos_px.x.round() as i32,
+                        pos_px.y.round() as i32,
                         0,
                         0,
                         SWP_NOSIZE | SWP_NOZORDER,
@@ -1194,10 +1196,9 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 self.with_wnd_state(|s| {
                     if let Some(min_size_dp) = s.min_size {
-                        let min_area = ScaledArea::from_dp(min_size_dp, self.scale());
-                        let min_size_px = min_area.size_px();
-                        min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
-                        min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
+                        let min_size_px = min_size_dp.to_px(self.scale());
+                        min_max_info.ptMinTrackSize.x = min_size_px.width.round() as i32;
+                        min_max_info.ptMinTrackSize.y = min_size_px.height.round() as i32;
                     }
                 });
                 Some(0)
@@ -1402,15 +1403,16 @@ impl WindowBuilder {
                 return Err(Error::NullHwnd);
             }
 
-            if let Some(size) = self.size {
+            if let Some(size_dp) = self.size {
                 if let Ok(scale) = handle.get_scale() {
+                    let size_px = size_dp.to_px(scale);
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        (size.width * scale.x()) as i32,
-                        (size.height * scale.y()) as i32,
+                        size_px.width.round() as i32,
+                        size_px.height.round() as i32,
                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
@@ -1823,7 +1825,7 @@ impl WindowHandle {
                     (info.rcClient.right as f64, info.rcClient.bottom as f64),
                 );
 
-                return window_frame - content_frame;
+                return (window_frame - content_frame).to_dp(w.scale.get());
             }
         }
 

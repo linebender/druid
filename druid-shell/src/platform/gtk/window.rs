@@ -356,9 +356,10 @@ impl WindowBuilder {
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
-            win_state
-                .drawing_area
-                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
+            win_state.drawing_area.set_size_request(
+                min_size_px.width.round() as i32,
+                min_size_px.height.round() as i32,
+            );
         }
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
@@ -860,14 +861,15 @@ impl WindowHandle {
 
     pub fn set_position(&self, position: Point) {
         if let Some(state) = self.state.upgrade() {
-            state.window.move_(position.x as i32, position.y as i32)
+            let px = position.to_px(state.scale.get());
+            state.window.move_(px.x as i32, px.y as i32)
         }
     }
 
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_position();
-            Point::new(x as f64, y as f64)
+            Point::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }
@@ -912,14 +914,17 @@ impl WindowHandle {
 
     pub fn set_size(&self, size: Size) {
         if let Some(state) = self.state.upgrade() {
-            state.window.resize(size.width as i32, size.height as i32)
+            let px = size.to_px(state.scale.get());
+            state
+                .window
+                .resize(px.width.round() as i32, px.height.round() as i32)
         }
     }
 
     pub fn get_size(&self) -> Size {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_size();
-            Size::new(x as f64, y as f64)
+            Size::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             warn!("Could not get size for GTK window");
             Size::new(0., 0.)
