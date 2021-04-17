@@ -30,6 +30,11 @@ pub struct Split<T> {
     min_bar_area: f64,    // Integers only
     solid: bool,
     draggable: bool,
+    /// The split bar is hovered by the mouse. This state is locked to `true` if the
+    /// widget is active (the bar is being dragged) to avoid cursor and painting jitter
+    /// if the mouse moves faster than the layout and temporarily gets outside of the
+    /// bar area while still being dragged.
+    is_bar_hover: bool,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -53,6 +58,7 @@ impl<T> Split<T> {
             min_bar_area: 6.0,
             solid: false,
             draggable: false,
+            is_bar_hover: false,
             child1: WidgetPod::new(child1).boxed(),
             child2: WidgetPod::new(child2).boxed(),
         }
@@ -285,6 +291,7 @@ impl<T: Data> Widget<T> for Split<T> {
                 Event::MouseDown(mouse) => {
                     if mouse.button.is_left() && self.bar_hit_test(ctx.size(), mouse.pos) {
                         ctx.set_active(true);
+                        self.is_bar_hover = true;
                         ctx.set_handled();
                     }
                 }
@@ -292,6 +299,7 @@ impl<T: Data> Widget<T> for Split<T> {
                     if mouse.button.is_left() && ctx.is_active() {
                         ctx.set_active(false);
                         self.update_split_point(ctx.size(), mouse.pos);
+                        self.is_bar_hover = false;
                         ctx.request_paint();
                     }
                 }
@@ -301,8 +309,10 @@ impl<T: Data> Widget<T> for Split<T> {
                         ctx.request_layout();
                     }
 
-                    if ctx.is_hot() || ctx.is_active() {
-                        if self.bar_hit_test(ctx.size(), mouse.pos) {
+                    let hover = ctx.is_active()
+                        || (ctx.is_hot() && self.bar_hit_test(ctx.size(), mouse.pos));
+                    if hover != self.is_bar_hover {
+                        if hover {
                             match self.split_axis {
                                 Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
                                 Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
@@ -310,6 +320,8 @@ impl<T: Data> Widget<T> for Split<T> {
                         } else {
                             ctx.clear_cursor();
                         }
+                        self.is_bar_hover = hover;
+                        ctx.request_paint();
                     }
                 }
                 _ => {}
