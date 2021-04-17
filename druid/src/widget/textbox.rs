@@ -48,7 +48,7 @@ const SCROLL_TO_INSETS: Insets = Insets::uniform_xy(40.0, 0.0);
 /// [`ValueTextBox`]: super::ValueTextBox
 pub struct TextBox<T> {
     placeholder: TextLayout<String>,
-    inner: Padding<T, Scroll<T, TextComponent<T>>>,
+    inner: Scroll<T, Padding<T, TextComponent<T>>>,
     scroll_to_selection_after_layout: bool,
     multiline: bool,
     /// true if a click event caused us to gain focus.
@@ -72,10 +72,14 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     pub fn new() -> Self {
         let mut placeholder = TextLayout::from_text("");
         placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
-        let mut scroll = Scroll::new(TextComponent::default()).content_must_fill(true);
+        let mut scroll = Scroll::new(Padding::new(
+            theme::TEXTBOX_INSETS,
+            TextComponent::default(),
+        ))
+        .content_must_fill(true);
         scroll.set_enabled_scrollbars(crate::scroll_component::ScrollbarsEnabled::None);
         Self {
-            inner: Padding::new(theme::TEXTBOX_INSETS, scroll),
+            inner: scroll,
             scroll_to_selection_after_layout: false,
             placeholder,
             multiline: false,
@@ -91,12 +95,9 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     pub fn multiline() -> Self {
         let mut this = TextBox::new();
         this.inner
-            .wrapped_mut()
             .set_enabled_scrollbars(crate::scroll_component::ScrollbarsEnabled::Both);
         this.text_mut().borrow_mut().set_accepts_newlines(true);
-        this.inner
-            .wrapped_mut()
-            .set_horizontal_scroll_enabled(false);
+        this.inner.set_horizontal_scroll_enabled(false);
         this.multiline = true;
         this
     }
@@ -109,9 +110,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// [`multiline`]: TextBox::multiline
     pub fn with_line_wrapping(mut self, wrap_lines: bool) -> Self {
-        self.inner
-            .wrapped_mut()
-            .set_horizontal_scroll_enabled(!wrap_lines);
+        self.inner.set_horizontal_scroll_enabled(!wrap_lines);
         self
     }
 }
@@ -282,15 +281,15 @@ impl<T> TextBox<T> {
     /// Using this correctly is difficult; please see the [`TextComponent`]
     /// docs for more information.
     pub fn text(&self) -> &TextComponent<T> {
-        self.inner.wrapped().child()
+        self.inner.child().wrapped()
     }
 
-    /// An immutable reference to the inner [`TextComponent`].
+    /// A mutable reference to the inner [`TextComponent`].
     ///
     /// Using this correctly is difficult; please see the [`TextComponent`]
     /// docs for more information.
     pub fn text_mut(&mut self) -> &mut TextComponent<T> {
-        self.inner.wrapped_mut().child_mut()
+        self.inner.child_mut().wrapped_mut()
     }
 
     fn reset_cursor_blink(&mut self, token: TimerToken) {
@@ -323,11 +322,11 @@ impl<T: TextStorage + EditableText> TextBox<T> {
 
     fn scroll_to_selection_end(&mut self) {
         let rect = self.rect_for_selection_end();
-        let view_rect = self.inner.wrapped().viewport_rect();
+        let view_rect = self.inner.viewport_rect();
         let is_visible =
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
-            self.inner.wrapped_mut().scroll_to(rect + SCROLL_TO_INSETS);
+            self.inner.scroll_to(rect + SCROLL_TO_INSETS);
         }
     }
 
@@ -472,7 +471,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(ImeInvalidation::SelectionChanged);
                 }
-                self.inner.wrapped_mut().child_mut().has_focus = true;
+                self.text_mut().has_focus = true;
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
                 ctx.request_paint();
@@ -484,9 +483,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
                     ctx.invalidate_text_input(ImeInvalidation::SelectionChanged);
                 }
-                self.inner.wrapped_mut().child_mut().has_focus = false;
+                self.text_mut().has_focus = false;
                 if !self.multiline {
-                    self.inner.wrapped_mut().scroll_to(Rect::ZERO);
+                    self.inner.scroll_to(Rect::ZERO);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -533,8 +532,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
         let layout_baseline = text_metrics.size.height - text_metrics.first_baseline;
         let baseline_off = layout_baseline
-            - (self.inner.wrapped().child_size().height
-                - self.inner.wrapped().viewport_rect().height())
+            - (self.inner.child_size().height - self.inner.viewport_rect().height())
             + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
@@ -604,9 +602,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             let cursor = if data.is_empty() {
                 cursor_line + padding_offset
             } else {
-                cursor_line + padding_offset - self.inner.wrapped().offset()
+                cursor_line + padding_offset - self.inner.offset()
             };
-            ctx.stroke(cursor, &cursor_color, 1.);
+
+            ctx.with_save(|ctx| {
+                ctx.clip(clip_rect);
+                ctx.stroke(cursor, &cursor_color, 1.);
+            })
         }
 
         // Paint the border

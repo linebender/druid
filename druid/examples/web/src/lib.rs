@@ -58,6 +58,7 @@ impl_example!(anim);
 impl_example!(calc);
 impl_example!(cursor);
 impl_example!(custom_widget);
+impl_example!(disabled);
 impl_example!(either);
 impl_example!(event_viewer);
 impl_example!(flex);
