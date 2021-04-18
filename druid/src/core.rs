@@ -1090,7 +1090,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.update_focus_chain = false;
 
                 // had_focus is the old focus value. state.has_focus was repaced with ctx.is_focused().
-                // Therefore is had_focus is true but state.has_focus is false the widgets, which is
+                // Therefore if had_focus is true but state.has_focus is false then the widget which is
                 // currently focused is not part of the functional tree anymore
                 // (Lifecycle::BuildFocusChain.should_propagate_to_hidden() is false!) and should
                 // resign the focus.
