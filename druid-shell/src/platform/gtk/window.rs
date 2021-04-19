@@ -356,9 +356,10 @@ impl WindowBuilder {
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
-            win_state
-                .drawing_area
-                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
+            win_state.drawing_area.set_size_request(
+                min_size_px.width.round() as i32,
+                min_size_px.height.round() as i32,
+            );
         }
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
@@ -698,6 +699,10 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
+        if let Some(level) = self.level {
+            handle.set_override_redirect(level);
+        }
+
         let size = self.size;
         win_state.with_handler(|h| {
             h.connect(&handle.clone().into());
@@ -856,14 +861,15 @@ impl WindowHandle {
 
     pub fn set_position(&self, position: Point) {
         if let Some(state) = self.state.upgrade() {
-            state.window.move_(position.x as i32, position.y as i32)
+            let px = position.to_px(state.scale.get());
+            state.window.move_(px.x as i32, px.y as i32)
         }
     }
 
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_position();
-            Point::new(x as f64, y as f64)
+            Point::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }
@@ -885,18 +891,40 @@ impl WindowHandle {
 
             state.window.set_type_hint(hint);
         }
+
+        self.set_override_redirect(level);
+    }
+
+    /// The override-redirect flag tells the window manager not to mess with the window; it should
+    /// be set for things like tooltips, dropdowns, etc.
+    ///
+    /// Note that this is exposed on the GDK window, so we can't set it until the GTK window is
+    /// realized.
+    fn set_override_redirect(&self, level: WindowLevel) {
+        let override_redirect = match level {
+            WindowLevel::AppWindow => false,
+            WindowLevel::Tooltip | WindowLevel::DropDown | WindowLevel::Modal => true,
+        };
+        if let Some(state) = self.state.upgrade() {
+            if let Some(window) = state.window.get_window() {
+                window.set_override_redirect(override_redirect);
+            }
+        }
     }
 
     pub fn set_size(&self, size: Size) {
         if let Some(state) = self.state.upgrade() {
-            state.window.resize(size.width as i32, size.height as i32)
+            let px = size.to_px(state.scale.get());
+            state
+                .window
+                .resize(px.width.round() as i32, px.height.round() as i32)
         }
     }
 
     pub fn get_size(&self) -> Size {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_size();
-            Size::new(x as f64, y as f64)
+            Size::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             warn!("Could not get size for GTK window");
             Size::new(0., 0.)

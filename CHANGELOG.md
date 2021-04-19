@@ -30,7 +30,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
-
+- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
+  context-methods to implement disabled ([#1632] by [@xarvic])
+- `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
+- `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -40,6 +43,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 - Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
 - Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
+- `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
+- Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
+- Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
+- Window size and positioning code is now in display points ([#1713] by [@jneem])
 
 ### Deprecated
 
@@ -48,16 +55,19 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Fixed
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
-
-
-- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
+- focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
+- Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
 
 ### Visual
 
 ### Docs
 
+- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
+- Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 
 ### Examples
@@ -443,6 +453,9 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@lidin]: https://github.com/lidin
+[@xarvic]: https://github.com/xarvic
+[@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -651,16 +664,26 @@ Last release without a changelog :(
 [#1606]: https://github.com/linebender/druid/pull/1606
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1625]: https://github.com/linebender/druid/pull/1625
+[#1632]: https://github.com/linebender/druid/pull/1632
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1636]: https://github.com/linebender/druid/pull/1636
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1654]: https://github.com/linebender/druid/pull/1654
 [#1660]: https://github.com/linebender/druid/pull/1660
 [#1662]: https://github.com/linebender/druid/pull/1662
 [#1677]: https://github.com/linebender/druid/pull/1677
+[#1691]: https://github.com/linebender/druid/pull/1691
+[#1693]: https://github.com/linebender/druid/pull/1693
+[#1695]: https://github.com/linebender/druid/pull/1695
+[#1696]: https://github.com/linebender/druid/pull/1696
 [#1698]: https://github.com/linebender/druid/pull/1698
+[#1702]: https://github.com/linebender/druid/pull/1702
+[#1713]: https://github.com/linebender/druid/pull/1713
+[#1715]: https://github.com/linebender/druid/pull/1715
+[#1724]: https://github.com/linebender/druid/pull/1724
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
