@@ -59,6 +59,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
+- Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
 
 ### Visual
 
@@ -681,6 +682,7 @@ Last release without a changelog :(
 [#1698]: https://github.com/linebender/druid/pull/1698
 [#1702]: https://github.com/linebender/druid/pull/1702
 [#1713]: https://github.com/linebender/druid/pull/1713
+[#1715]: https://github.com/linebender/druid/pull/1715
 [#1724]: https://github.com/linebender/druid/pull/1724
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
