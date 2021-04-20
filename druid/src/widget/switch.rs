@@ -260,7 +260,11 @@ impl Widget<bool> for Switch {
         // paint different background for on and off state
         // opacity of background color depends on knob position
         // todo: make color configurable
-        let opacity = (self.knob_pos.x - off_pos) / (on_pos - off_pos);
+        let opacity = if ctx.is_disabled() {
+            0.0
+        } else {
+            (self.knob_pos.x - off_pos) / (on_pos - off_pos)
+        };
 
         let background_gradient_on_state = LinearGradient::new(
             UnitPoint::TOP,
@@ -302,8 +306,8 @@ impl Widget<bool> for Switch {
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
                 (
-                    env.get(theme::FOREGROUND_LIGHT),
                     env.get(theme::FOREGROUND_DARK),
+                    env.get(theme::FOREGROUND_LIGHT),
                 ),
             )
         } else {
@@ -311,8 +315,8 @@ impl Widget<bool> for Switch {
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
                 (
-                    env.get(theme::FOREGROUND_DARK),
                     env.get(theme::FOREGROUND_LIGHT),
+                    env.get(theme::FOREGROUND_DARK),
                 ),
             )
         };

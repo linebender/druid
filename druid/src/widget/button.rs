@@ -182,8 +182,8 @@ impl<T: Data> Widget<T> for Button<T> {
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
                 (
-                    env.get(theme::DISABLED_FOREGROUND_LIGHT),
-                    env.get(theme::DISABLED_FOREGROUND_DARK),
+                    env.get(theme::DISABLED_BUTTON_LIGHT),
+                    env.get(theme::DISABLED_BUTTON_DARK),
                 ),
             )
         } else if is_active {

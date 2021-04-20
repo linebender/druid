@@ -383,8 +383,17 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     }
                 }
             }
-            LifeCycle::DisabledChanged(_) => {
-                ctx.request_paint();
+            LifeCycle::DisabledChanged(disabled) => {
+                if self.can_write() {
+                    let color = if *disabled {
+                        env.get(theme::DISABLED_TEXT_COLOR)
+                    } else {
+                        env.get(theme::TEXT_COLOR)
+                    };
+
+                    self.borrow_mut().layout.set_text_color(color);
+                }
+                ctx.request_layout();
             }
             _ => (),
         }

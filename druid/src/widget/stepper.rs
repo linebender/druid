@@ -143,8 +143,8 @@ impl Widget<f64> for Stepper {
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
             (
-                env.get(theme::DISABLED_FOREGROUND_LIGHT),
-                env.get(theme::DISABLED_FOREGROUND_DARK),
+                env.get(theme::DISABLED_BUTTON_LIGHT),
+                env.get(theme::DISABLED_BUTTON_DARK),
             ),
         );
 
