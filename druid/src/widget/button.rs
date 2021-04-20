@@ -71,7 +71,7 @@ impl<T: Data> Button<T> {
     /// [`.on_click`]: #method.on_click
     pub fn from_label(label: Label<T>) -> Button<T> {
         Button {
-            label,
+            label: label.control_text(),
             label_size: Size::ZERO,
         }
     }

@@ -56,7 +56,7 @@ impl<T: Data> Radio<T> {
     pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
         Radio {
             variant,
-            child_label: Label::new(label),
+            child_label: Label::new(label).control_text(),
         }
     }
 }
@@ -151,7 +151,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
             let inner_circle = Circle::new((size / 2., size / 2.), INNER_CIRCLE_RADIUS);
 
             let fill = if ctx.is_disabled() {
-                env.get(theme::DISABLED_FOREGROUND_LIGHT)
+                env.get(theme::DISABLED_TEXT_COLOR)
             } else {
                 env.get(theme::CURSOR_COLOR)
             };

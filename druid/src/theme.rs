@@ -23,7 +23,8 @@ use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key}
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
 
-pub const LABEL_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
+pub const TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
+pub const DISABLED_TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.disabled_label_color");
 pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.placeholder_color");
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.primary_light");
@@ -111,7 +112,8 @@ pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollba
 /// An initial theme.
 pub(crate) fn add_to_env(env: Env) -> Env {
     env.adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
-        .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(TEXT_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(DISABLED_TEXT_COLOR, Color::rgb8(0xa0, 0xa0, 0x9a))
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
         .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(PRIMARY_DARK, Color::rgb8(0x00, 0x8d, 0xdd))

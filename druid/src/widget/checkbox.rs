@@ -29,7 +29,7 @@ impl Checkbox {
     /// Create a new `Checkbox` with a text label.
     pub fn new(text: impl Into<LabelText<bool>>) -> Checkbox {
         Checkbox {
-            child_label: Label::new(text),
+            child_label: Label::new(text).control_text(),
         }
     }
 
@@ -148,9 +148,9 @@ impl Widget<bool> for Checkbox {
                 .line_join(LineJoin::Round);
 
             let brush = if ctx.is_disabled() {
-                env.get(theme::DISABLED_FOREGROUND_LIGHT)
+                env.get(theme::DISABLED_TEXT_COLOR)
             } else {
-                env.get(theme::LABEL_COLOR)
+                env.get(theme::TEXT_COLOR)
             };
 
             ctx.stroke_styled(path, &brush, 2., &style);

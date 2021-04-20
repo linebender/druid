@@ -63,6 +63,9 @@ impl Switch {
     }
 
     fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
+        self.on_text.rebuild_if_needed(ctx.text(), env);
+        self.off_text.rebuild_if_needed(ctx.text(), env);
+
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
@@ -177,7 +180,15 @@ impl Widget<bool> for Switch {
                 self.animation_in_progress = true;
                 ctx.request_anim_frame();
             }
-            LifeCycle::DisabledChanged(_) => {
+            LifeCycle::DisabledChanged(disabled) => {
+                ctx.request_paint();
+                let color = if *disabled {
+                    theme::DISABLED_TEXT_COLOR
+                } else {
+                    theme::TEXT_COLOR
+                };
+                self.off_text.set_text_color(color.clone());
+                self.on_text.set_text_color(color);
                 ctx.request_paint();
             }
             _ => {}
@@ -204,6 +215,8 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
+        self.on_text.rebuild_if_needed(ctx.text(), env);
+
         let text_metrics = self.on_text.layout_metrics();
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let width = height * SWITCH_WIDTH_RATIO;

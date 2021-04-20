@@ -189,7 +189,13 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        let color = if ctx.is_disabled() {
+            env.get(theme::DISABLED_TEXT_COLOR)
+        } else {
+            env.get(theme::TEXT_COLOR)
+        };
+
+        ctx.fill(arrows, &color);
     }
 
     #[instrument(
