@@ -21,7 +21,10 @@ use druid_shell::Cursor;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
-use crate::{ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment, TextLayout};
+use crate::{
+    ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment,
+    TextLayout,
+};
 use tracing::{instrument, trace};
 
 // added padding between the edges of the widget and the text.
@@ -153,7 +156,7 @@ impl<T: TextStorage> RawLabel<T> {
             layout: TextLayout::new(),
             line_break_mode: LineBreaking::Overflow,
             control_text: false,
-            default_text_color: crate::theme::TEXT_COLOR.into()
+            default_text_color: crate::theme::TEXT_COLOR.into(),
         }
     }
 
@@ -241,7 +244,6 @@ impl<T: TextStorage> RawLabel<T> {
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.layout.set_text_size(size);
     }
-
 
     /// Choose if this label should be a control-label.
     ///
@@ -583,11 +585,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
     }
 
-    #[instrument(
-        name = "RawLabel",
-        level = "trace",
-        skip(self, ctx, event, data, _env)
-    )]
+    #[instrument(name = "RawLabel", level = "trace", skip(self, ctx, event, data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {

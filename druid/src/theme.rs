@@ -24,7 +24,8 @@ pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
 
 pub const TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
-pub const DISABLED_TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.disabled_label_color");
+pub const DISABLED_TEXT_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_label_color");
 pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.placeholder_color");
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.primary_light");
@@ -41,8 +42,10 @@ pub const DISABLED_FOREGROUND_DARK: Key<Color> =
     Key::new("org.linebender.druid.theme.disabled_foreground_dark");
 pub const BUTTON_DARK: Key<Color> = Key::new("org.linebender.druid.theme.button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.button_light");
-pub const DISABLED_BUTTON_DARK: Key<Color> = Key::new("org.linebender.druid.theme.disabled_button_dark");
-pub const DISABLED_BUTTON_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.disabled_button_light");
+pub const DISABLED_BUTTON_DARK: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_button_dark");
+pub const DISABLED_BUTTON_LIGHT: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.button_border_width");
