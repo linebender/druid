@@ -126,11 +126,17 @@ impl<T, W> Scroll<T, W> {
     /// Set whether the content can be scrolled in the vertical direction.
     pub fn set_vertical_scroll_enabled(&mut self, enabled: bool) {
         self.clip.set_constrain_vertical(!enabled);
+        self.scroll_component
+            .enabled
+            .set_vertical_scrollbar_enabled(enabled);
     }
 
     /// Set whether the content can be scrolled in the horizontal direction.
     pub fn set_horizontal_scroll_enabled(&mut self, enabled: bool) {
         self.clip.set_constrain_horizontal(!enabled);
+        self.scroll_component
+            .enabled
+            .set_horizontal_scrollbar_enabled(enabled);
     }
 
     /// Returns a reference to the child widget.
