@@ -69,7 +69,7 @@ use tracing::{instrument, trace};
 ///
 /// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
-/// [`ImageBuf`]: ../druid_shell/struct.ImageBuf.html
+/// [`ImageBuf`]: ../piet/struct.ImageBuf.html
 /// [`FillStrat`]: ../widget/enum.FillStrat.html
 /// [`InterpolationMode`]: ../piet/enum.InterpolationMode.html
 pub struct Image {
