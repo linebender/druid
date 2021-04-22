@@ -97,7 +97,7 @@ pub struct RawLabel<T> {
     layout: TextLayout<T>,
     line_break_mode: LineBreaking,
 
-    control_text: bool,
+    disabled: bool,
     default_text_color: KeyOrValue<Color>,
 }
 
@@ -155,7 +155,7 @@ impl<T: TextStorage> RawLabel<T> {
         Self {
             layout: TextLayout::new(),
             line_break_mode: LineBreaking::Overflow,
-            control_text: false,
+            disabled: false,
             default_text_color: crate::theme::TEXT_COLOR.into(),
         }
     }
@@ -177,14 +177,6 @@ impl<T: TextStorage> RawLabel<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.set_text_size(size);
-        self
-    }
-
-    /// Builder-style method for making this label into a control-label.
-    ///
-    /// If this label is a control-label it will change its color when disabled.
-    pub fn control_text(mut self) -> Self {
-        self.control_text = true;
         self
     }
 
@@ -228,7 +220,9 @@ impl<T: TextStorage> RawLabel<T> {
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         let color = color.into();
-        self.layout.set_text_color(color.clone());
+        if !self.disabled {
+            self.layout.set_text_color(color.clone());
+        }
         self.default_text_color = color;
     }
 
@@ -243,13 +237,6 @@ impl<T: TextStorage> RawLabel<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.layout.set_text_size(size);
-    }
-
-    /// Choose if this label should be a control-label.
-    ///
-    /// If this label is a control-label it will change its color when disabled.
-    pub fn set_control_text(&mut self, is_control: bool) {
-        self.control_text = is_control;
     }
 
     /// Set the font.
@@ -384,13 +371,6 @@ impl<T: Data> Label<T> {
         self.text_should_be_updated = true;
     }
 
-    /// Choose if this label should be a control-label.
-    ///
-    /// If this label is a control-label it will change its color when disabled.
-    pub fn set_control_text(&mut self, control: bool) {
-        self.label.set_control_text(control);
-    }
-
     /// Builder-style method for setting the text color.
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
@@ -408,14 +388,6 @@ impl<T: Data> Label<T> {
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.label.set_text_size(size);
-        self
-    }
-
-    /// Builder-style method for making this label into a control-label.
-    ///
-    /// If this label is a control-label it will change its color when disabled.
-    pub fn control_text(mut self) -> Self {
-        self.label.set_control_text(true);
         self
     }
 
@@ -591,8 +563,7 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
             LifeCycle::WidgetAdded => {
                 self.layout.set_text(data.to_owned());
             }
-            LifeCycle::DisabledChanged(disabled) if self.control_text => {
-                dbg!("Control!");
+            LifeCycle::DisabledChanged(disabled) => {
                 let color = if *disabled {
                     KeyOrValue::Key(crate::theme::DISABLED_TEXT_COLOR)
                 } else {

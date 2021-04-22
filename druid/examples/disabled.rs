@@ -42,53 +42,50 @@ fn main_widget() -> impl Widget<AppData> {
     Flex::column()
         .with_child(named_child("text:", TextBox::new().lens(AppData::text)))
         .with_default_spacer()
-        .with_child(named_child(
-            "text (disabled):",
-            TextBox::new()
-                .lens(AppData::text)
+        .with_child(
+            named_child("text (disabled):", TextBox::new().lens(AppData::text))
                 .disabled_if(|data, _| data.disabled),
-        ))
+        )
         .with_default_spacer()
         .with_child(named_child("text:", TextBox::new().lens(AppData::text)))
         .with_default_spacer()
-        .with_child(named_child(
-            "text (disabled):",
-            TextBox::new()
-                .lens(AppData::text)
+        .with_child(
+            named_child("text (disabled):", TextBox::new().lens(AppData::text))
                 .disabled_if(|data, _| data.disabled),
-        ))
+        )
         .with_default_spacer()
         .with_default_spacer()
-        .with_child(named_child(
-            "value (disabled):",
-            Slider::new()
-                .with_range(0.0, 10.0)
-                .lens(AppData::value)
-                .disabled_if(|data, _| data.disabled),
-        ))
+        .with_child(
+            named_child(
+                "value (disabled):",
+                Slider::new().with_range(0.0, 10.0).lens(AppData::value),
+            )
+            .disabled_if(|data, _| data.disabled),
+        )
         .with_default_spacer()
-        .with_child(named_child(
-            "value (disabled):",
-            Stepper::new()
-                .with_range(0.0, 10.0)
-                .with_step(0.5)
-                .lens(AppData::value)
-                .disabled_if(|data, _| data.disabled),
-        ))
+        .with_child(
+            named_child(
+                "value (disabled):",
+                Stepper::new()
+                    .with_range(0.0, 10.0)
+                    .with_step(0.5)
+                    .lens(AppData::value),
+            )
+            .disabled_if(|data, _| data.disabled),
+        )
         .with_default_spacer()
-        .with_child(named_child(
-            "option (disabled):",
-            Checkbox::new("option")
-                .lens(AppData::option)
-                .disabled_if(|data, _| data.disabled),
-        ))
+        .with_child(
+            named_child(
+                "option (disabled):",
+                Checkbox::new("option").lens(AppData::option),
+            )
+            .disabled_if(|data, _| data.disabled),
+        )
         .with_default_spacer()
-        .with_child(named_child(
-            "option (disabled):",
-            Switch::new()
-                .lens(AppData::option)
+        .with_child(
+            named_child("option (disabled):", Switch::new().lens(AppData::option))
                 .disabled_if(|data, _| data.disabled),
-        ))
+        )
         .with_default_spacer()
         .with_child(
             Flex::row()

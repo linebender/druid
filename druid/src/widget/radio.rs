@@ -56,7 +56,7 @@ impl<T: Data> Radio<T> {
     pub fn new(label: impl Into<LabelText<T>>, variant: T) -> Radio<T> {
         Radio {
             variant,
-            child_label: Label::new(label).control_text(),
+            child_label: Label::new(label),
         }
     }
 }

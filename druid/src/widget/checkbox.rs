@@ -29,7 +29,7 @@ impl Checkbox {
     /// Create a new `Checkbox` with a text label.
     pub fn new(text: impl Into<LabelText<bool>>) -> Checkbox {
         Checkbox {
-            child_label: Label::new(text).control_text(),
+            child_label: Label::new(text),
         }
     }
 
