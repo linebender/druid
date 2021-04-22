@@ -215,6 +215,7 @@ druid = &quot;0.7.0&quot;
 // or to be on the bleeding edge:
 druid = { git = &quot;https://github.com/linebender/druid.git&quot; }
 </code></pre>
+<p>This book is written against the latest code on git, so some examples may not work with <code>0.7.0</code>.</p>
 <h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
 <p><em>this is outdated, and should be replaced with a walkthrough of getting a simple
 app built and running</em>.</p>
@@ -225,7 +226,7 @@ app built and running</em>.</p>
 </code></pre>
 <p>And then adding Druid as a dependency to Cargo.toml</p>
 <pre><code class="language-toml">[dependencies]
-druid = &quot;0.7.0&quot;
+druid = { git = &quot;https://github.com/linebender/druid.git&quot; }
 </code></pre>
 <p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
 <pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
@@ -240,7 +241,7 @@ fn main() -&gt; Result&lt;(), PlatformError&gt; {
     Ok(())
 }
 </code></pre>
-<p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code> that wraps build_ui function and launch it. Druid will use our <code>build_ui</code> function to build and rebuild our main window every time it needs to refresh. <code>build_ui</code> returns a tree of widgets. For now this tree consists of one simple label widget.</p>
+<p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code>, and launch it. We use <code>build_ui</code> to create a tree of widgets to pass to our <code>WindowDesc</code>. For now this tree consists of one simple label widget.</p>
 <p>This is a very simple example application and it's missing some important pieces. We will add these in the coming few paragraphs.</p>
 <h2><a class="header" href="#draw-more-widgets" id="draw-more-widgets">Draw more widgets</a></h2>
 <p>The first thing we could do to make our example application more interesting is to draw more than one widget. Unfortunately <code>WindowDesc::new</code> expects a function that returns only one Widget. We also need a way to tell Druid how to lay-out our widgets.
