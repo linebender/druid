@@ -23,6 +23,8 @@ use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key}
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
 
+#[deprecated(since = "0.8.0", note = "renamed to TEXT_COLOR")]
+pub const LABEL_COLOR: Key<Color> = TEXT_COLOR;
 pub const TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
 pub const DISABLED_TEXT_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.disabled_label_color");
