@@ -108,8 +108,6 @@ impl<T> Reconciler<T> {
                     child.push(MutationEl::Delete(1));
                     cbks.remove(&old.id);
                     *old_node = None;
-                } else {
-                    child.push(MutationEl::Skip(1));
                 }
             }
             VdomNode::Button(s, cb) => {

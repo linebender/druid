@@ -23,6 +23,7 @@ use druid_shell::{
 };
 
 mod element;
+mod elm;
 mod tree;
 mod vdom;
 mod window;
@@ -202,6 +203,34 @@ impl VdomCount {
     }
 }
 
+#[derive(Default)]
+struct ElmCountApp {
+    count: usize,
+}
+
+enum ElmCountMsg {
+    Increment,
+}
+
+impl elm::AppLogic for ElmCountApp {
+    type Msg = ElmCountMsg;
+
+    fn update(&mut self, msg: Self::Msg) {
+        match msg {
+            ElmCountMsg::Increment => self.count += 1,
+        }
+    }
+
+    fn view(&mut self) -> Box<dyn elm::Vdom<ElmCountMsg>> {
+        let button = elm::Button::new(format!("count: {}", self.count), |_action| {
+            ElmCountMsg::Increment
+        });
+        let mut column = elm::Column::new();
+        column.add_child(button);
+        Box::new(column)
+    }
+}
+
 fn main() {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
@@ -225,12 +254,18 @@ fn main() {
 
     //let mut app_logic = ManualMutationCount::default();
 
+    // Vdom implementation
+    /*
     let mut app_logic = VdomCount {
         // Note: this id is bogus. It's probably not needed.
         // TODO: change reconciler to not need root id
         reconciler: Reconciler::new(Id::next()),
         state: VdomCountState::default(),
     };
+    */
+
+    let elm_app_logic = ElmCountApp::default();
+    let mut app_logic = elm::ElmApp::new(elm_app_logic);
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
