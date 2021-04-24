@@ -35,6 +35,10 @@ pub struct Split<T> {
     /// if the mouse moves faster than the layout and temporarily gets outside of the
     /// bar area while still being dragged.
     is_bar_hover: bool,
+    /// Offset from the split point (bar center) to the actual mouse position when the
+    /// bar was clicked. This is used to ensure a click without mouse move is a no-op,
+    /// instead of re-centering the bar on the mouse.
+    click_offset: f64,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -59,6 +63,7 @@ impl<T> Split<T> {
             solid: false,
             draggable: false,
             is_bar_hover: false,
+            click_offset: 0.0,
             child1: WidgetPod::new(child1).boxed(),
             child2: WidgetPod::new(child2).boxed(),
         }
@@ -153,6 +158,23 @@ impl<T> Split<T> {
     #[inline]
     fn bar_padding(&self) -> f64 {
         (self.bar_area() - self.bar_size) / 2.0
+    }
+
+    /// Returns the position of the split point (split bar center).
+    fn bar_position(&self, size: Size) -> f64 {
+        let bar_area = self.bar_area();
+        match self.split_axis {
+            Axis::Horizontal => {
+                let reduced_width = size.width - bar_area;
+                let edge1 = (reduced_width * self.split_point_effective).floor();
+                edge1 + bar_area / 2.0
+            }
+            Axis::Vertical => {
+                let reduced_height = size.height - bar_area;
+                let edge1 = (reduced_height * self.split_point_effective).floor();
+                edge1 + bar_area / 2.0
+            }
+        }
     }
 
     /// Returns the location of the edges of the splitter bar area,
@@ -290,38 +312,63 @@ impl<T: Data> Widget<T> for Split<T> {
             match event {
                 Event::MouseDown(mouse) => {
                     if mouse.button.is_left() && self.bar_hit_test(ctx.size(), mouse.pos) {
-                        ctx.set_active(true);
-                        self.is_bar_hover = true;
                         ctx.set_handled();
-                    }
-                }
-                Event::MouseUp(mouse) => {
-                    if mouse.button.is_left() && ctx.is_active() {
-                        ctx.set_active(false);
-                        self.update_split_point(ctx.size(), mouse.pos);
-                        self.is_bar_hover = false;
-                        ctx.request_paint();
-                    }
-                }
-                Event::MouseMove(mouse) => {
-                    if ctx.is_active() {
-                        self.update_split_point(ctx.size(), mouse.pos);
-                        ctx.request_layout();
-                    }
-
-                    let hover = ctx.is_active()
-                        || (ctx.is_hot() && self.bar_hit_test(ctx.size(), mouse.pos));
-                    if hover != self.is_bar_hover {
-                        if hover {
+                        ctx.set_active(true);
+                        // Save the delta between the mouse click position and the split point
+                        self.click_offset = match self.split_axis {
+                            Axis::Horizontal => mouse.pos.x,
+                            Axis::Vertical => mouse.pos.y,
+                        } - self.bar_position(ctx.size());
+                        // If not already hovering, force and change cursor appropriately
+                        if !self.is_bar_hover {
+                            self.is_bar_hover = true;
                             match self.split_axis {
                                 Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
                                 Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
                             };
-                        } else {
-                            ctx.clear_cursor();
                         }
-                        self.is_bar_hover = hover;
-                        ctx.request_paint();
+                    }
+                }
+                Event::MouseUp(mouse) => {
+                    if mouse.button.is_left() && ctx.is_active() {
+                        ctx.set_handled();
+                        ctx.set_active(false);
+                        // Dependending on where the mouse cursor is when the button is released,
+                        // the cursor might or might not need to be changed
+                        self.is_bar_hover =
+                            ctx.is_hot() && self.bar_hit_test(ctx.size(), mouse.pos);
+                        if !self.is_bar_hover {
+                            ctx.clear_cursor()
+                        }
+                    }
+                }
+                Event::MouseMove(mouse) => {
+                    if ctx.is_active() {
+                        // If active, assume always hover/hot
+                        let effective_pos = match self.split_axis {
+                            Axis::Horizontal => {
+                                Point::new(mouse.pos.x - self.click_offset, mouse.pos.y)
+                            }
+                            Axis::Vertical => {
+                                Point::new(mouse.pos.x, mouse.pos.y - self.click_offset)
+                            }
+                        };
+                        self.update_split_point(ctx.size(), effective_pos);
+                        ctx.request_layout();
+                    } else {
+                        // If not active, set cursor when hovering state changes
+                        let hover = ctx.is_hot() && self.bar_hit_test(ctx.size(), mouse.pos);
+                        if hover != self.is_bar_hover {
+                            self.is_bar_hover = hover;
+                            if hover {
+                                match self.split_axis {
+                                    Axis::Horizontal => ctx.set_cursor(&Cursor::ResizeLeftRight),
+                                    Axis::Vertical => ctx.set_cursor(&Cursor::ResizeUpDown),
+                                };
+                            } else {
+                                ctx.clear_cursor();
+                            }
+                        }
                     }
                 }
                 _ => {}
