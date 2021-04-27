@@ -34,6 +34,7 @@ You can find its changes [documented below](#070---2021-01-01).
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
+- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -459,6 +460,7 @@ Last release without a changelog :(
 [@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
 [@RichardPoole42]: https://github.com/RichardPoole42
+[@r-ml]: https://github.com/r-ml
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -687,6 +689,7 @@ Last release without a changelog :(
 [#1715]: https://github.com/linebender/druid/pull/1715
 [#1724]: https://github.com/linebender/druid/pull/1724
 [#1730]: https://github.com/linebender/druid/pull/1730
+[#1743]: https://github.com/linebender/druid/pull/1743
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
