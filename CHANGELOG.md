@@ -34,6 +34,8 @@ You can find its changes [documented below](#070---2021-01-01).
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
+- GTK: added support for `content_insets` ([#1722] by [@jneem])
+
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -685,6 +687,7 @@ Last release without a changelog :(
 [#1702]: https://github.com/linebender/druid/pull/1702
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
+[#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
 [#1730]: https://github.com/linebender/druid/pull/1730
 
