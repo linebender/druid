@@ -222,6 +222,32 @@ impl<T: Data> Window<T> {
         }
     }
 
+    fn layout_if_needed(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
+        /*
+         * If a Widget is newly created it would not have an initial layout until
+         * paint time whichs bad because we might send more events down the tree
+         * before then. This is bad because a widget is not supposed to recieve a
+         * WidgetAdded event and then have layout before recieving any other events.
+         * Avoid this by calling this function after `post_event_processing` has
+         * sent the WidgetAdded event but before any other events could be sent.
+         *
+         * NOTE: Not called by lifecycle because lifecycle and layout can end up
+         * calling each other recursively. This is fine because Druid makes no
+         * guarantees about getting various lifecycle events without having been
+         * layed out.
+         */
+        if widget_state.needs_layout {
+            self.invalidate_and_finalize();
+            self.layout(queue, data, env);
+        }
+    }
+
     pub(crate) fn event(
         &mut self,
         queue: &mut CommandQueue,
@@ -313,6 +339,7 @@ impl<T: Data> Window<T> {
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);
+        self.layout_if_needed(&mut widget_state, queue, data, env);
 
         is_handled
     }
@@ -366,6 +393,7 @@ impl<T: Data> Window<T> {
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);
+        self.layout_if_needed(&mut widget_state, queue, data, env);
     }
 
     pub(crate) fn invalidate_and_finalize(&mut self) {
