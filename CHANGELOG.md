@@ -69,6 +69,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
+- Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 
 ### Examples
 
@@ -457,6 +458,7 @@ Last release without a changelog :(
 [@xarvic]: https://github.com/xarvic
 [@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
+[@RichardPoole42]: https://github.com/RichardPoole42
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -684,6 +686,7 @@ Last release without a changelog :(
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
 [#1724]: https://github.com/linebender/druid/pull/1724
+[#1730]: https://github.com/linebender/druid/pull/1730
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
