@@ -232,7 +232,15 @@ impl WindowHandle {
 
     /// Returns the insets of the window content from its position and size in [display points].
     ///
-    /// This is to account for any window system provided chrome, eg. title bars.
+    /// This is to account for any window system provided chrome, e.g. title bars. For example, if
+    /// you want your window to have room for contents of size `contents`, then you should call
+    /// [`WindowHandle::get_size`] with an argument of `(contents.to_rect() + insets).size()`,
+    /// where `insets` is the return value of this function.
+    ///
+    /// The details of this function are somewhat platform-dependent. For example, on Windows both
+    /// the insets and the window size include the space taken up by the title bar and window
+    /// decorations; on GTK neither the insets nor the window size include the title bar or window
+    /// decorations.
     ///
     /// [display points]: crate::Scale
     pub fn content_insets(&self) -> Insets {
