@@ -34,6 +34,9 @@ You can find its changes [documented below](#070---2021-01-01).
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
+- GTK: added support for `content_insets` ([#1722] by [@jneem])
+- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
+
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -69,6 +72,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
+- Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 
 ### Examples
 
@@ -457,6 +461,8 @@ Last release without a changelog :(
 [@xarvic]: https://github.com/xarvic
 [@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
+[@RichardPoole42]: https://github.com/RichardPoole42
+[@r-ml]: https://github.com/r-ml
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -683,7 +689,10 @@ Last release without a changelog :(
 [#1702]: https://github.com/linebender/druid/pull/1702
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
+[#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
+[#1730]: https://github.com/linebender/druid/pull/1730
+[#1743]: https://github.com/linebender/druid/pull/1743
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
