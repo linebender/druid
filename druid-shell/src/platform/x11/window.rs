@@ -800,7 +800,12 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        borrow_mut!(self.state)?.invalid.add_rect(rect.expand());
+        let mut state = borrow_mut!(self.state)?;
+        let scale = state.scale;
+        // We prefer to invalidate an integer number of pixels.
+        state
+            .invalid
+            .add_rect(rect.to_px(scale).expand().to_dp(scale));
         Ok(())
     }
 
