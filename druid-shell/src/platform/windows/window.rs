@@ -588,18 +588,20 @@ impl MyWndProc {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
                     set_style(hwnd, resizable, self.has_titlebar());
                 }
-                DeferredOp::SetWindowState(val) => unsafe {
-                    if self.handle.borrow().is_focusable() {
-                        let s = match val {
+                DeferredOp::SetWindowState(val) => {
+                    let show = if self.handle.borrow().is_focusable() {
+                        match val {
                             window::WindowState::Maximized => SW_MAXIMIZE,
                             window::WindowState::Minimized => SW_MINIMIZE,
                             window::WindowState::Restored => SW_RESTORE,
-                        };
-                        ShowWindow(hwnd, s);
+                        }
                     } else {
-                        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+                        SW_SHOWNOACTIVATE
+                    };
+                    unsafe {
+                        ShowWindow(hwnd, show);
                     }
-                },
+                }
                 DeferredOp::SaveAs(options, token) => {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
@@ -1729,17 +1731,17 @@ impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            unsafe {
-                if w.is_focusable {
-                    let show = match self.get_window_state() {
-                        window::WindowState::Maximized => SW_MAXIMIZE,
-                        window::WindowState::Minimized => SW_MINIMIZE,
-                        _ => SW_SHOWNORMAL,
-                    };
-                    ShowWindow(hwnd, show);
-                } else {
-                    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            let show = if w.is_focusable {
+                match self.get_window_state() {
+                    window::WindowState::Maximized => SW_MAXIMIZE,
+                    window::WindowState::Minimized => SW_MINIMIZE,
+                    _ => SW_SHOWNORMAL,
                 }
+            } else {
+                SW_SHOWNOACTIVATE
+            };
+            unsafe {
+                ShowWindow(hwnd, show);
                 UpdateWindow(hwnd);
             }
         }
