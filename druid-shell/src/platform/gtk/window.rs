@@ -875,9 +875,28 @@ impl WindowHandle {
         }
     }
 
+    /// The GTK implementation of content_insets differs from, e.g., the Windows one in that it
+    /// doesn't try to account for window decorations. Depending on the platform, GTK might not
+    /// even be aware of the size of the window decorations. And anyway, GTK's `Window::resize`
+    /// function [tries not to include] the window decorations, so it makes sense not to include
+    /// them here either.
+    ///
+    /// [tries not to include]: https://developer.gnome.org/gtk3/stable/GtkWidget.html#geometry-management
     pub fn content_insets(&self) -> Insets {
-        warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
-        Insets::ZERO
+        if let Some(state) = self.state.upgrade() {
+            let scale = state.scale.get();
+            let (width_px, height_px) = state.window.get_size();
+            let alloc_px = state.drawing_area.get_allocation();
+            let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
+            let alloc = Rect::from_origin_size(
+                (alloc_px.x as f64, alloc_px.y as f64),
+                (alloc_px.width as f64, alloc_px.height as f64),
+            )
+            .to_dp(scale);
+            window.to_rect() - alloc
+        } else {
+            Insets::ZERO
+        }
     }
 
     pub fn set_level(&self, level: WindowLevel) {
