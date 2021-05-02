@@ -18,154 +18,95 @@
 
 use crate::piet::Color;
 
-use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key};
+use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key, key};
 
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
-    Key::new("org.linebender.druid.theme.window_background_color");
+       key!("org.linebender.druid.theme.window_background_color", Color::rgb8(0x29, 0x29, 0x29));
 
-pub const LABEL_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
-pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.placeholder_color");
+pub const LABEL_COLOR: Key<Color> = key!("org.linebender.druid.theme.label_color", Color::rgb8(0xf0, 0xf0, 0xea));
+pub const PLACEHOLDER_COLOR: Key<Color> = key!("org.linebender.druid.theme.placeholder_color", Color::rgb8(0x80, 0x80, 0x80));
 
-pub const PRIMARY_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.primary_light");
-pub const PRIMARY_DARK: Key<Color> = Key::new("org.linebender.druid.theme.primary_dark");
+pub const PRIMARY_LIGHT: Key<Color> = key!("org.linebender.druid.theme.primary_light", Color::rgb8(0x5c, 0xc4, 0xff));
+pub const PRIMARY_DARK: Key<Color> = key!("org.linebender.druid.theme.primary_dark", Color::rgb8(0x00, 0x8d, 0xdd));
 pub const PROGRESS_BAR_RADIUS: Key<f64> =
-    Key::new("org.linebender.druid.theme.progress_bar_radius");
-pub const BACKGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.background_light");
-pub const BACKGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.background_dark");
-pub const FOREGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.foreground_light");
-pub const FOREGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.foreground_dark");
-pub const BUTTON_DARK: Key<Color> = Key::new("org.linebender.druid.theme.button_dark");
-pub const BUTTON_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.button_light");
-pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.button_radius");
+    key!("org.linebender.druid.theme.progress_bar_radius", 4.);
+pub const BACKGROUND_LIGHT: Key<Color> = key!("org.linebender.druid.theme.background_light", Color::rgb8(0x3a, 0x3a, 0x3a));
+pub const BACKGROUND_DARK: Key<Color> = key!("org.linebender.druid.theme.background_dark", Color::rgb8(0x31, 0x31, 0x31));
+pub const FOREGROUND_LIGHT: Key<Color> = key!("org.linebender.druid.theme.foreground_light", Color::rgb8(0xf9, 0xf9, 0xf9));
+pub const FOREGROUND_DARK: Key<Color> = key!("org.linebender.druid.theme.foreground_dark", Color::rgb8(0xbf, 0xbf, 0xbf));
+pub const BUTTON_DARK: Key<Color> = key!("org.linebender.druid.theme.button_dark", Color::BLACK);
+pub const BUTTON_LIGHT: Key<Color> = key!("org.linebender.druid.theme.button_light", Color::rgb8(0x21, 0x21, 0x21));
+pub const BUTTON_BORDER_RADIUS: Key<f64> = key!("org.linebender.druid.theme.button_radius", 4.);
 pub const BUTTON_BORDER_WIDTH: Key<f64> =
-    Key::new("org.linebender.druid.theme.button_border_width");
-pub const BORDER_DARK: Key<Color> = Key::new("org.linebender.druid.theme.border_dark");
-pub const BORDER_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.border_light");
+    key!("org.linebender.druid.theme.button_border_width", 2.);
+pub const BORDER_DARK: Key<Color> = key!("org.linebender.druid.theme.border_dark", Color::rgb8(0x3a, 0x3a, 0x3a));
+pub const BORDER_LIGHT: Key<Color> = key!("org.linebender.druid.theme.border_light", Color::rgb8(0xa1, 0xa1, 0xa1));
 #[deprecated(since = "0.8.0", note = "use SELECTED_TEXT_BACKGROUND_COLOR instead")]
 pub const SELECTION_COLOR: Key<Color> = SELECTED_TEXT_BACKGROUND_COLOR;
 pub const SELECTED_TEXT_BACKGROUND_COLOR: Key<Color> =
-    Key::new("org.linebender.druid.theme.selection_color");
+    key!("org.linebender.druid.theme.selection_color", Color::rgb8(0x43, 0x70, 0xA8));
 pub const SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR: Key<Color> =
-    Key::new("org.linebender.druid.theme.selection_color_inactive");
+    key!("org.linebender.druid.theme.selection_color_inactive", Color::grey8(0x74));
 pub const SELECTION_TEXT_COLOR: Key<Color> =
-    Key::new("org.linebender.druid.theme.selection_text_color");
-pub const CURSOR_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.cursor_color");
+    key!("org.linebender.druid.theme.selection_text_color", Color::rgb8(0x00, 0x00, 0x00));
+pub const CURSOR_COLOR: Key<Color> = key!("org.linebender.druid.theme.cursor_color", Color::WHITE);
 
-pub const TEXT_SIZE_NORMAL: Key<f64> = Key::new("org.linebender.druid.theme.text_size_normal");
-pub const TEXT_SIZE_LARGE: Key<f64> = Key::new("org.linebender.druid.theme.text_size_large");
+pub const TEXT_SIZE_NORMAL: Key<f64> = key!("org.linebender.druid.theme.text_size_normal", 15.0);
+pub const TEXT_SIZE_LARGE: Key<f64> = key!("org.linebender.druid.theme.text_size_large", 24.0);
 pub const BASIC_WIDGET_HEIGHT: Key<f64> =
-    Key::new("org.linebender.druid.theme.basic_widget_height");
+    key!("org.linebender.druid.theme.basic_widget_height", 18.0);
 
 /// The default font for labels, buttons, text boxes, and other UI elements.
-pub const UI_FONT: Key<FontDescriptor> = Key::new("org.linebender.druid.theme.ui-font");
+pub const UI_FONT: Key<FontDescriptor> = key!("org.linebender.druid.theme.ui-font", FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(15.0));
 
 /// A bold version of the default UI font.
-pub const UI_FONT_BOLD: Key<FontDescriptor> = Key::new("org.linebender.druid.theme.ui-font-bold");
+pub const UI_FONT_BOLD: Key<FontDescriptor> = key!("org.linebender.druid.theme.ui-font-bold", FontDescriptor::new(FontFamily::SYSTEM_UI)
+                .with_weight(FontWeight::BOLD)
+                .with_size(15.0));
 
 /// An Italic version of the default UI font.
 pub const UI_FONT_ITALIC: Key<FontDescriptor> =
-    Key::new("org.linebender.druid.theme.ui-font-italic");
+    key!("org.linebender.druid.theme.ui-font-italic", FontDescriptor::new(FontFamily::SYSTEM_UI)
+                .with_style(FontStyle::Italic)
+                .with_size(15.0));
 
 /// The default minimum width for a 'wide' widget; a textbox, slider, progress bar, etc.
-pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("org.linebender.druid.theme.long-widget-width");
+pub const WIDE_WIDGET_WIDTH: Key<f64> = key!("org.linebender.druid.theme.long-widget-width", 100.);
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> =
-    Key::new("org.linebender.druid.theme.bordered_widget_height");
+    key!("org.linebender.druid.theme.bordered_widget_height", 24.0);
 
 pub const TEXTBOX_BORDER_RADIUS: Key<f64> =
-    Key::new("org.linebender.druid.theme.textbox_border_radius");
+    key!("org.linebender.druid.theme.textbox_border_radius", 2.);
 pub const TEXTBOX_BORDER_WIDTH: Key<f64> =
-    Key::new("org.linebender.druid.theme.textbox_border_width");
-pub const TEXTBOX_INSETS: Key<Insets> = Key::new("org.linebender.druid.theme.textbox_insets");
+    key!("org.linebender.druid.theme.textbox_border_width", 1.);
+pub const TEXTBOX_INSETS: Key<Insets> = key!("org.linebender.druid.theme.textbox_insets", Insets::new(4.0, 4.0, 4.0, 4.0));
 
 /// The default horizontal spacing between widgets.
 pub const WIDGET_PADDING_HORIZONTAL: Key<f64> =
-    Key::new("org.linebender.druid.theme.widget-padding-h");
+    key!("org.linebender.druid.theme.widget-padding-h", 8.0);
 /// The default vertical spacing between widgets.
 pub const WIDGET_PADDING_VERTICAL: Key<f64> =
-    Key::new("org.linebender.druid.theme.widget-padding-v");
+    key!("org.linebender.druid.theme.widget-padding-v", 10.0);
 /// The default internal (horizontal) padding for visually distinct components
 /// of a widget; for instance between a checkbox and its label.
 pub const WIDGET_CONTROL_COMPONENT_PADDING: Key<f64> =
-    Key::new("org.linebender.druid.theme.widget-padding-control-label");
+    key!("org.linebender.druid.theme.widget-padding-control-label", 4.0);
 
-pub const SCROLLBAR_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.scrollbar_color");
+pub const SCROLLBAR_COLOR: Key<Color> = key!("org.linebender.druid.theme.scrollbar_color", Color::rgb8(0xff, 0xff, 0xff));
 pub const SCROLLBAR_BORDER_COLOR: Key<Color> =
-    Key::new("org.linebender.druid.theme.scrollbar_border_color");
+    key!("org.linebender.druid.theme.scrollbar_border_color", Color::rgb8(0x77, 0x77, 0x77));
 pub const SCROLLBAR_MAX_OPACITY: Key<f64> =
-    Key::new("org.linebender.druid.theme.scrollbar_max_opacity");
+    key!("org.linebender.druid.theme.scrollbar_max_opacity", 0.7);
 pub const SCROLLBAR_FADE_DELAY: Key<u64> =
-    Key::new("org.linebender.druid.theme.scrollbar_fade_time");
-pub const SCROLLBAR_WIDTH: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_width");
-pub const SCROLLBAR_PAD: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_pad");
-pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_radius");
+    key!("org.linebender.druid.theme.scrollbar_fade_time", 1500u64);
+pub const SCROLLBAR_WIDTH: Key<f64> = key!("org.linebender.druid.theme.scrollbar_width", 8.);
+pub const SCROLLBAR_PAD: Key<f64> = key!("org.linebender.druid.theme.scrollbar_pad", 2.);
+pub const SCROLLBAR_RADIUS: Key<f64> = key!("org.linebender.druid.theme.scrollbar_radius", 5.);
 pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
-    Key::new("org.linebender.druid.theme.scrollbar_edge_width");
+    key!("org.linebender.druid.theme.scrollbar_edge_width", 1.);
 /// Minimum length for any scrollbar to be when measured on that
 /// scrollbar's primary axis.
-pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollbar_min_size");
-
-/// An initial theme.
-pub(crate) fn add_to_env(env: Env) -> Env {
-    env.adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
-        .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
-        .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
-        .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
-        .adding(PRIMARY_DARK, Color::rgb8(0x00, 0x8d, 0xdd))
-        .adding(PROGRESS_BAR_RADIUS, 4.)
-        .adding(BACKGROUND_LIGHT, Color::rgb8(0x3a, 0x3a, 0x3a))
-        .adding(BACKGROUND_DARK, Color::rgb8(0x31, 0x31, 0x31))
-        .adding(FOREGROUND_LIGHT, Color::rgb8(0xf9, 0xf9, 0xf9))
-        .adding(FOREGROUND_DARK, Color::rgb8(0xbf, 0xbf, 0xbf))
-        .adding(BUTTON_DARK, Color::BLACK)
-        .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
-        .adding(BUTTON_BORDER_RADIUS, 4.)
-        .adding(BUTTON_BORDER_WIDTH, 2.)
-        .adding(BORDER_DARK, Color::rgb8(0x3a, 0x3a, 0x3a))
-        .adding(BORDER_LIGHT, Color::rgb8(0xa1, 0xa1, 0xa1))
-        .adding(
-            SELECTED_TEXT_BACKGROUND_COLOR,
-            Color::rgb8(0x43, 0x70, 0xA8),
-        )
-        .adding(SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR, Color::grey8(0x74))
-        .adding(SELECTION_TEXT_COLOR, Color::rgb8(0x00, 0x00, 0x00))
-        .adding(CURSOR_COLOR, Color::WHITE)
-        .adding(TEXT_SIZE_NORMAL, 15.0)
-        .adding(TEXT_SIZE_LARGE, 24.0)
-        .adding(BASIC_WIDGET_HEIGHT, 18.0)
-        .adding(WIDE_WIDGET_WIDTH, 100.)
-        .adding(BORDERED_WIDGET_HEIGHT, 24.0)
-        .adding(TEXTBOX_BORDER_RADIUS, 2.)
-        .adding(TEXTBOX_BORDER_WIDTH, 1.)
-        .adding(TEXTBOX_INSETS, Insets::new(4.0, 4.0, 4.0, 4.0))
-        .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
-        .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
-        .adding(SCROLLBAR_MAX_OPACITY, 0.7)
-        .adding(SCROLLBAR_FADE_DELAY, 1500u64)
-        .adding(SCROLLBAR_WIDTH, 8.)
-        .adding(SCROLLBAR_PAD, 2.)
-        .adding(SCROLLBAR_MIN_SIZE, 45.)
-        .adding(SCROLLBAR_RADIUS, 5.)
-        .adding(SCROLLBAR_EDGE_WIDTH, 1.)
-        .adding(WIDGET_PADDING_VERTICAL, 10.0)
-        .adding(WIDGET_PADDING_HORIZONTAL, 8.0)
-        .adding(WIDGET_CONTROL_COMPONENT_PADDING, 4.0)
-        .adding(
-            UI_FONT,
-            FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(15.0),
-        )
-        .adding(
-            UI_FONT_BOLD,
-            FontDescriptor::new(FontFamily::SYSTEM_UI)
-                .with_weight(FontWeight::BOLD)
-                .with_size(15.0),
-        )
-        .adding(
-            UI_FONT_ITALIC,
-            FontDescriptor::new(FontFamily::SYSTEM_UI)
-                .with_style(FontStyle::Italic)
-                .with_size(15.0),
-        )
-}
+pub const SCROLLBAR_MIN_SIZE: Key<f64> = key!("org.linebender.theme.scrollbar_min_size", 45.);
 
 #[deprecated(since = "0.7.0", note = "use Env::default() instead")]
 pub fn init() -> Env {

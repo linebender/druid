@@ -114,15 +114,17 @@ pub enum Value {
 }
 // ANCHOR_END: value_type
 
-pub struct DefaultValue(&'static str, Value);
+pub struct DefaultValue(pub &'static str, pub Value);
 
 inventory::collect!(DefaultValue);
 
 #[macro_export]
 macro_rules! key {
     ($name:literal, $default:expr) => {
-        inventory::submit!(DefaultValue($name, $default.clone().into()));
-        Key::new($name)
+        {
+            ::inventory::submit!(::druid::env::DefaultValue($name, $default.clone().into()));
+            ::druid::env::Key::new($name)
+        }
     }
 }
 
@@ -219,7 +221,7 @@ impl Env {
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.built-in.debug-paint");
+    pub(crate) const DEBUG_PAINT: Key<bool> = key!("org.linebender.druid.built-in.debug-paint", false);
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
@@ -227,7 +229,7 @@ impl Env {
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
     pub(crate) const DEBUG_WIDGET_ID: Key<bool> =
-        Key::new("org.linebender.druid.built-in.debug-widget-id");
+        key!("org.linebender.druid.built-in.debug-widget-id", false);
 
     /// A key used to tell widgets to print additional debug information.
     ///
@@ -250,7 +252,7 @@ impl Env {
     /// ```
     ///
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
-    pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
+    pub const DEBUG_WIDGET: Key<bool> = key!("org.linebender.druid.built-in.debug-widget", false);
 
     /// Gets a value from the environment, expecting it to be present.
     ///
