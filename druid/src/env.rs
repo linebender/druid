@@ -142,6 +142,7 @@ macro_rules! key {
     }};
 }
 
+/// Check if a value matches a key.
 pub const fn type_check<T>(_: &Key<T>, _: &T) {}
 
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].

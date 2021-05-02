@@ -157,7 +157,7 @@ mod contexts;
 mod core;
 mod data;
 mod dialog;
-mod env;
+pub mod env;
 mod event;
 mod ext_event;
 mod localization;
