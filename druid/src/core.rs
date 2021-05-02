@@ -912,6 +912,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // we may send an extra event after the actual event
         let mut extra_event = None;
 
+        let had_focus = self.state.has_focus;
+
         let recurse = match event {
             LifeCycle::Internal(internal) => match internal {
                 InternalLifeCycle::RouteWidgetAdded => {
@@ -1035,6 +1037,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             LifeCycle::BuildFocusChain => {
                 if self.state.update_focus_chain {
+                    // Replace has_focus to check if the value changed in the meantime
+                    let is_focused = ctx.state.focus_widget == Some(self.state.id);
+                    self.state.has_focus = is_focused;
+
                     self.state.focus_chain.clear();
                     true
                 } else {
@@ -1082,6 +1088,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             // Update focus-chain of our parent
             LifeCycle::BuildFocusChain => {
                 self.state.update_focus_chain = false;
+
+                // had_focus is the old focus value. state.has_focus was repaced with ctx.is_focused().
+                // Therefore if had_focus is true but state.has_focus is false then the widget which is
+                // currently focused is not part of the functional tree anymore
+                // (Lifecycle::BuildFocusChain.should_propagate_to_hidden() is false!) and should
+                // resign the focus.
+                if had_focus && !self.state.has_focus {
+                    self.state.request_focus = Some(FocusChange::Resign);
+                }
+                self.state.has_focus = had_focus;
+
                 if !self.state.is_disabled() {
                     ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
                 }

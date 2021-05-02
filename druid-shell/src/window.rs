@@ -216,26 +216,38 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// Sets the position of the window in [display points](crate::Scale), relative to the origin of the
     /// virtual screen.
     pub fn set_position(&self, position: impl Into<Point>) {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position of the top left corner of the window in [pixels](crate::Scale), relative to the origin of the
-    /// virtual screen.
+    /// Returns the position of the top left corner of the window in
+    /// [display points], relative to the origin of the virtual screen.
+    ///
+    /// [display points]: crate::Scale
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
 
-    /// Returns the insets of the window content from its position and size in [pixels](crate::Scale).
+    /// Returns the insets of the window content from its position and size in [display points].
     ///
-    /// This is to account for any window system provided chrome, eg. title bars.
+    /// This is to account for any window system provided chrome, e.g. title bars. For example, if
+    /// you want your window to have room for contents of size `contents`, then you should call
+    /// [`WindowHandle::get_size`] with an argument of `(contents.to_rect() + insets).size()`,
+    /// where `insets` is the return value of this function.
+    ///
+    /// The details of this function are somewhat platform-dependent. For example, on Windows both
+    /// the insets and the window size include the space taken up by the title bar and window
+    /// decorations; on GTK neither the insets nor the window size include the title bar or window
+    /// decorations.
+    ///
+    /// [display points]: crate::Scale
     pub fn content_insets(&self) -> Insets {
         self.0.content_insets()
     }
 
-    /// Set the window's size in [display points](crate::Scale).
+    /// Set the window's size in [display points].
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -243,11 +255,15 @@ impl WindowHandle {
     /// platform might choose a different size depending on its DPI or other platform-dependent
     /// configuration.  To know the actual size of the window you should handle the
     /// [`WinHandler::size`] method.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_size(&self, size: impl Into<Size>) {
         self.0.set_size(size.into())
     }
 
-    /// Gets the window size, in [pixels](crate::Scale).
+    /// Gets the window size, in [display points].
+    ///
+    /// [display points]: crate::Scale
     pub fn get_size(&self) -> Size {
         self.0.get_size()
     }
@@ -430,7 +446,7 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial drawing area size in [display points](crate::Scale).
+    /// Set the window's initial drawing area size in [display points].
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -438,16 +454,20 @@ impl WindowBuilder {
     /// platform might choose a different size depending on its DPI or other platform-dependent
     /// configuration.  To know the actual size of the window you should handle the
     /// [`WinHandler::size`] method.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's minimum drawing area size in [display points](crate::Scale).
+    /// Set the window's minimum drawing area size in [display points].
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
     /// This should be considered a request to the platform to set the minimum size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -467,8 +487,10 @@ impl WindowBuilder {
         self.0.set_transparent(transparent)
     }
 
-    /// Sets the initial window position in [pixels](crate::Scale), relative to the origin of the
+    /// Sets the initial window position in [display points], relative to the origin of the
     /// virtual screen.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
