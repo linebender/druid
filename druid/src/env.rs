@@ -114,6 +114,18 @@ pub enum Value {
 }
 // ANCHOR_END: value_type
 
+pub struct DefaultValue(&'static str, Value);
+
+inventory::collect!(DefaultValue);
+
+#[macro_export]
+macro_rules! key {
+    ($name:literal, $default:expr) => {
+        inventory::submit!(DefaultValue($name, $default.clone().into()));
+        Key::new($name)
+    }
+}
+
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
 ///
 /// This is a way to allow widgets to interchangeably use either a specific
@@ -515,18 +527,23 @@ impl Env {
     pub(crate) fn with_i10n(resources: Vec<String>, base_dir: &str) -> Self {
         let l10n = L10nManager::new(resources, base_dir);
 
+        let mut default_value = HashMap::new();
+
+        for DefaultValue(name, value) in inventory::iter::<DefaultValue> {
+            let old = default_value.insert((*name).into(), value.to_owned());
+            if old.is_some() {
+                eprintln!("Duplicate definition for env key \"{}\"!", name);
+                panic!()
+            }
+        }
+
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
-            map: HashMap::new(),
+            map: default_value,
             debug_colors: DEBUG_COLOR.into(),
         };
 
-        let env = Env(Arc::new(inner))
-            .adding(Env::DEBUG_PAINT, false)
-            .adding(Env::DEBUG_WIDGET_ID, false)
-            .adding(Env::DEBUG_WIDGET, false);
-
-        crate::theme::add_to_env(env)
+        Env(Arc::new(inner))
     }
 }
 
