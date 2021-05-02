@@ -114,6 +114,7 @@ pub enum Value {
 }
 // ANCHOR_END: value_type
 
+/// A type to collect default values for env-keys using the key! macro.
 pub struct DefaultValue(pub &'static str, pub Value);
 
 inventory::collect!(DefaultValue);
