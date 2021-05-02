@@ -3,13 +3,15 @@
 The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
 You can find its changes [documented below](#070---2021-01-01).
 
-# Unreleased
+## Unreleased
 
 ### Highlights
+
 - International text input support (IME) on macOS.
 - Rich text and complex script support on Linux.
 
 ### Added
+
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
@@ -56,6 +58,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Removed
 
 ### Fixed
+
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
@@ -63,6 +66,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
 - Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
+- Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
 
 ### Visual
 
@@ -463,6 +467,7 @@ Last release without a changelog :(
 [@ccqpein]: https://github.com/ccqpein
 [@RichardPoole42]: https://github.com/RichardPoole42
 [@r-ml]: https://github.com/r-ml
+[@djeedai]: https://github.com/djeedai
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -692,6 +697,7 @@ Last release without a changelog :(
 [#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
 [#1730]: https://github.com/linebender/druid/pull/1730
+[#1737]: https://github.com/linebender/druid/pull/1737
 [#1743]: https://github.com/linebender/druid/pull/1743
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
