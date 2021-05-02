@@ -119,7 +119,7 @@ pub struct DefaultValue(pub &'static str, pub Value);
 inventory::collect!(DefaultValue);
 
 /// A macro to create a new env-key and insert its default value into the every env.
-/// The
+///
 /// #Example
 /// ```
 /// use druid::{Env, Key, key};
