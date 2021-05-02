@@ -131,16 +131,15 @@ inventory::collect!(DefaultValue);
 /// ```
 #[macro_export]
 macro_rules! key {
-    ($name:literal, $default:expr) => {
-        {
-            let key = ::druid::env::Key::new($name);
-            let value = $default;
-            ::druid::env::type_check(&key, &value);
-            ::std::mem::forget(value);
-            ::inventory::submit!(::druid::env::DefaultValue($name, $default.into()));
-            key
-        }
-    }
+    ($name:literal, $default:expr) => {{
+        let key = ::druid::env::Key::new($name);
+        let value = $default;
+        ::druid::env::type_check(&key, &value);
+        #[allow(clippy::all)]
+        ::std::mem::forget(value);
+        ::inventory::submit!(::druid::env::DefaultValue($name, $default.into()));
+        key
+    }};
 }
 
 pub const fn type_check<T>(_: &Key<T>, _: &T) {}
@@ -238,7 +237,8 @@ impl Env {
     /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
     ///
     /// [`WidgetExt`]: trait.WidgetExt.html
-    pub(crate) const DEBUG_PAINT: Key<bool> = key!("org.linebender.druid.built-in.debug-paint", false);
+    pub(crate) const DEBUG_PAINT: Key<bool> =
+        key!("org.linebender.druid.built-in.debug-paint", false);
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
