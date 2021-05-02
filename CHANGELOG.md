@@ -285,6 +285,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
+- Link to the widget_nursery in README ([#1754] by [@xarvic])
 
 ### Changed
 
@@ -672,6 +673,7 @@ Last release without a changelog :(
 [#1691]: https://github.com/linebender/druid/pull/1691
 [#1693]: https://github.com/linebender/druid/pull/1693
 [#1698]: https://github.com/linebender/druid/pull/1698
+[#1754]: https://github.com/linebender/druid/pull/1754
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
