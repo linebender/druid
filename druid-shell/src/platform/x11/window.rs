@@ -222,16 +222,20 @@ impl WindowBuilder {
         let id = conn.generate_id()?;
         let setup = conn.setup();
 
-        let scale = match self.app.rdb.get_value::<f64>("Xft.dpi", "") {
-            Ok(Some(dpi)) => {
+        let env_dpi = std::env::var("DRUID_X11_DPI")
+            .ok()
+            .map(|x| x.parse::<f64>());
+
+        let scale = match env_dpi.or_else(|| self.app.rdb.get_value("Xft.dpi", "").transpose()) {
+            Some(Ok(dpi)) => {
                 let scale = dpi / 96.;
                 Scale::new(scale, scale)
             }
-            Ok(None) => Scale::default(),
-            Err(err) => {
+            None => Scale::default(),
+            Some(Err(err)) => {
                 let default = Scale::default();
                 warn!(
-                    "Unable to parse Xft.dpi: {:?}, defaulting to {:?}",
+                    "Unable to parse dpi: {:?}, defaulting to {:?}",
                     err, default
                 );
                 default
@@ -749,7 +753,7 @@ impl Window {
             buffers.idle_pixmaps.pop();
         } else {
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale);
+                let rect = rect.to_px(scale).expand();
                 let (x, y) = (rect.x0 as i16, rect.y0 as i16);
                 let (w, h) = (rect.width() as u16, rect.height() as u16);
                 self.app
@@ -800,12 +804,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        let mut state = borrow_mut!(self.state)?;
-        let scale = state.scale;
-        // We prefer to invalidate an integer number of pixels.
-        state
-            .invalid
-            .add_rect(rect.to_px(scale).expand().to_dp(scale));
+        // expanding not needed here, because we are expanding at every use of invalid
+        borrow_mut!(self.state)?.invalid.add_rect(rect);
         Ok(())
     }
 
@@ -843,7 +843,9 @@ impl Window {
 
     fn invalidate(&self) {
         match self.size() {
-            Ok(size) => self.add_invalid_rect(size.size_dp().to_rect()).unwrap(),
+            Ok(size) => self
+                .add_invalid_rect(size.size_dp().to_rect())
+                .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err)),
             Err(err) => error!("Window::invalidate - failed to get size: {}", err),
         }
 
@@ -886,7 +888,6 @@ impl Window {
         // TODO(x11/menus): implement Window::set_menu (currently a no-op)
     }
 
-    #[allow(clippy::unnecessary_wraps)]
     fn get_scale(&self) -> Result<Scale, Error> {
         Ok(borrow!(self.state)?.scale)
     }
@@ -1266,7 +1267,7 @@ impl PresentData {
             .rects()
             .iter()
             .map(|r| {
-                let r = r.to_px(scale);
+                let r = r.to_px(scale).expand();
                 Rectangle {
                     x: r.x0 as i16,
                     y: r.y0 as i16,
