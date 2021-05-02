@@ -122,9 +122,9 @@ inventory::collect!(DefaultValue);
 /// The
 /// #Example
 /// ```
-/// use druid::Key;
+/// use druid::{Env, Key, key};
 ///
-/// static MY_PROPERTY: Key<f64> = key!("org.my_app.my_property", 17.432);
+/// const MY_PROPERTY: Key<f64> = key!("org.my_app.my_property", 17.432);
 ///
 /// let env = Env::default();
 /// assert_eq!(env.get(MY_PROPERTY), 17.432);
