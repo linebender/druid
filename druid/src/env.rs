@@ -118,15 +118,32 @@ pub struct DefaultValue(pub &'static str, pub Value);
 
 inventory::collect!(DefaultValue);
 
+/// A macro to create a new env-key and insert its default value into the every env.
+/// The
+/// #Example
+/// ```
+/// use druid::Key;
+///
+/// static MY_PROPERTY: Key<f64> = key!("org.my_app.my_property", 17.432);
+///
+/// let env = Env::default();
+/// assert_eq!(env.get(MY_PROPERTY), 17.432);
+/// ```
 #[macro_export]
 macro_rules! key {
     ($name:literal, $default:expr) => {
         {
-            ::inventory::submit!(::druid::env::DefaultValue($name, $default.clone().into()));
-            ::druid::env::Key::new($name)
+            let key = ::druid::env::Key::new($name);
+            let value = $default;
+            ::druid::env::type_check(&key, &value);
+            ::std::mem::forget(value);
+            ::inventory::submit!(::druid::env::DefaultValue($name, $default.into()));
+            key
         }
     }
 }
+
+pub const fn type_check<T>(_: &Key<T>, _: &T) {}
 
 /// Either a concrete `T` or a [`Key<T>`] that can be resolved in the [`Env`].
 ///
