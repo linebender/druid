@@ -53,6 +53,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
 - Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
+- Update look and feel of controls when disabled ([#1717] by [@xarvic])
 
 ### Deprecated
 
@@ -699,6 +700,7 @@ Last release without a changelog :(
 [#1702]: https://github.com/linebender/druid/pull/1702
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
+[#1717]: https://github.com/linebender/druid/pull/1717
 [#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
 [#1730]: https://github.com/linebender/druid/pull/1730
