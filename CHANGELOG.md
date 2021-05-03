@@ -67,6 +67,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
 - Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
 - Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
+- X11 backend now supports scaling([#1751] by [@Maan2003])
 
 ### Visual
 
@@ -699,6 +700,7 @@ Last release without a changelog :(
 [#1730]: https://github.com/linebender/druid/pull/1730
 [#1737]: https://github.com/linebender/druid/pull/1737
 [#1743]: https://github.com/linebender/druid/pull/1743
+[#1751]: https://github.com/linebender/druid/pull/1751
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

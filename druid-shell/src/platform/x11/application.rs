@@ -27,6 +27,7 @@ use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::xfixes::ConnectionExt as _;
 use x11rb::protocol::xproto::{ConnectionExt, CreateWindowAux, EventMask, WindowClass};
 use x11rb::protocol::Event;
+use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::application::AppHandler;
@@ -49,6 +50,9 @@ pub(crate) struct Application {
     /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
+
+    /// The X11 resource database used to query dpi.
+    pub(crate) rdb: ResourceDb,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -99,6 +103,7 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
+        let rdb = ResourceDb::new_from_default(&conn)?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
         let state = Rc::new(RefCell::new(State {
@@ -123,6 +128,7 @@ impl Application {
 
         Ok(Application {
             connection,
+            rdb,
             screen_num: screen_num as i32,
             window_id,
             state,
@@ -282,7 +288,7 @@ impl Application {
                     w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(ev);
+                    w.handle_button_press(ev)?;
                 }
             }
             Event::ButtonRelease(ev) => {
@@ -293,14 +299,14 @@ impl Application {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(ev);
+                    w.handle_button_release(ev)?;
                 }
             }
             Event::MotionNotify(ev) => {
                 let w = self
                     .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(ev);
+                w.handle_motion_notify(ev)?;
             }
             Event::ClientMessage(ev) => {
                 let w = self
