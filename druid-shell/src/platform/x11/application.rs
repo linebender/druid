@@ -504,12 +504,12 @@ impl Application {
         // from gettext manual
         // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
         var_non_empty("LANGUAGE")
+            // the LANGUAGE value is priority list seperated by :
+            // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
+            .and_then(|locale| locale.split(':').next().map(String::from))
             .or_else(|| var_non_empty("LC_ALL"))
             .or_else(|| var_non_empty("LC_MESSAGES"))
             .or_else(|| var_non_empty("LANG"))
-            // the value is priority list seperated by :
-            // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
-            .and_then(|locale| locale.split(':').next().map(String::from))
             .unwrap_or_else(|| "en-US".to_string())
     }
 
