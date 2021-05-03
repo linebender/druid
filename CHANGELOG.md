@@ -38,6 +38,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
 - GTK: added support for `content_insets` ([#1722] by [@jneem])
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
+- Text input handles Delete key ([#1746] by [@bjorn])
 
 ### Changed
 
@@ -470,6 +471,7 @@ Last release without a changelog :(
 [@RichardPoole42]: https://github.com/RichardPoole42
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
+[@bjorn]: https://github.com/bjorn
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -701,6 +703,7 @@ Last release without a changelog :(
 [#1730]: https://github.com/linebender/druid/pull/1730
 [#1737]: https://github.com/linebender/druid/pull/1737
 [#1743]: https://github.com/linebender/druid/pull/1743
+[#1746]: https://github.com/linebender/druid/pull/1746
 [#1751]: https://github.com/linebender/druid/pull/1751
 [#1754]: https://github.com/linebender/druid/pull/1754
 
