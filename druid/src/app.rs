@@ -557,10 +557,11 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Sets the initial window position in virtual screen coordinates.
-    /// [`position`] Position in pixels.
+    /// Sets the initial window position in [display points], relative to the origin
+    /// of the [virtual screen].
     ///
-    /// [`position`]: struct.Point.html
+    /// [display points]: crate::Scale
+    /// [virtual screen]: crate::Screen
     pub fn set_position(mut self, position: impl Into<Point>) -> Self {
         self.config = self.config.set_position(position.into());
         self
