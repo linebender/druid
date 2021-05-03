@@ -55,6 +55,7 @@ mod svg;
 mod switch;
 mod tabs;
 mod textbox;
+mod transform_box;
 mod value_textbox;
 mod view_switcher;
 #[allow(clippy::module_inception)]
