@@ -95,13 +95,13 @@ struct State {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Cursors {
-    pub default: xproto::Cursor,
-    pub text: xproto::Cursor,
-    pub pointer: xproto::Cursor,
-    pub crosshair: xproto::Cursor,
-    pub not_allowed: xproto::Cursor,
-    pub row_resize: xproto::Cursor,
-    pub col_resize: xproto::Cursor,
+    pub default: Option<xproto::Cursor>,
+    pub text: Option<xproto::Cursor>,
+    pub pointer: Option<xproto::Cursor>,
+    pub crosshair: Option<xproto::Cursor>,
+    pub not_allowed: Option<xproto::Cursor>,
+    pub row_resize: Option<xproto::Cursor>,
+    pub col_resize: Option<xproto::Cursor>,
 }
 
 impl Application {
@@ -139,16 +139,21 @@ impl Application {
         };
 
         let handle = x11rb::cursor::Handle::new(connection.as_ref(), screen_num, &rdb)?.reply()?;
-        let load_cursor = |name| handle.load_cursor(connection.as_ref(), name);
+        let load_cursor = |cursor| {
+            handle
+                .load_cursor(connection.as_ref(), cursor)
+                .map_err(|e| tracing::warn!("Unable to load cursor {}, error: {}", cursor, e))
+                .ok()
+        };
 
         let cursors = Cursors {
-            default: load_cursor("default")?,
-            text: load_cursor("text")?,
-            pointer: load_cursor("pointer")?,
-            crosshair: load_cursor("crosshair")?,
-            not_allowed: load_cursor("not-allowed")?,
-            row_resize: load_cursor("row-resize")?,
-            col_resize: load_cursor("col-resize")?,
+            default: load_cursor("default"),
+            text: load_cursor("text"),
+            pointer: load_cursor("pointer"),
+            crosshair: load_cursor("crosshair"),
+            not_allowed: load_cursor("not-allowed"),
+            row_resize: load_cursor("row-resize"),
+            col_resize: load_cursor("col-resize"),
         };
 
         Ok(Application {

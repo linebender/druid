@@ -894,18 +894,22 @@ impl Window {
             Cursor::Crosshair => cursors.crosshair,
             Cursor::OpenHand => {
                 warn!("Cursor::OpenHand not supported for x11 backend. using arrow cursor");
-                cursors.default
+                None
             }
             Cursor::NotAllowed => cursors.not_allowed,
             Cursor::ResizeLeftRight => cursors.col_resize,
             Cursor::ResizeUpDown => cursors.row_resize,
             // TODO: (x11/custom cursor)
-            Cursor::Custom(_) => cursors.default,
+            Cursor::Custom(_) => None,
         };
+        if cursor.is_none() {
+            warn!("Unable to load cursor {:?}", cursor);
+            return;
+        }
         let conn = self.app.connection();
         let changes = ChangeWindowAttributesAux::new().cursor(cursor);
         if let Err(e) = conn.change_window_attributes(self.id, &changes) {
-            error!("Changing window attributes failed {}", e);
+            error!("Changing cursor window attribute failed {}", e);
         };
     }
 
