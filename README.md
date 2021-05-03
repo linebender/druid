@@ -60,7 +60,7 @@ fn ui_builder() -> impl Widget<u32> {
 ```
 
 Check out the [the examples folder] for a more comprehensive demonstration of
-Druid's existing functionality and widgets.
+Druid's existing functionality and widgets. Check [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) for more widgets.
 
 ## Screenshots
 
