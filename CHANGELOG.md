@@ -38,6 +38,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
 - GTK: added support for `content_insets` ([#1722] by [@jneem])
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
+- Text input handles Delete key ([#1746] by [@bjorn])
 
 ### Changed
 
@@ -68,6 +69,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
 - Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
 - X11 backend now supports scaling([#1751] by [@Maan2003])
+- X11 backend now supports changing cursors ([#1755] by [@Maan2003])
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 
 ### Visual
@@ -299,6 +301,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
+- Link to the widget_nursery in README ([#1754] by [@xarvic])
 
 ### Changed
 
@@ -470,6 +473,7 @@ Last release without a changelog :(
 [@RichardPoole42]: https://github.com/RichardPoole42
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
+[@bjorn]: https://github.com/bjorn
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -701,7 +705,10 @@ Last release without a changelog :(
 [#1730]: https://github.com/linebender/druid/pull/1730
 [#1737]: https://github.com/linebender/druid/pull/1737
 [#1743]: https://github.com/linebender/druid/pull/1743
+[#1746]: https://github.com/linebender/druid/pull/1746
 [#1751]: https://github.com/linebender/druid/pull/1751
+[#1754]: https://github.com/linebender/druid/pull/1754
+[#1755]: https://github.com/linebender/druid/pull/1755
 [#1756]: https://github.com/linebender/druid/pull/1756
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
