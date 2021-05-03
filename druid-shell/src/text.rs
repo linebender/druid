@@ -511,6 +511,9 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
         KbKey::Backspace => {
             input_handler.handle_action(Action::Delete(Movement::Grapheme(Direction::Upstream)));
         }
+        KbKey::Delete => {
+            input_handler.handle_action(Action::Delete(Movement::Grapheme(Direction::Downstream)));
+        }
         KbKey::Enter => {
             // I'm sorry windows, you'll get IME soon.
             input_handler.handle_action(Action::InsertNewLine {

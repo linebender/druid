@@ -3,13 +3,15 @@
 The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
 You can find its changes [documented below](#070---2021-01-01).
 
-# Unreleased
+## Unreleased
 
 ### Highlights
+
 - International text input support (IME) on macOS.
 - Rich text and complex script support on Linux.
 
 ### Added
+
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
@@ -34,6 +36,10 @@ You can find its changes [documented below](#070---2021-01-01).
   context-methods to implement disabled ([#1632] by [@xarvic])
 - `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
 - `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
+- GTK: added support for `content_insets` ([#1722] by [@jneem])
+- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
+- Text input handles Delete key ([#1746] by [@bjorn])
+
 ### Changed
 
 - Warn on unhandled Commands ([#1533] by [@Maan2003])
@@ -54,6 +60,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Removed
 
 ### Fixed
+
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
@@ -61,6 +68,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
 - Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
+- Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
+- X11 backend now supports scaling([#1751] by [@Maan2003])
 
 ### Visual
 
@@ -70,6 +79,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
+- Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 
 ### Examples
 
@@ -290,6 +300,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
+- Link to the widget_nursery in README ([#1754] by [@xarvic])
 
 ### Changed
 
@@ -458,6 +469,10 @@ Last release without a changelog :(
 [@xarvic]: https://github.com/xarvic
 [@arthmis]: https://github.com/arthmis
 [@ccqpein]: https://github.com/ccqpein
+[@RichardPoole42]: https://github.com/RichardPoole42
+[@r-ml]: https://github.com/r-ml
+[@djeedai]: https://github.com/djeedai
+[@bjorn]: https://github.com/bjorn
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -685,7 +700,14 @@ Last release without a changelog :(
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
 [#1717]: https://github.com/linebender/druid/pull/1717
+[#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
+[#1730]: https://github.com/linebender/druid/pull/1730
+[#1737]: https://github.com/linebender/druid/pull/1737
+[#1743]: https://github.com/linebender/druid/pull/1743
+[#1746]: https://github.com/linebender/druid/pull/1746
+[#1751]: https://github.com/linebender/druid/pull/1751
+[#1754]: https://github.com/linebender/druid/pull/1754
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
