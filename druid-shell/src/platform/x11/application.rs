@@ -25,7 +25,7 @@ use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::xfixes::ConnectionExt as _;
-use x11rb::protocol::xproto::{ConnectionExt, CreateWindowAux, EventMask, WindowClass};
+use x11rb::protocol::xproto::{self, ConnectionExt, CreateWindowAux, EventMask, WindowClass};
 use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
@@ -53,6 +53,7 @@ pub(crate) struct Application {
 
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: ResourceDb,
+    pub(crate) cursors: Cursors,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -92,6 +93,17 @@ struct State {
     windows: HashMap<u32, Rc<Window>>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct Cursors {
+    pub default: Option<xproto::Cursor>,
+    pub text: Option<xproto::Cursor>,
+    pub pointer: Option<xproto::Cursor>,
+    pub crosshair: Option<xproto::Cursor>,
+    pub not_allowed: Option<xproto::Cursor>,
+    pub row_resize: Option<xproto::Cursor>,
+    pub col_resize: Option<xproto::Cursor>,
+}
+
 impl Application {
     pub fn new() -> Result<Application, Error> {
         // If we want to support OpenGL, we will need to open a connection with Xlib support (see
@@ -126,6 +138,24 @@ impl Application {
             }
         };
 
+        let handle = x11rb::cursor::Handle::new(connection.as_ref(), screen_num, &rdb)?.reply()?;
+        let load_cursor = |cursor| {
+            handle
+                .load_cursor(connection.as_ref(), cursor)
+                .map_err(|e| tracing::warn!("Unable to load cursor {}, error: {}", cursor, e))
+                .ok()
+        };
+
+        let cursors = Cursors {
+            default: load_cursor("default"),
+            text: load_cursor("text"),
+            pointer: load_cursor("pointer"),
+            crosshair: load_cursor("crosshair"),
+            not_allowed: load_cursor("not-allowed"),
+            row_resize: load_cursor("row-resize"),
+            col_resize: load_cursor("col-resize"),
+        };
+
         Ok(Application {
             connection,
             rdb,
@@ -133,6 +163,7 @@ impl Application {
             window_id,
             state,
             idle_read,
+            cursors,
             idle_write,
             present_opcode,
             marker: std::marker::PhantomData,

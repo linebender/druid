@@ -33,8 +33,8 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap,
-    PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
+    EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -884,6 +884,35 @@ impl Window {
         ));
     }
 
+    fn set_cursor(&self, cursor: &Cursor) {
+        let cursors = &self.app.cursors;
+        #[allow(deprecated)]
+        let cursor = match cursor {
+            Cursor::Arrow => cursors.default,
+            Cursor::IBeam => cursors.text,
+            Cursor::Pointer => cursors.pointer,
+            Cursor::Crosshair => cursors.crosshair,
+            Cursor::OpenHand => {
+                warn!("Cursor::OpenHand not supported for x11 backend. using arrow cursor");
+                None
+            }
+            Cursor::NotAllowed => cursors.not_allowed,
+            Cursor::ResizeLeftRight => cursors.col_resize,
+            Cursor::ResizeUpDown => cursors.row_resize,
+            // TODO: (x11/custom cursor)
+            Cursor::Custom(_) => None,
+        };
+        if cursor.is_none() {
+            warn!("Unable to load cursor {:?}", cursor);
+            return;
+        }
+        let conn = self.app.connection();
+        let changes = ChangeWindowAttributesAux::new().cursor(cursor);
+        if let Err(e) = conn.change_window_attributes(self.id, &changes) {
+            error!("Changing cursor window attribute failed {}", e);
+        };
+    }
+
     fn set_menu(&self, _menu: Menu) {
         // TODO(x11/menus): implement Window::set_menu (currently a no-op)
     }
@@ -1592,8 +1621,10 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_cursor(&mut self, _cursor: &Cursor) {
-        // TODO(x11/cursors): implement WindowHandle::set_cursor
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_cursor(cursor);
+        }
     }
 
     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
