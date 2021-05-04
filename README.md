@@ -32,17 +32,17 @@ We gladly accept contributions via GitHub pull requests. Please see
 
 ## Example
 
-Here's a simple counter example app.
+Here's a simple counter example app:
 
 ```rust
 use druid::widget::{Button, Flex, Label};
 use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WidgetExt, WindowDesc};
 
 fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder());
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
 }
 
@@ -58,6 +58,9 @@ fn ui_builder() -> impl Widget<u32> {
     Flex::column().with_child(label).with_child(button)
 }
 ```
+##### This example is compatible with master, [here's an example using 0.7.0](https://crates.io/crates/druid/0.7.0#example)
+<br>
+
 
 Check out the [the examples folder] for a more comprehensive demonstration of
 Druid's existing functionality and widgets.
