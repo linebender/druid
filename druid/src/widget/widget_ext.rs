@@ -300,6 +300,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     ///
     /// [`is_disabled`]: crate::EventCtx::is_disabled
     /// [`set_disabled`]: crate::EventCtx::set_disabled
+    /// [`DisabledIf`]: crate::widget::DisabledIf
     fn disabled_if(self, disabled_if: impl Fn(&T, &Env) -> bool + 'static) -> DisabledIf<T, Self> {
         DisabledIf::new(self, disabled_if)
     }

@@ -24,6 +24,7 @@ use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use crate::scale::Scalable;
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use tracing::{error, info, warn};
@@ -32,8 +33,8 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ConfigureNotifyEvent, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap,
-    PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
+    EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -51,10 +52,10 @@ use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
-use crate::window;
 use crate::window::{
     FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
+use crate::{window, ScaledArea};
 
 use super::application::Application;
 use super::keycodes;
@@ -220,6 +221,28 @@ impl WindowBuilder {
         let screen_num = self.app.screen_num();
         let id = conn.generate_id()?;
         let setup = conn.setup();
+
+        let env_dpi = std::env::var("DRUID_X11_DPI")
+            .ok()
+            .map(|x| x.parse::<f64>());
+
+        let scale = match env_dpi.or_else(|| self.app.rdb.get_value("Xft.dpi", "").transpose()) {
+            Some(Ok(dpi)) => {
+                let scale = dpi / 96.;
+                Scale::new(scale, scale)
+            }
+            None => Scale::default(),
+            Some(Err(err)) => {
+                let default = Scale::default();
+                warn!(
+                    "Unable to parse dpi: {:?}, defaulting to {:?}",
+                    err, default
+                );
+                default
+            }
+        };
+
+        let size_px = self.size.to_px(scale);
         let screen = setup
             .roots
             .get(screen_num as usize)
@@ -239,7 +262,7 @@ impl WindowBuilder {
         );
 
         // Create the actual window
-        let (width, height) = (self.size.width as u16, self.size.height as u16);
+        let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
         conn.create_window(
             // Window depth
             x11rb::COPY_FROM_PARENT.try_into().unwrap(),
@@ -253,11 +276,9 @@ impl WindowBuilder {
             // Y-coordinate of the new window
             0,
             // Width of the new window
-            // TODO(x11/dpi_scaling): figure out DPI scaling
-            width,
+            width_px,
             // Height of the new window
-            // TODO(x11/dpi_scaling): figure out DPI scaling
-            height,
+            height_px,
             // Border width
             0,
             // Window class type
@@ -281,7 +302,8 @@ impl WindowBuilder {
         let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
         let state = RefCell::new(WindowState {
-            size: self.size,
+            area: ScaledArea::from_px(size_px, scale),
+            scale,
             invalid: Region::EMPTY,
             destroyed: false,
         });
@@ -301,8 +323,8 @@ impl WindowBuilder {
             conn,
             id,
             buf_count,
-            width,
-            height,
+            width_px,
+            height_px,
             screen.root_depth,
         )?);
 
@@ -491,7 +513,8 @@ atom_manager! {
 
 /// The mutable state of the window.
 struct WindowState {
-    size: Size,
+    area: ScaledArea,
+    scale: Scale,
     /// The region that was invalidated since the last time we rendered.
     invalid: Region,
     /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
@@ -585,10 +608,11 @@ impl Window {
     }
 
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        let size = self.size()?;
+        let size = self.size()?.size_dp();
+        let scale = self.get_scale()?;
         self.with_handler(|h| {
             h.connect(&handle.into());
-            h.scale(Scale::default());
+            h.scale(scale);
             h.size(size);
         });
         Ok(())
@@ -609,16 +633,17 @@ impl Window {
         borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
     }
 
-    fn size(&self) -> Result<Size, Error> {
-        Ok(borrow!(self.state)?.size)
+    fn size(&self) -> Result<ScaledArea, Error> {
+        Ok(borrow!(self.state)?.area)
     }
 
+    // note: size is in px
     fn set_size(&self, size: Size) -> Result<(), Error> {
-        // TODO(x11/dpi_scaling): detect DPI and scale size
+        let scale = self.get_scale()?;
         let new_size = {
             let mut state = borrow_mut!(self.state)?;
-            if size != state.size {
-                state.size = size;
+            if size != state.area.size_px() {
+                state.area = ScaledArea::from_px(size, scale);
                 true
             } else {
                 false
@@ -640,8 +665,9 @@ impl Window {
                         status
                     )
                 })?;
-            self.add_invalid_rect(size.to_rect())?;
-            self.with_handler(|h| h.size(size));
+            self.add_invalid_rect(size.to_dp(scale).to_rect())?;
+            self.with_handler(|h| h.size(size.to_dp(scale)));
+            self.with_handler(|h| h.scale(scale));
         }
         Ok(())
     }
@@ -675,12 +701,13 @@ impl Window {
         {
             let surface = borrow!(self.cairo_surface)?;
             let cairo_ctx = cairo::Context::new(&surface);
-
+            let scale = self.get_scale()?;
             for rect in invalid.rects() {
+                let rect = rect.to_px(scale);
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
-
+            cairo_ctx.scale(scale.x(), scale.y());
             let mut piet_ctx = Piet::new(&cairo_ctx);
 
             // We need to be careful with earlier returns here, because piet_ctx
@@ -720,13 +747,15 @@ impl Window {
             .idle_pixmaps
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
+        let scale = self.get_scale()?;
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
-            present.present(self.app.connection(), pixmap, self.id, &invalid)?;
+            present.present(self.app.connection(), pixmap, self.id, &invalid, scale)?;
             buffers.idle_pixmaps.pop();
         } else {
-            for r in invalid.rects() {
-                let (x, y) = (r.x0 as i16, r.y0 as i16);
-                let (w, h) = (r.width() as u16, r.height() as u16);
+            for rect in invalid.rects() {
+                let rect = rect.to_px(scale).expand();
+                let (x, y) = (rect.x0 as i16, rect.y0 as i16);
+                let (w, h) = (rect.width() as u16, rect.height() as u16);
                 self.app
                     .connection()
                     .copy_area(pixmap, self.id, self.gc, x, y, x, y, w, h)?;
@@ -775,7 +804,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        borrow_mut!(self.state)?.invalid.add_rect(rect.expand());
+        // expanding not needed here, because we are expanding at every use of invalid
+        borrow_mut!(self.state)?.invalid.add_rect(rect);
         Ok(())
     }
 
@@ -813,9 +843,13 @@ impl Window {
 
     fn invalidate(&self) {
         match self.size() {
-            Ok(size) => self.invalidate_rect(size.to_rect()),
+            Ok(size) => self
+                .add_invalid_rect(size.size_dp().to_rect())
+                .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err)),
             Err(err) => error!("Window::invalidate - failed to get size: {}", err),
         }
+
+        self.request_anim_frame();
     }
 
     fn invalidate_rect(&self, rect: Rect) {
@@ -850,23 +884,49 @@ impl Window {
         ));
     }
 
+    fn set_cursor(&self, cursor: &Cursor) {
+        let cursors = &self.app.cursors;
+        #[allow(deprecated)]
+        let cursor = match cursor {
+            Cursor::Arrow => cursors.default,
+            Cursor::IBeam => cursors.text,
+            Cursor::Pointer => cursors.pointer,
+            Cursor::Crosshair => cursors.crosshair,
+            Cursor::OpenHand => {
+                warn!("Cursor::OpenHand not supported for x11 backend. using arrow cursor");
+                None
+            }
+            Cursor::NotAllowed => cursors.not_allowed,
+            Cursor::ResizeLeftRight => cursors.col_resize,
+            Cursor::ResizeUpDown => cursors.row_resize,
+            // TODO: (x11/custom cursor)
+            Cursor::Custom(_) => None,
+        };
+        if cursor.is_none() {
+            warn!("Unable to load cursor {:?}", cursor);
+            return;
+        }
+        let conn = self.app.connection();
+        let changes = ChangeWindowAttributesAux::new().cursor(cursor);
+        if let Err(e) = conn.change_window_attributes(self.id, &changes) {
+            error!("Changing cursor window attribute failed {}", e);
+        };
+    }
+
     fn set_menu(&self, _menu: Menu) {
         // TODO(x11/menus): implement Window::set_menu (currently a no-op)
     }
 
-    #[allow(clippy::unnecessary_wraps)]
     fn get_scale(&self) -> Result<Scale, Error> {
-        // TODO(x11/dpi_scaling): figure out DPI scaling
-        Ok(Scale::new(1.0, 1.0))
+        Ok(borrow!(self.state)?.scale)
     }
 
     pub fn handle_expose(&self, expose: &xproto::ExposeEvent) -> Result<(), Error> {
-        // TODO(x11/dpi_scaling): when dpi scaling is
-        // implemented, it needs to be used here too
         let rect = Rect::from_origin_size(
             (expose.x as f64, expose.y as f64),
             (expose.width as f64, expose.height as f64),
-        );
+        )
+        .to_dp(self.get_scale()?);
 
         self.add_invalid_rect(rect)?;
         if self.waiting_on_present()? {
@@ -900,10 +960,14 @@ impl Window {
         });
     }
 
-    pub fn handle_button_press(&self, button_press: &xproto::ButtonPressEvent) {
+    pub fn handle_button_press(
+        &self,
+        button_press: &xproto::ButtonPressEvent,
+    ) -> Result<(), Error> {
         let button = mouse_button(button_press.detail);
+        let scale = self.get_scale()?;
         let mouse_event = MouseEvent {
-            pos: Point::new(button_press.event_x as f64, button_press.event_y as f64),
+            pos: Point::new(button_press.event_x as f64, button_press.event_y as f64).to_dp(scale),
             // The xcb state field doesn't include the newly pressed button, but
             // druid wants it to be included.
             buttons: mouse_buttons(button_press.state).with(button),
@@ -915,12 +979,18 @@ impl Window {
             wheel_delta: Vec2::ZERO,
         };
         self.with_handler(|h| h.mouse_down(&mouse_event));
+        Ok(())
     }
 
-    pub fn handle_button_release(&self, button_release: &xproto::ButtonReleaseEvent) {
+    pub fn handle_button_release(
+        &self,
+        button_release: &xproto::ButtonReleaseEvent,
+    ) -> Result<(), Error> {
+        let scale = self.get_scale()?;
         let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
-            pos: Point::new(button_release.event_x as f64, button_release.event_y as f64),
+            pos: Point::new(button_release.event_x as f64, button_release.event_y as f64)
+                .to_dp(scale),
             // The xcb state includes the newly released button, but druid
             // doesn't want it.
             buttons: mouse_buttons(button_release.state).without(button),
@@ -931,11 +1001,13 @@ impl Window {
             wheel_delta: Vec2::ZERO,
         };
         self.with_handler(|h| h.mouse_up(&mouse_event));
+        Ok(())
     }
 
     pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
         let button = event.detail;
         let mods = key_mods(event.state);
+        let scale = self.get_scale()?;
 
         // We use a delta of 120 per tick to match the behavior of Windows.
         let is_shift = mods.shift();
@@ -949,7 +1021,7 @@ impl Window {
             _ => return Err(anyhow!("unexpected mouse wheel button: {}", button)),
         };
         let mouse_event = MouseEvent {
-            pos: Point::new(event.event_x as f64, event.event_y as f64),
+            pos: Point::new(event.event_x as f64, event.event_y as f64).to_dp(scale),
             buttons: mouse_buttons(event.state),
             mods: key_mods(event.state),
             count: 0,
@@ -962,9 +1034,14 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_motion_notify(&self, motion_notify: &xproto::MotionNotifyEvent) {
+    pub fn handle_motion_notify(
+        &self,
+        motion_notify: &xproto::MotionNotifyEvent,
+    ) -> Result<(), Error> {
+        let scale = self.get_scale()?;
         let mouse_event = MouseEvent {
-            pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64),
+            pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64)
+                .to_dp(scale),
             buttons: mouse_buttons(motion_notify.state),
             mods: key_mods(motion_notify.state),
             count: 0,
@@ -973,6 +1050,7 @@ impl Window {
             wheel_delta: Vec2::ZERO,
         };
         self.with_handler(|h| h.mouse_move(&mouse_event));
+        Ok(())
     }
 
     pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {
@@ -1104,11 +1182,11 @@ impl Window {
     }
 
     pub(crate) fn next_timeout(&self) -> Option<Instant> {
-        if let Some(timer) = self.timer_queue.lock().unwrap().peek() {
-            Some(timer.deadline())
-        } else {
-            None
-        }
+        self.timer_queue
+            .lock()
+            .unwrap()
+            .peek()
+            .map(|timer| timer.deadline())
     }
 
     pub(crate) fn run_timers(&self, now: Instant) {
@@ -1212,15 +1290,19 @@ impl PresentData {
         pixmap: Pixmap,
         window_id: u32,
         region: &Region,
+        scale: Scale,
     ) -> Result<(), Error> {
         let x_rects: Vec<Rectangle> = region
             .rects()
             .iter()
-            .map(|r| Rectangle {
-                x: r.x0 as i16,
-                y: r.y0 as i16,
-                width: r.width() as u16,
-                height: r.height() as u16,
+            .map(|r| {
+                let r = r.to_px(scale).expand();
+                Rectangle {
+                    x: r.x0 as i16,
+                    y: r.y0 as i16,
+                    width: r.width() as u16,
+                    height: r.height() as u16,
+                }
             })
             .collect();
 
@@ -1539,8 +1621,10 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_cursor(&mut self, _cursor: &Cursor) {
-        // TODO(x11/cursors): implement WindowHandle::set_cursor
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_cursor(cursor);
+        }
     }
 
     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
@@ -1566,14 +1650,10 @@ impl WindowHandle {
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        if let Some(w) = self.window.upgrade() {
-            Some(IdleHandle {
-                queue: Arc::clone(&w.idle_queue),
-                pipe: w.idle_pipe,
-            })
-        } else {
-            None
-        }
+        self.window.upgrade().map(|w| IdleHandle {
+            queue: Arc::clone(&w.idle_queue),
+            pipe: w.idle_pipe,
+        })
     }
 
     pub fn get_scale(&self) -> Result<Scale, ShellError> {

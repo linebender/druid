@@ -98,6 +98,7 @@ pub(crate) struct WindowBuilder {
     transparent: bool,
     min_size: Option<Size>,
     position: Option<Point>,
+    level: Option<WindowLevel>,
     state: window::WindowState,
 }
 
@@ -223,6 +224,9 @@ struct WindowState {
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
     active_text_input: Cell<Option<TextFieldToken>>,
+    // Is the window focusable ("activatable" in Win32 terminology)?
+    // False for tooltips, to prevent stealing focus from owner window.
+    is_focusable: bool,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -385,7 +389,13 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
             0,
             0,
             0,
-            SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOSIZE,
+            SWP_SHOWWINDOW
+                | SWP_NOMOVE
+                | SWP_NOZORDER
+                | SWP_FRAMECHANGED
+                | SWP_NOSIZE
+                | SWP_NOOWNERZORDER
+                | SWP_NOACTIVATE,
         ) == 0
         {
             warn!(
@@ -543,7 +553,7 @@ impl MyWndProc {
                         0,
                         size_px.width.round() as i32,
                         size_px.height.round() as i32,
-                        SWP_NOMOVE | SWP_NOZORDER,
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
                         warn!(
@@ -561,7 +571,7 @@ impl MyWndProc {
                         pos_px.y.round() as i32,
                         0,
                         0,
-                        SWP_NOSIZE | SWP_NOZORDER,
+                        SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
                         warn!(
@@ -578,14 +588,20 @@ impl MyWndProc {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
                     set_style(hwnd, resizable, self.has_titlebar());
                 }
-                DeferredOp::SetWindowState(val) => unsafe {
-                    let s = match val {
-                        window::WindowState::Maximized => SW_MAXIMIZE,
-                        window::WindowState::Minimized => SW_MINIMIZE,
-                        window::WindowState::Restored => SW_RESTORE,
+                DeferredOp::SetWindowState(val) => {
+                    let show = if self.handle.borrow().is_focusable() {
+                        match val {
+                            window::WindowState::Maximized => SW_MAXIMIZE,
+                            window::WindowState::Minimized => SW_MINIMIZE,
+                            window::WindowState::Restored => SW_RESTORE,
+                        }
+                    } else {
+                        SW_SHOWNOACTIVATE
                     };
-                    ShowWindow(hwnd, s);
-                },
+                    unsafe {
+                        ShowWindow(hwnd, show);
+                    }
+                }
                 DeferredOp::SaveAs(options, token) => {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
@@ -747,7 +763,9 @@ impl WndProc for MyWndProc {
                                 | SWP_NOMOVE
                                 | SWP_NOZORDER
                                 | SWP_FRAMECHANGED
-                                | SWP_NOSIZE,
+                                | SWP_NOSIZE
+                                | SWP_NOOWNERZORDER
+                                | SWP_NOACTIVATE,
                         ) == 0
                         {
                             warn!(
@@ -813,7 +831,11 @@ impl WndProc for MyWndProc {
                     (*rect).top,
                     (*rect).right - (*rect).left,
                     (*rect).bottom - (*rect).top,
-                    SWP_NOZORDER | SWP_FRAMECHANGED | SWP_DRAWFRAME,
+                    SWP_NOZORDER
+                        | SWP_FRAMECHANGED
+                        | SWP_DRAWFRAME
+                        | SWP_NOOWNERZORDER
+                        | SWP_NOACTIVATE,
                 );
                 Some(0)
             },
@@ -1233,6 +1255,7 @@ impl WindowBuilder {
             size: None,
             min_size: None,
             position: None,
+            level: None,
             state: window::WindowState::Restored,
         }
     }
@@ -1287,8 +1310,13 @@ impl WindowBuilder {
         self.state = state;
     }
 
-    pub fn set_level(&mut self, _level: WindowLevel) {
-        warn!("WindowBuilder::set_level  is currently unimplemented for Windows platforms.");
+    pub fn set_level(&mut self, level: WindowLevel) {
+        match level {
+            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
+            _ => {
+                warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows platforms.", level);
+            }
+        }
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1330,6 +1358,28 @@ impl WindowBuilder {
                 None => (0 as HMENU, None, false),
             };
 
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
+            let mut dwExStyle: DWORD = 0;
+            let mut focusable = true;
+            if let Some(level) = self.level {
+                match level {
+                    WindowLevel::AppWindow => (),
+                    WindowLevel::Tooltip => {
+                        dwStyle = WS_POPUP;
+                        dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+                        focusable = false;
+                    }
+                    WindowLevel::DropDown => {
+                        dwStyle = WS_CHILD;
+                        dwExStyle = 0;
+                    }
+                    WindowLevel::Modal => {
+                        dwStyle = WS_OVERLAPPED;
+                        dwExStyle = WS_EX_TOPMOST;
+                    }
+                }
+            }
+
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
                 scale: Cell::new(scale),
@@ -1345,6 +1395,7 @@ impl WindowBuilder {
                 is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
+                is_focusable: focusable,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1367,14 +1418,13 @@ impl WindowBuilder {
             };
             win.wndproc.connect(&handle, state);
 
-            let mut dwStyle = WS_OVERLAPPEDWINDOW;
             if !self.resizable {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
             if !self.show_titlebar {
                 dwStyle &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
             }
-            let mut dwExStyle = 0;
+
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
@@ -1413,7 +1463,7 @@ impl WindowBuilder {
                         0,
                         size_px.width.round() as i32,
                         size_px.height.round() as i32,
-                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
                     ) == 0
                     {
                         warn!(
@@ -1681,12 +1731,16 @@ impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            unsafe {
-                let show = match self.get_window_state() {
+            let show = if w.is_focusable {
+                match self.get_window_state() {
                     window::WindowState::Maximized => SW_MAXIMIZE,
                     window::WindowState::Minimized => SW_MINIMIZE,
                     _ => SW_SHOWNORMAL,
-                };
+                }
+            } else {
+                SW_SHOWNOACTIVATE
+            };
+            unsafe {
                 ShowWindow(hwnd, show);
                 UpdateWindow(hwnd);
             }
@@ -2059,6 +2113,12 @@ impl WindowHandle {
     /// druid_win_shell.
     pub fn get_hwnd(&self) -> Option<HWND> {
         self.state.upgrade().map(|w| w.hwnd.get())
+    }
+
+    /// Check whether the window can receive keyboard focus. This is generally true,
+    /// except for special windows like tooltips.
+    pub fn is_focusable(&self) -> bool {
+        self.state.upgrade().map(|w| w.is_focusable).unwrap_or(true)
     }
 
     /// Get a handle that can be used to schedule an idle task.

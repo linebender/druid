@@ -25,8 +25,9 @@ use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::xfixes::ConnectionExt as _;
-use x11rb::protocol::xproto::{ConnectionExt, CreateWindowAux, EventMask, WindowClass};
+use x11rb::protocol::xproto::{self, ConnectionExt, CreateWindowAux, EventMask, WindowClass};
 use x11rb::protocol::Event;
+use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::application::AppHandler;
@@ -49,6 +50,10 @@ pub(crate) struct Application {
     /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
+
+    /// The X11 resource database used to query dpi.
+    pub(crate) rdb: ResourceDb,
+    pub(crate) cursors: Cursors,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -88,6 +93,17 @@ struct State {
     windows: HashMap<u32, Rc<Window>>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct Cursors {
+    pub default: Option<xproto::Cursor>,
+    pub text: Option<xproto::Cursor>,
+    pub pointer: Option<xproto::Cursor>,
+    pub crosshair: Option<xproto::Cursor>,
+    pub not_allowed: Option<xproto::Cursor>,
+    pub row_resize: Option<xproto::Cursor>,
+    pub col_resize: Option<xproto::Cursor>,
+}
+
 impl Application {
     pub fn new() -> Result<Application, Error> {
         // If we want to support OpenGL, we will need to open a connection with Xlib support (see
@@ -99,6 +115,7 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
+        let rdb = ResourceDb::new_from_default(&conn)?;
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
         let state = Rc::new(RefCell::new(State {
@@ -121,12 +138,32 @@ impl Application {
             }
         };
 
+        let handle = x11rb::cursor::Handle::new(connection.as_ref(), screen_num, &rdb)?.reply()?;
+        let load_cursor = |cursor| {
+            handle
+                .load_cursor(connection.as_ref(), cursor)
+                .map_err(|e| tracing::warn!("Unable to load cursor {}, error: {}", cursor, e))
+                .ok()
+        };
+
+        let cursors = Cursors {
+            default: load_cursor("default"),
+            text: load_cursor("text"),
+            pointer: load_cursor("pointer"),
+            crosshair: load_cursor("crosshair"),
+            not_allowed: load_cursor("not-allowed"),
+            row_resize: load_cursor("row-resize"),
+            col_resize: load_cursor("col-resize"),
+        };
+
         Ok(Application {
             connection,
+            rdb,
             screen_num: screen_num as i32,
             window_id,
             state,
             idle_read,
+            cursors,
             idle_write,
             present_opcode,
             marker: std::marker::PhantomData,
@@ -282,7 +319,7 @@ impl Application {
                     w.handle_wheel(ev)
                         .context("BUTTON_PRESS - failed to handle wheel")?;
                 } else {
-                    w.handle_button_press(ev);
+                    w.handle_button_press(ev)?;
                 }
             }
             Event::ButtonRelease(ev) => {
@@ -293,14 +330,14 @@ impl Application {
                     // This is the release event corresponding to a mouse wheel.
                     // Ignore it: we already handled the press event.
                 } else {
-                    w.handle_button_release(ev);
+                    w.handle_button_release(ev)?;
                 }
             }
             Event::MotionNotify(ev) => {
                 let w = self
                     .window(ev.event)
                     .context("MOTION_NOTIFY - failed to get window")?;
-                w.handle_motion_notify(ev);
+                w.handle_motion_notify(ev)?;
             }
             Event::ClientMessage(ev) => {
                 let w = self
@@ -489,9 +526,22 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        // TODO(x11/locales): implement Application::get_locale
-        tracing::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
-        "en-US".into()
+        let var_non_empty = |var| match std::env::var(var) {
+            Ok(s) if s.is_empty() => None,
+            Ok(s) => Some(s),
+            Err(_) => None,
+        };
+
+        // from gettext manual
+        // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
+        var_non_empty("LANGUAGE")
+            // the LANGUAGE value is priority list seperated by :
+            // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
+            .and_then(|locale| locale.split(':').next().map(String::from))
+            .or_else(|| var_non_empty("LC_ALL"))
+            .or_else(|| var_non_empty("LC_MESSAGES"))
+            .or_else(|| var_non_empty("LANG"))
+            .unwrap_or_else(|| "en-US".to_string())
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
