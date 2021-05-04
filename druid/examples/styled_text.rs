@@ -58,6 +58,11 @@ pub fn main() -> Result<(), PlatformError> {
     };
 
     AppLauncher::with_window(main_window)
+        .configure_env(|env, _data| {
+            const MY_CUSTOM_FONT: Key<FontDescriptor> =
+                Key::new("org.linebender.example.my-custom-font");
+            env.set(MY_CUSTOM_FONT, FontDescriptor::new(FontFamily::SYSTEM_UI))
+        })
         .log_to_console()
         .launch(data)?;
 
@@ -97,15 +102,21 @@ fn ui_builder() -> impl Widget<AppData> {
         .on_click(|_, data, _| {
             data.size *= 1.1;
         })
-        .env_scope(|env: &mut druid::Env, data: &AppData| {
-            let new_font = if data.mono {
-                FontDescriptor::new(FontFamily::MONOSPACE)
-            } else {
-                FontDescriptor::new(FontFamily::SYSTEM_UI)
-            }
-            .with_size(data.size);
-            env.set(MY_CUSTOM_FONT, new_font);
-        });
+        .env_scope_dynamic(
+            |data: &AppData, env: &mut druid::Env| {
+                let new_font = if data.mono {
+                    FontDescriptor::new(FontFamily::MONOSPACE)
+                } else {
+                    FontDescriptor::new(FontFamily::SYSTEM_UI)
+                }
+                .with_size(data.size);
+                env.set(MY_CUSTOM_FONT, new_font);
+            },
+            |old_data, data, _env| {
+                println!("invalidate env: {}", !data.mono.same(&old_data.mono));
+                !data.mono.same(&old_data.mono)
+            },
+        );
 
     let labels = Scroll::new(
         Flex::column()

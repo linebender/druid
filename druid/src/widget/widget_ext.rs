@@ -14,7 +14,7 @@
 
 //! Convenience methods for widgets.
 
-use super::invalidation::DebugInvalidation;
+use super::{env_scope::EnvOverride, invalidation::DebugInvalidation};
 use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
@@ -156,6 +156,19 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Env`]: crate::Env
     fn env_scope(self, env: Env) -> EnvScope<T, Self> {
         EnvScope::new(env, self)
+    }
+
+    /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
+    /// [`Env`] with the provided `Env`.
+    ///
+    /// [`EnvScope`]: crate::widget::EnvScope
+    /// [`Env`]: crate::Env
+    fn env_scope_dynamic(
+        self,
+        overrides: impl Fn(&T, &mut Env) + 'static,
+        invalidate_env: impl Fn(&T, &T, &Env) -> bool + 'static,
+    ) -> EnvScope<T, Self> {
+        EnvScope::dynamic(overrides, invalidate_env, self)
     }
 
     /// Wrap this widget with the provided [`Controller`].
@@ -314,21 +327,21 @@ impl<T: Data> SizedBox<T> {
 impl<T: Data, W> EnvScope<T, W> {
     pub fn env_scope(self, env: Env) -> EnvScope<T, W> {
         let EnvScope {
+            mut overrides,
+            child,
+            current_child_env,
+            prev_super_env,
+        } = self;
+
+        if let EnvOverride::Static(ref mut env_overrides) = overrides {
+            *env_overrides = env_overrides.with_overrides(&env);
+        }
+
+        EnvScope {
             overrides,
             child,
             current_child_env,
             prev_super_env,
-            modify_env,
-            should_modify_env_now,
-        } = self;
-        EnvScope {
-            // is this correct? should i take the overrides or current child env?
-            overrides: overrides.with_overrides(&env),
-            child,
-            current_child_env,
-            prev_super_env,
-            modify_env,
-            should_modify_env_now,
         }
     }
 

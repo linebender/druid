@@ -24,12 +24,17 @@ pub struct EnvScope<T, W> {
     pub(crate) child: WidgetPod<T, W>,
     pub(crate) current_child_env: Option<Env>,
     pub(crate) prev_super_env: Option<Env>,
-    pub(crate) overrides: Env,
-    pub(crate) modify_env: Option<Box<dyn Fn(&T, &mut Env)>>,
-    pub(crate) should_modify_env_now: EnvInvalidationCheck<T>,
+    pub(crate) overrides: EnvOverride<T>,
+    // pub(crate) modify_env: Option<Box<dyn Fn(&T, &mut Env)>>,
+    // pub(crate) should_modify_env_now: Option<EnvInvalidationCheck<T>>,
 }
 
-type EnvInvalidationCheck<T> = Option<Box<dyn Fn(&T, &T, &Env) -> bool>>;
+pub(crate) enum EnvOverride<T> {
+    Static(Env),
+    Dynamic(DynamicEnv<T>, EnvInvalidationCheck<T>),
+}
+type DynamicEnv<T> = Box<dyn Fn(&T, &mut Env)>;
+type EnvInvalidationCheck<T> = Box<dyn Fn(&T, &T, &Env) -> bool>;
 
 impl<T, W: Widget<T>> EnvScope<T, W> {
     /// Create a widget that updates the environment for its descendants.
@@ -60,9 +65,25 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
             child: WidgetPod::new(child),
             current_child_env: None,
             prev_super_env: None,
-            overrides,
-            modify_env: None,
-            should_modify_env_now: None,
+            overrides: EnvOverride::Static(overrides),
+        }
+    }
+
+    /// Create a widge that updates the environment for its descendants based on
+    /// application data.
+    ///
+    /// This accepts two closures. The `invalidate_env` argument will determine whether
+    /// the `overrides` is called to update `Env`.
+    pub fn dynamic(
+        overrides: impl Fn(&T, &mut Env) + 'static,
+        invalidate_env: impl Fn(&T, &T, &Env) -> bool + 'static,
+        child: W,
+    ) -> EnvScope<T, W> {
+        EnvScope {
+            child: WidgetPod::new(child),
+            current_child_env: None,
+            prev_super_env: None,
+            overrides: EnvOverride::Dynamic(Box::new(overrides), Box::new(invalidate_env)),
         }
     }
 
@@ -73,26 +94,16 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
             .map(|old| old.same(super_env))
             .unwrap_or(false);
         if !super_same {
-            self.current_child_env = Some(super_env.with_overrides(&self.overrides));
+            match self.overrides {
+                EnvOverride::Static(ref overrides) => {
+                    self.current_child_env = Some(super_env.with_overrides(overrides));
+                }
+                EnvOverride::Dynamic(_, _) => {
+                    self.current_child_env = Some(super_env.with_overrides(&super_env));
+                }
+            }
             self.prev_super_env = Some(super_env.to_owned());
         }
-    }
-
-    /// This function takes a closure that allows you to modify the Env
-    /// based on the provided data.
-    ///
-    /// The first closure gives you access to app data and a mutable `Env`
-    /// which will be passed to `EnvScope`'s children.
-    ///
-    /// The second closure will determine if the first closure is called
-    /// when there are updates to the provided data.
-    pub fn modify_env(
-        &mut self,
-        modify_env: impl Fn(&T, &mut Env) + 'static,
-        should_modify_env: impl Fn(&T, &T, &Env) -> bool + 'static,
-    ) {
-        self.modify_env = Some(Box::new(modify_env));
-        self.should_modify_env_now = Some(Box::new(should_modify_env));
     }
 }
 
@@ -119,20 +130,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         skip(self, ctx, old_data, data, env)
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        let should_modify_env = if let Some(ref modify_now) = self.should_modify_env_now {
-            (modify_now)(old_data, data, env)
-        } else {
-            false
-        };
+        if let EnvOverride::Dynamic(ref overrides, ref invalidate) = self.overrides {
+            let should_invalidate_env = (invalidate)(old_data, data, env);
 
-        if should_modify_env {
-            let mut new_env = env.to_owned();
-            // this won't panic because if should_modify_env is true
-            // then it's guaranteed that self.modify_env is Some
-            (self.modify_env.as_ref().unwrap())(data, &mut new_env);
-            self.child_env(&new_env);
-        } else {
-            self.child_env(&env);
+            if should_invalidate_env {
+                let mut new_env = env.to_owned();
+                (overrides)(data, &mut new_env);
+                self.child_env(&new_env);
+            }
         };
 
         let child_env = self.current_child_env.as_ref().unwrap_or(&env);
