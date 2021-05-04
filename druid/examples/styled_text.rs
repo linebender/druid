@@ -58,10 +58,11 @@ pub fn main() -> Result<(), PlatformError> {
     };
 
     AppLauncher::with_window(main_window)
-        .configure_env(|env, _data| {
+        .configure_env(|env, data| {
             const MY_CUSTOM_FONT: Key<FontDescriptor> =
                 Key::new("org.linebender.example.my-custom-font");
-            env.set(MY_CUSTOM_FONT, FontDescriptor::new(FontFamily::SYSTEM_UI))
+            let font = FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(data.size);
+            env.set(MY_CUSTOM_FONT, font);
         })
         .log_to_console()
         .launch(data)?;
