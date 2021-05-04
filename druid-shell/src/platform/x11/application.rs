@@ -526,9 +526,22 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        // TODO(x11/locales): implement Application::get_locale
-        tracing::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
-        "en-US".into()
+        let var_non_empty = |var| match std::env::var(var) {
+            Ok(s) if s.is_empty() => None,
+            Ok(s) => Some(s),
+            Err(_) => None,
+        };
+
+        // from gettext manual
+        // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
+        var_non_empty("LANGUAGE")
+            // the LANGUAGE value is priority list seperated by :
+            // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
+            .and_then(|locale| locale.split(':').next().map(String::from))
+            .or_else(|| var_non_empty("LC_ALL"))
+            .or_else(|| var_non_empty("LC_MESSAGES"))
+            .or_else(|| var_non_empty("LANG"))
+            .unwrap_or_else(|| "en-US".to_string())
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
