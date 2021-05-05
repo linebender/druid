@@ -328,7 +328,7 @@ impl<W: Widget<bool>> Controller<bool, W> for CancelClose {
 fn build_root_widget() -> impl Widget<HelloState> {
     let env = {
         let mut env = Env::new();
-        env.set(theme::LABEL_COLOR, env.get(theme::PRIMARY_LIGHT));
+        env.set(theme::TEXT_COLOR, env.get(theme::PRIMARY_LIGHT));
         env
     };
 
