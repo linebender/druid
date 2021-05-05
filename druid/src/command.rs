@@ -77,7 +77,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 ///
 /// let selector = Selector::new("process_rows");
 /// let rows = vec![1, 3, 10, 12];
-/// let command = Command::new(selector, rows, Target::Auto);
+/// let command = selector.with(rows);
 ///
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
@@ -129,7 +129,7 @@ pub struct Notification {
 ///
 /// let selector = Selector::new("use-once");
 /// let num = CantClone(42);
-/// let command = Command::new(selector, SingleUse::new(num), Target::Auto);
+/// let command = selector.with(SingleUse::new(num));
 ///
 /// let payload: &SingleUse<CantClone> = command.get_unchecked(selector);
 /// if let Some(num) = payload.take() {
@@ -154,21 +154,26 @@ pub enum Target {
     /// The `Command` will be delivered to all open windows, and all widgets
     /// in each window. Delivery will stop if the event is [`handled`].
     ///
-    /// [`handled`]: struct.EventCtx.html#set_handled
+    /// [`handled`]: crate::EventCtx::set_handled
     Global,
     /// The target is a specific window.
     ///
     /// The `Command` will be delivered to all widgets in that window.
     /// Delivery will stop if the event is [`handled`].
     ///
-    /// [`handled`]: struct.EventCtx.html#set_handled
+    /// [`handled`]: crate::EventCtx::set_handled
     Window(WindowId),
     /// The target is a specific widget.
     Widget(WidgetId),
     /// The target will be determined automatically.
     ///
     /// How this behaves depends on the context used to submit the command.
-    /// Each `submit_command` function should have documentation about the specific behavior.
+    /// If the command is submitted within a `Widget` method, then it will be sent to the host
+    /// window for that widget. If it is from outside the application, via [`ExtEventSink`],
+    /// or from the root [`AppDelegate`] then it will be sent to [`Target::Global`] .
+    ///
+    /// [`ExtEventSink`]: crate::ExtEventSink
+    /// [`AppDelegate`]: crate::AppDelegate
     Auto,
 }
 
@@ -382,11 +387,11 @@ impl<T: Any> Selector<T> {
     /// as `Selector<()>` implements `Into<Command>`.
     ///
     /// By default, the command will have [`Target::Auto`].
-    /// The [`Command::to`] method can be used to override this.
+    /// The [`Selector::to`] method can be used to override this.
     ///
-    /// [`Command::new`]: struct.Command.html#method.new
-    /// [`Command::to`]: struct.Command.html#method.to
-    /// [`Target::Auto`]: enum.Target.html#variant.Auto
+    /// [`Command::new`]: Command::new
+    /// [`Selector::to`]: Selector::to
+    /// [`Target::Auto`]: Target::Auto
     pub fn with(self, payload: T) -> Command {
         Command::new(self, payload, Target::Auto)
     }
@@ -395,7 +400,7 @@ impl<T: Any> Selector<T> {
 impl Command {
     /// Create a new `Command` with a payload and a [`Target`].
     ///
-    /// [`Selector::with`] can be used to create `Command`s more conveniently.
+    /// [`Selector::with`] should be used to create `Command`s more conveniently.
     ///
     /// If you do not need a payload, [`Selector`] implements `Into<Command>`.
     ///
@@ -655,7 +660,7 @@ mod tests {
     fn get_payload() {
         let sel = Selector::new("my-selector");
         let payload = vec![0, 1, 2];
-        let command = Command::new(sel, payload, Target::Auto);
+        let command = sel.with(payload);
         assert_eq!(command.get(sel), Some(&vec![0, 1, 2]));
     }
 

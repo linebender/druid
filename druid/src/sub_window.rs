@@ -126,11 +126,11 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                 let old = self.data.clone(); // Could avoid this by keeping two bit of data or if we could ask widget pod?
                 self.child.event(ctx, event, &mut self.data, &self.env);
                 if !old.same(&self.data) {
-                    ctx.submit_command(Command::new(
-                        SUB_WINDOW_HOST_TO_PARENT,
-                        Box::new(self.data.clone()),
-                        self.parent_id,
-                    ))
+                    ctx.submit_command(
+                        SUB_WINDOW_HOST_TO_PARENT
+                            .with(Box::new(self.data.clone()))
+                            .to(self.parent_id),
+                    )
                 }
             }
         }

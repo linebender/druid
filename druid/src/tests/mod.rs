@@ -419,23 +419,23 @@ fn simple_disable() {
         harness.send_initial_events();
         check_states("send_initial_events", [None, None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         check_states("Change 1", [Some(true), None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         check_states("Change 2", [Some(true), None, Some(true), None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_3));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_3));
         check_states("Change 3", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_2));
         check_states("Change 4", [Some(true), None, Some(false), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         check_states("Change 5", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
         //This is intended the widget should not receive an event!
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_1));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_1));
         check_states("Change 6", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
     })
@@ -493,25 +493,25 @@ fn resign_focus_on_disable() {
         harness.send_initial_events();
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_2));
+        harness.submit_command(REQUEST_FOCUS.to(id_2));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, Some(id_2));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_2]);
         assert_eq!(harness.window().focus, Some(id_2));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         assert_eq!(harness.window().focus_chain(), &[]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_1));
+        harness.submit_command(REQUEST_FOCUS.to(id_1));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
         assert_eq!(harness.window().focus, Some(id_1));
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_2));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, Some(id_1));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_2]);
         assert_eq!(harness.window().focus, None);
     })
@@ -555,7 +555,7 @@ fn disable_tree() {
 
     fn multi_update(states: &[(WidgetId, bool)]) -> Command {
         let payload = states.iter().cloned().collect::<HashMap<_, _>>();
-        Command::new(MULTI_CHANGE_DISABLED, payload, Target::Global)
+        MULTI_CHANGE_DISABLED.with(payload).to(Target::Global)
     }
 
     let disabled_0: Rc<Cell<Option<bool>>> = Default::default();
