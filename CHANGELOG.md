@@ -82,6 +82,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 - Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
+- Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
+- Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 
 ### Examples
 
@@ -712,6 +714,7 @@ Last release without a changelog :(
 [#1754]: https://github.com/linebender/druid/pull/1754
 [#1755]: https://github.com/linebender/druid/pull/1755
 [#1756]: https://github.com/linebender/druid/pull/1756
+[#1761]: https://github.com/linebender/druid/pull/1761
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
