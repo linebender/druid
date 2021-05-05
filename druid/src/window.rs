@@ -38,9 +38,6 @@ use crate::{
     UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
-
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
 
 /// A unique identifier for a window.
@@ -182,6 +179,23 @@ impl<T: Data> Window<T> {
                 false,
             );
         }
+
+        // Update the disabled state if necessary
+        // Always do this before updating the focus-chain
+        if self.root.state().tree_disabled_changed() {
+            let event = LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged);
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
+        // Update the focus-chain if necessary
+        // Always do this before sending focus change, since this event updates the focus chain.
+        if self.root.state().update_focus_chain {
+            let event = LifeCycle::BuildFocusChain;
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
+        self.update_focus(widget_state, queue, data, env);
+
         // Add all the requested timers to the window's timers map.
         self.timers.extend_drain(&mut widget_state.timers);
 
@@ -278,42 +292,6 @@ impl<T: Data> Window<T> {
         // because the token may be reused and re-added in a lifecycle pass below.
         if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
             self.timers.remove(&token);
-        }
-
-        if let Some(focus_req) = widget_state.request_focus.take() {
-            let old = self.focus;
-            let new = self.widget_for_focus_request(focus_req);
-            // Only send RouteFocusChanged in case there's actual change
-            if old != new {
-                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
-                self.lifecycle(queue, &event, data, env, false);
-                self.focus = new;
-                // check if the newly focused widget has an IME session, and
-                // notify the system if so.
-                //
-                // If you're here because a profiler sent you: I guess I should've
-                // used a hashmap?
-                let old_was_ime = old
-                    .map(|old| {
-                        self.ime_handlers
-                            .iter()
-                            .any(|(_, sesh)| sesh.widget_id == old)
-                    })
-                    .unwrap_or(false);
-                let maybe_active_text_field = self
-                    .ime_handlers
-                    .iter()
-                    .find(|(_, sesh)| Some(sesh.widget_id) == self.focus)
-                    .map(|(token, _)| *token);
-                // we call this on every focus change; we could call it less but does it matter?
-                self.ime_focus_change = if maybe_active_text_field.is_some() {
-                    Some(maybe_active_text_field)
-                } else if old_was_ime {
-                    Some(None)
-                } else {
-                    None
-                };
-            }
         }
 
         if let Some(cursor) = &widget_state.cursor {
@@ -441,14 +419,16 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
-        piet.fill(
-            invalid.bounding_box(),
-            &(if self.transparent {
-                TRANSPARENT
-            } else {
-                env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
-            }),
-        );
+        for r in invalid.rects().to_owned() {
+            piet.clear(
+                Some(r),
+                if self.transparent {
+                    Color::TRANSPARENT
+                } else {
+                    env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
+                },
+            );
+        }
         self.paint(piet, invalid, queue, data, env);
     }
 
@@ -570,6 +550,50 @@ impl<T: Data> Window<T> {
             .find(|(token, _)| req_token == *token)
             .and_then(|(_, reg)| reg.document.acquire(mutable))
             .unwrap()
+    }
+
+    fn update_focus(
+        &mut self,
+        widget_state: &mut WidgetState,
+        queue: &mut CommandQueue,
+        data: &T,
+        env: &Env,
+    ) {
+        if let Some(focus_req) = widget_state.request_focus.take() {
+            let old = self.focus;
+            let new = self.widget_for_focus_request(focus_req);
+            // Only send RouteFocusChanged in case there's actual change
+            if old != new {
+                let event = LifeCycle::Internal(InternalLifeCycle::RouteFocusChanged { old, new });
+                self.lifecycle(queue, &event, data, env, false);
+                self.focus = new;
+                // check if the newly focused widget has an IME session, and
+                // notify the system if so.
+                //
+                // If you're here because a profiler sent you: I guess I should've
+                // used a hashmap?
+                let old_was_ime = old
+                    .map(|old| {
+                        self.ime_handlers
+                            .iter()
+                            .any(|(_, sesh)| sesh.widget_id == old)
+                    })
+                    .unwrap_or(false);
+                let maybe_active_text_field = self
+                    .ime_handlers
+                    .iter()
+                    .find(|(_, sesh)| Some(sesh.widget_id) == self.focus)
+                    .map(|(token, _)| *token);
+                // we call this on every focus change; we could call it less but does it matter?
+                self.ime_focus_change = if maybe_active_text_field.is_some() {
+                    Some(maybe_active_text_field)
+                } else if old_was_ime {
+                    Some(None)
+                } else {
+                    None
+                };
+            }
+        }
     }
 
     /// Create a function that can invalidate the provided widget's text state.

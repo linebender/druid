@@ -14,8 +14,7 @@
 
 //! Implementations of the [`druid::text::Formatter`] trait.
 
-use druid::text::format::{Formatter, Validation, ValidationError};
-use druid::text::Selection;
+use druid::text::{Formatter, Selection, Validation, ValidationError};
 use druid::Data;
 
 /// A formatter that can display currency values.

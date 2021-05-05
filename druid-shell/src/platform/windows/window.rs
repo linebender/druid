@@ -35,8 +35,6 @@ use winapi::shared::dxgitype::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
-use winapi::um::d2d1_1::ID2D1DeviceContext;
-use winapi::um::d2d1_1::D2D1_PRIMITIVE_BLEND_COPY;
 use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
 use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
 use winapi::um::errhandlingapi::GetLastError;
@@ -56,7 +54,7 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Color, Piet, PietText, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -100,6 +98,7 @@ pub(crate) struct WindowBuilder {
     transparent: bool,
     min_size: Option<Size>,
     position: Option<Point>,
+    level: Option<WindowLevel>,
     state: window::WindowState,
 }
 
@@ -167,7 +166,7 @@ enum DeferredOp {
 
 #[derive(Clone)]
 pub struct WindowHandle {
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: Weak<WindowState>,
 }
 
@@ -225,6 +224,9 @@ struct WindowState {
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
     active_text_input: Cell<Option<TextFieldToken>>,
+    // Is the window focusable ("activatable" in Win32 terminology)?
+    // False for tooltips, to prevent stealing focus from owner window.
+    is_focusable: bool,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -243,7 +245,7 @@ struct MyWndProc {
     app: Application,
     handle: RefCell<WindowHandle>,
     d2d_factory: D2DFactory,
-    dwrite_factory: DwriteFactory,
+    text: PietText,
     state: RefCell<Option<WndState>>,
     present_strategy: PresentStrategy,
 }
@@ -297,11 +299,6 @@ impl Drop for HCursor {
 
 /// Message indicating there are idle tasks to run.
 const DS_RUN_IDLE: UINT = WM_USER;
-
-/// Transparent bg clearing color
-///
-/// FIXME: Replace usage with Color::TRANSPARENT on next Piet release
-const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
 
 /// Message relaying a request to destroy the window.
 ///
@@ -392,7 +389,13 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
             0,
             0,
             0,
-            SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOSIZE,
+            SWP_SHOWWINDOW
+                | SWP_NOMOVE
+                | SWP_NOZORDER
+                | SWP_FRAMECHANGED
+                | SWP_NOSIZE
+                | SWP_NOOWNERZORDER
+                | SWP_NOACTIVATE,
         ) == 0
         {
             warn!(
@@ -419,36 +422,12 @@ impl WndState {
     }
 
     // Renders but does not present.
-    fn render(&mut self, d2d: &D2DFactory, dw: &DwriteFactory, invalid: &Region) {
+    fn render(&mut self, d2d: &D2DFactory, text: &PietText, invalid: &Region) {
         let rt = self.render_target.as_mut().unwrap();
 
         rt.begin_draw();
         {
-            // Piet is missing alpha blending setting, so we have to call
-            // ID2D1DeviceContext::SetPrimitiveBlend() manually to clear just
-            // the required pixels
-            let dc_for_transparency: Option<&ComPtr<ID2D1DeviceContext>> =
-                self.transparent.then(|| unsafe {
-                    (rt as *mut _ as *mut ComPtr<ID2D1DeviceContext>)
-                        .as_ref()
-                        .unwrap()
-                });
-
-            let mut piet_ctx = Piet::new(d2d, dw.clone(), rt);
-
-            // Clear the background if transparency DC is found
-            if let Some(dc) = dc_for_transparency {
-                let current_blend = unsafe { dc.GetPrimitiveBlend() };
-                unsafe {
-                    dc.SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-                }
-                for r in invalid.rects().iter() {
-                    piet_ctx.fill(r, &TRANSPARENT);
-                }
-                unsafe {
-                    dc.SetPrimitiveBlend(current_blend);
-                }
-            }
+            let mut piet_ctx = Piet::new(d2d, text.clone(), rt);
 
             // The documentation on DXGI_PRESENT_PARAMETERS says we "must not update any
             // pixel outside of the dirty rectangles."
@@ -565,15 +544,16 @@ impl MyWndProc {
     fn handle_deferred(&self, op: DeferredOp) {
         if let Some(hwnd) = self.handle.borrow().get_hwnd() {
             match op {
-                DeferredOp::SetSize(size) => unsafe {
+                DeferredOp::SetSize(size_dp) => unsafe {
+                    let size_px = size_dp.to_px(self.scale());
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        (size.width * self.scale().x()) as i32,
-                        (size.height * self.scale().y()) as i32,
-                        SWP_NOMOVE | SWP_NOZORDER,
+                        size_px.width.round() as i32,
+                        size_px.height.round() as i32,
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
                         warn!(
@@ -582,15 +562,16 @@ impl MyWndProc {
                         );
                     };
                 },
-                DeferredOp::SetPosition(position) => unsafe {
+                DeferredOp::SetPosition(pos_dp) => unsafe {
+                    let pos_px = pos_dp.to_px(self.scale());
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
-                        position.x as i32,
-                        position.y as i32,
+                        pos_px.x.round() as i32,
+                        pos_px.y.round() as i32,
                         0,
                         0,
-                        SWP_NOSIZE | SWP_NOZORDER,
+                        SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
                         warn!(
@@ -607,14 +588,20 @@ impl MyWndProc {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
                     set_style(hwnd, resizable, self.has_titlebar());
                 }
-                DeferredOp::SetWindowState(val) => unsafe {
-                    let s = match val {
-                        window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                        window::WindowState::MINIMIZED => SW_MINIMIZE,
-                        window::WindowState::RESTORED => SW_RESTORE,
+                DeferredOp::SetWindowState(val) => {
+                    let show = if self.handle.borrow().is_focusable() {
+                        match val {
+                            window::WindowState::Maximized => SW_MAXIMIZE,
+                            window::WindowState::Minimized => SW_MINIMIZE,
+                            window::WindowState::Restored => SW_RESTORE,
+                        }
+                    } else {
+                        SW_SHOWNOACTIVATE
                     };
-                    ShowWindow(hwnd, s);
-                },
+                    unsafe {
+                        ShowWindow(hwnd, show);
+                    }
+                }
                 DeferredOp::SaveAs(options, token) => {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
@@ -776,7 +763,9 @@ impl WndProc for MyWndProc {
                                 | SWP_NOMOVE
                                 | SWP_NOZORDER
                                 | SWP_FRAMECHANGED
-                                | SWP_NOSIZE,
+                                | SWP_NOSIZE
+                                | SWP_NOOWNERZORDER
+                                | SWP_NOACTIVATE,
                         ) == 0
                         {
                             warn!(
@@ -814,7 +803,7 @@ impl WndProc for MyWndProc {
                     let invalid = self.take_invalid();
                     if !invalid.rects().is_empty() {
                         s.handler.rebuild_resources();
-                        s.render(&self.d2d_factory, &self.dwrite_factory, &invalid);
+                        s.render(&self.d2d_factory, &self.text, &invalid);
                         if let Some(ref mut ds) = s.dxgi_state {
                             let mut dirty_rects = util::region_to_rectis(&invalid, self.scale());
                             let params = DXGI_PRESENT_PARAMETERS {
@@ -842,14 +831,18 @@ impl WndProc for MyWndProc {
                     (*rect).top,
                     (*rect).right - (*rect).left,
                     (*rect).bottom - (*rect).top,
-                    SWP_NOZORDER | SWP_FRAMECHANGED | SWP_DRAWFRAME,
+                    SWP_NOZORDER
+                        | SWP_FRAMECHANGED
+                        | SWP_DRAWFRAME
+                        | SWP_NOOWNERZORDER
+                        | SWP_NOACTIVATE,
                 );
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
                 if wparam != 0 && !self.has_titlebar() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() == window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() == window::WindowState::Maximized {
                             // When maximized, windows still adds offsets for the frame
                             // so we counteract them here.
                             let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
@@ -871,7 +864,7 @@ impl WndProc for MyWndProc {
                 let mut hit = DefWindowProcW(hwnd, msg, wparam, lparam);
                 if !self.has_titlebar() && self.resizable() {
                     if let Ok(handle) = self.handle.try_borrow() {
-                        if handle.get_window_state() != window::WindowState::MAXIMIZED {
+                        if handle.get_window_state() != window::WindowState::Maximized {
                             let mut rect = RECT {
                                 left: 0,
                                 top: 0,
@@ -949,11 +942,7 @@ impl WndProc for MyWndProc {
                         if let Err(e) = s.rebuild_render_target(&self.d2d_factory, scale) {
                             error!("error building render target: {}", e);
                         }
-                        s.render(
-                            &self.d2d_factory,
-                            &self.dwrite_factory,
-                            &size_dp.to_rect().into(),
-                        );
+                        s.render(&self.d2d_factory, &self.text, &size_dp.to_rect().into());
                         let present_after = match self.present_strategy {
                             PresentStrategy::Sequential => 1,
                             _ => 0,
@@ -1229,10 +1218,9 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 self.with_wnd_state(|s| {
                     if let Some(min_size_dp) = s.min_size {
-                        let min_area = ScaledArea::from_dp(min_size_dp, self.scale());
-                        let min_size_px = min_area.size_px();
-                        min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
-                        min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
+                        let min_size_px = min_size_dp.to_px(self.scale());
+                        min_max_info.ptMinTrackSize.x = min_size_px.width.round() as i32;
+                        min_max_info.ptMinTrackSize.y = min_size_px.height.round() as i32;
                     }
                 });
                 Some(0)
@@ -1267,7 +1255,8 @@ impl WindowBuilder {
             size: None,
             min_size: None,
             position: None,
-            state: window::WindowState::RESTORED,
+            level: None,
+            state: window::WindowState::Restored,
         }
     }
 
@@ -1321,20 +1310,26 @@ impl WindowBuilder {
         self.state = state;
     }
 
-    pub fn set_level(&mut self, _level: WindowLevel) {
-        warn!("WindowBuilder::set_level  is currently unimplemented for Windows platforms.");
+    pub fn set_level(&mut self, level: WindowLevel) {
+        match level {
+            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
+            _ => {
+                warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows platforms.", level);
+            }
+        }
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
-            let dw_clone = dwrite_factory.clone();
+            let fonts = self.app.fonts.clone();
+            let text = PietText::new_with_shared_fonts(dwrite_factory, Some(fonts));
             let wndproc = MyWndProc {
                 app: self.app.clone(),
                 handle: Default::default(),
                 d2d_factory: D2DFactory::new().unwrap(),
-                dwrite_factory: dw_clone,
+                text: text.clone(),
                 state: RefCell::new(None),
                 present_strategy: self.present_strategy,
             };
@@ -1363,6 +1358,28 @@ impl WindowBuilder {
                 None => (0 as HMENU, None, false),
             };
 
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
+            let mut dwExStyle: DWORD = 0;
+            let mut focusable = true;
+            if let Some(level) = self.level {
+                match level {
+                    WindowLevel::AppWindow => (),
+                    WindowLevel::Tooltip => {
+                        dwStyle = WS_POPUP;
+                        dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+                        focusable = false;
+                    }
+                    WindowLevel::DropDown => {
+                        dwStyle = WS_CHILD;
+                        dwExStyle = 0;
+                    }
+                    WindowLevel::Modal => {
+                        dwStyle = WS_OVERLAPPED;
+                        dwExStyle = WS_EX_TOPMOST;
+                    }
+                }
+            }
+
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
                 scale: Cell::new(scale),
@@ -1378,10 +1395,11 @@ impl WindowBuilder {
                 is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
+                is_focusable: focusable,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
-                dwrite_factory,
+                text,
                 state: Rc::downgrade(&win),
             };
 
@@ -1400,21 +1418,20 @@ impl WindowBuilder {
             };
             win.wndproc.connect(&handle, state);
 
-            let mut dwStyle = WS_OVERLAPPEDWINDOW;
             if !self.resizable {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
             if !self.show_titlebar {
                 dwStyle &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
             }
-            let mut dwExStyle = 0;
+
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
             }
 
             match self.state {
-                window::WindowState::MAXIMIZED => dwStyle |= WS_MAXIMIZE,
-                window::WindowState::MINIMIZED => dwStyle |= WS_MINIMIZE,
+                window::WindowState::Maximized => dwStyle |= WS_MAXIMIZE,
+                window::WindowState::Minimized => dwStyle |= WS_MINIMIZE,
                 _ => (),
             };
 
@@ -1436,16 +1453,17 @@ impl WindowBuilder {
                 return Err(Error::NullHwnd);
             }
 
-            if let Some(size) = self.size {
+            if let Some(size_dp) = self.size {
                 if let Ok(scale) = handle.get_scale() {
+                    let size_px = size_dp.to_px(scale);
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        (size.width * scale.x()) as i32,
-                        (size.height * scale.y()) as i32,
-                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
+                        size_px.width.round() as i32,
+                        size_px.height.round() as i32,
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
                     ) == 0
                     {
                         warn!(
@@ -1713,12 +1731,16 @@ impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
-            unsafe {
-                let show = match self.get_window_state() {
-                    window::WindowState::MAXIMIZED => SW_MAXIMIZE,
-                    window::WindowState::MINIMIZED => SW_MINIMIZE,
+            let show = if w.is_focusable {
+                match self.get_window_state() {
+                    window::WindowState::Maximized => SW_MAXIMIZE,
+                    window::WindowState::Minimized => SW_MINIMIZE,
                     _ => SW_SHOWNORMAL,
-                };
+                }
+            } else {
+                SW_SHOWNOACTIVATE
+            };
+            unsafe {
                 ShowWindow(hwnd, show);
                 UpdateWindow(hwnd);
             }
@@ -1803,7 +1825,7 @@ impl WindowHandle {
 
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
-        self.defer(DeferredOp::SetWindowState(window::WindowState::RESTORED));
+        self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         self.defer(DeferredOp::SetPosition(position));
     }
 
@@ -1857,7 +1879,7 @@ impl WindowHandle {
                     (info.rcClient.right as f64, info.rcClient.bottom as f64),
                 );
 
-                return window_frame - content_frame;
+                return (window_frame - content_frame).to_dp(w.scale.get());
             }
         }
 
@@ -1917,15 +1939,15 @@ impl WindowHandle {
                     );
                 }
                 if (style & WS_MAXIMIZE) != 0 {
-                    window::WindowState::MAXIMIZED
+                    window::WindowState::Maximized
                 } else if (style & WS_MINIMIZE) != 0 {
-                    window::WindowState::MINIMIZED
+                    window::WindowState::Minimized
                 } else {
-                    window::WindowState::RESTORED
+                    window::WindowState::Restored
                 }
             }
         } else {
-            window::WindowState::RESTORED
+            window::WindowState::Restored
         }
     }
 
@@ -1961,7 +1983,7 @@ impl WindowHandle {
     }
 
     pub fn text(&self) -> PietText {
-        PietText::new(self.dwrite_factory.clone())
+        self.text.clone()
     }
 
     pub fn add_text_field(&self) -> TextFieldToken {
@@ -2093,6 +2115,12 @@ impl WindowHandle {
         self.state.upgrade().map(|w| w.hwnd.get())
     }
 
+    /// Check whether the window can receive keyboard focus. This is generally true,
+    /// except for special windows like tooltips.
+    pub fn is_focusable(&self) -> bool {
+        self.state.upgrade().map(|w| w.is_focusable).unwrap_or(true)
+    }
+
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
         self.state.upgrade().map(|w| IdleHandle {
@@ -2175,7 +2203,7 @@ impl Default for WindowHandle {
     fn default() -> Self {
         WindowHandle {
             state: Default::default(),
-            dwrite_factory: DwriteFactory::new().unwrap(),
+            text: PietText::new_with_shared_fonts(DwriteFactory::new().unwrap(), None),
         }
     }
 }

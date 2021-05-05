@@ -3,17 +3,20 @@
 The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
 You can find its changes [documented below](#070---2021-01-01).
 
-# Unreleased
+## Unreleased
 
 ### Highlights
+
 - International text input support (IME) on macOS.
+- Rich text and complex script support on Linux.
 
 ### Added
-- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
+
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
 - WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
+- Add `on_added()` method in `WidgetExt` ([#1485] by [@arthmis])
 - RichTextBuilder ([#1520] by [@Maan2003])
 - `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
 - `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
@@ -22,11 +25,21 @@ You can find its changes [documented below](#070---2021-01-01).
 - WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
 - Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
 - Shell: windows implementation from content_insets ([#1592] by [@HoNile])
+- Support individual corner radii for kurbo::RoundedRect ([#1561] by [@SecondFlight])
 - Shell: IME API and macOS IME implementation ([#1619] by [@lord])
 - Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
+- `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
+- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
+  context-methods to implement disabled ([#1632] by [@xarvic])
+- `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
+- `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
+- GTK: added support for `content_insets` ([#1722] by [@jneem])
+- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
+- Text input handles Delete key ([#1746] by [@bjorn])
 
 ### Changed
 
@@ -36,22 +49,40 @@ You can find its changes [documented below](#070---2021-01-01).
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
 - Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
 - Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
+- Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
+- `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
+- Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
+- Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
+- Window size and positioning code is now in display points ([#1713] by [@jneem])
+- Update look and feel of controls when disabled ([#1717] by [@xarvic])
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
-
-
-- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
+- GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
+- focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
+- Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
+- Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
+- X11 backend now supports scaling([#1751] by [@Maan2003])
+- X11 backend now supports changing cursors ([#1755] by [@Maan2003])
+- X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 
 ### Visual
 
 ### Docs
+
+- Fixed docs of derived Lens ([#1523] by [@Maan2003])
+- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
+- Added missing documentation on derived lens items ([#1696] by [@lidin])
+- Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
+- Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 
 ### Examples
 
@@ -272,6 +303,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
+- Link to the widget_nursery in README ([#1754] by [@xarvic])
 
 ### Changed
 
@@ -437,6 +469,14 @@ Last release without a changelog :(
 [@SecondFlight]: https://github.com/SecondFlight
 [@lord]: https://github.com/lord
 [@Lejero]: https://github.com/Lejero
+[@lidin]: https://github.com/lidin
+[@xarvic]: https://github.com/xarvic
+[@arthmis]: https://github.com/arthmis
+[@ccqpein]: https://github.com/ccqpein
+[@RichardPoole42]: https://github.com/RichardPoole42
+[@r-ml]: https://github.com/r-ml
+[@djeedai]: https://github.com/djeedai
+[@bjorn]: https://github.com/bjorn
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -627,6 +667,7 @@ Last release without a changelog :(
 [#1448]: https://github.com/linebender/druid/pull/1448
 [#1463]: https://github.com/linebender/druid/pull/1463
 [#1452]: https://github.com/linebender/druid/pull/1452
+[#1485]: https://github.com/linebender/druid/pull/1485
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
 [#1526]: https://github.com/linebender/druid/pull/1526
@@ -635,6 +676,7 @@ Last release without a changelog :(
 [#1534]: https://github.com/linebender/druid/pull/1534
 [#1254]: https://github.com/linebender/druid/pull/1254
 [#1559]: https://github.com/linebender/druid/pull/1559
+[#1561]: https://github.com/linebender/druid/pull/1561
 [#1562]: https://github.com/linebender/druid/pull/1562
 [#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
@@ -642,6 +684,7 @@ Last release without a changelog :(
 [#1606]: https://github.com/linebender/druid/pull/1606
 [#1619]: https://github.com/linebender/druid/pull/1619
 [#1625]: https://github.com/linebender/druid/pull/1625
+[#1632]: https://github.com/linebender/druid/pull/1632
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1636]: https://github.com/linebender/druid/pull/1636
@@ -649,6 +692,29 @@ Last release without a changelog :(
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1645]: https://github.com/linebender/druid/pull/1645
 [#1647]: https://github.com/linebender/druid/pull/1647
+[#1654]: https://github.com/linebender/druid/pull/1654
+[#1660]: https://github.com/linebender/druid/pull/1660
+[#1662]: https://github.com/linebender/druid/pull/1662
+[#1677]: https://github.com/linebender/druid/pull/1677
+[#1691]: https://github.com/linebender/druid/pull/1691
+[#1693]: https://github.com/linebender/druid/pull/1693
+[#1695]: https://github.com/linebender/druid/pull/1695
+[#1696]: https://github.com/linebender/druid/pull/1696
+[#1698]: https://github.com/linebender/druid/pull/1698
+[#1702]: https://github.com/linebender/druid/pull/1702
+[#1713]: https://github.com/linebender/druid/pull/1713
+[#1715]: https://github.com/linebender/druid/pull/1715
+[#1717]: https://github.com/linebender/druid/pull/1717
+[#1722]: https://github.com/linebender/druid/pull/1722
+[#1724]: https://github.com/linebender/druid/pull/1724
+[#1730]: https://github.com/linebender/druid/pull/1730
+[#1737]: https://github.com/linebender/druid/pull/1737
+[#1743]: https://github.com/linebender/druid/pull/1743
+[#1746]: https://github.com/linebender/druid/pull/1746
+[#1751]: https://github.com/linebender/druid/pull/1751
+[#1754]: https://github.com/linebender/druid/pull/1754
+[#1755]: https://github.com/linebender/druid/pull/1755
+[#1756]: https://github.com/linebender/druid/pull/1756
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

@@ -62,7 +62,7 @@ impl Default for Spinner {
     fn default() -> Self {
         Spinner {
             t: 0.0,
-            color: theme::LABEL_COLOR.into(),
+            color: theme::TEXT_COLOR.into(),
         }
     }
 }

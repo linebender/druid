@@ -84,45 +84,51 @@ impl Widget<f64> for Slider {
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
-                if self.knob_hit_test(knob_size, mouse.pos) {
-                    self.x_offset = self.knob_pos.x - mouse.pos.x
-                } else {
-                    self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    if self.knob_hit_test(knob_size, mouse.pos) {
+                        self.x_offset = self.knob_pos.x - mouse.pos.x
+                    } else {
+                        self.x_offset = 0.;
+                        *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    }
+                    ctx.request_paint();
                 }
-                ctx.request_paint();
             }
             Event::MouseUp(mouse) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
+                if ctx.is_active() && !ctx.is_disabled() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
                 }
+                ctx.set_active(false);
             }
             Event::MouseMove(mouse) => {
-                if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                    ctx.request_paint();
-                }
-                if ctx.is_hot() {
-                    let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
-                    if knob_hover != self.knob_hovered {
-                        self.knob_hovered = knob_hover;
+                if !ctx.is_disabled() {
+                    if ctx.is_active() {
+                        *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                         ctx.request_paint();
                     }
+                    if ctx.is_hot() {
+                        let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
+                        if knob_hover != self.knob_hovered {
+                            self.knob_hovered = knob_hover;
+                            ctx.request_paint();
+                        }
+                    }
+                } else {
+                    ctx.set_active(false);
                 }
             }
             _ => (),
         }
     }
 
-    #[instrument(
-        name = "Slider",
-        level = "trace",
-        skip(self, _ctx, _event, _data, _env)
-    )]
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
+        if let LifeCycle::DisabledChanged(_) = event {
+            ctx.request_paint();
+        }
+    }
 
     #[instrument(
         name = "Slider",
@@ -184,31 +190,37 @@ impl Widget<f64> for Slider {
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
         let knob_circle = Circle::new(self.knob_pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
 
-        let normal_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_LIGHT),
-                env.get(theme::FOREGROUND_DARK),
-            ),
-        );
-        let flipped_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_DARK),
-                env.get(theme::FOREGROUND_LIGHT),
-            ),
-        );
-
-        let knob_gradient = if is_active {
-            flipped_knob_gradient
+        let knob_gradient = if ctx.is_disabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::DISABLED_FOREGROUND_LIGHT),
+                    env.get(theme::DISABLED_FOREGROUND_DARK),
+                ),
+            )
+        } else if ctx.is_active() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_DARK),
+                    env.get(theme::FOREGROUND_LIGHT),
+                ),
+            )
         } else {
-            normal_knob_gradient
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_LIGHT),
+                    env.get(theme::FOREGROUND_DARK),
+                ),
+            )
         };
 
         //Paint the border
-        let border_color = if is_hovered || is_active {
+        let border_color = if (is_hovered || is_active) && !ctx.is_disabled() {
             env.get(theme::FOREGROUND_LIGHT)
         } else {
             env.get(theme::FOREGROUND_DARK)

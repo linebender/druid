@@ -48,9 +48,8 @@ use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
-use crate::window;
 use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+    self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
 use super::application::Application;
@@ -357,9 +356,10 @@ impl WindowBuilder {
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
-            win_state
-                .drawing_area
-                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
+            win_state.drawing_area.set_size_request(
+                min_size_px.width.round() as i32,
+                min_size_px.height.round() as i32,
+            );
         }
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
@@ -699,6 +699,10 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
+        if let Some(level) = self.level {
+            handle.set_override_redirect(level);
+        }
+
         let size = self.size;
         win_state.with_handler(|h| {
             h.connect(&handle.clone().into());
@@ -857,22 +861,42 @@ impl WindowHandle {
 
     pub fn set_position(&self, position: Point) {
         if let Some(state) = self.state.upgrade() {
-            state.window.move_(position.x as i32, position.y as i32)
+            let px = position.to_px(state.scale.get());
+            state.window.move_(px.x as i32, px.y as i32)
         }
     }
 
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_position();
-            Point::new(x as f64, y as f64)
+            Point::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }
     }
 
+    /// The GTK implementation of content_insets differs from, e.g., the Windows one in that it
+    /// doesn't try to account for window decorations. Depending on the platform, GTK might not
+    /// even be aware of the size of the window decorations. And anyway, GTK's `Window::resize`
+    /// function [tries not to include] the window decorations, so it makes sense not to include
+    /// them here either.
+    ///
+    /// [tries not to include]: https://developer.gnome.org/gtk3/stable/GtkWidget.html#geometry-management
     pub fn content_insets(&self) -> Insets {
-        warn!("WindowHandle::content_insets unimplemented for GTK platforms.");
-        Insets::ZERO
+        if let Some(state) = self.state.upgrade() {
+            let scale = state.scale.get();
+            let (width_px, height_px) = state.window.get_size();
+            let alloc_px = state.drawing_area.get_allocation();
+            let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
+            let alloc = Rect::from_origin_size(
+                (alloc_px.x as f64, alloc_px.y as f64),
+                (alloc_px.width as f64, alloc_px.height as f64),
+            )
+            .to_dp(scale);
+            window.to_rect() - alloc
+        } else {
+            Insets::ZERO
+        }
     }
 
     pub fn set_level(&self, level: WindowLevel) {
@@ -886,18 +910,40 @@ impl WindowHandle {
 
             state.window.set_type_hint(hint);
         }
+
+        self.set_override_redirect(level);
+    }
+
+    /// The override-redirect flag tells the window manager not to mess with the window; it should
+    /// be set for things like tooltips, dropdowns, etc.
+    ///
+    /// Note that this is exposed on the GDK window, so we can't set it until the GTK window is
+    /// realized.
+    fn set_override_redirect(&self, level: WindowLevel) {
+        let override_redirect = match level {
+            WindowLevel::AppWindow => false,
+            WindowLevel::Tooltip | WindowLevel::DropDown | WindowLevel::Modal => true,
+        };
+        if let Some(state) = self.state.upgrade() {
+            if let Some(window) = state.window.get_window() {
+                window.set_override_redirect(override_redirect);
+            }
+        }
     }
 
     pub fn set_size(&self, size: Size) {
         if let Some(state) = self.state.upgrade() {
-            state.window.resize(size.width as i32, size.height as i32)
+            let px = size.to_px(state.scale.get());
+            state
+                .window
+                .resize(px.width.round() as i32, px.height.round() as i32)
         }
     }
 
     pub fn get_size(&self) -> Size {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_size();
-            Size::new(x as f64, y as f64)
+            Size::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             warn!("Could not get size for GTK window");
             Size::new(0., 0.)
@@ -905,16 +951,16 @@ impl WindowHandle {
     }
 
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         let cur_size_state = self.get_window_state();
         if let Some(state) = self.state.upgrade() {
             match (size_state, cur_size_state) {
                 (s1, s2) if s1 == s2 => (),
-                (MAXIMIZED, _) => state.window.maximize(),
-                (MINIMIZED, _) => state.window.iconify(),
-                (RESTORED, MAXIMIZED) => state.window.unmaximize(),
-                (RESTORED, MINIMIZED) => state.window.deiconify(),
-                (RESTORED, RESTORED) => (), // Unreachable
+                (Maximized, _) => state.window.maximize(),
+                (Minimized, _) => state.window.iconify(),
+                (Restored, Maximized) => state.window.unmaximize(),
+                (Restored, Minimized) => state.window.deiconify(),
+                (Restored, Restored) => (), // Unreachable
             }
 
             state.window.unmaximize();
@@ -922,18 +968,18 @@ impl WindowHandle {
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        use window::WindowState::{MAXIMIZED, MINIMIZED, RESTORED};
+        use window::WindowState::{Maximized, Minimized, Restored};
         if let Some(state) = self.state.upgrade() {
             if state.window.is_maximized() {
-                return MAXIMIZED;
+                return Maximized;
             } else if let Some(window) = state.window.get_parent_window() {
                 let state = window.get_state();
                 if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
-                    return MINIMIZED;
+                    return Minimized;
                 }
             }
         }
-        RESTORED
+        Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {

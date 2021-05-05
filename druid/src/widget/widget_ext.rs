@@ -19,7 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::widget::Scroll;
+use crate::widget::{DisabledIf, Scroll};
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
@@ -28,9 +28,12 @@ use crate::{
 pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// Wrap this widget in a [`Padding`] widget with the given [`Insets`].
     ///
-    /// [`Padding`]: widget/struct.Padding.html
-    /// [`Insets`]: kurbo/struct.Insets.html
-    fn padding(self, insets: impl Into<Insets>) -> Padding<T, Self> {
+    /// Like [`Padding::new`], this can accept a variety of arguments, including
+    /// a [`Key`] referring to [`Insets`] in the [`Env`].
+    ///
+    /// [`Key`]: crate::Key
+    /// [`Insets`]: crate::Insets
+    fn padding(self, insets: impl Into<KeyOrValue<Insets>>) -> Padding<T, Self> {
         Padding::new(insets, self)
     }
 
@@ -269,6 +272,18 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Scroll`]: widget/struct.Scroll.html
     fn scroll(self) -> Scroll<T, Self> {
         Scroll::new(self)
+    }
+
+    /// Wrap this widget in a [`DisabledIf`] widget.
+    ///
+    /// The provided closure will determine if the widget is disabled.
+    /// See [`is_disabled`] or [`set_disabled`] for more info about disabled state.
+    ///
+    /// [`is_disabled`]: crate::EventCtx::is_disabled
+    /// [`set_disabled`]: crate::EventCtx::set_disabled
+    /// [`DisabledIf`]: crate::widget::DisabledIf
+    fn disabled_if(self, disabled_if: impl Fn(&T, &Env) -> bool + 'static) -> DisabledIf<T, Self> {
+        DisabledIf::new(self, disabled_if)
     }
 }
 

@@ -14,7 +14,7 @@ fn make_labels() {
 // ANCHOR: env_scope
 fn scoped_label() {
     let my_label = Label::<()>::new("Warning!").env_scope(|env, _| {
-        env.set(druid::theme::LABEL_COLOR, Color::BLACK);
+        env.set(druid::theme::TEXT_COLOR, Color::BLACK);
         env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
     });
 }
