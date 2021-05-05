@@ -388,10 +388,6 @@ impl<T: Any> Selector<T> {
     ///
     /// By default, the command will have [`Target::Auto`].
     /// The [`Selector::to`] method can be used to override this.
-    ///
-    /// [`Command::new`]: Command::new
-    /// [`Selector::to`]: Selector::to
-    /// [`Target::Auto`]: Target::Auto
     pub fn with(self, payload: T) -> Command {
         Command::new(self, payload, Target::Auto)
     }
@@ -403,10 +399,6 @@ impl Command {
     /// [`Selector::with`] should be used to create `Command`s more conveniently.
     ///
     /// If you do not need a payload, [`Selector`] implements `Into<Command>`.
-    ///
-    /// [`Selector`]: struct.Selector.html
-    /// [`Selector::with`]: struct.Selector.html#method.with
-    /// [`Target`]: enum.Target.html
     pub fn new<T: Any>(selector: Selector<T>, payload: T, target: impl Into<Target>) -> Self {
         Command {
             symbol: selector.symbol(),
