@@ -17,9 +17,7 @@ use crate::commands::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::lens::Unit;
 use crate::widget::prelude::*;
 use crate::win_handler::AppState;
-use crate::{
-    Command, Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId,
-};
+use crate::{Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
 use druid_shell::Error;
 use std::any::Any;
 use std::ops::Deref;
