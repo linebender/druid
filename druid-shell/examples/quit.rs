@@ -69,6 +69,7 @@ impl WinHandler for QuitState {
 fn main() {
     tracing_subscriber::fmt().init();
     let app = Application::new().unwrap();
+
     let mut file_menu = Menu::new();
     file_menu.add_item(
         0x100,
@@ -77,8 +78,9 @@ fn main() {
         true,
         false,
     );
+
     let mut menubar = Menu::new();
-    menubar.add_dropdown(Menu::new(), "Application", true);
+    menubar.add_dropdown(file_menu, "Application", true);
 
     let mut builder = WindowBuilder::new(app.clone());
     builder.set_handler(Box::new(QuitState::default()));
