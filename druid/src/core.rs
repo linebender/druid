@@ -1151,7 +1151,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         None
                     },
                 };
-                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                let command = SUB_WINDOW_PARENT_TO_HOST.with(update).to(*host);
                 ctx.submit_command(command);
             }
         }
