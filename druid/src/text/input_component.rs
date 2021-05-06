@@ -832,7 +832,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
 impl<T: TextStorage> EditSessionHandle<T> {
     fn new(inner: Arc<RefCell<EditSession<T>>>) -> Self {
         let text = inner.borrow().layout.text().cloned().unwrap();
-        EditSessionHandle { inner, text }
+        EditSessionHandle { text, inner }
     }
 }
 

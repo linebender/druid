@@ -91,11 +91,7 @@ impl EditableText for String {
     }
 
     fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
-        if let Some(slice) = self.get(range) {
-            Some(Cow::from(slice))
-        } else {
-            None
-        }
+        self.get(range).map(Cow::from)
     }
 
     fn len(&self) -> usize {
