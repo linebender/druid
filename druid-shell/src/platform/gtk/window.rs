@@ -1372,13 +1372,13 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let is_composing = false;
 
     KeyEvent {
+        state,
         key,
         code,
         location,
         mods,
         repeat,
         is_composing,
-        state,
     }
 }
 
