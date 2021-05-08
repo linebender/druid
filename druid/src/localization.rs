@@ -192,16 +192,13 @@ impl L10nManager {
             let mut locales = vec![];
 
             let res_dir = fs::read_dir(base_dir)?;
-            for entry in res_dir {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        if let Some(name) = path.file_name() {
-                            if let Some(name) = name.to_str() {
-                                let langid: LanguageIdentifier =
-                                    name.parse().expect("Parsing failed.");
-                                locales.push(langid);
-                            }
+            for entry in res_dir.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name() {
+                        if let Some(name) = name.to_str() {
+                            let langid: LanguageIdentifier = name.parse().expect("Parsing failed.");
+                            locales.push(langid);
                         }
                     }
                 }
@@ -234,8 +231,8 @@ impl L10nManager {
 
         L10nManager {
             res_mgr,
-            current_bundle,
             resources,
+            current_bundle,
             current_locale,
         }
     }

@@ -315,13 +315,13 @@ impl KeyboardState {
                 }
             };
             let event = KeyEvent {
-                code,
+                state,
                 key,
+                code,
                 location,
                 mods,
-                state,
-                is_composing,
                 repeat,
+                is_composing,
             };
             Some(event)
         }
