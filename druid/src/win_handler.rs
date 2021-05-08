@@ -221,11 +221,9 @@ impl<T: Data> Inner<T> {
             app_data_type: TypeId::of::<T>(),
             ext_event_host,
         };
-        if let Some(delegate) = delegate.as_deref_mut() {
-            Some(f(delegate, data, env, &mut ctx))
-        } else {
-            None
-        }
+        delegate
+            .as_deref_mut()
+            .map(|delegate| f(delegate, data, env, &mut ctx))
     }
 
     fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
