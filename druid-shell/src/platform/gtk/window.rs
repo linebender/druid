@@ -254,16 +254,16 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
-        window.set_app_paintable(true);
         window.set_decorated(self.show_titlebar);
-        let mut can_transparent = false;
+        let mut transparent = false;
         if self.transparent {
             if let Some(screen) = window.get_screen() {
                 let visual = screen.get_rgba_visual();
-                can_transparent = visual.is_some();
+                transparent = visual.is_some();
                 window.set_visual(visual.as_ref());
             }
         }
+        window.set_app_paintable(transparent);
 
         // Get the scale factor based on the GTK reported DPI
         let scale_factor =
@@ -285,7 +285,7 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
-            is_transparent: Cell::new(self.transparent & can_transparent),
+            is_transparent: Cell::new(transparent),
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
