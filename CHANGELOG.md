@@ -90,6 +90,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Maintenance
 
 - Updated to x11rb 0.8.0. ([#1519] by [@psychon])
+- Updated fluent-bundle to 0.15.1 and fluent syntax to 0.11.0 ([#1772] by [@r-ml])
 
 ### Outside News
 
@@ -715,6 +716,7 @@ Last release without a changelog :(
 [#1755]: https://github.com/linebender/druid/pull/1755
 [#1756]: https://github.com/linebender/druid/pull/1756
 [#1761]: https://github.com/linebender/druid/pull/1761
+[#1772]: https://github.com/linebender/druid/pull/1772
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
