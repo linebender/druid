@@ -107,7 +107,7 @@ impl BundleStack {
     fn format_pattern(
         &self,
         id: &str,
-        pattern: &FluentPattern,
+        pattern: &FluentPattern<&str>,
         args: Option<&FluentArgs>,
         errors: &mut Vec<FluentError>,
     ) -> String {
@@ -154,7 +154,7 @@ impl ResourceManager {
         debug!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
-            let mut bundle = FluentBundle::new(&resolved_locales);
+            let mut bundle = FluentBundle::new(resolved_locales.clone());
             for res_id in resource_ids {
                 let res = self.get_resource(&res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
@@ -254,7 +254,7 @@ impl L10nManager {
         let value = match self
             .current_bundle
             .get_message(key)
-            .and_then(|msg| msg.value)
+            .and_then(|msg| msg.value())
         {
             Some(v) => v,
             None => return None,
