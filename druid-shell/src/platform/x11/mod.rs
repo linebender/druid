@@ -35,6 +35,7 @@ mod util;
 
 pub mod application;
 pub mod clipboard;
+mod dbus;
 pub mod error;
 pub mod keycodes;
 pub mod menu;

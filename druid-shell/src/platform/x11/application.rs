@@ -33,6 +33,7 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
+use super::dbus::DbusHandle;
 use super::util;
 use super::window::Window;
 
@@ -51,6 +52,7 @@ pub(crate) struct Application {
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
 
+    pub(crate) dbus: DbusHandle,
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
     pub(crate) cursors: Cursors,
@@ -158,6 +160,7 @@ impl Application {
 
         Ok(Application {
             connection,
+            dbus: DbusHandle::default(),
             rdb,
             screen_num: screen_num as i32,
             window_id,

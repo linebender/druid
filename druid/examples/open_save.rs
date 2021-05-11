@@ -59,7 +59,7 @@ fn ui_builder() -> impl Widget<String> {
         ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
     });
     let open = Button::new("Open").on_click(move |ctx, _, _| {
-        ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(open_dialog_options.clone()))
+        ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
     });
 
     let mut col = Flex::column();
