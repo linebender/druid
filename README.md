@@ -58,9 +58,7 @@ fn ui_builder() -> impl Widget<u32> {
     Flex::column().with_child(label).with_child(button)
 }
 ```
-##### This example is compatible with master, [here's an example using 0.7.0](https://crates.io/crates/druid/0.7.0#example)
-<br>
-
+This example works with master. Here's an example for 0.7.0: https://docs.rs/druid/latest/druid/#examples.
 
 Check out the [the examples folder] for a more comprehensive demonstration of
 Druid's existing functionality and widgets.
@@ -319,4 +317,3 @@ active and friendly community.
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
-
