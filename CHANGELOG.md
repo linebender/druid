@@ -31,6 +31,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
   context-methods to implement disabled ([#1632] by [@xarvic])
@@ -425,6 +426,7 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
+[@arthmis]: https://github.com/arthmis
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -691,6 +693,7 @@ Last release without a changelog :(
 [#1636]: https://github.com/linebender/druid/pull/1636
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1645]: https://github.com/linebender/druid/pull/1645
 [#1647]: https://github.com/linebender/druid/pull/1647
 [#1654]: https://github.com/linebender/druid/pull/1654
 [#1660]: https://github.com/linebender/druid/pull/1660
