@@ -34,17 +34,12 @@ fn response_thread(
                     let response = msg.body::<ResponseResult<FileDialogResponse>>()?;
                     let file_info = if let ResponseType::Success = response.0 {
                         // FIXME: what are we supposed to do if there are multiple files?
-                        response.1.uris.first().and_then(|s| {
-                            // FIXME: we get a URI, but we want a path. There must be a less hacky
-                            // way to do this...
-                            if s.starts_with("file://") {
-                                Some(FileInfo {
-                                    path: s[7..].into(),
-                                })
-                            } else {
-                                None
-                            }
-                        })
+                        response
+                            .1
+                            .uris
+                            .first()
+                            .and_then(|s| s.strip_prefix("file://"))
+                            .map(|s| FileInfo { path: s.into() })
                     } else {
                         None
                     };
@@ -79,7 +74,10 @@ impl DbusHandle {
         let connection = Connection::new_session()?;
         let proxy = FileChooserProxy::new(&connection)?;
 
-        let title = options.title.clone().unwrap_or("Open file".to_owned());
+        let title = options
+            .title
+            .clone()
+            .unwrap_or_else(|| "Open file".to_owned());
         let opts = OpenOptions::from(options);
         let reply = proxy.open_file(&format!("x11:{}", window), &title, opts)?;
         let tok = FileDialogToken::next();
@@ -98,7 +96,10 @@ impl DbusHandle {
         let connection = Connection::new_session()?;
         let proxy = FileChooserProxy::new(&connection)?;
 
-        let title = options.title.clone().unwrap_or("Save as".to_owned());
+        let title = options
+            .title
+            .clone()
+            .unwrap_or_else(|| "Save as".to_owned());
         let opts = SaveOptions::from(options);
         let reply = proxy.save_file(&format!("x11:{}", window), &title, opts)?;
         let tok = FileDialogToken::next();
@@ -166,7 +167,7 @@ impl From<crate::FileDialogOptions> for OpenOptions {
             directory: opts.select_directories,
             filters: opts
                 .allowed_types
-                .unwrap_or(Vec::new())
+                .unwrap_or_else(Vec::new)
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -182,7 +183,7 @@ impl From<crate::FileDialogOptions> for SaveOptions {
             modal: true,
             filters: opts
                 .allowed_types
-                .unwrap_or(Vec::new())
+                .unwrap_or_else(Vec::new)
                 .into_iter()
                 .map(Into::into)
                 .collect(),
