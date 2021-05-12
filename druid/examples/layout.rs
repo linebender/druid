@@ -62,7 +62,7 @@ fn build_app() -> impl Widget<u32> {
     }
 
     // aspect ratio box
-    let aspect_ratio_label = Label::new("Hello there, this box it's aspect-ratio. Notice text will overflow if box becomes too small.")
+    let aspect_ratio_label = Label::new("This is an aspect-ratio box. Notice how the text will overflow if the box becomes too small.")
         .with_text_color(Color::BLACK)
         .with_line_break_mode(LineBreaking::WordWrap)
         .center();
