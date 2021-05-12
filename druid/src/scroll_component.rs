@@ -218,9 +218,9 @@ impl ScrollComponent {
     }
 
     fn calc_bar_bounds(&self, axis: Axis, port: &Viewport, env: &Env) -> Option<Rect> {
-        let viewport_size = port.rect.size();
+        let viewport_size = port.view_size;
         let content_size = port.content_size;
-        let scroll_offset = port.rect.origin().to_vec2();
+        let scroll_offset = port.view_origin.to_vec2();
 
         let viewport_major = axis.major(viewport_size);
         let content_major = axis.major(content_size);
@@ -265,7 +265,7 @@ impl ScrollComponent {
 
     /// Draw scroll bars.
     pub fn draw_bars(&self, ctx: &mut PaintCtx, port: &Viewport, env: &Env) {
-        let scroll_offset = port.rect.origin().to_vec2();
+        let scroll_offset = port.view_origin.to_vec2();
 
         if self.enabled.is_none() || self.opacity <= 0.0 {
             return;
@@ -312,8 +312,8 @@ impl ScrollComponent {
         if !self.enabled.is_enabled(Axis::Vertical) {
             return false;
         }
-        let viewport_size = port.rect.size();
-        let scroll_offset = port.rect.origin().to_vec2();
+        let viewport_size = port.view_size;
+        let scroll_offset = port.view_origin.to_vec2();
 
         if let Some(mut bounds) = self.calc_vertical_bar_bounds(port, env) {
             // Stretch hitbox to edge of widget
@@ -331,8 +331,8 @@ impl ScrollComponent {
         if !self.enabled.is_enabled(Axis::Horizontal) {
             return false;
         }
-        let viewport_size = port.rect.size();
-        let scroll_offset = port.rect.origin().to_vec2();
+        let viewport_size = port.view_size;
+        let scroll_offset = port.view_origin.to_vec2();
 
         if let Some(mut bounds) = self.calc_horizontal_bar_bounds(port, env) {
             // Stretch hitbox to edge of widget
@@ -347,9 +347,9 @@ impl ScrollComponent {
     ///
     /// Make sure to call on every event
     pub fn event(&mut self, port: &mut Viewport, ctx: &mut EventCtx, event: &Event, env: &Env) {
-        let viewport_size = port.rect.size();
+        let viewport_size = port.view_size;
         let content_size = port.content_size;
-        let scroll_offset = port.rect.origin().to_vec2();
+        let scroll_offset = port.view_origin.to_vec2();
 
         let scrollbar_is_hovered = match event {
             Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
@@ -532,7 +532,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 25.0, 100.0, 75.0),
+            view_origin: (0.0, 25.0).into(),
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -540,7 +541,10 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         assert_eq!(scrollbar_rect, Rect::new(86.0, 38.0, 97.0, 63.0));
@@ -552,7 +556,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 0.0, 100.0, 50.0),
+            view_origin: Point::ZERO,
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -560,14 +565,17 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         // scrollbar should be at start of viewport
         approx_eq!(
             f64,
             scrollbar_rect.y0,
-            viewport.rect.y0 + TEST_SCROLLBAR_PAD
+            viewport.view_rect().y0 + TEST_SCROLLBAR_PAD
         );
         assert_eq!(scrollbar_rect, Rect::new(86.0, 3.0, 97.0, 28.0));
     }
@@ -578,7 +586,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 50.0, 100.0, 100.0),
+            view_origin: (0.0, 50.0).into(),
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -586,14 +595,17 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         // scrollbar should be at end of viewport
         approx_eq!(
             f64,
             scrollbar_rect.y1,
-            viewport.rect.y1 - TEST_SCROLLBAR_PAD
+            viewport.view_rect().y1 - TEST_SCROLLBAR_PAD
         );
         assert_eq!(scrollbar_rect, Rect::new(86.0, 72.0, 97.0, 97.0));
     }
@@ -604,14 +616,15 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let mut viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 25.0, 100.0, 75.0),
+            view_origin: (0.0, 25.0).into(),
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect_1 = scroll_component
             .calc_vertical_bar_bounds(&viewport, &test_env())
             .unwrap();
 
-        viewport.rect = viewport.rect + Vec2::new(0.0, 15.0);
+        viewport.view_origin += Vec2::new(0.0, 15.0);
 
         let scrollbar_rect_2 = scroll_component
             .calc_vertical_bar_bounds(&viewport, &test_env())
@@ -630,7 +643,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Both;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 50.0, 100.0, 100.0),
+            view_origin: (0.0, 50.0).into(),
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -638,11 +652,14 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         assert!(
-            scrollbar_rect.y1 + TEST_SCROLLBAR_WIDTH <= viewport.rect.y1,
+            scrollbar_rect.y1 + TEST_SCROLLBAR_WIDTH <= viewport.view_rect().y1,
             "vertical scrollbar should leave space for the horizontal scrollbar when both enabled"
         );
         assert_eq!(scrollbar_rect, Rect::new(86.0, 61.0, 97.0, 86.0));
@@ -654,7 +671,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 1000.0),
-            rect: Rect::new(0.0, 25.0, 100.0, 75.0),
+            view_origin: (0.0, 25.0).into(),
+            view_size: (100.0, 50.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -662,7 +680,10 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         // scrollbar should use SCROLLBAR_MIN_SIZE when content is much bigger than viewport
@@ -676,7 +697,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 25.0, 100.0, 35.0),
+            view_origin: (0.0, 25.0).into(),
+            view_size: (100.0, 10.0).into(),
         };
 
         let scrollbar_rect = scroll_component
@@ -684,19 +706,22 @@ mod tests {
             .unwrap();
 
         assert!(
-            rect_contains(viewport.rect.inset(TEST_SCROLLBAR_PAD), scrollbar_rect),
+            rect_contains(
+                viewport.view_rect().inset(TEST_SCROLLBAR_PAD),
+                scrollbar_rect
+            ),
             "scrollbar should be contained by viewport"
         );
         // scrollbar should fill viewport if too small for SCROLLBAR_MIN_SIZE
         approx_eq!(
             f64,
             scrollbar_rect.y0,
-            viewport.rect.y0 + TEST_SCROLLBAR_PAD
+            viewport.view_rect().y0 + TEST_SCROLLBAR_PAD
         );
         approx_eq!(
             f64,
             scrollbar_rect.y1,
-            viewport.rect.y1 - TEST_SCROLLBAR_PAD
+            viewport.view_rect().y1 - TEST_SCROLLBAR_PAD
         );
     }
 
@@ -706,7 +731,8 @@ mod tests {
         scroll_component.enabled = ScrollbarsEnabled::Vertical;
         let viewport = Viewport {
             content_size: Size::new(100.0, 100.0),
-            rect: Rect::new(0.0, 25.0, 100.0, 28.0),
+            view_origin: (0.0, 25.0).into(),
+            view_size: (100.0, 3.0).into(),
         };
 
         let scrollbar_rect = scroll_component.calc_vertical_bar_bounds(&viewport, &test_env());
