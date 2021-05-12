@@ -562,10 +562,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.needs_layout = false;
         self.state.is_expecting_set_origin_call = true;
 
-        let child_mouse_pos = match ctx.mouse_pos {
-            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2() + self.viewport_offset()),
-            None => None,
-        };
+        let child_mouse_pos = ctx
+            .mouse_pos
+            .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());
         let prev_size = self.state.size;
 
         let mut child_ctx = LayoutCtx {
@@ -1151,7 +1150,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         None
                     },
                 };
-                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                let command = SUB_WINDOW_PARENT_TO_HOST.with(update).to(*host);
                 ctx.submit_command(command);
             }
         }

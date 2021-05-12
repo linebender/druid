@@ -107,7 +107,7 @@ impl BundleStack {
     fn format_pattern(
         &self,
         id: &str,
-        pattern: &FluentPattern,
+        pattern: &FluentPattern<&str>,
         args: Option<&FluentArgs>,
         errors: &mut Vec<FluentError>,
     ) -> String {
@@ -154,7 +154,7 @@ impl ResourceManager {
         debug!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
-            let mut bundle = FluentBundle::new(&resolved_locales);
+            let mut bundle = FluentBundle::new(resolved_locales.clone());
             for res_id in resource_ids {
                 let res = self.get_resource(&res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
@@ -192,16 +192,13 @@ impl L10nManager {
             let mut locales = vec![];
 
             let res_dir = fs::read_dir(base_dir)?;
-            for entry in res_dir {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        if let Some(name) = path.file_name() {
-                            if let Some(name) = name.to_str() {
-                                let langid: LanguageIdentifier =
-                                    name.parse().expect("Parsing failed.");
-                                locales.push(langid);
-                            }
+            for entry in res_dir.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name() {
+                        if let Some(name) = name.to_str() {
+                            let langid: LanguageIdentifier = name.parse().expect("Parsing failed.");
+                            locales.push(langid);
                         }
                     }
                 }
@@ -234,8 +231,8 @@ impl L10nManager {
 
         L10nManager {
             res_mgr,
-            current_bundle,
             resources,
+            current_bundle,
             current_locale,
         }
     }
@@ -257,7 +254,7 @@ impl L10nManager {
         let value = match self
             .current_bundle
             .get_message(key)
-            .and_then(|msg| msg.value)
+            .and_then(|msg| msg.value())
         {
             Some(v) => v,
             None => return None,
