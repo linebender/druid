@@ -127,6 +127,9 @@ pub(crate) struct WidgetState {
 
     pub(crate) needs_layout: bool,
 
+    /// Because of some scrolling or something, `parent_window_origin` needs to be updated.
+    pub(crate) needs_window_origin: bool,
+
     /// Any descendant is active.
     has_active: bool,
 
@@ -308,10 +311,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Scroll`]: widget/struct.Scroll.html
     pub fn set_viewport_offset(&mut self, offset: Vec2) {
         if offset != self.state.viewport_offset {
-            // We need the parent_window_origin recalculated.
-            // It should be possible to just trigger the InternalLifeCycle::ParentWindowOrigin here,
-            // instead of full layout. Would need more management in WidgetState.
-            self.state.needs_layout = true;
+            self.state.needs_window_origin = true;
         }
         self.state.viewport_offset = offset;
     }
@@ -560,6 +560,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         self.state.needs_layout = false;
+        self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
         let child_mouse_pos = ctx
@@ -971,6 +972,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
                 InternalLifeCycle::ParentWindowOrigin => {
                     self.state.parent_window_origin = ctx.widget_state.window_origin();
+                    self.state.needs_window_origin = false;
                     true
                 }
                 #[cfg(test)]
@@ -1212,6 +1214,7 @@ impl WidgetState {
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
+            needs_window_origin: false,
             is_active: false,
             has_active: false,
             has_focus: false,
@@ -1273,6 +1276,7 @@ impl WidgetState {
         child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
+        self.needs_window_origin |= child_state.needs_window_origin;
         self.request_anim |= child_state.request_anim;
         self.children_disabled_changed |= child_state.children_disabled_changed;
         self.children_disabled_changed |=

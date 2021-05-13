@@ -54,9 +54,9 @@ druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
 tracing = { version = "0.1.22" }
 tracing-subscriber = { version = "0.2.15", features = ["fmt", "ansi"], default-features = false }
-fluent-bundle = "0.12.0"
+fluent-bundle = "0.15.1"
 fluent-langneg = "0.13.0"
-fluent-syntax = "0.9.3"
+fluent-syntax = "0.11.0"
 unic-langid = "0.9.0"
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.3.0"
