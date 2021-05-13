@@ -40,6 +40,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - GTK: added support for `content_insets` ([#1722] by [@jneem])
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
+- `lens` macro can access nested fields ([#1764] by [@Maan2003])
 
 ### Changed
 
@@ -719,6 +720,7 @@ Last release without a changelog :(
 [#1755]: https://github.com/linebender/druid/pull/1755
 [#1756]: https://github.com/linebender/druid/pull/1756
 [#1761]: https://github.com/linebender/druid/pull/1761
+[#1764]: https://github.com/linebender/druid/pull/1764
 [#1772]: https://github.com/linebender/druid/pull/1772
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
