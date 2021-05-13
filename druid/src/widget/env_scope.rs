@@ -31,7 +31,7 @@ pub struct EnvScope<T, W> {
 
 pub(crate) enum EnvOverride<T> {
     Static(Env),
-    Dynamic(DynamicEnv<T>, DynamicEnv<T>, EnvInvalidationCheck<T>),
+    Dynamic(DynamicEnv<T>, EnvInvalidationCheck<T>),
 }
 type DynamicEnv<T> = Box<dyn Fn(&T, &mut Env)>;
 type EnvInvalidationCheck<T> = Box<dyn Fn(&T, &T, &Env) -> bool>;
@@ -75,7 +75,6 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
     /// This accepts two closures. The `invalidate_env` argument will determine whether
     /// the `overrides` is called to update `Env`.
     pub fn dynamic(
-        static_overrides: impl Fn(&T, &mut Env) + 'static,
         overrides: impl Fn(&T, &mut Env) + 'static,
         invalidate_env: impl Fn(&T, &T, &Env) -> bool + 'static,
         child: W,
@@ -84,34 +83,36 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
             child: WidgetPod::new(child),
             current_child_env: None,
             prev_super_env: None,
-            overrides: EnvOverride::Dynamic(
-                Box::new(static_overrides),
-                Box::new(overrides),
-                Box::new(invalidate_env),
-            ),
+            overrides: EnvOverride::Dynamic(Box::new(overrides), Box::new(invalidate_env)),
         }
     }
 
     fn child_env(&mut self, super_env: &Env, data: &T) {
-        let super_same = self
-            .prev_super_env
-            .as_ref()
-            .map(|old| old.same(super_env))
-            .unwrap_or(false);
-        if !super_same {
-            match self.overrides {
-                EnvOverride::Static(ref overrides) => {
+        match self.overrides {
+            EnvOverride::Static(ref overrides) => {
+                let super_same = self
+                    .prev_super_env
+                    .as_ref()
+                    .map(|old| old.same(&super_env))
+                    .unwrap_or(false);
+                if !super_same {
                     self.current_child_env = Some(super_env.with_overrides(overrides));
                 }
-                EnvOverride::Dynamic(ref static_overrides, ref dynamic_overrides, _) => {
-                    let mut new_env = super_env.to_owned();
-                    (static_overrides)(data, &mut new_env);
+            }
+            EnvOverride::Dynamic(ref dynamic_overrides, _) => {
+                let mut new_env = super_env.to_owned();
+                let super_same = self
+                    .prev_super_env
+                    .as_ref()
+                    .map(|old| old.same(&super_env))
+                    .unwrap_or(false);
+                if !super_same {
                     (dynamic_overrides)(data, &mut new_env);
                     self.current_child_env = Some(new_env);
                 }
             }
-            self.prev_super_env = Some(super_env.clone());
         }
+        self.prev_super_env = Some(super_env.clone());
     }
 }
 
@@ -142,17 +143,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
             EnvOverride::Static(_) => {
                 self.child_env(env, data);
             }
-            EnvOverride::Dynamic(_, _, ref invalidate) => {
+            EnvOverride::Dynamic(ref dynamic_overrides, ref invalidate) => {
                 let should_invalidate_env = (invalidate)(old_data, data, env);
-                // dbg!(should_invalidate_env);
 
                 if should_invalidate_env {
-                    // let new_env = env.to_owned();
-                    let new_env = Env::new().with_overrides(env);
-                    // dbg!(new_env.same(env));
-                    // (static_overrides)(data, &mut new_env);
-                    // (overrides)(data, &mut new_env);
-                    // self.child_env(env, data);
+                    let mut new_env = Env::new().with_overrides(env);
+                    // (dynamic_overrides)(data, &mut new_env);
                     self.child_env(&new_env, data);
                 }
             }

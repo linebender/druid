@@ -101,13 +101,12 @@ fn ui_builder() -> impl Widget<AppData> {
             data.size *= 1.1;
         })
         .env_scope_dynamic(
-            |data, env| {
+            |data: &AppData, env: &mut druid::Env| {
                 const MY_CUSTOM_FONT: Key<FontDescriptor> =
                     Key::new("org.linebender.example.my-custom-font");
                 let font = FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(data.size);
                 env.set(MY_CUSTOM_FONT, font);
-            },
-            |data: &AppData, env: &mut druid::Env| {
+
                 let new_font = if data.mono {
                     FontDescriptor::new(FontFamily::MONOSPACE)
                 } else {

@@ -165,11 +165,10 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Env`]: crate::Env
     fn env_scope_dynamic(
         self,
-        static_overrides: impl Fn(&T, &mut Env) + 'static,
         overrides: impl Fn(&T, &mut Env) + 'static,
         invalidate_env: impl Fn(&T, &T, &Env) -> bool + 'static,
     ) -> EnvScope<T, Self> {
-        EnvScope::dynamic(static_overrides, overrides, invalidate_env, self)
+        EnvScope::dynamic(overrides, invalidate_env, self)
     }
 
     /// Wrap this widget with the provided [`Controller`].

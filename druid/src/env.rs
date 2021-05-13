@@ -496,7 +496,7 @@ impl Debug for Value {
 
 impl Data for Env {
     fn same(&self, other: &Env) -> bool {
-        Arc::ptr_eq(&self.0, &other.0) && self.0.deref().same(other.0.deref())
+        Arc::ptr_eq(&self.0, &other.0) || self.0.deref().same(other.0.deref())
     }
 }
 
