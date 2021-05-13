@@ -87,39 +87,31 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
         }
     }
 
-    fn child_env(&mut self, super_env: &Env, data: &T) {
-        match self.overrides {
-            EnvOverride::Static(ref overrides) => {
-                let super_same = self
-                    .prev_super_env
-                    .as_ref()
-                    .map(|old| old.same(&super_env))
-                    .unwrap_or(false);
-                if !super_same {
+    fn child_env(&mut self, super_env: &Env) {
+        let super_same = self
+            .prev_super_env
+            .as_ref()
+            .map(|old| old.same(&super_env))
+            .unwrap_or(false);
+        if !super_same {
+            match self.overrides {
+                EnvOverride::Static(ref overrides) => {
                     self.current_child_env = Some(super_env.with_overrides(overrides));
                 }
-            }
-            EnvOverride::Dynamic(ref dynamic_overrides, _) => {
-                let mut new_env = super_env.to_owned();
-                let super_same = self
-                    .prev_super_env
-                    .as_ref()
-                    .map(|old| old.same(&super_env))
-                    .unwrap_or(false);
-                if !super_same {
-                    (dynamic_overrides)(data, &mut new_env);
+                EnvOverride::Dynamic(ref dynamic_overrides, _) => {
+                    let mut new_env = super_env.to_owned();
                     self.current_child_env = Some(new_env);
                 }
             }
+            self.prev_super_env = Some(super_env.clone());
         }
-        self.prev_super_env = Some(super_env.clone());
     }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.child_env(env, &data);
+        self.child_env(env);
         let child_env = self.current_child_env.as_ref().unwrap_or(env);
 
         self.child.event(ctx, event, data, child_env)
@@ -127,7 +119,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
 
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.child_env(env, data);
+        self.child_env(env);
         let child_env = self.current_child_env.as_ref().unwrap_or(env);
 
         self.child.lifecycle(ctx, event, data, &child_env)
@@ -139,19 +131,20 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         skip(self, ctx, old_data, data, env)
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        match self.overrides {
-            EnvOverride::Static(_) => {
-                self.child_env(env, data);
-            }
-            EnvOverride::Dynamic(ref dynamic_overrides, ref invalidate) => {
-                let should_invalidate_env = (invalidate)(old_data, data, env);
+        if let EnvOverride::Dynamic(ref rebuild, ref invalidate) = self.overrides {
+            let should_invalidate_env = (invalidate)(old_data, data, env);
 
-                if should_invalidate_env {
-                    let mut new_env = Env::new().with_overrides(env);
-                    // (dynamic_overrides)(data, &mut new_env);
-                    self.child_env(&new_env, data);
-                }
+            if should_invalidate_env {
+                // let mut new_env = Env::new().with_overrides(env);
+                let mut new_env = env.clone();
+                (rebuild)(data, &mut new_env);
+
+                self.child_env(&new_env);
             }
+        }
+
+        if ctx.env_changed() {
+            self.child_env(env);
         }
 
         let child_env = self.current_child_env.as_ref().unwrap_or(&env);
@@ -161,7 +154,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("EnvScope");
-        self.child_env(env, data);
+        self.child_env(env);
         let child_env = self.current_child_env.as_ref().unwrap_or(env);
 
         let size = self.child.layout(ctx, &bc, data, &child_env);
@@ -171,7 +164,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
 
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.child_env(env, data);
+        self.child_env(env);
         let child_env = self.current_child_env.as_ref().unwrap_or(env);
 
         self.child.paint(ctx, data, &child_env);
