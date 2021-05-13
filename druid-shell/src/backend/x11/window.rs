@@ -48,7 +48,7 @@ use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyEvent, KeyState, Modifiers};
+use crate::keyboard::{KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -58,10 +58,9 @@ use crate::text::{simulate_input, Event};
 use crate::window::{
     FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
-use crate::{window, ScaledArea};
+use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
-use super::keycodes;
 use super::menu::Menu;
 use super::util::Timer;
 
@@ -1066,26 +1065,12 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) {
-        let hw_keycode = key_press.detail;
-        let code = keycodes::hardware_keycode_to_code(hw_keycode);
-        let mods = key_mods(key_press.state);
-        let key = keycodes::code_to_key(code, mods);
-        let location = keycodes::code_to_location(code);
-        let state = KeyState::Down;
-        let key_event = KeyEvent {
-            code,
-            key,
-            mods,
-            location,
-            state,
-            repeat: false,
-            is_composing: false,
-        };
-        self.with_handler(|h| {
-            if !h.key_down(key_event.clone()) {
-                simulate_input(h, self.active_text_field.get(), key_event);
+    pub fn handle_key_event(&self, event: KeyEvent) {
+        self.with_handler(|h| match event.state {
+            KeyState::Down => {
+                simulate_input(h, self.active_text_field.get(), event);
             }
+            KeyState::Up => h.key_up(event),
         });
     }
 

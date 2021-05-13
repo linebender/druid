@@ -36,8 +36,8 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
-use super::util;
 use super::window::Window;
+use super::{util, xkb};
 
 #[derive(Clone)]
 pub(crate) struct Application {
@@ -99,6 +99,7 @@ pub(crate) struct Application {
     render_argb32_pictformat_cursor: Option<Pictformat>,
     /// Newest timestamp that we received
     timestamp: Rc<Cell<Timestamp>>,
+    xkb_context: xkb::Context,
 }
 
 /// The mutable `Application` state.
@@ -107,6 +108,7 @@ struct State {
     quitting: bool,
     /// A collection of all the `Application` windows.
     windows: HashMap<u32, Rc<Window>>,
+    xkb_state: xkb::State,
 }
 
 #[derive(Clone, Debug)]
@@ -132,11 +134,25 @@ impl Application {
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
+        let ctx = xkb::Context::new();
+        ctx.set_log_level(tracing::Level::DEBUG);
+        use x11rb::protocol::xkb::ConnectionExt;
+        conn.xkb_use_extension(1, 0)?.reply()?;
+        let device_id = ctx
+            .core_keyboard_device_id(&conn)
+            .context("get core keyboard device id")?;
+
+        let keymap = ctx
+            .keymap_from_device(&conn, device_id)
+            .context("key map from device")?;
+
+        let xkb_state = keymap.state();
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num)?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashMap::new(),
+            xkb_state,
         }));
 
         let (idle_read, idle_write) = nix::unistd::pipe2(nix::fcntl::OFlag::O_NONBLOCK)?;
@@ -227,6 +243,7 @@ impl Application {
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
             timestamp: Rc::new(Cell::new(x11rb::CURRENT_TIME)),
+            xkb_context: ctx,
         })
     }
 
@@ -414,7 +431,25 @@ impl Application {
                 let w = self
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(ev);
+                let hw_keycode = ev.detail;
+                let state = borrow_mut!(self.state)?;
+                let key_event = state
+                    .xkb_state
+                    .key_event(hw_keycode as _, keyboard_types::KeyState::Down);
+
+                w.handle_key_event(key_event);
+            }
+            Event::KeyRelease(ev) => {
+                let w = self
+                    .window(ev.event)
+                    .context("KEY_PRESS - failed to get window")?;
+                let hw_keycode = ev.detail;
+                let state = borrow_mut!(self.state)?;
+                let key_event = state
+                    .xkb_state
+                    .key_event(hw_keycode as _, keyboard_types::KeyState::Up);
+
+                w.handle_key_event(key_event);
             }
             Event::ButtonPress(ev) => {
                 let w = self
