@@ -14,13 +14,16 @@
 
 //! Example of dynamic text styling
 
-use druid::widget::{
-    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Scroll,
-    Stepper, TextBox,
-};
 use druid::{
     theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt,
     LocalizedString, PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
+};
+use druid::{
+    widget::{
+        Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse,
+        Scroll, Stepper, TextBox,
+    },
+    Env,
 };
 use std::fmt::Display;
 
@@ -58,12 +61,6 @@ pub fn main() -> Result<(), PlatformError> {
     };
 
     AppLauncher::with_window(main_window)
-        .configure_env(|env, data| {
-            const MY_CUSTOM_FONT: Key<FontDescriptor> =
-                Key::new("org.linebender.example.my-custom-font");
-            let font = FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(data.size);
-            env.set(MY_CUSTOM_FONT, font);
-        })
         .log_to_console()
         .launch(data)?;
 
@@ -104,6 +101,12 @@ fn ui_builder() -> impl Widget<AppData> {
             data.size *= 1.1;
         })
         .env_scope_dynamic(
+            |data, env| {
+                const MY_CUSTOM_FONT: Key<FontDescriptor> =
+                    Key::new("org.linebender.example.my-custom-font");
+                let font = FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(data.size);
+                env.set(MY_CUSTOM_FONT, font);
+            },
             |data: &AppData, env: &mut druid::Env| {
                 let new_font = if data.mono {
                     FontDescriptor::new(FontFamily::MONOSPACE)
@@ -114,7 +117,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 env.set(MY_CUSTOM_FONT, new_font);
             },
             |old_data, data, _env| {
-                println!("invalidate env: {}", !data.mono.same(&old_data.mono));
+                // println!("invalidate env: {}", !data.mono.same(&old_data.mono));
                 !data.mono.same(&old_data.mono)
             },
         );
