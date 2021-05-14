@@ -36,7 +36,7 @@ pub use crate::platform::clipboard as platform;
 /// data available as an SVG, for other editors, and a bitmap image for applications
 /// that can accept general image data.
 ///
-/// ## `FormatId` entifiers
+/// ## `FormatId`entifiers
 ///
 /// In order for other applications to find data we put on the clipboard,
 /// (and for us to use data from other applications) we need to use agreed-upon
