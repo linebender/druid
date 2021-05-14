@@ -25,7 +25,7 @@ pub use crate::platform::clipboard as platform;
 /// Copying and pasting text is simple, using [`Clipboard::put_string`] and
 /// [`Clipboard::get_string`]. If this is all you need, you're in luck.
 ///
-/// # Advanced useage
+/// # Advanced usage
 ///
 /// When working with data more complicated than plaintext, you will generally
 /// want to make that data available in multiple formats.
@@ -36,7 +36,7 @@ pub use crate::platform::clipboard as platform;
 /// data available as an SVG, for other editors, and a bitmap image for applications
 /// that can accept general image data.
 ///
-/// ## `FormatId`entifiers
+/// ## `FormatId` entifiers
 ///
 /// In order for other applications to find data we put on the clipboard,
 /// (and for us to use data from other applications) we need to use agreed-upon
