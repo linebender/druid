@@ -198,46 +198,42 @@ impl From<StringCursor> for ArcStrCursor {
 }
 
 impl EditableTextCursor<Arc<String>> for ArcStrCursor {
-   fn set(&mut self, position: usize) {
-      self.0.set(position)
-   }
-   fn pos(&self) -> usize {
-      self.0.pos()
-   }
-   fn is_boundary(&self) -> bool {
-      self.0.is_boundary()
-   }
-   fn prev(&mut self) -> Option<usize> {
-      self.0.prev()
-   }
-   fn next(&mut self) -> Option<usize> {
-      self.0.next()
-   }
-   fn peek_next_codepoint(&self) -> Option<char> {
-      self.0.peek_next_codepoint()
-   }
-   fn next_codepoint(&mut self) -> Option<char> {
-      self.0.next_codepoint()
-   }
-   fn prev_codepoint(&mut self) -> Option<char> {
-      self.0.prev_codepoint()
-   }
-   fn at_or_next(&mut self) -> Option<usize> {
-      self.0.at_or_next()
-   }
-   fn at_or_prev(&mut self) -> Option<usize> {
-      self.0.at_or_prev()
-   }
+    fn set(&mut self, position: usize) {
+        self.0.set(position)
+    }
+    fn pos(&self) -> usize {
+        self.0.pos()
+    }
+    fn is_boundary(&self) -> bool {
+        self.0.is_boundary()
+    }
+    fn prev(&mut self) -> Option<usize> {
+        self.0.prev()
+    }
+    fn next(&mut self) -> Option<usize> {
+        self.0.next()
+    }
+    fn peek_next_codepoint(&self) -> Option<char> {
+        self.0.peek_next_codepoint()
+    }
+    fn next_codepoint(&mut self) -> Option<char> {
+        self.0.next_codepoint()
+    }
+    fn prev_codepoint(&mut self) -> Option<char> {
+        self.0.prev_codepoint()
+    }
+    fn at_or_next(&mut self) -> Option<usize> {
+        self.0.at_or_next()
+    }
+    fn at_or_prev(&mut self) -> Option<usize> {
+        self.0.at_or_prev()
+    }
 }
 
 impl EditableText for Arc<String> {
     type Cursor = ArcStrCursor;
     fn cursor(&self, position: usize) -> Option<Self::Cursor> {
-        if let Some(cursor) = <String as EditableText>::cursor(self, position) {
-            Some(cursor.into())
-        } else {
-            None
-        }
+        <String as EditableText>::cursor(self, position).map(|cursor| cursor.into())
     }
     fn edit(&mut self, range: Range<usize>, new: impl Into<String>) {
         let new = new.into();
