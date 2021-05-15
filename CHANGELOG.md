@@ -229,6 +229,7 @@ values and their textual representations. ([#1377])
 - Ensure that `LifeCycle::WidgetAdded` is the first thing a widget sees. ([#1259] by [@finnerale])
 - Fix a missed call to `CloseClipboard` on Windows. ([#1410] by [@andrewhickman])
 - WidgetPod: change not laid out `debug_panic` to warning ([#1441] by [@Maan2003])
+- `EditableText` now takes any `EditableTextCursor` instead of only `StringCursor` ([#????] by [@Juan65Lira])
 
 ### Visual
 
