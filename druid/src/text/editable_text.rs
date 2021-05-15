@@ -22,13 +22,13 @@ use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
 /// An EditableText trait.
 pub trait EditableText: Sized {
-    // TODO: would be nice to have something like
-    // type Cursor: EditableTextCursor<Self>;
+    /// The cursor to be used by this type
+    type Cursor: EditableTextCursor<Self>;
 
     /// Create a cursor with a reference to the text and a offset position.
     ///
     /// Returns None if the position isn't a codepoint boundary.
-    fn cursor(&self, position: usize) -> Option<StringCursor>;
+    fn cursor(&self, position: usize) -> Option<Self::Cursor>;
 
     /// Replace range with new text.
     /// Can panic if supplied an invalid range.
@@ -73,9 +73,10 @@ pub trait EditableText: Sized {
 }
 
 impl EditableText for String {
-    fn cursor<'a>(&self, position: usize) -> Option<StringCursor> {
+    type Cursor = StringCursor;
+    fn cursor(&self, position: usize) -> Option<StringCursor> {
         let new_cursor = StringCursor {
-            text: &self,
+            text: self.clone(),
             position,
         };
 
@@ -187,9 +188,56 @@ impl EditableText for String {
     }
 }
 
+/// EditableTextCursor implementor for Arc<String>
+pub struct ArcStrCursor(StringCursor);
+
+impl From<StringCursor> for ArcStrCursor {
+    fn from(sc: StringCursor) -> Self {
+        Self(sc)
+    }
+}
+
+impl EditableTextCursor<Arc<String>> for ArcStrCursor {
+   fn set(&mut self, position: usize) {
+      self.0.set(position)
+   }
+   fn pos(&self) -> usize {
+      self.0.pos()
+   }
+   fn is_boundary(&self) -> bool {
+      self.0.is_boundary()
+   }
+   fn prev(&mut self) -> Option<usize> {
+      self.0.prev()
+   }
+   fn next(&mut self) -> Option<usize> {
+      self.0.next()
+   }
+   fn peek_next_codepoint(&self) -> Option<char> {
+      self.0.peek_next_codepoint()
+   }
+   fn next_codepoint(&mut self) -> Option<char> {
+      self.0.next_codepoint()
+   }
+   fn prev_codepoint(&mut self) -> Option<char> {
+      self.0.prev_codepoint()
+   }
+   fn at_or_next(&mut self) -> Option<usize> {
+      self.0.at_or_next()
+   }
+   fn at_or_prev(&mut self) -> Option<usize> {
+      self.0.at_or_prev()
+   }
+}
+
 impl EditableText for Arc<String> {
-    fn cursor(&self, position: usize) -> Option<StringCursor> {
-        <String as EditableText>::cursor(self, position)
+    type Cursor = ArcStrCursor;
+    fn cursor(&self, position: usize) -> Option<Self::Cursor> {
+        if let Some(cursor) = <String as EditableText>::cursor(self, position) {
+            Some(cursor.into())
+        } else {
+            None
+        }
     }
     fn edit(&mut self, range: Range<usize>, new: impl Into<String>) {
         let new = new.into();
@@ -273,12 +321,12 @@ pub trait EditableTextCursor<EditableText> {
 
 /// A cursor type that implements EditableTextCursor for String
 #[derive(Debug)]
-pub struct StringCursor<'a> {
-    text: &'a str,
+pub struct StringCursor {
+    text: String,
     position: usize,
 }
 
-impl<'a> EditableTextCursor<&'a String> for StringCursor<'a> {
+impl EditableTextCursor<String> for StringCursor {
     fn set(&mut self, position: usize) {
         self.position = position;
     }
