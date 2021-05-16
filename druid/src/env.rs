@@ -387,7 +387,7 @@ impl Env {
 
     /// Replaces and adds to current `Env`'s values with values form the provided `Env`.
     pub(crate) fn with_overrides(&self, changes: &Env) -> Env {
-        let mut new_env = self.to_owned();
+        let mut new_env = self.clone();
         let mut internal_env = Arc::make_mut(&mut new_env.0).to_owned();
         let env_map = &mut internal_env.map;
 
