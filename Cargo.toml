@@ -8,10 +8,12 @@ members = [
     "druid/examples/hello_web",
     "druid/examples/value_formatting",
     "lasagna",
+    "druidinho",
 ]
 default-members = [
     "druid",
     "druid-shell",
     "druid-derive",
     "lasagna",
+    "druidinho",
 ]
