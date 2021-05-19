@@ -301,12 +301,6 @@ impl WindowBuilder {
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
-        let state = RefCell::new(WindowState {
-            area: ScaledArea::from_px(size_px, scale),
-            scale,
-            invalid: Region::EMPTY,
-            destroyed: false,
-        });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
             Err(e) => {
@@ -349,7 +343,10 @@ impl WindowBuilder {
             handler,
             cairo_surface,
             atoms,
-            state,
+            area: Cell::new(ScaledArea::from_px(size_px, scale)),
+            scale: Cell::new(scale),
+            invalid: RefCell::new(Region::EMPTY),
+            destroyed: Cell::new(false),
             timer_queue: Mutex::new(BinaryHeap::new()),
             idle_queue: Arc::new(Mutex::new(Vec::new())),
             idle_pipe: self.app.idle_pipe(),
@@ -425,7 +422,12 @@ pub(crate) struct Window {
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
     atoms: WindowAtoms,
-    state: RefCell<WindowState>,
+    area: Cell<ScaledArea>,
+    scale: Cell<Scale>,
+    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    destroyed: Cell<bool>,
+    /// The region that was invalidated since the last time we rendered.
+    invalid: RefCell<Region>,
     /// Timers, sorted by "earliest deadline first"
     timer_queue: Mutex<BinaryHeap<Timer>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
@@ -511,16 +513,6 @@ atom_manager! {
     }
 }
 
-/// The mutable state of the window.
-struct WindowState {
-    area: ScaledArea,
-    scale: Scale,
-    /// The region that was invalidated since the last time we rendered.
-    invalid: Region,
-    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
-    destroyed: bool,
-}
-
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
 /// extension is enabled, we render to a pixmap and then present it. If the present extension is
 /// disabled, we render to a pixmap and then call `copy_area` on it (this probably isn't the best
@@ -582,7 +574,7 @@ impl Window {
     #[track_caller]
     fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
         if self.cairo_surface.try_borrow_mut().is_err()
-            || self.state.try_borrow_mut().is_err()
+            || self.invalid.try_borrow_mut().is_err()
             || self.present_data.try_borrow_mut().is_err()
             || self.buffers.try_borrow_mut().is_err()
         {
@@ -608,8 +600,8 @@ impl Window {
     }
 
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        let size = self.size()?.size_dp();
-        let scale = self.get_scale()?;
+        let size = self.size().size_dp();
+        let scale = self.scale.get();
         self.with_handler(|h| {
             h.connect(&handle.into());
             h.scale(scale);
@@ -621,29 +613,25 @@ impl Window {
     /// Start the destruction of the window.
     pub fn destroy(&self) {
         if !self.destroyed() {
-            match borrow_mut!(self.state) {
-                Ok(mut state) => state.destroyed = true,
-                Err(e) => error!("Failed to set destroyed flag: {}", e),
-            }
+            self.destroyed.set(true);
             log_x11!(self.app.connection().destroy_window(self.id));
         }
     }
 
     fn destroyed(&self) -> bool {
-        borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
+        self.destroyed.get()
     }
 
-    fn size(&self) -> Result<ScaledArea, Error> {
-        Ok(borrow!(self.state)?.area)
+    fn size(&self) -> ScaledArea {
+        self.area.get()
     }
 
     // note: size is in px
     fn set_size(&self, size: Size) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let new_size = {
-            let mut state = borrow_mut!(self.state)?;
-            if size != state.area.size_px() {
-                state.area = ScaledArea::from_px(size, scale);
+            if size != self.area.get().size_px() {
+                self.area.set(ScaledArea::from_px(size, scale));
                 true
             } else {
                 false
@@ -697,11 +685,11 @@ impl Window {
         }
 
         self.update_cairo_surface()?;
-        let invalid = std::mem::replace(&mut borrow_mut!(self.state)?.invalid, Region::EMPTY);
+        let invalid = std::mem::replace(&mut *borrow_mut!(self.invalid)?, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
             let cairo_ctx = cairo::Context::new(&surface);
-            let scale = self.get_scale()?;
+            let scale = self.scale.get();
             for rect in invalid.rects() {
                 let rect = rect.to_px(scale);
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
@@ -747,7 +735,7 @@ impl Window {
             .idle_pixmaps
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
             present.present(self.app.connection(), pixmap, self.id, &invalid, scale)?;
             buffers.idle_pixmaps.pop();
@@ -805,7 +793,7 @@ impl Window {
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
         // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.state)?.invalid.add_rect(rect);
+        borrow_mut!(self.invalid)?.add_rect(rect);
         Ok(())
     }
 
@@ -842,12 +830,9 @@ impl Window {
     }
 
     fn invalidate(&self) {
-        match self.size() {
-            Ok(size) => self
-                .add_invalid_rect(size.size_dp().to_rect())
-                .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err)),
-            Err(err) => error!("Window::invalidate - failed to get size: {}", err),
-        }
+        let rect = self.size().size_dp().to_rect();
+        self.add_invalid_rect(rect)
+            .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err));
 
         self.request_anim_frame();
     }
@@ -918,7 +903,7 @@ impl Window {
     }
 
     fn get_scale(&self) -> Result<Scale, Error> {
-        Ok(borrow!(self.state)?.scale)
+        Ok(self.scale.get())
     }
 
     pub fn handle_expose(&self, expose: &xproto::ExposeEvent) -> Result<(), Error> {
@@ -926,7 +911,7 @@ impl Window {
             (expose.x as f64, expose.y as f64),
             (expose.width as f64, expose.height as f64),
         )
-        .to_dp(self.get_scale()?);
+        .to_dp(self.scale.get());
 
         self.add_invalid_rect(rect)?;
         if self.waiting_on_present()? {
@@ -965,7 +950,7 @@ impl Window {
         button_press: &xproto::ButtonPressEvent,
     ) -> Result<(), Error> {
         let button = mouse_button(button_press.detail);
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let mouse_event = MouseEvent {
             pos: Point::new(button_press.event_x as f64, button_press.event_y as f64).to_dp(scale),
             // The xcb state field doesn't include the newly pressed button, but
@@ -986,7 +971,7 @@ impl Window {
         &self,
         button_release: &xproto::ButtonReleaseEvent,
     ) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_release.event_x as f64, button_release.event_y as f64)
@@ -1007,7 +992,7 @@ impl Window {
     pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
         let button = event.detail;
         let mods = key_mods(event.state);
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
 
         // We use a delta of 120 per tick to match the behavior of Windows.
         let is_shift = mods.shift();
@@ -1038,7 +1023,7 @@ impl Window {
         &self,
         motion_notify: &xproto::MotionNotifyEvent,
     ) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let mouse_event = MouseEvent {
             pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64)
                 .to_dp(scale),

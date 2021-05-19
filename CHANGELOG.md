@@ -31,6 +31,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
   context-methods to implement disabled ([#1632] by [@xarvic])
@@ -39,6 +40,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - GTK: added support for `content_insets` ([#1722] by [@jneem])
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
+- `lens` macro can access nested fields ([#1764] by [@Maan2003])
 
 ### Changed
 
@@ -90,6 +92,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Maintenance
 
 - Updated to x11rb 0.8.0. ([#1519] by [@psychon])
+- Updated fluent-bundle to 0.15.1 and fluent syntax to 0.11.0 ([#1772] by [@r-ml])
 
 ### Outside News
 
@@ -424,6 +427,7 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
+[@arthmis]: https://github.com/arthmis
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -690,6 +694,7 @@ Last release without a changelog :(
 [#1636]: https://github.com/linebender/druid/pull/1636
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1645]: https://github.com/linebender/druid/pull/1645
 [#1647]: https://github.com/linebender/druid/pull/1647
 [#1654]: https://github.com/linebender/druid/pull/1654
 [#1660]: https://github.com/linebender/druid/pull/1660
@@ -715,6 +720,8 @@ Last release without a changelog :(
 [#1755]: https://github.com/linebender/druid/pull/1755
 [#1756]: https://github.com/linebender/druid/pull/1756
 [#1761]: https://github.com/linebender/druid/pull/1761
+[#1764]: https://github.com/linebender/druid/pull/1764
+[#1772]: https://github.com/linebender/druid/pull/1772
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
