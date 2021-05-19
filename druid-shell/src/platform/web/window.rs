@@ -41,7 +41,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
-use crate::keyboard::{KbKey, KeyState, Modifiers};
+use crate::keyboard::{KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::text::{simulate_input, Event};
