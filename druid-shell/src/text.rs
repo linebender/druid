@@ -550,7 +550,11 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             input_handler.handle_action(action);
         }
         KbKey::Home => {
-            let movement = Movement::ParagraphStart;
+            let movement = if event.mods.ctrl() {
+                Movement::Vertical(VerticalMovement::DocumentStart)
+            } else {
+                Movement::Line(Direction::Upstream)
+            };
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
@@ -558,7 +562,11 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             }
         }
         KbKey::End => {
-            let movement = Movement::ParagraphEnd;
+            let movement = if event.mods.ctrl() {
+                Movement::Vertical(VerticalMovement::DocumentEnd)
+            } else {
+                Movement::Line(Direction::Downstream)
+            };
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
@@ -566,7 +574,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             }
         }
         KbKey::PageUp => {
-            let movement = Movement::Vertical(VerticalMovement::DocumentStart);
+            let movement = Movement::Vertical(VerticalMovement::PageUp);
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
@@ -574,7 +582,7 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             }
         }
         KbKey::PageDown => {
-            let movement = Movement::Vertical(VerticalMovement::DocumentEnd);
+            let movement = Movement::Vertical(VerticalMovement::PageDown);
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
