@@ -15,7 +15,7 @@
 //! This example shows how to construct a basic layout,
 //! using columns, rows, and loops, for repeated Widgets.
 
-use druid::widget::{Button, Flex, Label};
+use druid::widget::{AspectRatioBox, Button, Flex, Label, LineBreaking};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
 fn build_app() -> impl Widget<u32> {
@@ -60,6 +60,17 @@ fn build_app() -> impl Widget<u32> {
             weight,
         );
     }
+
+    // aspect ratio box
+    let aspect_ratio_label = Label::new("This is an aspect-ratio box. Notice how the text will overflow if the box becomes too small.")
+        .with_text_color(Color::BLACK)
+        .with_line_break_mode(LineBreaking::WordWrap)
+        .center();
+    let aspect_ratio_box = AspectRatioBox::new(aspect_ratio_label, 4.0)
+        .border(Color::BLACK, 1.0)
+        .background(Color::WHITE);
+    col.add_flex_child(aspect_ratio_box.center(), 1.0);
+
     // This method asks druid to draw colored rectangles around our widgets,
     // so we can visually inspect their layout rectangles.
     col.debug_paint_layout()

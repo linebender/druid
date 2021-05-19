@@ -52,7 +52,7 @@ pub(crate) struct Application {
     marker: std::marker::PhantomData<*mut XCBConnection>,
 
     /// The X11 resource database used to query dpi.
-    pub(crate) rdb: ResourceDb,
+    pub(crate) rdb: Rc<ResourceDb>,
     pub(crate) cursors: Cursors,
     /// The default screen of the connected display.
     ///
@@ -115,7 +115,7 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
-        let rdb = ResourceDb::new_from_default(&conn)?;
+        let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num as i32)?;
         let state = Rc::new(RefCell::new(State {

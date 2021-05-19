@@ -180,6 +180,11 @@ impl<T: Data> Window<T> {
             );
         }
 
+        if self.root.state().needs_window_origin && !self.root.state().needs_layout {
+            let event = LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin);
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
         // Update the disabled state if necessary
         // Always do this before updating the focus-chain
         if self.root.state().tree_disabled_changed() {

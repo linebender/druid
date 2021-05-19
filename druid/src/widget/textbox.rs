@@ -576,7 +576,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         };
 
         // Paint the background
-        let clip_rect = Size::new(size.width - border_width, size.height)
+        let clip_rect = size
             .to_rect()
             .inset(-border_width / 2.0)
             .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
