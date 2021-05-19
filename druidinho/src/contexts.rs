@@ -1,4 +1,3 @@
-
 use crate::piet::{Piet, RenderContext};
 use druid_shell::WindowHandle;
 
@@ -10,12 +9,12 @@ pub struct EventCtx<'a> {
 }
 
 pub struct PaintCtx<'a, 'b> {
-    state: &'a WidgetState,
-    render_ctx: &'a mut Piet<'b>,
+    pub(crate) state: &'a WidgetState,
+    pub(crate) render_ctx: &'a mut Piet<'b>,
 }
 
 pub struct LayoutCtx<'a> {
-    state: &'a WidgetState,
+    pub(crate) state: &'a WidgetState,
 }
 
 impl<'a> EventCtx<'a> {

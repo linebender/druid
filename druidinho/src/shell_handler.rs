@@ -4,24 +4,40 @@ use std::rc::Rc;
 
 use crate::kurbo::Size;
 use crate::piet::Piet;
+
 use druid_shell::{
-    text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, KeyEvent, MouseEvent,
-    Region, Scale, TextFieldToken, TimerToken, WinHandler, WindowHandle,
+    FileDialogToken, FileInfo, IdleToken, KeyEvent, MouseEvent, Region, Scale, TextFieldToken,
+    TimerToken, WinHandler, WindowHandle,
 };
 
-use super::Window;
+use super::{Widget, Window};
 
-struct ShellHandler {
+pub struct ShellHandler {
+    //app: Application,
     inner: WindowConnection,
 }
 
 enum WindowConnection {
-    Waiting,
+    Waiting(Box<dyn Widget>),
     Connected(Rc<RefCell<Window>>),
     Closed,
+    // a sentinel state only used during transitions
+    Invalid,
+}
+
+impl WindowConnection {
+    fn transition(&mut self) -> WindowConnection {
+        std::mem::replace(self, WindowConnection::Invalid)
+    }
 }
 
 impl ShellHandler {
+    pub fn new(widget: impl Widget + 'static) -> Self {
+        ShellHandler {
+            inner: WindowConnection::Waiting(Box::new(widget)),
+        }
+    }
+
     fn with_window<R>(&self, f: impl FnOnce(&Window) -> R) -> Option<R> {
         match &self.inner {
             WindowConnection::Connected(w) => Some(f(&*w.borrow())),
@@ -45,12 +61,13 @@ impl ShellHandler {
 
 impl WinHandler for ShellHandler {
     fn connect(&mut self, handle: &WindowHandle) {
-        self.inner = match self.inner {
-            WindowConnection::Waiting => {
-                WindowConnection::Connected(Rc::new(RefCell::new(Window::new(handle.clone()))))
-            }
+        self.inner = match self.inner.transition() {
+            WindowConnection::Waiting(widget) => WindowConnection::Connected(Rc::new(
+                RefCell::new(Window::new(handle.clone(), widget)),
+            )),
             WindowConnection::Connected(_) => panic!("window already connected"),
             WindowConnection::Closed => panic!("window has been closed"),
+            WindowConnection::Invalid => unreachable!(),
         };
         self.with_window_mut(|w| w.window_connected());
     }

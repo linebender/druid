@@ -9,6 +9,12 @@ pub struct SizedBox<W> {
     height: Option<f64>,
 }
 
+impl SizedBox<()> {
+    pub fn empty() -> SizedBox<()> {
+        SizedBox::default()
+    }
+}
+
 impl<W> SizedBox<W> {
     pub fn new(inner: W) -> Self {
         Self {
@@ -16,10 +22,6 @@ impl<W> SizedBox<W> {
             width: None,
             height: None,
         }
-    }
-
-    pub fn empty() -> SizedBox<()> {
-        SizedBox::default()
     }
 
     /// Set container's width.
@@ -34,7 +36,8 @@ impl<W> SizedBox<W> {
         self
     }
 
-    pub fn size(mut self, size: Size) -> Self {
+    pub fn size(mut self, size: impl Into<Size>) -> Self {
+        let size = size.into();
         self.height = Some(size.height);
         self.width = Some(size.width);
         self

@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use crate::kurbo::Size;
 use druid_shell::{KeyEvent, TimerToken};
 
@@ -10,6 +12,7 @@ pub struct WidgetHost<W> {
     state: WidgetState,
 }
 
+#[derive(Debug, Clone, Default)]
 pub(crate) struct WidgetState {
     /// The mouse is inside the widget's frame.
     pub(crate) hovered: bool,
@@ -25,7 +28,25 @@ pub(crate) struct WidgetState {
     child_keyboard_focus: bool,
 }
 
+impl WidgetState {
+    pub(crate) fn should_receive_mouse(&self) -> bool {
+        self.mouse_focus || self.hovered || self.child_mouse_focus
+    }
+
+    fn merge_up(&mut self, child: &mut WidgetState) {
+        self.child_mouse_focus |= child.child_mouse_focus | child.mouse_focus;
+        self.child_keyboard_focus |= child.child_keyboard_focus | child.keyboard_focus;
+    }
+}
+
 impl<W: Widget> WidgetHost<W> {
+    pub fn new(child: W) -> Self {
+        WidgetHost {
+            child: LayoutHost::new(child),
+            state: Default::default(),
+        }
+    }
+
     fn with_child<R>(
         &mut self,
         parent_ctx: &mut EventCtx,
@@ -88,13 +109,40 @@ impl<W: Widget> Widget for WidgetHost<W> {
     }
 }
 
-impl WidgetState {
-    pub(crate) fn should_receive_mouse(&self) -> bool {
-        self.mouse_focus || self.hovered || self.child_mouse_focus
+impl Widget for Box<dyn Widget> {
+    fn init(&mut self, ctx: &mut EventCtx) {
+        self.deref_mut().init(ctx)
+    }
+    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+        self.deref_mut().mouse_down(ctx, event);
+    }
+    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+        self.deref_mut().mouse_up(ctx, event);
     }
 
-    fn merge_up(&mut self, child: &mut WidgetState) {
-        self.child_mouse_focus |= child.child_mouse_focus | child.mouse_focus;
-        self.child_keyboard_focus |= child.child_keyboard_focus | child.keyboard_focus;
+    fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+        self.deref_mut().mouse_move(ctx, event);
+    }
+    fn scroll(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+        self.deref_mut().scroll(ctx, event);
+    }
+    fn key_down(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+        self.deref_mut().key_down(ctx, event);
+    }
+
+    fn key_up(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+        self.deref_mut().key_up(ctx, event);
+    }
+
+    fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
+        self.deref_mut().timer(ctx, token);
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
+        self.deref_mut().layout(ctx, bc)
+    }
+
+    fn paint(&self, ctx: &mut PaintCtx) {
+        self.deref().paint(ctx)
     }
 }
