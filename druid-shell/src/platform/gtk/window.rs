@@ -14,7 +14,6 @@
 
 //! GTK window creation and management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::c_void;
@@ -1206,7 +1205,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
@@ -1239,7 +1238,7 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 
         for item in queue {
             match item {
-                IdleKind::Callback(it) => it.call(handler.as_any()),
+                IdleKind::Callback(it) => it.call(handler),
                 IdleKind::Token(it) => handler.idle(it),
             }
         }

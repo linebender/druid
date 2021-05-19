@@ -16,7 +16,6 @@
 
 #![allow(non_snake_case)]
 
-use std::any::Any;
 use std::ffi::c_void;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
@@ -904,7 +903,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
     );
     for item in queue {
         match item {
-            IdleKind::Callback(it) => it.call(view_state.handler.as_any()),
+            IdleKind::Callback(it) => it.call(&mut *view_state.handler),
             IdleKind::Token(it) => {
                 view_state.handler.as_mut().idle(it);
             }
@@ -1404,7 +1403,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         self.add_idle(IdleKind::Callback(Box::new(callback)));
     }

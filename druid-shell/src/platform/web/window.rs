@@ -14,7 +14,6 @@
 
 //! Web window creation and management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::rc::{Rc, Weak};
@@ -142,7 +141,7 @@ impl WindowState {
         let mut queue = self.idle_queue.lock().expect("process_idle_queue");
         for item in queue.drain(..) {
             match item {
-                IdleKind::Callback(cb) => cb.call(&self.handler),
+                IdleKind::Callback(cb) => cb.call(&mut **self.handler.borrow_mut()),
                 IdleKind::Token(tok) => self.handler.borrow_mut().idle(tok),
             }
         }
@@ -686,7 +685,7 @@ impl IdleHandle {
     /// Add an idle handler, which is called (once) when the main thread is idle.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.queue.lock().expect("IdleHandle::add_idle queue");
         queue.push(IdleKind::Callback(Box::new(callback)));
