@@ -14,7 +14,6 @@
 
 //! X11 window creation and window management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
@@ -1147,7 +1146,7 @@ impl Window {
             for callback in queue {
                 match callback {
                     IdleKind::Callback(f) => {
-                        f.call(handler.as_any());
+                        f.call(handler);
                     }
                     IdleKind::Token(tok) => {
                         handler.idle(tok);
@@ -1424,7 +1423,7 @@ impl IdleHandle {
 
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         self.queue
             .lock()
