@@ -36,7 +36,8 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        //TODO ahem
-        "en-US".into()
+        web_sys::window()
+            .and_then(|w| w.navigator().language())
+            .unwrap_or_else(|| "en-US".into())
     }
 }
