@@ -42,7 +42,7 @@ use x11rb::xcb_ffi::XCBConnection;
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::common_util::IdleCallback;
-use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
@@ -57,6 +57,7 @@ use crate::window::{
 use crate::{window, ScaledArea};
 
 use super::application::Application;
+use super::dialog;
 use super::keycodes;
 use super::menu::Menu;
 use super::util::{self, Timer};
@@ -1154,8 +1155,6 @@ impl Window {
                     IdleKind::Redraw => {
                         needs_redraw = true;
                     }
-                    IdleKind::OpenFile(tok, info) => handler.open_file(tok, info),
-                    IdleKind::SaveFile(tok, info) => handler.save_as(tok, info),
                 }
             }
         });
@@ -1399,8 +1398,6 @@ pub(crate) enum IdleKind {
     Callback(Box<dyn IdleCallback>),
     Token(IdleToken),
     Redraw,
-    OpenFile(FileDialogToken, Option<FileInfo>),
-    SaveFile(FileDialogToken, Option<FileInfo>),
 }
 
 impl IdleHandle {
@@ -1424,7 +1421,7 @@ impl IdleHandle {
         self.add_idle(IdleKind::Redraw);
     }
 
-    pub(crate) fn add_idle(&self, idle: IdleKind) {
+    fn add_idle(&self, idle: IdleKind) {
         self.queue.lock().unwrap().push(idle);
         self.wake();
     }
@@ -1622,7 +1619,7 @@ impl WindowHandle {
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         if let Some(w) = self.window.upgrade() {
             if let Some(idle) = self.get_idle_handle() {
-                match w.app.dbus.open_file(w.id, idle, options) {
+                match dialog::open_file(w.id, idle, options) {
                     Ok(tok) => Some(tok),
                     Err(e) => {
                         warn!("Error starting the dbus session: {}", e);
@@ -1642,7 +1639,7 @@ impl WindowHandle {
         // FIXME: copy-paste from open_file
         if let Some(w) = self.window.upgrade() {
             if let Some(idle) = self.get_idle_handle() {
-                match w.app.dbus.save_file(w.id, idle, options) {
+                match dialog::save_file(w.id, idle, options) {
                     Ok(tok) => Some(tok),
                     Err(e) => {
                         warn!("Error starting the dbus session: {}", e);

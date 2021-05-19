@@ -1,4 +1,7 @@
 //! This module contains functions for opening file dialogs using DBus.
+//!
+//! TODO: The `ashpd` crate is going to provide a convenient high-level interface for this. Start
+//! using that when it's ready.
 
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStringExt;
@@ -9,11 +12,6 @@ use zvariant::{OwnedObjectPath, OwnedValue};
 
 use super::window::IdleHandle;
 use crate::{FileDialogOptions, FileDialogToken, FileInfo};
-
-// I made this struct to store, e.g., connection state and pending responses. But I'm getting
-// deadlocks when trying to use the connection, so for now just make a new connection each time.
-#[derive(Clone, Default)]
-pub struct DbusHandle {}
 
 fn response_thread(
     conn: Connection,
@@ -59,56 +57,53 @@ fn response_thread(
     }
 }
 
-impl DbusHandle {
-    pub fn open_file(
-        &self,
-        window: u32,
-        idle: IdleHandle,
-        options: FileDialogOptions,
-    ) -> fdo::Result<FileDialogToken> {
-        let connection = Connection::new_session()?;
-        let proxy = FileChooserProxy::new(&connection)?;
+pub(crate) fn open_file(
+    window: u32,
+    idle: IdleHandle,
+    options: FileDialogOptions,
+) -> fdo::Result<FileDialogToken> {
+    let connection = Connection::new_session()?;
+    let proxy = FileChooserProxy::new(&connection)?;
 
-        let title = options
-            .title
-            .clone()
-            .unwrap_or_else(|| "Open file".to_owned());
-        let opts = OpenOptions::from(options);
-        let reply = proxy.open_file(&format!("x11:{}", window), &title, opts)?;
-        let tok = FileDialogToken::next();
+    let title = options
+        .title
+        .clone()
+        .unwrap_or_else(|| "Open file".to_owned());
+    let opts = OpenOptions::from(options);
+    let reply = proxy.open_file(&format!("x11:{}", window), &title, opts)?;
+    let tok = FileDialogToken::next();
 
-        std::thread::spawn(move || response_thread(connection, idle, reply, tok, true));
+    std::thread::spawn(move || response_thread(connection, idle, reply, tok, true));
 
-        Ok(tok)
-    }
+    Ok(tok)
+}
 
-    pub fn save_file(
-        &self,
-        window: u32,
-        idle: IdleHandle,
-        options: FileDialogOptions,
-    ) -> fdo::Result<FileDialogToken> {
-        let connection = Connection::new_session()?;
-        let proxy = FileChooserProxy::new(&connection)?;
+pub(crate) fn save_file(
+    window: u32,
+    idle: IdleHandle,
+    options: FileDialogOptions,
+) -> fdo::Result<FileDialogToken> {
+    let connection = Connection::new_session()?;
+    let proxy = FileChooserProxy::new(&connection)?;
 
-        let title = options
-            .title
-            .clone()
-            .unwrap_or_else(|| "Save as".to_owned());
-        let opts = SaveOptions::from(options);
-        let reply = proxy.save_file(&format!("x11:{}", window), &title, opts)?;
-        let tok = FileDialogToken::next();
+    let title = options
+        .title
+        .clone()
+        .unwrap_or_else(|| "Save as".to_owned());
+    let opts = SaveOptions::from(options);
+    let reply = proxy.save_file(&format!("x11:{}", window), &title, opts)?;
+    let tok = FileDialogToken::next();
 
-        std::thread::spawn(move || response_thread(connection, idle, reply, tok, false));
+    std::thread::spawn(move || response_thread(connection, idle, reply, tok, false));
 
-        Ok(tok)
-    }
+    Ok(tok)
 }
 
 /// The options supported by the freedesktop.org filechooser protocol. These are documented at
 /// https://flatpak.github.io/xdg-desktop-portal/portal-docs.html#gdbus-org.freedesktop.portal.FileChooser
 #[derive(zvariant_derive::SerializeDict, zvariant_derive::TypeDict)]
-// FIXME: the dbus_proxy macro makes me make this pub
+// the dbus_proxy macro makes me make this pub, but it isn't actually really pub because this
+// module is private
 pub struct OpenOptions {
     /// Label for the accept button. FDO says that mnemonic underlines are supported; does the
     /// druid end use mnemonic underlines also? (TODO)
@@ -128,7 +123,6 @@ pub struct OpenOptions {
 /// The options supported by the freedesktop.org filechooser protocol. These are documented at
 /// https://flatpak.github.io/xdg-desktop-portal/portal-docs.html#gdbus-org.freedesktop.portal.FileChooser
 #[derive(zvariant_derive::SerializeDict, zvariant_derive::TypeDict)]
-// FIXME: the dbus_proxy macro makes me make this pub
 pub struct SaveOptions {
     /// Label for the accept button. FDO says that mnemonic underlines are supported; does the
     /// druid end use mnemonic underlines also? (TODO)
