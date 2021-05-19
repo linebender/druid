@@ -42,7 +42,7 @@ impl Svg {
         }
     }
 
-    /// A builder-style method for specifying the fill strategy.
+    /// Builder-style method for specifying the fill strategy.
     pub fn fill_mode(mut self, mode: FillStrat) -> Self {
         self.fill = mode;
         self
