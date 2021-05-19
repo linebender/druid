@@ -163,7 +163,7 @@ impl<T, W> Scroll<T, W> {
     ///
     /// This is relative to the bounds of the content.
     pub fn viewport_rect(&self) -> Rect {
-        self.clip.viewport().rect
+        self.clip.viewport().view_rect()
     }
 
     /// Return the scroll offset on a particular axis
@@ -203,7 +203,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Scroll");
 
-        let old_size = self.clip.viewport().rect.size();
+        let old_size = self.clip.viewport().view_size;
         let child_size = self.clip.layout(ctx, &bc, data, env);
         log_size_warnings(child_size);
 
