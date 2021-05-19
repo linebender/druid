@@ -38,6 +38,6 @@ impl Application {
     pub fn get_locale() -> String {
         web_sys::window()
             .and_then(|w| w.navigator().language())
-            .unwrap_or("en-US".into())
+            .unwrap_or_else(|| "en-US".into())
     }
 }
