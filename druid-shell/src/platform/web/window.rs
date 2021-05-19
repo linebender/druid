@@ -113,6 +113,7 @@ struct WindowState {
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
+    rendering_soon: Cell<bool>,
 }
 
 // TODO: support custom cursors
@@ -444,6 +445,7 @@ impl WindowBuilder {
             invalid: RefCell::new(Region::EMPTY),
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
+            rendering_soon: Cell::new(false),
         });
 
         setup_web_callbacks(&window);
@@ -632,10 +634,14 @@ impl WindowHandle {
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
             let state = s.clone();
-            s.request_animation_frame(move || {
-                state.render();
-            })
-            .expect("Failed to request animation frame");
+            if !state.rendering_soon.get() {
+                state.rendering_soon.set(true);
+                s.request_animation_frame(move || {
+                    state.rendering_soon.set(false);
+                    state.render();
+                })
+                .expect("Failed to request animation frame");
+            }
         }
     }
 
