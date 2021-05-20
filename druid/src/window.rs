@@ -424,7 +424,7 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
-        for r in invalid.rects().to_owned() {
+        for &r in invalid.rects() {
             piet.clear(
                 Some(r),
                 if self.transparent {
