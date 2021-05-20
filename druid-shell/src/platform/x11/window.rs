@@ -99,6 +99,17 @@ impl From<Visualtype> for xcb_visualtype_t {
     }
 }
 
+fn size_hints(resizable: bool, size: Size, min_size: Size) -> WmSizeHints {
+    let mut size_hints = WmSizeHints::new();
+    if resizable {
+        size_hints.min_size = Some((min_size.width as i32, min_size.height as i32));
+    } else {
+        size_hints.min_size = Some((size.width as i32, size.height as i32));
+        size_hints.max_size = Some((size.width as i32, size.height as i32));
+    }
+    size_hints
+}
+
 pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
@@ -106,7 +117,7 @@ pub(crate) struct WindowBuilder {
     position: Option<Point>,
     size: Size,
     min_size: Size,
-    resizeable: bool,
+    resizable: bool,
     level: WindowLevel,
     state: Option<window::WindowState>,
 }
@@ -120,7 +131,7 @@ impl WindowBuilder {
             position: None,
             size: Size::new(500.0, 400.0),
             min_size: Size::new(0.0, 0.0),
-            resizeable: true,
+            resizable: true,
             level: WindowLevel::AppWindow,
             state: None,
         }
@@ -144,7 +155,7 @@ impl WindowBuilder {
     }
 
     pub fn resizable(&mut self, resizable: bool) {
-        self.resizeable = resizable;
+        self.resizable = resizable;
     }
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
@@ -350,16 +361,8 @@ impl WindowBuilder {
             .context("set _NET_WM_PID")?;
         }
 
-        let size = (width_px as i32, height_px as i32);
-        let mut size_hints = WmSizeHints::new();
         let min_size = self.min_size.to_px(scale);
-        if self.resizeable {
-            size_hints.min_size = Some((min_size.width as i32, min_size.height as i32));
-        } else {
-            size_hints.min_size = Some(size);
-            size_hints.max_size = Some(size);
-        }
-        log_x11!(size_hints
+        log_x11!(size_hints(self.resizable, size_px, min_size)
             .set_normal_hints(conn.as_ref(), id)
             .context("set wm normal hints"));
 
@@ -382,6 +385,7 @@ impl WindowBuilder {
             atoms,
             area: Cell::new(ScaledArea::from_px(size_px, scale)),
             scale: Cell::new(scale),
+            min_size,
             invalid: RefCell::new(Region::EMPTY),
             destroyed: Cell::new(false),
             timer_queue: Mutex::new(BinaryHeap::new()),
@@ -466,6 +470,8 @@ pub(crate) struct Window {
     atoms: WindowAtoms,
     area: Cell<ScaledArea>,
     scale: Cell<Scale>,
+    // min size in px
+    min_size: Size,
     /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
     destroyed: Cell<bool>,
     /// The region that was invalidated since the last time we rendered.
@@ -674,7 +680,7 @@ impl Window {
     }
 
     // note: size is in px
-    fn set_size(&self, size: Size) -> Result<(), Error> {
+    fn size_changed(&self, size: Size) -> Result<(), Error> {
         let scale = self.scale.get();
         let new_size = {
             if size != self.area.get().size_px() {
@@ -811,17 +817,10 @@ impl Window {
 
     /// Set whether the window should be resizable
     fn resizable(&self, resizable: bool) {
-        if !resizable {
-            let conn = self.app.connection().as_ref();
-            let mut hints = WmSizeHints::new();
-            let size = self.size().size_px();
-            // setting min and max size to current size will make window not resizable
-            hints.min_size = Some((size.width as _, size.height as _));
-            hints.max_size = Some((size.width as _, size.height as _));
-            log_x11!(hints
-                .set_normal_hints(conn, self.id)
-                .context("set normal hints"));
-        }
+        let conn = self.app.connection().as_ref();
+        log_x11!(size_hints(resizable, self.size().size_px(), self.min_size)
+            .set_normal_hints(conn, self.id)
+            .context("set normal hints"));
     }
 
     /// Set whether the window should show titlebar
@@ -854,7 +853,7 @@ impl Window {
         ));
     }
 
-    fn _set_size(&self, size: Size) {
+    fn set_size(&self, size: Size) {
         let conn = self.app.connection();
         let scale = self.scale.get();
         let size = size.to_px(scale).expand();
@@ -1173,7 +1172,7 @@ impl Window {
     }
 
     pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
-        self.set_size(Size::new(event.width as f64, event.height as f64))
+        self.size_changed(Size::new(event.width as f64, event.height as f64))
     }
 
     pub fn handle_complete_notify(&self, event: &CompleteNotifyEvent) -> Result<(), Error> {
@@ -1632,7 +1631,7 @@ impl WindowHandle {
 
     pub fn set_size(&self, size: Size) {
         if let Some(w) = self.window.upgrade() {
-            w._set_size(size);
+            w.set_size(size);
         } else {
             error!("Window {} has already been dropped", self.id);
         }
