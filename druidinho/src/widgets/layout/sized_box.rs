@@ -1,5 +1,5 @@
 use crate::kurbo::Size;
-use crate::widget::WidgetHolder;
+use crate::widget::SingleChildContainer;
 use crate::{BoxConstraints, LayoutCtx, Widget};
 
 #[derive(Debug, Default)]
@@ -99,7 +99,7 @@ impl<W> SizedBox<W> {
     }
 }
 
-impl<W: Widget> WidgetHolder for SizedBox<W> {
+impl<W: Widget> SingleChildContainer for SizedBox<W> {
     type Child = W;
 
     fn widget(&self) -> &Self::Child {

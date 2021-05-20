@@ -17,7 +17,7 @@
 use super::layout::LayoutHost;
 use crate::kurbo::{Point, Size};
 use crate::piet::{Color, RenderContext};
-use crate::widget::WidgetHolder;
+use crate::widget::SingleChildContainer;
 use crate::{BoxConstraints, LayoutCtx, PaintCtx, Widget};
 
 struct BorderStyle {
@@ -63,7 +63,7 @@ impl<W> Background<W> {
     }
 }
 
-impl<W: Widget> WidgetHolder for Background<W> {
+impl<W: Widget> SingleChildContainer for Background<W> {
     type Child = LayoutHost<W>;
 
     fn widget(&self) -> &Self::Child {
@@ -78,7 +78,7 @@ impl<W: Widget> WidgetHolder for Background<W> {
         bc.debug_check("Container");
         let border_width = self.border.as_ref().map(|b| b.width).unwrap_or(0.0);
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
-        let size = WidgetHolder::layout(&mut self.inner, ctx, child_bc);
+        let size = SingleChildContainer::layout(&mut self.inner, ctx, child_bc);
         let origin = Point::new(border_width, border_width);
         self.inner.set_origin(origin);
 
@@ -105,6 +105,6 @@ impl<W: Widget> WidgetHolder for Background<W> {
             ctx.stroke(border_rect, &border.color, border.width);
         };
 
-        WidgetHolder::paint(&self.inner, ctx);
+        SingleChildContainer::paint(&self.inner, ctx);
     }
 }

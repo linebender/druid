@@ -27,12 +27,12 @@ impl Widget for () {
     }
 }
 
-/// A helper trait for types that wrap a widget
+/// A helper trait for types that wrap a single widget.
 ///
 /// This provides default implementations of widget methods that forward to
 /// the inner widget; the wrapping widget only needs to override the specific
 /// methods it is interested in.
-pub trait WidgetHolder {
+pub trait SingleChildContainer {
     type Child: Widget;
 
     fn widget(&self) -> &Self::Child;
@@ -71,35 +71,35 @@ pub trait WidgetHolder {
     }
 }
 
-impl<T: WidgetHolder<Child = W>, W: Widget> Widget for T {
+impl<T: SingleChildContainer<Child = W>, W: Widget> Widget for T {
     fn init(&mut self, ctx: &mut EventCtx) {
-        <Self as WidgetHolder>::init(self, ctx)
+        <Self as SingleChildContainer>::init(self, ctx)
     }
     fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
-        <Self as WidgetHolder>::mouse_down(self, ctx, event)
+        <Self as SingleChildContainer>::mouse_down(self, ctx, event)
     }
     fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
-        <Self as WidgetHolder>::mouse_up(self, ctx, event)
+        <Self as SingleChildContainer>::mouse_up(self, ctx, event)
     }
     fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
-        <Self as WidgetHolder>::mouse_move(self, ctx, event)
+        <Self as SingleChildContainer>::mouse_move(self, ctx, event)
     }
     fn scroll(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
-        <Self as WidgetHolder>::scroll(self, ctx, event)
+        <Self as SingleChildContainer>::scroll(self, ctx, event)
     }
     fn key_down(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
-        <Self as WidgetHolder>::key_down(self, ctx, event)
+        <Self as SingleChildContainer>::key_down(self, ctx, event)
     }
     fn key_up(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
-        <Self as WidgetHolder>::key_up(self, ctx, event)
+        <Self as SingleChildContainer>::key_up(self, ctx, event)
     }
     fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
-        <Self as WidgetHolder>::timer(self, ctx, token)
+        <Self as SingleChildContainer>::timer(self, ctx, token)
     }
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
-        <Self as WidgetHolder>::layout(self, ctx, bc)
+        <Self as SingleChildContainer>::layout(self, ctx, bc)
     }
     fn paint(&self, ctx: &mut PaintCtx) {
-        <Self as WidgetHolder>::paint(self, ctx)
+        <Self as SingleChildContainer>::paint(self, ctx)
     }
 }

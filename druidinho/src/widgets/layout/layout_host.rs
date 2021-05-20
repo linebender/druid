@@ -1,6 +1,6 @@
 use crate::kurbo::{Affine, Point, Rect, Size};
 use crate::piet::RenderContext;
-use crate::widget::WidgetHolder;
+use crate::widget::SingleChildContainer;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 
 /// Manages the position of a child widget.
@@ -59,7 +59,7 @@ impl<W> LayoutHost<W> {
     }
 }
 
-impl<W: Widget> WidgetHolder for LayoutHost<W> {
+impl<W: Widget> SingleChildContainer for LayoutHost<W> {
     type Child = W;
 
     fn widget(&self) -> &Self::Child {

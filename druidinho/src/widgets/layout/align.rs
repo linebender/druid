@@ -17,7 +17,7 @@
 use super::LayoutHost;
 use crate::kurbo::{Rect, Size};
 use crate::piet::UnitPoint;
-use crate::widget::WidgetHolder;
+use crate::widget::SingleChildContainer;
 use crate::{BoxConstraints, LayoutCtx, Widget};
 
 /// A widget that aligns its child.
@@ -62,7 +62,7 @@ impl<T> Align<T> {
     }
 }
 
-impl<W: Widget> WidgetHolder for Align<W> {
+impl<W: Widget> SingleChildContainer for Align<W> {
     type Child = LayoutHost<W>;
 
     fn widget(&self) -> &Self::Child {
@@ -76,7 +76,7 @@ impl<W: Widget> WidgetHolder for Align<W> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
         bc.debug_check("Align");
 
-        let size = WidgetHolder::layout(&mut self.child, ctx, bc.loosen());
+        let size = SingleChildContainer::layout(&mut self.child, ctx, bc.loosen());
         log_size_warnings(size);
 
         let mut my_size = size;
