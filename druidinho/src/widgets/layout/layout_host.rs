@@ -90,7 +90,7 @@ impl<W: Widget> WidgetHolder for LayoutHost<W> {
 
     fn paint(&self, ctx: &mut PaintCtx) {
         if self.debug_needs_set_origin {
-            eprintln!("Missing call to set_origin");
+            panic!("Missing call to set_origin");
         }
         ctx.with_save(|ctx| {
             let layout_origin = self.origin.to_vec2();

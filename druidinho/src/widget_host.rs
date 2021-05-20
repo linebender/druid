@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::kurbo::Size;
+use crate::kurbo::{Point, Size};
 use druid_shell::{KeyEvent, TimerToken};
 
 use crate::contexts::{EventCtx, LayoutCtx, PaintCtx};
@@ -45,6 +45,10 @@ impl<W: Widget> WidgetHost<W> {
             child: LayoutHost::new(child),
             state: Default::default(),
         }
+    }
+
+    pub fn set_origin(&mut self, origin: Point) {
+        self.child.set_origin(origin);
     }
 
     fn with_child<R>(

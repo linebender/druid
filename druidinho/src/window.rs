@@ -1,4 +1,4 @@
-use crate::kurbo::Size;
+use crate::kurbo::{Point, Size};
 use crate::piet::Piet;
 use crate::widget_host::{WidgetHost, WidgetState};
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
@@ -40,6 +40,7 @@ impl Window {
         };
         let bc = BoxConstraints::tight(self.window_size.clone());
         self.root.layout(&mut ctx, bc);
+        self.root.set_origin(Point::ZERO);
     }
 
     pub fn paint(&mut self, piet: &mut Piet, _region: &Region) {

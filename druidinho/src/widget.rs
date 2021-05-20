@@ -20,7 +20,12 @@ pub trait Widget {
 }
 
 /// The null widget, which does nothing.
-impl Widget for () {}
+impl Widget for () {
+    // not quite nothing; it respects its constraints.
+    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
+        bc.constrain(Size::ZERO)
+    }
+}
 
 /// A helper trait for types that wrap a widget
 ///
