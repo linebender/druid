@@ -56,22 +56,21 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
         match &mut event {
             Event::MouseDown(me) => {
                 if self.need_layout {
-                    println!("skip mousedown event");
                     return;
                 }
-                me.pos = self.affine_out_in * me.pos;
+                me.pos = self.affine_in_out * me.pos;
             }
             Event::MouseUp(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_out_in * me.pos;
+                me.pos = self.affine_in_out * me.pos;
             }
             Event::MouseMove(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_out_in * me.pos;
+                me.pos = self.affine_in_out * me.pos;
             }
             Event::Wheel(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_out_in * me.pos;
+                me.pos = self.affine_in_out * me.pos;
             }
             _ => {}
         }
@@ -107,7 +106,8 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
         ctx.mouse_pos = ctx.mouse_pos.map(|pos|self.affine_out_in * pos);
         self.widget.set_origin(ctx, data, env, Point::ZERO);
 
-        let bounding_box = self.affine_in_out.transform_rect_bbox(self.widget.paint_rect());
+        let bounding_box = self.affine_out_in.transform_rect_bbox(self.widget.paint_rect());
+        println!("insets: {:.2?}, {:.2?} - {:.2?}", bounding_box - size.to_rect(), bounding_box, size.to_rect());
         ctx.set_paint_insets(bounding_box - size.to_rect());
 
         self.need_layout = false;
@@ -118,9 +118,11 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         // This works since the widgets origin is zero.
         ctx.region.set_rect(self.widget.paint_rect());
-        ctx.transform(self.affine_out_in);
+        ctx.with_save(|ctx|{
+            ctx.transform(self.affine_out_in);
 
-        self.widget.paint(ctx, data, env);
+            self.widget.paint(ctx, data, env);
+        });
     }
 }
 

@@ -15,7 +15,9 @@
 //! This is an example of arbitrary transform of widgets.
 
 use druid::widget::{AARotation, AATransformBox, Button, Flex, Radio, ViewSwitcher, TransformBox};
-use druid::{Env, WidgetExt, Widget, Affine, WindowDesc, AppLauncher, Data, Lens};
+use druid::{RenderContext, Env, WidgetExt, Widget, Affine, WindowDesc, AppLauncher, Data, Lens, Point, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, UpdateCtx};
+use piet_common::Color;
+use druid::kurbo::Circle;
 
 #[derive(Clone, Data, Lens)]
 struct TransformState {
@@ -24,11 +26,43 @@ struct TransformState {
 
 fn rotated_widget(data: &TransformState, _: &TransformState, _: &Env) -> Box<dyn Widget<TransformState>> {
     AATransformBox::new(
-    Button::new("Rotatable test button!")
-            .fix_width(300.0)
-            .padding(50.0)
+    MousePainter(None)
     ).rotated(data.rotation)
         .boxed()
+}
+
+struct MousePainter(Option<Point>);
+
+impl<T: Data> Widget<T> for MousePainter {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        if let Event::MouseMove(me) = event {
+            self.0 = Some(me.pos);
+            ctx.request_paint();
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::FocusChanged(false) = event {
+            self.0 = None;
+            ctx.request_paint();
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+        bc.constrain((250.0, 80.0))
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+        let back = ctx.size().to_rounded_rect(5.0);
+
+        ctx.fill(back, &Color::BLACK);
+        if let Some(center) = self.0 {
+            ctx.stroke(Circle::new(center, 4.0), &Color::RED, 2.0);
+        }
+    }
 }
 
 fn build_root_widget() -> impl Widget<TransformState> {
@@ -50,9 +84,10 @@ fn build_root_widget() -> impl Widget<TransformState> {
             ))
         .with_default_spacer()
         .with_child(TransformBox::with_transform(
-            Button::new("test sting data"),
+            MousePainter(None),
             Affine::rotate(0.6)
         ))
+        .debug_paint_layout()
 }
 
 pub fn main() {
