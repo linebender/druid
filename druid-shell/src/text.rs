@@ -477,7 +477,11 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             input_handler.set_selection(Selection::caret(new_caret_index));
         }
         KbKey::ArrowLeft => {
-            let movement = Movement::Grapheme(Direction::Left);
+            let movement = if event.mods.ctrl() {
+                Movement::Word(Direction::Left)
+            } else {
+                Movement::Grapheme(Direction::Left)
+            };
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
@@ -485,7 +489,11 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             }
         }
         KbKey::ArrowRight => {
-            let movement = Movement::Grapheme(Direction::Right);
+            let movement = if event.mods.ctrl() {
+                Movement::Word(Direction::Right)
+            } else {
+                Movement::Grapheme(Direction::Right)
+            };
             if event.mods.shift() {
                 input_handler.handle_action(Action::MoveSelecting(movement));
             } else {
@@ -509,10 +517,20 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             }
         }
         KbKey::Backspace => {
-            input_handler.handle_action(Action::Delete(Movement::Grapheme(Direction::Upstream)));
+            let movement = if event.mods.ctrl() {
+                Movement::Word(Direction::Upstream)
+            } else {
+                Movement::Grapheme(Direction::Upstream)
+            };
+            input_handler.handle_action(Action::Delete(movement));
         }
         KbKey::Delete => {
-            input_handler.handle_action(Action::Delete(Movement::Grapheme(Direction::Downstream)));
+            let movement = if event.mods.ctrl() {
+                Movement::Word(Direction::Downstream)
+            } else {
+                Movement::Grapheme(Direction::Downstream)
+            };
+            input_handler.handle_action(Action::Delete(movement));
         }
         KbKey::Enter => {
             // I'm sorry windows, you'll get IME soon.
@@ -530,6 +548,46 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
                 }
             };
             input_handler.handle_action(action);
+        }
+        KbKey::Home => {
+            let movement = if event.mods.ctrl() {
+                Movement::Vertical(VerticalMovement::DocumentStart)
+            } else {
+                Movement::Line(Direction::Upstream)
+            };
+            if event.mods.shift() {
+                input_handler.handle_action(Action::MoveSelecting(movement));
+            } else {
+                input_handler.handle_action(Action::Move(movement));
+            }
+        }
+        KbKey::End => {
+            let movement = if event.mods.ctrl() {
+                Movement::Vertical(VerticalMovement::DocumentEnd)
+            } else {
+                Movement::Line(Direction::Downstream)
+            };
+            if event.mods.shift() {
+                input_handler.handle_action(Action::MoveSelecting(movement));
+            } else {
+                input_handler.handle_action(Action::Move(movement));
+            }
+        }
+        KbKey::PageUp => {
+            let movement = Movement::Vertical(VerticalMovement::PageUp);
+            if event.mods.shift() {
+                input_handler.handle_action(Action::MoveSelecting(movement));
+            } else {
+                input_handler.handle_action(Action::Move(movement));
+            }
+        }
+        KbKey::PageDown => {
+            let movement = Movement::Vertical(VerticalMovement::PageDown);
+            if event.mods.shift() {
+                input_handler.handle_action(Action::MoveSelecting(movement));
+            } else {
+                input_handler.handle_action(Action::Move(movement));
+            }
         }
         _ => {
             handler.release_input_lock(token);
