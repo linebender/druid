@@ -1,4 +1,4 @@
-use crate::piet::{Piet, RenderContext};
+use crate::piet::{Piet, PietText, RenderContext};
 use druid_shell::WindowHandle;
 
 use crate::widget_host::WidgetState;
@@ -14,10 +14,15 @@ pub struct PaintCtx<'a, 'b> {
 }
 
 pub struct LayoutCtx<'a> {
+    pub(crate) window: &'a WindowHandle,
     pub(crate) state: &'a WidgetState,
 }
 
 impl<'a> EventCtx<'a> {
+    pub fn text(&self) -> PietText {
+        self.window.text()
+    }
+
     pub fn hovered(&self) -> bool {
         self.state.hovered
     }
@@ -28,6 +33,12 @@ impl<'a> EventCtx<'a> {
 
     pub fn keyboard_focused(&self) -> bool {
         self.state.keyboard_focus
+    }
+}
+
+impl LayoutCtx<'_> {
+    pub fn text(&self) -> PietText {
+        self.window.text()
     }
 }
 

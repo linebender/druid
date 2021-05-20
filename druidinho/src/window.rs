@@ -37,6 +37,7 @@ impl Window {
     pub fn prepare_paint(&mut self) {
         let mut ctx = LayoutCtx {
             state: &self.root_state,
+            window: &self.handle,
         };
         let bc = BoxConstraints::tight(self.window_size.clone());
         self.root.layout(&mut ctx, bc);
