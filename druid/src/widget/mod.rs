@@ -97,6 +97,7 @@ pub use svg::{Svg, SvgData};
 pub use switch::Switch;
 pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
+pub use transform_box::{AATransform, AARotation, AATransformBox, TransformBox, TransformPolicy};
 pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
 #[doc(hidden)]

@@ -78,6 +78,7 @@ impl_example!(split_demo);
 impl_example!(styled_text.unwrap());
 impl_example!(switches);
 impl_example!(timer);
+impl_example!(transform);
 impl_example!(tabs);
 impl_example!(textbox);
 impl_example!(transparency);
