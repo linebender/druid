@@ -107,7 +107,6 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
         self.widget.set_origin(ctx, data, env, Point::ZERO);
 
         let bounding_box = self.affine_out_in.transform_rect_bbox(self.widget.paint_rect());
-        println!("insets: {:.2?}, {:.2?} - {:.2?}", bounding_box - size.to_rect(), bounding_box, size.to_rect());
         ctx.set_paint_insets(bounding_box - size.to_rect());
 
         self.need_layout = false;
@@ -126,7 +125,7 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
     }
 }
 
-#[derive(Copy, Clone, Data, Default, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Data, Default, Eq, PartialEq, Hash, Debug)]
 pub struct AARotation(u8);
 
 impl AARotation {
@@ -226,7 +225,7 @@ impl<T> AATransformBox<T> {
 
     pub fn rotate(&mut self, rotation: AARotation) {
         let mut transform = *self.transform();
-        transform.0 = transform.0.flipped();
+        transform.0 = transform.0 + rotation;
         self.set_transform(transform);
     }
 

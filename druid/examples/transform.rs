@@ -25,6 +25,7 @@ struct TransformState {
 }
 
 fn rotated_widget(data: &TransformState, _: &TransformState, _: &Env) -> Box<dyn Widget<TransformState>> {
+    println!("rebuild with: {:?}", data.rotation);
     AATransformBox::new(
     MousePainter(None)
     ).rotated(data.rotation)
