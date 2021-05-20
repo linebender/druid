@@ -55,7 +55,10 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
         let mut event = event.to_owned();
         match &mut event {
             Event::MouseDown(me) => {
-                if self.need_layout {return}
+                if self.need_layout {
+                    println!("skip mousedown event");
+                    return;
+                }
                 me.pos = self.affine_out_in * me.pos;
             }
             Event::MouseUp(me) => {
@@ -106,6 +109,8 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
 
         let bounding_box = self.affine_in_out.transform_rect_bbox(self.widget.paint_rect());
         ctx.set_paint_insets(bounding_box - size.to_rect());
+
+        self.need_layout = false;
 
         size
     }

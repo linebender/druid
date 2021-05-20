@@ -14,12 +14,8 @@
 
 //! This is an example of arbitrary transform of widgets.
 
-use druid::widget::prelude::*;
-use druid::widget::{Flex, Label, TextBox, AARotation, AATransformBox, ViewSwitcher, Button, Radio, TransformBox};
-use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc, Affine};
-
-const VERTICAL_WIDGET_SPACING: f64 = 20.0;
-const TEXT_BOX_WIDTH: f64 = 200.0;
+use druid::widget::{AARotation, AATransformBox, Button, Flex, Radio, ViewSwitcher, TransformBox};
+use druid::{Env, WidgetExt, Widget, Affine, WindowDesc, AppLauncher, Data, Lens};
 
 #[derive(Clone, Data, Lens)]
 struct TransformState {
