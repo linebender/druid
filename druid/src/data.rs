@@ -175,6 +175,17 @@ impl_data_simple!(std::net::IpAddr);
 impl_data_simple!(std::net::SocketAddr);
 impl_data_simple!(std::ops::RangeFull);
 impl_data_simple!(druid::piet::InterpolationMode);
+#[cfg(feature = "chrono")]
+impl_data_simple!(chrono::Duration);
+#[cfg(feature = "chrono")]
+impl_data_simple!(chrono::naive::IsoWeek);
+#[cfg(feature = "chrono")]
+impl_data_simple!(chrono::naive::NaiveDate);
+#[cfg(feature = "chrono")]
+impl_data_simple!(chrono::naive::NaiveDateTime);
+#[cfg(feature = "chrono")]
+impl_data_simple!(chrono::naive::NaiveTime);
+
 //TODO: remove me!?
 impl_data_simple!(String);
 
@@ -542,6 +553,20 @@ impl Data for piet::TextAlignment {
 impl Data for ImageBuf {
     fn same(&self, other: &Self) -> bool {
         self.raw_pixels_shared().same(&other.raw_pixels_shared())
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl<Tz: chrono::offset::TimeZone + 'static> Data for chrono::Date<Tz> {
+    fn same(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl<Tz: chrono::offset::TimeZone + 'static> Data for chrono::DateTime<Tz> {
+    fn same(&self, other: &Self) -> bool {
+        self == other
     }
 }
 

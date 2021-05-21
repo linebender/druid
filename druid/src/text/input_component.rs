@@ -272,7 +272,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
     )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::MouseDown(mouse) if self.can_write() => {
+            Event::MouseDown(mouse) if self.can_write() && !ctx.is_disabled() => {
                 ctx.set_active(true);
                 // ensure data is up to date before a click
                 let needs_rebuild = self
@@ -295,23 +295,26 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 ctx.request_paint();
             }
             Event::MouseMove(mouse) if self.can_write() => {
-                ctx.set_cursor(&Cursor::IBeam);
-                if ctx.is_active() {
-                    let pre_sel = self.borrow().selection();
-                    self.borrow_mut().do_drag(mouse.pos);
-                    if self.borrow().selection() != pre_sel {
-                        self.borrow_mut()
-                            .update_pending_invalidation(ImeInvalidation::SelectionChanged);
-                        ctx.request_update();
-                        ctx.request_paint();
+                if !ctx.is_disabled() {
+                    ctx.set_cursor(&Cursor::IBeam);
+                    if ctx.is_active() {
+                        let pre_sel = self.borrow().selection();
+                        self.borrow_mut().do_drag(mouse.pos);
+                        if self.borrow().selection() != pre_sel {
+                            self.borrow_mut()
+                                .update_pending_invalidation(ImeInvalidation::SelectionChanged);
+                            ctx.request_update();
+                            ctx.request_paint();
+                        }
                     }
+                } else {
+                    ctx.set_disabled(false);
+                    ctx.clear_cursor();
                 }
             }
-            Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
-                    ctx.request_paint();
-                }
+            Event::MouseUp(_) if ctx.is_active() => {
+                ctx.set_active(false);
+                ctx.request_paint();
             }
             Event::ImeStateChange => {
                 assert!(
@@ -379,6 +382,18 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                         ctx.invalidate_text_input(ImeInvalidation::LayoutChanged);
                     }
                 }
+            }
+            LifeCycle::DisabledChanged(disabled) => {
+                if self.can_write() {
+                    let color = if *disabled {
+                        env.get(theme::DISABLED_TEXT_COLOR)
+                    } else {
+                        env.get(theme::TEXT_COLOR)
+                    };
+
+                    self.borrow_mut().layout.set_text_color(color);
+                }
+                ctx.request_layout();
             }
             _ => (),
         }
@@ -704,7 +719,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn do_mouse_down(&mut self, point: Point, mods: Modifiers, count: u8) {
-        let point = point + Vec2::new(self.alignment_offset, 0.0);
+        let point = point - Vec2::new(self.alignment_offset, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
             self.selection.active = pos;
@@ -720,7 +735,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn do_drag(&mut self, point: Point) {
-        let point = point + Vec2::new(self.alignment_offset, 0.0);
+        let point = point - Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
         let text = match self.layout.text() {
@@ -817,7 +832,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
 impl<T: TextStorage> EditSessionHandle<T> {
     fn new(inner: Arc<RefCell<EditSession<T>>>) -> Self {
         let text = inner.borrow().layout.text().cloned().unwrap();
-        EditSessionHandle { inner, text }
+        EditSessionHandle { text, inner }
     }
 }
 

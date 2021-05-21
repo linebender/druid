@@ -25,7 +25,7 @@ pub use crate::platform::clipboard as platform;
 /// Copying and pasting text is simple, using [`Clipboard::put_string`] and
 /// [`Clipboard::get_string`]. If this is all you need, you're in luck.
 ///
-/// # Advanced useage
+/// # Advanced usage
 ///
 /// When working with data more complicated than plaintext, you will generally
 /// want to make that data available in multiple formats.

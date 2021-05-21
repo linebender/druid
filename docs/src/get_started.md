@@ -13,7 +13,7 @@ Setting up a project is a simple as creating a new Rust project;
 And then adding Druid as a dependency to Cargo.toml
 ```toml
 [dependencies]
-druid = "0.7.0"
+druid = { git = "https://github.com/linebender/druid.git" }
 ```
 
 To show a minimal window with a label replace `main.rs` with this;
@@ -30,7 +30,7 @@ fn main() -> Result<(), PlatformError> {
     Ok(())
 }
 ```
-In our main function we create an `AppLauncher`, pass it a `WindowDesc` that wraps build_ui function and launch it. Druid will use our `build_ui` function to build and rebuild our main window every time it needs to refresh. `build_ui` returns a tree of widgets. For now this tree consists of one simple label widget.
+In our main function we create an `AppLauncher`, pass it a `WindowDesc`, and launch it. We use `build_ui` to create a tree of widgets to pass to our `WindowDesc`. For now this tree consists of one simple label widget.
 
 This is a very simple example application and it's missing some important pieces. We will add these in the coming few paragraphs.
 

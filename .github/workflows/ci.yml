@@ -48,6 +48,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
+
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
@@ -124,6 +127,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
+
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
         uses: actions-rs/cargo@v1
@@ -177,6 +183,9 @@ jobs:
           components: clippy
           profile: minimal
           override: true
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
 
       # Clippy wasm32 relevant packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell (wasm)
@@ -273,6 +282,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
+
       # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
@@ -320,6 +332,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
+
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
@@ -354,6 +369,9 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
 
       # Doc packages in deeper-to-higher dependency order
       - name: cargo doc druid-shell
@@ -400,6 +418,9 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
 
       - name: install mdbook
         uses: actions-rs/cargo@v1

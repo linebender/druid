@@ -115,16 +115,18 @@ impl<T: Data> Widget<T> for Button<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.request_paint();
-                trace!("Button {:?} pressed", ctx.widget_id());
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    ctx.request_paint();
+                    trace!("Button {:?} pressed", ctx.widget_id());
+                }
             }
             Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
+                if ctx.is_active() && !ctx.is_disabled() {
                     ctx.request_paint();
                     trace!("Button {:?} released", ctx.widget_id());
                 }
+                ctx.set_active(false);
             }
             _ => (),
         }
@@ -132,7 +134,7 @@ impl<T: Data> Widget<T> for Button<T> {
 
     #[instrument(name = "Button", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::HotChanged(_) = event {
+        if let LifeCycle::HotChanged(_) | LifeCycle::DisabledChanged(_) = event {
             ctx.request_paint();
         }
         self.label.lifecycle(ctx, event, data, env)
@@ -165,7 +167,7 @@ impl<T: Data> Widget<T> for Button<T> {
 
     #[instrument(name = "Button", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let is_active = ctx.is_active();
+        let is_active = ctx.is_active() && !ctx.is_disabled();
         let is_hot = ctx.is_hot();
         let size = ctx.size();
         let stroke_width = env.get(theme::BUTTON_BORDER_WIDTH);
@@ -175,7 +177,16 @@ impl<T: Data> Widget<T> for Button<T> {
             .inset(-stroke_width / 2.0)
             .to_rounded_rect(env.get(theme::BUTTON_BORDER_RADIUS));
 
-        let bg_gradient = if is_active {
+        let bg_gradient = if ctx.is_disabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::DISABLED_BUTTON_LIGHT),
+                    env.get(theme::DISABLED_BUTTON_DARK),
+                ),
+            )
+        } else if is_active {
             LinearGradient::new(
                 UnitPoint::TOP,
                 UnitPoint::BOTTOM,
@@ -189,7 +200,7 @@ impl<T: Data> Widget<T> for Button<T> {
             )
         };
 
-        let border_color = if is_hot {
+        let border_color = if is_hot && !ctx.is_disabled() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)

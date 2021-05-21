@@ -203,9 +203,10 @@ impl<T: Data> AppLauncher<T> {
         #[cfg(target_arch = "wasm32")]
         {
             console_error_panic_hook::set_once();
-            // tracing_wasm doesn't let us filter by level, but chrome/firefox devtools can
-            // already do that anyway
-            tracing_wasm::set_as_global_default();
+            let config = tracing_wasm::WASMLayerConfigBuilder::new()
+                .set_max_level(tracing::Level::DEBUG)
+                .build();
+            tracing_wasm::set_as_global_default_with_config(config)
         }
         self
     }
@@ -557,10 +558,11 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Sets the initial window position in virtual screen coordinates.
-    /// [`position`] Position in pixels.
+    /// Sets the initial window position in [display points], relative to the origin
+    /// of the [virtual screen].
     ///
-    /// [`position`]: struct.Point.html
+    /// [display points]: crate::Scale
+    /// [virtual screen]: crate::Screen
     pub fn set_position(mut self, position: impl Into<Point>) -> Self {
         self.config = self.config.set_position(position.into());
         self

@@ -96,6 +96,9 @@ pub struct Label<T> {
 pub struct RawLabel<T> {
     layout: TextLayout<T>,
     line_break_mode: LineBreaking,
+
+    disabled: bool,
+    default_text_color: KeyOrValue<Color>,
 }
 
 /// Options for handling lines that are too wide for the label.
@@ -152,6 +155,8 @@ impl<T: TextStorage> RawLabel<T> {
         Self {
             layout: TextLayout::new(),
             line_break_mode: LineBreaking::Overflow,
+            disabled: false,
+            default_text_color: crate::theme::TEXT_COLOR.into(),
         }
     }
 
@@ -214,7 +219,11 @@ impl<T: TextStorage> RawLabel<T> {
     /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
-        self.layout.set_text_color(color);
+        let color = color.into();
+        if !self.disabled {
+            self.layout.set_text_color(color.clone());
+        }
+        self.default_text_color = color;
     }
 
     /// Set the text size.
@@ -486,9 +495,9 @@ impl<T: Data> Widget<T> for Label<T> {
         if matches!(event, LifeCycle::WidgetAdded) {
             self.text.resolve(data, env);
             self.text_should_be_updated = false;
-            self.label
-                .lifecycle(ctx, event, &self.text.display_text(), env);
         }
+        self.label
+            .lifecycle(ctx, event, &self.text.display_text(), env);
     }
 
     #[instrument(name = "Label", level = "trace", skip(self, ctx, _old_data, data, env))]
@@ -548,14 +557,22 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         }
     }
 
-    #[instrument(
-        name = "RawLabel",
-        level = "trace",
-        skip(self, _ctx, event, data, _env)
-    )]
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
-        if matches!(event, LifeCycle::WidgetAdded) {
-            self.layout.set_text(data.to_owned());
+    #[instrument(name = "RawLabel", level = "trace", skip(self, ctx, event, data, _env))]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.layout.set_text(data.to_owned());
+            }
+            LifeCycle::DisabledChanged(disabled) => {
+                let color = if *disabled {
+                    KeyOrValue::Key(crate::theme::DISABLED_TEXT_COLOR)
+                } else {
+                    self.default_text_color.clone()
+                };
+                self.layout.set_text_color(color);
+                ctx.request_layout();
+            }
+            _ => {}
         }
     }
 

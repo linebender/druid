@@ -186,3 +186,90 @@ fn flex_paint_rect_overflow() {
         assert_eq!(state.paint_rect().size(), expected_paint_rect.size());
     })
 }
+
+use crate::tests::harness::*;
+use crate::widget::AspectRatioBox;
+use crate::widget::Label;
+use crate::WidgetExt;
+
+#[test]
+fn aspect_ratio_tight_constraints() {
+    let id = WidgetId::next();
+    let (width, height) = (400., 400.);
+    let aspect = AspectRatioBox::<()>::new(Label::new("hello!"), 1.0)
+        .with_id(id)
+        .fix_width(width)
+        .fix_height(height)
+        .center();
+
+    let (window_width, window_height) = (600., 600.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(width, height));
+    });
+}
+
+#[test]
+fn aspect_ratio_infinite_constraints() {
+    let id = WidgetId::next();
+    let (width, height) = (100., 100.);
+    let label = Label::new("hello!").fix_width(width).height(height);
+    let aspect = AspectRatioBox::<()>::new(label, 1.0)
+        .with_id(id)
+        .scroll()
+        .center();
+
+    let (window_width, window_height) = (600., 600.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(width, height));
+    });
+}
+
+#[test]
+fn aspect_ratio_tight_constraint_on_width() {
+    let id = WidgetId::next();
+    let label = Label::new("hello!");
+    let aspect = AspectRatioBox::<()>::new(label, 2.0)
+        .with_id(id)
+        .fix_width(300.)
+        .center();
+
+    let (window_width, window_height) = (600., 50.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(300., 50.));
+    });
+}
+
+#[test]
+fn aspect_ratio() {
+    let id = WidgetId::next();
+    let label = Label::new("hello!");
+    let aspect = AspectRatioBox::<()>::new(label, 2.0)
+        .with_id(id)
+        .center()
+        .center();
+
+    let (window_width, window_height) = (1000., 1000.);
+
+    Harness::create_simple((), aspect, |harness| {
+        harness.set_initial_size(Size::new(window_width, window_height));
+        harness.send_initial_events();
+        harness.just_layout();
+        let state = harness.get_state(id);
+        assert_eq!(state.layout_rect().size(), Size::new(1000., 500.));
+    });
+}

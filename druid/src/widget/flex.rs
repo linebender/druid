@@ -14,7 +14,7 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
-use crate::kurbo::common::FloatExt;
+use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
 use tracing::{instrument, trace};
@@ -236,9 +236,22 @@ impl Axis {
         }
     }
 
+    /// Extract the coordinate locating the argument with respect to this axis.
+    pub fn major_vec(self, vec: Vec2) -> f64 {
+        match self {
+            Axis::Horizontal => vec.x,
+            Axis::Vertical => vec.y,
+        }
+    }
+
     /// Extract the coordinate locating the argument with respect to the perpendicular axis.
     pub fn minor_pos(self, pos: Point) -> f64 {
         self.cross().major_pos(pos)
+    }
+
+    /// Extract the coordinate locating the argument with respect to the perpendicular axis.
+    pub fn minor_vec(self, vec: Vec2) -> f64 {
+        self.cross().major_vec(vec)
     }
 
     /// Arrange the major and minor measurements with respect to this axis such that it forms

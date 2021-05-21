@@ -19,7 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::widget::Scroll;
+use crate::widget::{DisabledIf, Scroll};
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
@@ -272,6 +272,18 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// [`Scroll`]: widget/struct.Scroll.html
     fn scroll(self) -> Scroll<T, Self> {
         Scroll::new(self)
+    }
+
+    /// Wrap this widget in a [`DisabledIf`] widget.
+    ///
+    /// The provided closure will determine if the widget is disabled.
+    /// See [`is_disabled`] or [`set_disabled`] for more info about disabled state.
+    ///
+    /// [`is_disabled`]: crate::EventCtx::is_disabled
+    /// [`set_disabled`]: crate::EventCtx::set_disabled
+    /// [`DisabledIf`]: crate::widget::DisabledIf
+    fn disabled_if(self, disabled_if: impl Fn(&T, &Env) -> bool + 'static) -> DisabledIf<T, Self> {
+        DisabledIf::new(self, disabled_if)
     }
 }
 

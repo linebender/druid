@@ -36,5 +36,6 @@ druid = "0.7.0"
 // or to be on the bleeding edge:
 druid = { git = "https://github.com/linebender/druid.git" }
 ```
+This book is written against the latest code on git, so some examples may not work with `0.7.0`.
 
 [GTK installation page]: https://www.gtk.org/docs/installations/linux/

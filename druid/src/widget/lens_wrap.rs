@@ -69,6 +69,16 @@ impl<T, U, L, W> LensWrap<T, U, L, W> {
             phantom_t: Default::default(),
         }
     }
+
+    /// Get a reference to the lens.
+    pub fn lens(&self) -> &L {
+        &self.lens
+    }
+
+    /// Get a mutable reference to the lens.
+    pub fn lens_mut(&mut self) -> &mut L {
+        &mut self.lens
+    }
 }
 
 impl<T, U, L, W> Widget<T> for LensWrap<T, U, L, W>

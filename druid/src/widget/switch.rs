@@ -63,6 +63,9 @@ impl Switch {
     }
 
     fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env, switch_width: f64) {
+        self.on_text.rebuild_if_needed(ctx.text(), env);
+        self.off_text.rebuild_if_needed(ctx.text(), env);
+
         let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let knob_size = switch_height - 2. * SWITCH_PADDING;
 
@@ -98,16 +101,20 @@ impl Widget<bool> for Switch {
 
         match event {
             Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.request_paint();
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    ctx.request_paint();
+                }
             }
             Event::MouseUp(_) => {
-                if self.knob_dragged {
-                    // toggle value when dragging if knob has been moved far enough
-                    *data = self.knob_pos.x > switch_width / 2.;
-                } else if ctx.is_active() {
-                    // toggle value on click
-                    *data = !*data;
+                if !ctx.is_disabled() {
+                    if self.knob_dragged {
+                        // toggle value when dragging if knob has been moved far enough
+                        *data = self.knob_pos.x > switch_width / 2.;
+                    } else if ctx.is_active() {
+                        // toggle value on click
+                        *data = !*data;
+                    }
                 }
 
                 ctx.set_active(false);
@@ -117,14 +124,18 @@ impl Widget<bool> for Switch {
                 ctx.request_anim_frame();
             }
             Event::MouseMove(mouse) => {
-                if ctx.is_active() {
-                    self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
-                    self.knob_dragged = true;
+                if !ctx.is_disabled() {
+                    if ctx.is_active() {
+                        self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
+                        self.knob_dragged = true;
+                    }
+                    if ctx.is_hot() {
+                        self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
+                    }
+                    ctx.request_paint();
+                } else {
+                    ctx.set_active(false);
                 }
-                if ctx.is_hot() {
-                    self.knob_hovered = self.knob_hit_test(knob_size, mouse.pos)
-                }
-                ctx.request_paint();
             }
             Event::AnimFrame(interval) => {
                 let delta = Duration::from_nanos(*interval).as_secs_f64();
@@ -159,9 +170,28 @@ impl Widget<bool> for Switch {
 
     #[instrument(name = "Switch", level = "trace", skip(self, ctx, event, _data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &bool, env: &Env) {
-        if matches!(event, LifeCycle::WidgetAdded) {
-            self.on_text.rebuild_if_needed(ctx.text(), env);
-            self.off_text.rebuild_if_needed(ctx.text(), env);
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.on_text.rebuild_if_needed(ctx.text(), env);
+                self.off_text.rebuild_if_needed(ctx.text(), env);
+            }
+            LifeCycle::DisabledChanged(true) if self.knob_dragged => {
+                self.knob_dragged = false;
+                self.animation_in_progress = true;
+                ctx.request_anim_frame();
+            }
+            LifeCycle::DisabledChanged(disabled) => {
+                ctx.request_paint();
+                let color = if *disabled {
+                    theme::DISABLED_TEXT_COLOR
+                } else {
+                    theme::TEXT_COLOR
+                };
+                self.off_text.set_text_color(color.clone());
+                self.on_text.set_text_color(color);
+                ctx.request_paint();
+            }
+            _ => {}
         }
     }
 
@@ -185,6 +215,8 @@ impl Widget<bool> for Switch {
         _data: &bool,
         env: &Env,
     ) -> Size {
+        self.on_text.rebuild_if_needed(ctx.text(), env);
+
         let text_metrics = self.on_text.layout_metrics();
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
         let width = height * SWITCH_WIDTH_RATIO;
@@ -228,7 +260,11 @@ impl Widget<bool> for Switch {
         // paint different background for on and off state
         // opacity of background color depends on knob position
         // todo: make color configurable
-        let opacity = (self.knob_pos.x - off_pos) / (on_pos - off_pos);
+        let opacity = if ctx.is_disabled() {
+            0.0
+        } else {
+            (self.knob_pos.x - off_pos) / (on_pos - off_pos)
+        };
 
         let background_gradient_on_state = LinearGradient::new(
             UnitPoint::TOP,
@@ -256,27 +292,33 @@ impl Widget<bool> for Switch {
         let is_active = ctx.is_active();
         let is_hovered = self.knob_hovered;
 
-        let normal_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_LIGHT),
-                env.get(theme::FOREGROUND_DARK),
-            ),
-        );
-        let flipped_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_DARK),
-                env.get(theme::FOREGROUND_LIGHT),
-            ),
-        );
-
-        let knob_gradient = if is_active {
-            flipped_knob_gradient
+        let knob_gradient = if ctx.is_disabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::DISABLED_FOREGROUND_LIGHT),
+                    env.get(theme::DISABLED_FOREGROUND_DARK),
+                ),
+            )
+        } else if is_active {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_DARK),
+                    env.get(theme::FOREGROUND_LIGHT),
+                ),
+            )
         } else {
-            normal_knob_gradient
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_LIGHT),
+                    env.get(theme::FOREGROUND_DARK),
+                ),
+            )
         };
 
         // paint the border

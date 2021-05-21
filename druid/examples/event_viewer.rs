@@ -336,7 +336,7 @@ pub fn main() {
         .log_to_console()
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
-            env.set(theme::LABEL_COLOR, TEXT_COLOR);
+            env.set(theme::TEXT_COLOR, TEXT_COLOR);
             env.set(theme::WIDGET_PADDING_HORIZONTAL, 2.0);
             env.set(theme::WIDGET_PADDING_VERTICAL, 2.0);
         })

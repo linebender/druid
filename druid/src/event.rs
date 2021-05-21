@@ -428,10 +428,11 @@ impl LifeCycle {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             LifeCycle::Internal(internal) => internal.should_propagate_to_hidden(),
-            LifeCycle::WidgetAdded | LifeCycle::DisabledChanged(_) | LifeCycle::BuildFocusChain => {
-                true
-            }
-            LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
+            LifeCycle::WidgetAdded | LifeCycle::DisabledChanged(_) => true,
+            LifeCycle::Size(_)
+            | LifeCycle::HotChanged(_)
+            | LifeCycle::FocusChanged(_)
+            | LifeCycle::BuildFocusChain => false,
         }
     }
 }

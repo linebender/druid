@@ -59,7 +59,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
+                if mouse_event.button == MouseButton::Left && !ctx.is_disabled() {
                     ctx.set_active(true);
                     ctx.request_paint();
                     trace!("Widget {:?} pressed", ctx.widget_id());
@@ -68,7 +68,7 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
             Event::MouseUp(mouse_event) => {
                 if ctx.is_active() && mouse_event.button == MouseButton::Left {
                     ctx.set_active(false);
-                    if ctx.is_hot() {
+                    if ctx.is_hot() && !ctx.is_disabled() {
                         (self.action)(ctx, data, env);
                     }
                     ctx.request_paint();

@@ -127,6 +127,9 @@ pub(crate) struct WidgetState {
 
     pub(crate) needs_layout: bool,
 
+    /// Because of some scrolling or something, `parent_window_origin` needs to be updated.
+    pub(crate) needs_window_origin: bool,
+
     /// Any descendant is active.
     has_active: bool,
 
@@ -308,10 +311,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Scroll`]: widget/struct.Scroll.html
     pub fn set_viewport_offset(&mut self, offset: Vec2) {
         if offset != self.state.viewport_offset {
-            // We need the parent_window_origin recalculated.
-            // It should be possible to just trigger the InternalLifeCycle::ParentWindowOrigin here,
-            // instead of full layout. Would need more management in WidgetState.
-            self.state.needs_layout = true;
+            self.state.needs_window_origin = true;
         }
         self.state.viewport_offset = offset;
     }
@@ -560,12 +560,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         self.state.needs_layout = false;
+        self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
-        let child_mouse_pos = match ctx.mouse_pos {
-            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2() + self.viewport_offset()),
-            None => None,
-        };
+        let child_mouse_pos = ctx
+            .mouse_pos
+            .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());
         let prev_size = self.state.size;
 
         let mut child_ctx = LayoutCtx {
@@ -912,6 +912,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // we may send an extra event after the actual event
         let mut extra_event = None;
 
+        let had_focus = self.state.has_focus;
+
         let recurse = match event {
             LifeCycle::Internal(internal) => match internal {
                 InternalLifeCycle::RouteWidgetAdded => {
@@ -970,6 +972,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
                 InternalLifeCycle::ParentWindowOrigin => {
                     self.state.parent_window_origin = ctx.widget_state.window_origin();
+                    self.state.needs_window_origin = false;
                     true
                 }
                 #[cfg(test)]
@@ -1035,6 +1038,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             LifeCycle::BuildFocusChain => {
                 if self.state.update_focus_chain {
+                    // Replace has_focus to check if the value changed in the meantime
+                    let is_focused = ctx.state.focus_widget == Some(self.state.id);
+                    self.state.has_focus = is_focused;
+
                     self.state.focus_chain.clear();
                     true
                 } else {
@@ -1082,6 +1089,17 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             // Update focus-chain of our parent
             LifeCycle::BuildFocusChain => {
                 self.state.update_focus_chain = false;
+
+                // had_focus is the old focus value. state.has_focus was repaced with ctx.is_focused().
+                // Therefore if had_focus is true but state.has_focus is false then the widget which is
+                // currently focused is not part of the functional tree anymore
+                // (Lifecycle::BuildFocusChain.should_propagate_to_hidden() is false!) and should
+                // resign the focus.
+                if had_focus && !self.state.has_focus {
+                    self.state.request_focus = Some(FocusChange::Resign);
+                }
+                self.state.has_focus = had_focus;
+
                 if !self.state.is_disabled() {
                     ctx.widget_state.focus_chain.extend(&self.state.focus_chain);
                 }
@@ -1134,7 +1152,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         None
                     },
                 };
-                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                let command = SUB_WINDOW_PARENT_TO_HOST.with(update).to(*host);
                 ctx.submit_command(command);
             }
         }
@@ -1196,6 +1214,7 @@ impl WidgetState {
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
+            needs_window_origin: false,
             is_active: false,
             has_active: false,
             has_focus: false,
@@ -1257,6 +1276,7 @@ impl WidgetState {
         child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
+        self.needs_window_origin |= child_state.needs_window_origin;
         self.request_anim |= child_state.request_anim;
         self.children_disabled_changed |= child_state.children_disabled_changed;
         self.children_disabled_changed |=

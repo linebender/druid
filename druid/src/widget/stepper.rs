@@ -139,6 +139,15 @@ impl Widget<f64> for Stepper {
         let increase_button_rect = Rect::from_origin_size(increase_button_origin, button_size);
         let decrease_button_rect = Rect::from_origin_size(decrease_button_origin, button_size);
 
+        let disabled_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::DISABLED_BUTTON_LIGHT),
+                env.get(theme::DISABLED_BUTTON_DARK),
+            ),
+        );
+
         let active_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
@@ -152,13 +161,17 @@ impl Widget<f64> for Stepper {
         );
 
         // draw buttons that are currently triggered as active
-        if self.increase_active {
+        if ctx.is_disabled() {
+            ctx.fill(increase_button_rect, &disabled_gradient);
+        } else if self.increase_active {
             ctx.fill(increase_button_rect, &active_gradient);
         } else {
             ctx.fill(increase_button_rect, &inactive_gradient);
         };
 
-        if self.decrease_active {
+        if ctx.is_disabled() {
+            ctx.fill(decrease_button_rect, &disabled_gradient);
+        } else if self.decrease_active {
             ctx.fill(decrease_button_rect, &active_gradient);
         } else {
             ctx.fill(decrease_button_rect, &inactive_gradient);
@@ -176,7 +189,13 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        let color = if ctx.is_disabled() {
+            env.get(theme::DISABLED_TEXT_COLOR)
+        } else {
+            env.get(theme::TEXT_COLOR)
+        };
+
+        ctx.fill(arrows, &color);
     }
 
     #[instrument(
@@ -205,19 +224,21 @@ impl Widget<f64> for Stepper {
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
 
-                if mouse.pos.y > height / 2. {
-                    self.decrease_active = true;
-                    self.decrement(data);
-                } else {
-                    self.increase_active = true;
-                    self.increment(data);
+                    if mouse.pos.y > height / 2. {
+                        self.decrease_active = true;
+                        self.decrement(data);
+                    } else {
+                        self.increase_active = true;
+                        self.increment(data);
+                    }
+
+                    self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
+
+                    ctx.request_paint();
                 }
-
-                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
-
-                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);
@@ -229,19 +250,27 @@ impl Widget<f64> for Stepper {
                 ctx.request_paint();
             }
             Event::Timer(id) if *id == self.timer_id => {
-                if self.increase_active {
-                    self.increment(data);
+                if !ctx.is_disabled() {
+                    if self.increase_active {
+                        self.increment(data);
+                    }
+                    if self.decrease_active {
+                        self.decrement(data);
+                    }
+                    self.timer_id = ctx.request_timer(STEPPER_REPEAT);
+                } else {
+                    ctx.set_active(false);
                 }
-                if self.decrease_active {
-                    self.decrement(data);
-                }
-                self.timer_id = ctx.request_timer(STEPPER_REPEAT);
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
+        if let LifeCycle::DisabledChanged(_) = event {
+            ctx.request_paint();
+        }
+    }
 
     #[instrument(
         name = "Stepper",

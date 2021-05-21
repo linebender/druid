@@ -82,7 +82,7 @@ impl<T> TextLayout<T> {
         TextLayout {
             text: None,
             font: crate::theme::UI_FONT.into(),
-            text_color: crate::theme::LABEL_COLOR.into(),
+            text_color: crate::theme::TEXT_COLOR.into(),
             text_size_override: None,
             layout: None,
             wrap_width: f64::INFINITY,

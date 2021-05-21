@@ -83,18 +83,27 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     // Define lens types for each field
     let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
-        let docs = format!(
-            "Lens for the field `{}` on [`{1}`](super::{1})",
-            field_name, ty
+        let struct_docs = format!(
+            "Lens for the field `{field}` on [`{ty}`](super::{ty}).",
+            field = field_name,
+            ty = ty,
+        );
+
+        let fn_docs = format!(
+            "Creates a new lens for the field `{field}` on [`{ty}`](super::{ty}). \
+            Use [`{ty}::{field}`](super::{ty}::{field}) instead.",
+            field = field_name,
+            ty = ty,
         );
 
         quote! {
-            #[doc = #docs]
+            #[doc = #struct_docs]
             #[allow(non_camel_case_types)]
             #[derive(Debug, Copy, Clone)]
             pub struct #field_name#lens_ty_generics(#(#phantom_decls),*);
 
             impl #lens_ty_generics #field_name#lens_ty_generics{
+                #[doc = #fn_docs]
                 pub const fn new()->Self{
                     Self(#(#phantom_inits),*)
                 }
@@ -148,12 +157,15 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         let lens_field_name = f.attrs.lens_name_override.as_ref().unwrap_or(&field_name);
 
         quote! {
-            /// Lens for the corresponding field
+            /// Lens for the corresponding field.
             pub const #lens_field_name: #twizzled_name::#field_name#lens_ty_generics = #twizzled_name::#field_name::new();
         }
     });
 
+    let mod_docs = format!("Derived lenses for [`{}`].", ty);
+
     let expanded = quote! {
+        #[doc = #mod_docs]
         pub mod #twizzled_name {
             #(#defs)*
         }

@@ -930,23 +930,18 @@ impl<TP: TabsPolicy> Tabs<TP> {
     }
 
     fn make_scope(&self, tabs_from_data: TP) -> WidgetPod<TP::Input, TabsScope<TP>> {
-        let (tabs_bar, tabs_body) = (
-            (TabBar::new(self.axis, self.edge), 0.0),
-            (
-                TabsBody::new(self.axis, self.transition)
-                    .padding(5.)
-                    .border(theme::BORDER_DARK, 0.5),
-                1.0,
-            ),
-        );
+        let tabs_bar = TabBar::new(self.axis, self.edge);
+        let tabs_body = TabsBody::new(self.axis, self.transition)
+            .padding(5.)
+            .border(theme::BORDER_DARK, 0.5);
         let mut layout: Flex<TabsState<TP>> = Flex::for_axis(self.axis.cross());
 
         if let TabsEdge::Trailing = self.edge {
-            layout.add_flex_child(tabs_body.0, tabs_body.1);
-            layout.add_flex_child(tabs_bar.0, tabs_bar.1);
+            layout.add_flex_child(tabs_body, 1.);
+            layout.add_child(tabs_bar);
         } else {
-            layout.add_flex_child(tabs_bar.0, tabs_bar.1);
-            layout.add_flex_child(tabs_body.0, tabs_body.1);
+            layout.add_child(tabs_bar);
+            layout.add_flex_child(tabs_body, 1.);
         };
 
         WidgetPod::new(Scope::new(
