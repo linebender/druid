@@ -1,56 +1,73 @@
-use crate::{WidgetPod, Widget, Affine, Vec2, Data, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, Env, UpdateCtx, Rect, Insets, Point, RenderContext};
+use crate::{WidgetPod, Widget, Affine, Data, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, Env, UpdateCtx, Point, RenderContext};
 use std::ops::{Add, Sub};
-use crate::core::WidgetState;
 
+/// A trait which decides the size and transform of the inner widget based on the outer BoxConstrains.
 pub trait TransformPolicy {
-    fn get_transform(&mut self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size);
+    /// layout the inner widget and return the size of the outer box and transform of the inner widget.
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size);
 }
 
 impl<F: Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size)> TransformPolicy for F {
-    fn get_transform(&mut self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
         (self)(bc, layout)
     }
 }
 
+/// A widget wrapper which layouts the inner widget according to the provided `TransformPolicy`.
 pub struct TransformBox<T, F> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
     //The affine transform for external points to internal points
-    affine_out_in: Affine,
-    //The affine transform for internal points to external points
     affine_in_out: Affine,
+    //The affine transform for internal points to external points
+    affine_out_in: Affine,
     need_layout: bool,
-    transform: F,
+    transform: Option<F>,
+    extractor: Option<Box<dyn Fn(&T) -> F>>
 }
 
 impl<T, F> TransformBox<T, F> {
+    /// creates a new `TransformBox` with the inner widget and a fixed `TransformPolicy`
     pub fn with_transform(widget: impl Widget<T> + 'static, transform: F) -> Self {
         TransformBox {
             widget: WidgetPod::new(Box::new(widget)),
-            affine_out_in: Default::default(),
             affine_in_out: Default::default(),
+            affine_out_in: Default::default(),
             need_layout: true,
-            transform,
+            transform: Some(transform),
+            extractor: None,
         }
     }
 
-    pub fn affine(&self) -> Affine {
-        self.affine_out_in
+    /// creates a new `TransformBox` from the inner widget and a closure to extract `TransformPolicy`
+    /// from data.
+    pub fn with_extractor(widget: impl Widget<T> + 'static, extractor: impl Fn(&T) -> F + 'static) -> Self {
+        TransformBox {
+            widget: WidgetPod::new(Box::new(widget)),
+            affine_in_out: Default::default(),
+            affine_out_in: Default::default(),
+            need_layout: true,
+            transform: None,
+            extractor: Some(Box::new(extractor)),
+        }
     }
 
-    pub fn affine_inv(&self) -> Affine {
+    /// returns the affine created by `TransformPolicy`. It is the transform which transform points
+    /// from the local coordinate-space to its parent's coordinate-space. It is also the transform
+    /// used by PaintCtx.
+    pub fn affine(&self) -> Affine {
         self.affine_in_out
     }
 
-    pub fn transform(&self) -> &F {
-        &self.transform
+    /// returns the cached inverse of the `TransformBox::affine()`. It is used ot transform points
+    /// from the parent's coordinate-space to the local coordinate-space. The event method uses it
+    /// to get the local position for MouseEvents.
+    pub fn affine_inv(&self) -> Affine {
+        self.affine_out_in
     }
 
-    pub fn set_transform(&mut self, new:  F) {
-        self.transform = new;
-    }
 }
 
-impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
+impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut event = event.to_owned();
         match &mut event {
@@ -58,19 +75,19 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
                 if self.need_layout {
                     return;
                 }
-                me.pos = self.affine_in_out * me.pos;
+                me.pos = self.affine_out_in * me.pos;
             }
             Event::MouseUp(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_in_out * me.pos;
+                me.pos = self.affine_out_in * me.pos;
             }
             Event::MouseMove(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_in_out * me.pos;
+                me.pos = self.affine_out_in * me.pos;
             }
             Event::Wheel(me) => {
                 if self.need_layout {return}
-                me.pos = self.affine_in_out * me.pos;
+                me.pos = self.affine_out_in * me.pos;
             }
             _ => {}
         }
@@ -81,6 +98,10 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let Some(extractor) = &self.extractor {
+            self.transform = Some(extractor(data));
+        }
+
         self.widget.lifecycle(ctx, event, data, env);
         if !ctx.widget_state.invalid.is_empty() {
             ctx.request_paint();
@@ -89,6 +110,14 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
 
     fn update(&mut self, ctx: &mut UpdateCtx, _: &T, data: &T, env: &Env) {
         self.widget.update(ctx, data, env);
+        if let Some(extractor) = &self.extractor {
+            let new = extractor(data);
+            if !new.same(self.transform.as_ref().unwrap()) {
+                self.transform = Some(new);
+                ctx.request_layout();
+            }
+        }
+
         if !ctx.widget_state.invalid.is_empty() {
             ctx.request_paint();
         }
@@ -96,17 +125,18 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let Self {transform, widget, ..} = self;
+        let transform = transform.as_ref().unwrap();
         let mut child_layout = |bc: &BoxConstraints|widget.layout(ctx, bc, data, env);
         let (affine, size): (Affine, Size) = transform.get_transform(bc, &mut child_layout);
 
-        self.affine_out_in = affine;
-        self.affine_in_out = affine.inverse();
+        self.affine_in_out = affine;
+        self.affine_out_in = affine.inverse();
 
         // update the current mouse position to set hot correctly
-        ctx.mouse_pos = ctx.mouse_pos.map(|pos|self.affine_out_in * pos);
+        ctx.mouse_pos = ctx.mouse_pos.map(|pos|self.affine_in_out * pos);
         self.widget.set_origin(ctx, data, env, Point::ZERO);
 
-        let bounding_box = self.affine_out_in.transform_rect_bbox(self.widget.paint_rect());
+        let bounding_box = self.affine_in_out.transform_rect_bbox(self.widget.paint_rect());
         ctx.set_paint_insets(bounding_box - size.to_rect());
 
         self.need_layout = false;
@@ -118,34 +148,43 @@ impl<T: Data, F: TransformPolicy> Widget<T> for TransformBox<T, F> {
         // This works since the widgets origin is zero.
         ctx.region.set_rect(self.widget.paint_rect());
         ctx.with_save(|ctx|{
-            ctx.transform(self.affine_out_in);
+            ctx.transform(self.affine_in_out);
 
             self.widget.paint(ctx, data, env);
         });
     }
 }
 
+/// An axis-aligned rotation, the only possible value are 0°, 90°, 180°, 270°
 #[derive(Copy, Clone, Data, Default, Eq, PartialEq, Hash, Debug)]
 pub struct AARotation(u8);
 
 impl AARotation {
+    /// 0°
     pub const ORIGIN: AARotation = AARotation(0);
+    /// 90°
     pub const CLOCKWISE: AARotation = AARotation(1);
+    /// 180°
     pub const HALF_WAY: AARotation = AARotation(2);
+    /// 270°
     pub const COUNTER_CLOCKWISE: AARotation = AARotation(3);
 
+    /// turn clockwise 90°
     pub fn clockwise(self) -> Self {
         Self((self.0 + 1) % 4)
     }
 
+    /// turn counter-clockwise 90°
     pub fn counter_clockwise(self) -> Self {
         Self((self.0 + 3) % 4)
     }
 
+    /// turn 180°
     pub fn flipped(self) -> Self {
         Self((self.0 + 2) % 4)
     }
 
+    /// Is 90° or 270° therefore the X-Axis becomes the Y-Axis
     pub fn is_axis_flipped(self) -> bool {
         self.0 % 2 == 1
     }
@@ -159,19 +198,27 @@ impl Add for AARotation {
     }
 }
 
-pub type AATransform = (AARotation, bool);
+impl Sub for AARotation {
+    type Output = Self;
 
-pub type AATransformBox<T> = TransformBox<T, AATransform>;
+    fn sub(self, other: Self) -> Self {
+        Self((self.0 - other.0 + 4) % 4)
+    }
+}
+
+/// An axis-aligned transformation (rotation and flipping axis).
+#[derive(Copy, Clone, Data, Debug, Eq, PartialEq)]
+pub struct AATransform(AARotation, bool);
 
 impl TransformPolicy for AATransform {
-    fn get_transform(&mut self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
         let bc = if self.0.is_axis_flipped() {
             BoxConstraints::new(Size::new(bc.min().height, bc.min().width),
                                 Size::new(bc.max().height, bc.max().width))
         } else {
             *bc
         };
-        let mut inner_size = layout(&bc);
+        let inner_size = layout(&bc);
 
         let outer_size = if self.0.is_axis_flipped() {
             Size::new(inner_size.height, inner_size.width)
@@ -181,70 +228,162 @@ impl TransformPolicy for AATransform {
 
         let transform = Affine::translate(outer_size.to_vec2() / 2.0) *
             Affine::rotate(self.0.0 as f64 * std::f64::consts::PI * 0.5) *
-            Affine::translate(-outer_size.to_vec2() / 2.0);
+            Affine::translate(-inner_size.to_vec2() / 2.0);
 
         (transform, outer_size)
     }
 }
 
-impl Sub for AARotation {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        Self((self.0 - other.0 + 4) % 4)
+impl Default for AATransform {
+    fn default() -> Self {
+        Self(AARotation::ORIGIN, false)
     }
 }
 
-impl<T> AATransformBox<T> {
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
-        Self::with_transform(inner, (AARotation::ORIGIN, false))
-    }
-
+impl AATransform {
+    /// returns the rotation of this transform.
     pub fn rotation(&self) -> AARotation {
-        self.transform.0
+        self.0
     }
 
+    /// The transform can't be turned into identity by rotating.
     pub fn is_flipped(&self) -> bool {
-        self.transform.1
+        self.1
     }
 
+    /// A builder-style method to rotate the Transform.
     pub fn rotated(mut self, rotation: AARotation) -> Self {
         self.rotate(rotation);
         self
     }
 
+    /// A builder-style method to flip the transform horizontally.
     pub fn flipped_horizontal(mut self) -> Self {
         self.flip_horizontal();
         self
     }
 
+    /// A builder-style method to flip the transform vertically.
     pub fn flipped_vertical(mut self) -> Self {
         self.flip_vertical();
         self
     }
 
+    /// Rotate the Transform.
     pub fn rotate(&mut self, rotation: AARotation) {
-        let mut transform = *self.transform();
-        transform.0 = transform.0 + rotation;
-        self.set_transform(transform);
+        self.0 = self.0 + rotation;
     }
 
+    /// Flip the transform horizontally.
     pub fn flip_horizontal(&mut self) {
-        let mut transform = *self.transform();
-        transform.1 = !transform.1;
-        self.set_transform(transform);
+        self.1 = !self.1;
     }
 
+    /// Flip the transform vertically.
     pub fn flip_vertical(&mut self) {
-        let mut transform = *self.transform();
-        transform.1 = !transform.1;
-        transform.0 = transform.0.flipped();
-        self.set_transform(transform);
+        self.0 = self.0.flipped();
+        self.1 = !self.1;
     }
 }
 
-impl TransformPolicy for Affine {
-    fn get_transform(&mut self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
-        (*self, layout(bc))
+/// A `TransformPolicy` which rotates and keeps the widget inside the bounds of the TransformBox.
+#[derive(Copy, Clone, Data, Debug)]
+pub struct BoundedRotation(f64);
+
+impl BoundedRotation {
+    /// creates a BoundedRotation from radians.
+    pub fn radians(rad: f64) -> Self {
+        Self(rad)
+    }
+
+    /// creates a BoundedRotation from degrees.
+    pub fn degree(deg: f64) -> Self {
+        Self::radians(deg / 180.0 * std::f64::consts::PI)
+    }
+
+    /// returns the rotation in radians.
+    pub fn to_radians(self) -> f64 {
+        self.0
+    }
+
+    /// returns the rotation in degrees.
+    pub fn to_degrees(self) -> f64 {
+        self.0 * 180.0 / std::f64::consts::PI
+    }
+}
+
+impl TransformPolicy for BoundedRotation {
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+        let inner_size = layout(&bc);
+
+        let rotation = Affine::rotate(self.0);
+        let bounds = rotation.transform_rect_bbox(inner_size.to_rect());
+
+        // translate the rotation to start at (0, 0).
+        let transform = Affine::translate((-bounds.x0, -bounds.y0)) * rotation;
+        let size = Size::new(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0);
+
+        (transform, size)
+    }
+}
+
+/// A `TransformPolicy` which rotates a widget around its center. Parts of the widget will become
+/// inaccessible.
+#[derive(Copy, Clone, Data, Debug)]
+pub struct CenterRotation(f64);
+
+impl CenterRotation {
+    /// creates a CenterRotation from radians.
+    pub fn radians(rad: f64) -> Self {
+        Self(rad)
+    }
+
+    /// creates a CenterRotation from degrees.
+    pub fn degree(deg: f64) -> Self {
+        Self::radians(deg / 180.0 * std::f64::consts::PI)
+    }
+
+    /// returns the rotation in radians.
+    pub fn to_radians(self) -> f64 {
+        self.0
+    }
+
+    /// returns the rotation in degrees.
+    pub fn to_degrees(self) -> f64 {
+        self.0 * 180.0 / std::f64::consts::PI
+    }
+}
+
+impl TransformPolicy for CenterRotation {
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+        let size = layout(bc);
+        let half = size.to_vec2() / 2.0;
+        let affine = Affine::translate(half) *
+            Affine::rotate(self.0) *
+            Affine::translate(-half);
+
+        (affine, size)
+    }
+}
+
+/// A `TransformPolicy` which applies a specific `Affine` and tries to fit the bounds of the
+/// `TransformBox` bounds around the inner widget. Parts of the widget can become inaccessible.
+#[derive(Copy, Clone, Data, Debug)]
+pub struct BoundedAffine(pub Affine);
+
+impl TransformPolicy for BoundedAffine {
+    fn get_transform(&self, _bc: &BoxConstraints, _layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+        unimplemented!()
+    }
+}
+
+/// A `TransformPolicy` which applies a specific `Affine` and keeps the original size of the inner
+/// widget. Parts of the widget can become inaccessible.
+#[derive(Copy, Clone, Data, Debug)]
+pub struct FreeAffine(pub Affine);
+
+impl TransformPolicy for FreeAffine {
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+        (self.0, layout(bc))
     }
 }

@@ -14,49 +14,50 @@
 
 //! This is an example of arbitrary transform of widgets.
 
-use druid::widget::{AARotation, AATransformBox, Button, Flex, Radio, ViewSwitcher, TransformBox};
-use druid::{RenderContext, Env, WidgetExt, Widget, Affine, WindowDesc, AppLauncher, Data, Lens, Point, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, UpdateCtx};
+use druid::widget::{AARotation, Flex, Radio, ViewSwitcher, TransformBox, FreeAffine, AATransform, BoundedRotation, Slider, CenterRotation};
+use druid::{RenderContext, Env, WidgetExt, Widget, WindowDesc, AppLauncher, Data, Lens, Point, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, UpdateCtx};
 use piet_common::Color;
 use druid::kurbo::Circle;
 
 #[derive(Clone, Data, Lens)]
 struct TransformState {
     rotation: AARotation,
+    rotation2: f64,
 }
 
-fn rotated_widget(data: &TransformState, _: &TransformState, _: &Env) -> Box<dyn Widget<TransformState>> {
-    println!("rebuild with: {:?}", data.rotation);
-    AATransformBox::new(
-    MousePainter(None)
-    ).rotated(data.rotation)
-        .boxed()
+fn rotated_widget(data: &AARotation, _: &TransformState, _: &Env) -> Box<dyn Widget<TransformState>> {
+    TransformBox::with_transform(
+        MousePainter(None),
+        AATransform::default()
+            .rotated(*data)
+    ).boxed()
 }
 
 struct MousePainter(Option<Point>);
 
 impl<T: Data> Widget<T> for MousePainter {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         if let Event::MouseMove(me) = event {
-            self.0 = Some(me.pos);
+            if ctx.is_hot() {
+                self.0 = Some(me.pos);
+            } else {
+                self.0 = None;
+            }
             ctx.request_paint();
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        if let LifeCycle::FocusChanged(false) = event {
-            self.0 = None;
-            ctx.request_paint();
-        }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
+    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, _env: &Env) -> Size {
         bc.constrain((250.0, 80.0))
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let back = ctx.size().to_rounded_rect(5.0);
 
         ctx.fill(back, &Color::BLACK);
@@ -68,27 +69,30 @@ impl<T: Data> Widget<T> for MousePainter {
 
 fn build_root_widget() -> impl Widget<TransformState> {
     let settings = Flex::column()
-        .with_child(Radio::new("0°", AARotation::ORIGIN))
+        .with_child(Radio::new("0°", AARotation::ORIGIN).lens(TransformState::rotation))
         .with_default_spacer()
-        .with_child(Radio::new("90°", AARotation::CLOCKWISE))
+        .with_child(Radio::new("90°", AARotation::CLOCKWISE).lens(TransformState::rotation))
         .with_default_spacer()
-        .with_child(Radio::new("180°", AARotation::HALF_WAY))
+        .with_child(Radio::new("180°", AARotation::HALF_WAY).lens(TransformState::rotation))
         .with_default_spacer()
-        .with_child(Radio::new("270°", AARotation::COUNTER_CLOCKWISE));
+        .with_child(Radio::new("270°", AARotation::COUNTER_CLOCKWISE).lens(TransformState::rotation))
+        .with_default_spacer()
+        .with_child(Slider::new().with_range(0.0, 180.0).lens(TransformState::rotation2));
 
     Flex::row()
-        .with_child(settings.lens(TransformState::rotation))
+        .with_child(settings)
         .with_default_spacer()
         .with_child(ViewSwitcher::<TransformState, _>::new(
-            |data: &TransformState, _|data.to_owned(),
+            |data: &TransformState, _|data.rotation,
             rotated_widget
             ))
         .with_default_spacer()
-        .with_child(TransformBox::with_transform(
+        .with_child(TransformBox::with_extractor(
             MousePainter(None),
-            Affine::rotate(0.6)
+            |data: &TransformState|BoundedRotation::degree(data.rotation2),
         ))
         .debug_paint_layout()
+        .debug_widget_id()
 }
 
 pub fn main() {
@@ -100,6 +104,7 @@ pub fn main() {
     // create the initial app state
     let initial_state: TransformState = TransformState {
         rotation: AARotation::ORIGIN,
+        rotation2: 0.0,
     };
 
     // start the application. Here we pass in the application state.
