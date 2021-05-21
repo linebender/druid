@@ -1,6 +1,6 @@
 use crate::{
-    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetPod, Lens,
+    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetPod,
 };
 use std::ops::{Add, Sub};
 
@@ -233,7 +233,7 @@ impl Sub for AaRotation {
 
 /// An axis-aligned transformation (rotation and flipping axis).
 #[derive(Copy, Clone, Data, Debug, Eq, PartialEq, Lens)]
-pub struct AaTransform{
+pub struct AaTransform {
     rotation: AaRotation,
     #[lens(ignore)]
     flipped_horizontal: bool,
@@ -266,9 +266,7 @@ impl TransformPolicy for AaTransform {
             * Affine::translate(-inner_size.to_vec2() / 2.0);
 
         if self.flipped_horizontal {
-            transform = Affine::translate((outer_size.width, 0.0)) *
-                Affine::FLIP_X *
-                transform;
+            transform = Affine::translate((outer_size.width, 0.0)) * Affine::FLIP_X * transform;
         }
 
         (transform, outer_size)
@@ -277,19 +275,21 @@ impl TransformPolicy for AaTransform {
 
 impl Default for AaTransform {
     fn default() -> Self {
-        Self{rotation: AaRotation::ORIGIN, flipped_horizontal: false}
+        Self {
+            rotation: AaRotation::ORIGIN,
+            flipped_horizontal: false,
+        }
     }
 }
 
 impl AaTransform {
-
     /// returns the rotation of this transform.
-    pub fn get_rotation(&self) -> AaRotation {
+    pub fn get_rotation(self) -> AaRotation {
         self.rotation
     }
 
     /// The transform can't be turned into identity by rotating.
-    pub fn is_flipped(&self) -> bool {
+    pub fn is_flipped(self) -> bool {
         self.flipped_horizontal
     }
 

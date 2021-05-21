@@ -15,9 +15,12 @@
 //! This is an example of arbitrary transform of widgets.
 
 use druid::kurbo::Circle;
-use druid::widget::{AaRotation, AaTransform, Flex, Radio, Slider, TransformBox, ViewSwitcher, BoundedRotation, Button, CenterRotation};
+use druid::widget::{
+    AaRotation, AaTransform, BoundedRotation, Button, CenterRotation, Flex, Radio, Slider,
+    TransformBox, ViewSwitcher,
+};
 use druid::{
-    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle, LensExt,
+    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WindowDesc,
 };
 use piet_common::Color;
@@ -84,15 +87,16 @@ fn build_root_widget() -> impl Widget<TransformState> {
         .with_default_spacer()
         .with_child(
             Button::new("Flip horizontal")
-                .on_click(|_, data: &mut AaTransform, _|data.flip_horizontal())
+                .on_click(|_, data: &mut AaTransform, _| data.flip_horizontal())
                 .lens(TransformState::rotation),
         )
         .with_default_spacer()
         .with_child(
             Button::new("Flip vertical")
-                .on_click(|_, data: &mut AaTransform, _|data.flip_vertical())
+                .on_click(|_, data: &mut AaTransform, _| data.flip_vertical())
                 .lens(TransformState::rotation),
-        ).with_default_spacer()
+        )
+        .with_default_spacer()
         .with_child(
             Slider::new()
                 .with_range(0.0, 180.0)
