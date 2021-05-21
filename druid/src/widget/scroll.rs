@@ -34,6 +34,8 @@ use tracing::{instrument, trace};
 pub struct Scroll<T, W> {
     clip: ClipBox<T, W>,
     scroll_component: ScrollComponent,
+    scroll_snap_vertical: Box<dyn Fn(&T, &Env) -> bool>,
+    scroll_snap_horizontal: Box<dyn Fn(&T, &Env) -> bool>,
 }
 
 impl<T, W: Widget<T>> Scroll<T, W> {
@@ -46,6 +48,8 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         Scroll {
             clip: ClipBox::new(child),
             scroll_component: ScrollComponent::new(),
+            scroll_snap_vertical: Box::new(|_, _| false),
+            scroll_snap_horizontal: Box::new(|_, _| false),
         }
     }
 
@@ -96,6 +100,26 @@ impl<T, W> Scroll<T, W> {
     /// `Scroll` widget.
     pub fn content_must_fill(mut self, must_fill: bool) -> Self {
         self.set_content_must_fill(must_fill);
+        self
+    }
+
+    /// Whether the view should snap vertically when the child size changes.
+    /// If `false` (the default) the vertical view will remain stationary
+    /// regardless of new data.
+    /// If `true`, whenever the child size changes, the view will snap to the
+    /// bottom.
+    pub fn with_snap_vertical(mut self, snap: impl Fn(&T, &Env) -> bool + 'static) -> Self {
+        self.scroll_snap_vertical = Box::new(snap);
+        self
+    }
+
+    /// Whether the view should snap horizontally when the child size changes.
+    /// If `false` (the default) the horizontal view will remain stationary
+    /// regardless of new data.
+    /// If `true`, whenever the child size changes, the view will snap to the
+    /// far right.
+    pub fn with_snap_horizontal(mut self, snap: impl Fn(&T, &Env) -> bool + 'static) -> Self {
+        self.scroll_snap_horizontal = Box::new(snap);
         self
     }
 
@@ -203,7 +227,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Scroll");
 
-        let old_size = self.clip.viewport().view_size;
+        let old_content_size = self.clip.viewport().content_size;
+        let old_self_size = self.clip.viewport().view_size;
+
         let child_size = self.clip.layout(ctx, &bc, data, env);
         log_size_warnings(child_size);
 
@@ -211,9 +237,25 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         // The new size might have made the current scroll offset invalid. This makes it valid
         // again.
         let _ = self.scroll_by(Vec2::ZERO);
-        if old_size != self_size {
+        if old_self_size != self_size {
             self.scroll_component
                 .reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+        }
+
+        if ((self.scroll_snap_vertical)(data, env) || (self.scroll_snap_horizontal)(data, env))
+            && self.clip.viewport().content_size != old_content_size
+        {
+            let viewport = self.clip.viewport();
+            let mut distance = Vec2::ZERO;
+            if (self.scroll_snap_vertical)(data, env) {
+                distance.y = viewport.content_size.height
+                    - (viewport.view_origin.y + viewport.view_size.height);
+            }
+            if (self.scroll_snap_horizontal)(data, env) {
+                distance.x = viewport.content_size.width
+                    - (viewport.view_origin.x + viewport.view_size.width);
+            }
+            self.scroll_by(distance);
         }
 
         trace!("Computed size: {}", self_size);
