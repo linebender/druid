@@ -1,14 +1,27 @@
-use crate::{WidgetPod, Widget, Affine, Data, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, Env, UpdateCtx, Point, RenderContext};
+use crate::{
+    Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetPod, Lens,
+};
 use std::ops::{Add, Sub};
 
 /// A trait which decides the size and transform of the inner widget based on the outer BoxConstrains.
 pub trait TransformPolicy {
     /// layout the inner widget and return the size of the outer box and transform of the inner widget.
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size);
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size);
 }
 
-impl<F: Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size)> TransformPolicy for F {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+impl<F: Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size)>
+    TransformPolicy for F
+{
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
         (self)(bc, layout)
     }
 }
@@ -22,7 +35,7 @@ pub struct TransformBox<T, F> {
     affine_out_in: Affine,
     need_layout: bool,
     transform: Option<F>,
-    extractor: Option<Box<dyn Fn(&T) -> F>>
+    extractor: Option<Box<dyn Fn(&T) -> F>>,
 }
 
 impl<T, F> TransformBox<T, F> {
@@ -40,7 +53,10 @@ impl<T, F> TransformBox<T, F> {
 
     /// creates a new `TransformBox` from the inner widget and a closure to extract `TransformPolicy`
     /// from data.
-    pub fn with_extractor(widget: impl Widget<T> + 'static, extractor: impl Fn(&T) -> F + 'static) -> Self {
+    pub fn with_extractor(
+        widget: impl Widget<T> + 'static,
+        extractor: impl Fn(&T) -> F + 'static,
+    ) -> Self {
         TransformBox {
             widget: WidgetPod::new(Box::new(widget)),
             affine_in_out: Default::default(),
@@ -64,7 +80,6 @@ impl<T, F> TransformBox<T, F> {
     pub fn affine_inv(&self) -> Affine {
         self.affine_out_in
     }
-
 }
 
 impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
@@ -78,15 +93,21 @@ impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
                 me.pos = self.affine_out_in * me.pos;
             }
             Event::MouseUp(me) => {
-                if self.need_layout {return}
+                if self.need_layout {
+                    return;
+                }
                 me.pos = self.affine_out_in * me.pos;
             }
             Event::MouseMove(me) => {
-                if self.need_layout {return}
+                if self.need_layout {
+                    return;
+                }
                 me.pos = self.affine_out_in * me.pos;
             }
             Event::Wheel(me) => {
-                if self.need_layout {return}
+                if self.need_layout {
+                    return;
+                }
                 me.pos = self.affine_out_in * me.pos;
             }
             _ => {}
@@ -124,19 +145,23 @@ impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let Self {transform, widget, ..} = self;
+        let Self {
+            transform, widget, ..
+        } = self;
         let transform = transform.as_ref().unwrap();
-        let mut child_layout = |bc: &BoxConstraints|widget.layout(ctx, bc, data, env);
+        let mut child_layout = |bc: &BoxConstraints| widget.layout(ctx, bc, data, env);
         let (affine, size): (Affine, Size) = transform.get_transform(bc, &mut child_layout);
 
         self.affine_in_out = affine;
         self.affine_out_in = affine.inverse();
 
         // update the current mouse position to set hot correctly
-        ctx.mouse_pos = ctx.mouse_pos.map(|pos|self.affine_in_out * pos);
+        ctx.mouse_pos = ctx.mouse_pos.map(|pos| self.affine_in_out * pos);
         self.widget.set_origin(ctx, data, env, Point::ZERO);
 
-        let bounding_box = self.affine_in_out.transform_rect_bbox(self.widget.paint_rect());
+        let bounding_box = self
+            .affine_in_out
+            .transform_rect_bbox(self.widget.paint_rect());
         ctx.set_paint_insets(bounding_box - size.to_rect());
 
         self.need_layout = false;
@@ -147,7 +172,7 @@ impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         // This works since the widgets origin is zero.
         ctx.region.set_rect(self.widget.paint_rect());
-        ctx.with_save(|ctx|{
+        ctx.with_save(|ctx| {
             ctx.transform(self.affine_in_out);
 
             self.widget.paint(ctx, data, env);
@@ -157,17 +182,17 @@ impl<T: Data, F: TransformPolicy + Data> Widget<T> for TransformBox<T, F> {
 
 /// An axis-aligned rotation, the only possible value are 0°, 90°, 180°, 270°
 #[derive(Copy, Clone, Data, Default, Eq, PartialEq, Hash, Debug)]
-pub struct AARotation(u8);
+pub struct AaRotation(u8);
 
-impl AARotation {
+impl AaRotation {
     /// 0°
-    pub const ORIGIN: AARotation = AARotation(0);
+    pub const ORIGIN: AaRotation = AaRotation(0);
     /// 90°
-    pub const CLOCKWISE: AARotation = AARotation(1);
+    pub const CLOCKWISE: AaRotation = AaRotation(1);
     /// 180°
-    pub const HALF_WAY: AARotation = AARotation(2);
+    pub const HALF_WAY: AaRotation = AaRotation(2);
     /// 270°
-    pub const COUNTER_CLOCKWISE: AARotation = AARotation(3);
+    pub const COUNTER_CLOCKWISE: AaRotation = AaRotation(3);
 
     /// turn clockwise 90°
     pub fn clockwise(self) -> Self {
@@ -190,7 +215,7 @@ impl AARotation {
     }
 }
 
-impl Add for AARotation {
+impl Add for AaRotation {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -198,7 +223,7 @@ impl Add for AARotation {
     }
 }
 
-impl Sub for AARotation {
+impl Sub for AaRotation {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -207,52 +232,69 @@ impl Sub for AARotation {
 }
 
 /// An axis-aligned transformation (rotation and flipping axis).
-#[derive(Copy, Clone, Data, Debug, Eq, PartialEq)]
-pub struct AATransform(AARotation, bool);
+#[derive(Copy, Clone, Data, Debug, Eq, PartialEq, Lens)]
+pub struct AaTransform{
+    rotation: AaRotation,
+    #[lens(ignore)]
+    flipped_horizontal: bool,
+}
 
-impl TransformPolicy for AATransform {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
-        let bc = if self.0.is_axis_flipped() {
-            BoxConstraints::new(Size::new(bc.min().height, bc.min().width),
-                                Size::new(bc.max().height, bc.max().width))
+impl TransformPolicy for AaTransform {
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
+        let bc = if self.rotation.is_axis_flipped() {
+            BoxConstraints::new(
+                Size::new(bc.min().height, bc.min().width),
+                Size::new(bc.max().height, bc.max().width),
+            )
         } else {
             *bc
         };
         let inner_size = layout(&bc);
 
-        let outer_size = if self.0.is_axis_flipped() {
+        let outer_size = if self.rotation.is_axis_flipped() {
             Size::new(inner_size.height, inner_size.width)
         } else {
             inner_size
         };
 
-        let transform = Affine::translate(outer_size.to_vec2() / 2.0) *
-            Affine::rotate(self.0.0 as f64 * std::f64::consts::PI * 0.5) *
-            Affine::translate(-inner_size.to_vec2() / 2.0);
+        let mut transform = Affine::translate(outer_size.to_vec2() / 2.0)
+            * Affine::rotate(self.rotation.0 as f64 * std::f64::consts::PI * 0.5)
+            * Affine::translate(-inner_size.to_vec2() / 2.0);
+
+        if self.flipped_horizontal {
+            transform = Affine::translate((outer_size.width, 0.0)) *
+                Affine::FLIP_X *
+                transform;
+        }
 
         (transform, outer_size)
     }
 }
 
-impl Default for AATransform {
+impl Default for AaTransform {
     fn default() -> Self {
-        Self(AARotation::ORIGIN, false)
+        Self{rotation: AaRotation::ORIGIN, flipped_horizontal: false}
     }
 }
 
-impl AATransform {
+impl AaTransform {
+
     /// returns the rotation of this transform.
-    pub fn rotation(&self) -> AARotation {
-        self.0
+    pub fn get_rotation(&self) -> AaRotation {
+        self.rotation
     }
 
     /// The transform can't be turned into identity by rotating.
     pub fn is_flipped(&self) -> bool {
-        self.1
+        self.flipped_horizontal
     }
 
     /// A builder-style method to rotate the Transform.
-    pub fn rotated(mut self, rotation: AARotation) -> Self {
+    pub fn rotated(mut self, rotation: AaRotation) -> Self {
         self.rotate(rotation);
         self
     }
@@ -270,19 +312,19 @@ impl AATransform {
     }
 
     /// Rotate the Transform.
-    pub fn rotate(&mut self, rotation: AARotation) {
-        self.0 = self.0 + rotation;
+    pub fn rotate(&mut self, rotation: AaRotation) {
+        self.rotation = self.rotation + rotation;
     }
 
     /// Flip the transform horizontally.
     pub fn flip_horizontal(&mut self) {
-        self.1 = !self.1;
+        self.flipped_horizontal = !self.flipped_horizontal;
     }
 
     /// Flip the transform vertically.
     pub fn flip_vertical(&mut self) {
-        self.0 = self.0.flipped();
-        self.1 = !self.1;
+        self.rotation = self.rotation.flipped();
+        self.flipped_horizontal = !self.flipped_horizontal;
     }
 }
 
@@ -313,7 +355,11 @@ impl BoundedRotation {
 }
 
 impl TransformPolicy for BoundedRotation {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
         let inner_size = layout(&bc);
 
         let rotation = Affine::rotate(self.0);
@@ -355,12 +401,14 @@ impl CenterRotation {
 }
 
 impl TransformPolicy for CenterRotation {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
         let size = layout(bc);
         let half = size.to_vec2() / 2.0;
-        let affine = Affine::translate(half) *
-            Affine::rotate(self.0) *
-            Affine::translate(-half);
+        let affine = Affine::translate(half) * Affine::rotate(self.0) * Affine::translate(-half);
 
         (affine, size)
     }
@@ -372,7 +420,11 @@ impl TransformPolicy for CenterRotation {
 pub struct BoundedAffine(pub Affine);
 
 impl TransformPolicy for BoundedAffine {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
         let inner_size = layout(bc);
         let bounds = self.0.transform_rect_bbox(inner_size.to_rect());
 
@@ -386,7 +438,11 @@ impl TransformPolicy for BoundedAffine {
 pub struct FreeAffine(pub Affine);
 
 impl TransformPolicy for FreeAffine {
-    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+    fn get_transform(
+        &self,
+        bc: &BoxConstraints,
+        layout: &mut dyn FnMut(&BoxConstraints) -> Size,
+    ) -> (Affine, Size) {
         (self.0, layout(bc))
     }
 }
