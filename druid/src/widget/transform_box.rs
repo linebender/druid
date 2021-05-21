@@ -5,8 +5,15 @@ use crate::{
 use std::ops::{Add, Sub};
 
 /// A trait which decides the size and transform of the inner widget based on the outer BoxConstrains.
-pub trait TransformPolicy {
-    /// layout the inner widget and return the size of the outer box and transform of the inner widget.
+pub trait TransformPolicy: Data {
+    /// This method is run every time same returns false or layout was requested.
+    ///
+    /// It can decide which [`BoxConstraints`](crate::BoxConstraints) to pass to the inner widget via layout, to meet
+    /// its own box constrains.
+    ///
+    /// The return value contains the size of the [`TransformBox`](TransformBox) and the [`Affine`](crate::Affine) used to transform
+    /// the inner widget (The affine transforms points from the local coordinate-space to the
+    /// parents coordinate-space which is equal to how [`RenderContext::transform`](crate::RenderContext::transform) works).
     fn get_transform(
         &self,
         bc: &BoxConstraints,
@@ -14,7 +21,7 @@ pub trait TransformPolicy {
     ) -> (Affine, Size);
 }
 
-impl<F: Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size)>
+impl<F: Data + Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size)>
     TransformPolicy for F
 {
     fn get_transform(
