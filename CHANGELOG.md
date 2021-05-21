@@ -41,7 +41,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
-- `Scroll` widget: add the ability to snap the view to the most recent input ([#] by [@becky112358])
+- `Scroll` widget: add the ability to snap the view to the most recent input ([#1798] by [@becky112358])
 
 ### Changed
 
