@@ -14,7 +14,7 @@
 
 //! This is an example of arbitrary transform of widgets.
 
-use druid::widget::{AARotation, Flex, Radio, ViewSwitcher, TransformBox, FreeAffine, AATransform, BoundedRotation, Slider, CenterRotation};
+use druid::widget::{AARotation, Flex, Radio, ViewSwitcher, TransformBox, AATransform, Slider, CenterRotation};
 use druid::{RenderContext, Env, WidgetExt, Widget, WindowDesc, AppLauncher, Data, Lens, Point, EventCtx, LifeCycle, PaintCtx, BoxConstraints, LifeCycleCtx, Size, LayoutCtx, Event, UpdateCtx};
 use piet_common::Color;
 use druid::kurbo::Circle;

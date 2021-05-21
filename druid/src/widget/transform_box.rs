@@ -16,9 +16,9 @@ impl<F: Fn(&BoxConstraints, &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine,
 /// A widget wrapper which layouts the inner widget according to the provided `TransformPolicy`.
 pub struct TransformBox<T, F> {
     widget: WidgetPod<T, Box<dyn Widget<T>>>,
-    //The affine transform for external points to internal points
-    affine_in_out: Affine,
     //The affine transform for internal points to external points
+    affine_in_out: Affine,
+    //The affine transform for external points to internal points
     affine_out_in: Affine,
     need_layout: bool,
     transform: Option<F>,
@@ -372,8 +372,11 @@ impl TransformPolicy for CenterRotation {
 pub struct BoundedAffine(pub Affine);
 
 impl TransformPolicy for BoundedAffine {
-    fn get_transform(&self, _bc: &BoxConstraints, _layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
-        unimplemented!()
+    fn get_transform(&self, bc: &BoxConstraints, layout: &mut dyn FnMut(&BoxConstraints) -> Size) -> (Affine, Size) {
+        let inner_size = layout(bc);
+        let bounds = self.0.transform_rect_bbox(inner_size.to_rect());
+
+        (self.0, bc.constrain((bounds.x1, bounds.y1)))
     }
 }
 
