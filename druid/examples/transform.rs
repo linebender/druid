@@ -20,10 +20,10 @@ use druid::widget::{
     TransformBox, ViewSwitcher,
 };
 use druid::{
-    AppLauncher, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt, LifeCycle,
-    LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WindowDesc,
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt,
+    LifeCycle, LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt,
+    WindowDesc,
 };
-use piet_common::Color;
 
 #[derive(Clone, Data, Lens)]
 struct TransformState {
