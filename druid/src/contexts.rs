@@ -112,6 +112,7 @@ pub struct LayoutCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
     pub(crate) mouse_pos: Option<Point>,
+    pub(crate) needs_layout: bool,
 }
 
 /// Z-order paint operations with transformations.
@@ -377,6 +378,28 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     pub fn request_layout(&mut self) {
         trace!("request_layout");
         self.widget_state.needs_layout = true;
+    }
+
+    /// Request a local re-layout
+    ///
+    /// This only triggers a re-laoyout on this Widget
+    /// and its immediate parents all the way up to the root Widget.
+    /// No paint invlidation is done, so the caller needs to take care of it.
+    ///
+    /// As the sibling Widgets' sizes wouldn't be recalculated,
+    /// it could cause a bad layout if this Widget's size is changed.
+    ///
+    /// One good example to use this is in a scroll. You can call this
+    /// when the scroll content's size is changed to update the state of
+    /// the scroll widget, without needs to re-layout and redraw the whole window,
+    /// which can be expensive.
+    ///
+    /// Another use case would be if you've got some kind of "floating" Widget.
+    /// Because of the fact it's "floating", the origin and size of it doens't
+    /// affect any other Widgets.
+    pub fn request_local_layout(&mut self) {
+        trace!("request_local_layout");
+        self.widget_state.needs_local_layout = true;
     }
 
     /// Request an animation frame.
