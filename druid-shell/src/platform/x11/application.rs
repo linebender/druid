@@ -162,7 +162,7 @@ impl Application {
                         && format.direct.green_mask == 0xff
                         && format.direct.blue_shift == 0
                         && format.direct.blue_mask == 0xff
-                        && format.direct.alpha_shift == 0
+                        && format.direct.alpha_shift == 24
                         && format.direct.alpha_mask == 0xff
                 })
                 .map(|format| format.id)
