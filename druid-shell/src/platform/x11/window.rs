@@ -14,6 +14,7 @@
 
 //! X11 window creation and window management.
 
+use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
@@ -29,7 +30,10 @@ use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVis
 use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
+use x11rb::errors::ReplyOrIdError;
+use x11rb::image::{BitsPerPixel, Image, ImageOrder, ScanlinePad};
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
+use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
     self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
@@ -883,8 +887,7 @@ impl Window {
             Cursor::NotAllowed => cursors.not_allowed,
             Cursor::ResizeLeftRight => cursors.col_resize,
             Cursor::ResizeUpDown => cursors.row_resize,
-            // TODO: (x11/custom cursor)
-            Cursor::Custom(_) => None,
+            Cursor::Custom(custom) => Some(custom.0),
         };
         if cursor.is_none() {
             warn!("Unable to load cursor {:?}", cursor);
@@ -1611,9 +1614,31 @@ impl WindowHandle {
         }
     }
 
-    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        warn!("Custom cursors are not yet supported in the X11 backend");
-        None
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(w) = self.window.upgrade() {
+            match w.app.render_argb32_pictformat_cursor() {
+                None => {
+                    warn!("Custom cursors are not supported by the X11 server");
+                    None
+                }
+                Some(format) => {
+                    // BEGIN: Lots of code just to get the image into a RENDER Picture
+
+                    let conn = w.app.connection();
+                    let screen = &conn.setup().roots[w.app.screen_num() as usize];
+                    match make_cursor(&**conn, screen.root, format, desc) {
+                        // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
+                        Ok(cursor) => Some(cursor),
+                        Err(err) => {
+                            error!("Failed to create custom cursor: {:?}", err);
+                            None
+                        },
+                    }
+                }
+            }
+        } else {
+            None
+        }
     }
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
@@ -1668,4 +1693,48 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 
         RawWindowHandle::Xcb(handle)
     }
+}
+
+fn make_cursor(conn: &XCBConnection, root_window: u32, argb32_format: Pictformat, desc: &CursorDesc) -> Result<Cursor, ReplyOrIdError> {
+    // BEGIN: Lots of code just to get the image into a RENDER Picture
+
+    // No idea how to sanely get the pixel values, so I'll go with 'insane':
+    // Iterate over all pixels and build an array
+    let pixels = desc.image
+        .pixel_colors()
+        .flat_map(|row| row.flat_map(|color| {
+            // TODO: RENDER (likely) expects unpremultiplied alpha. We should convert.
+            let (r, g, b, a) = color.as_rgba8();
+            // TODO Ownership and flat_map don't go well together :-(
+            vec![r, g, b, a]
+        }))
+        .collect::<Vec<u8>>();
+    let image = Image::new(
+        desc.image.width().try_into().expect("Invalid cursor width"),
+        desc.image.height().try_into().expect("Invalid cursor height"),
+        ScanlinePad::Pad8,
+        32,
+        BitsPerPixel::B32,
+        ImageOrder::MSBFirst,
+        Cow::Owned(pixels),
+    ).expect("We got the number of bytes for this image wrong?!");
+
+    let pixmap = conn.generate_id()?;
+    let gc = conn.generate_id()?;
+    let picture = conn.generate_id()?;
+    conn.create_pixmap(32, pixmap, root_window, image.width(), image.height())?;
+    conn.create_gc(gc, pixmap, &Default::default())?;
+
+    image.put(conn, pixmap, gc, 0, 0)?;
+    conn.render_create_picture(picture, pixmap, argb32_format, &Default::default())?;
+
+    conn.free_gc(gc)?;
+    conn.free_pixmap(pixmap)?;
+    // End: Lots of code just to get the image into a RENDER Picture
+
+    let cursor = conn.generate_id()?;
+    conn.render_create_cursor(cursor, picture, desc.hot.x as u16, desc.hot.y as u16)?;
+    conn.render_free_picture(picture)?;
+
+    Ok(Cursor::Custom(CustomCursor(cursor)))
 }
