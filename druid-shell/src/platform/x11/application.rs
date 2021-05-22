@@ -142,15 +142,18 @@ impl Application {
         };
 
         let pictformats = connection.render_query_pict_formats()?;
-        let render_create_cursor_supported = match connection.extension_information(render::X11_EXTENSION_NAME)?
-                .and_then(|_| connection.render_query_version(0, 5).ok())
-                .map(|cookie| cookie.reply())
-                .transpose()? {
+        let render_create_cursor_supported = match connection
+            .extension_information(render::X11_EXTENSION_NAME)?
+            .and_then(|_| connection.render_query_version(0, 5).ok())
+            .map(|cookie| cookie.reply())
+            .transpose()?
+        {
             Some(version) if version.major_version >= 1 || version.minor_version >= 5 => true,
             _ => false,
         };
         let render_argb32_pictformat_cursor = if render_create_cursor_supported {
-            pictformats.reply()?
+            pictformats
+                .reply()?
                 .formats
                 .iter()
                 .find(|format| {

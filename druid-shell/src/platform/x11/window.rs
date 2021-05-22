@@ -1632,7 +1632,7 @@ impl WindowHandle {
                         Err(err) => {
                             error!("Failed to create custom cursor: {:?}", err);
                             None
-                        },
+                        }
                     }
                 }
             }
@@ -1695,29 +1695,41 @@ unsafe impl HasRawWindowHandle for WindowHandle {
     }
 }
 
-fn make_cursor(conn: &XCBConnection, root_window: u32, argb32_format: Pictformat, desc: &CursorDesc) -> Result<Cursor, ReplyOrIdError> {
+fn make_cursor(
+    conn: &XCBConnection,
+    root_window: u32,
+    argb32_format: Pictformat,
+    desc: &CursorDesc,
+) -> Result<Cursor, ReplyOrIdError> {
     // BEGIN: Lots of code just to get the image into a RENDER Picture
 
     // No idea how to sanely get the pixel values, so I'll go with 'insane':
     // Iterate over all pixels and build an array
-    let pixels = desc.image
+    let pixels = desc
+        .image
         .pixel_colors()
-        .flat_map(|row| row.flat_map(|color| {
-            // TODO: RENDER (likely) expects unpremultiplied alpha. We should convert.
-            let (r, g, b, a) = color.as_rgba8();
-            // TODO Ownership and flat_map don't go well together :-(
-            vec![r, g, b, a]
-        }))
+        .flat_map(|row| {
+            row.flat_map(|color| {
+                // TODO: RENDER (likely) expects unpremultiplied alpha. We should convert.
+                let (r, g, b, a) = color.as_rgba8();
+                // TODO Ownership and flat_map don't go well together :-(
+                vec![r, g, b, a]
+            })
+        })
         .collect::<Vec<u8>>();
     let image = Image::new(
         desc.image.width().try_into().expect("Invalid cursor width"),
-        desc.image.height().try_into().expect("Invalid cursor height"),
+        desc.image
+            .height()
+            .try_into()
+            .expect("Invalid cursor height"),
         ScanlinePad::Pad8,
         32,
         BitsPerPixel::B32,
         ImageOrder::MSBFirst,
         Cow::Owned(pixels),
-    ).expect("We got the number of bytes for this image wrong?!");
+    )
+    .expect("We got the number of bytes for this image wrong?!");
 
     let pixmap = conn.generate_id()?;
     let gc = conn.generate_id()?;
