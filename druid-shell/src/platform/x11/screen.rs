@@ -116,6 +116,9 @@ fn get_monitors_randr_screen_resources(
     get_monitors_randr_crtcs_timestamp(conn, &reply.crtcs, reply.config_timestamp)
 }
 
+// This function first sends a number of requests, collect()ing them into a Vec and then gets the
+// replies. This saves round-trips. Without the collect(), there would be one round-trip per CRTC.
+#[allow(clippy::needless_collect)]
 fn get_monitors_randr_crtcs_timestamp(
     conn: &impl Connection,
     crtcs: &[Crtc],
