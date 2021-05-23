@@ -32,7 +32,7 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, ColormapAlloc,
+    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent, ConnectionExt,
     CreateGCAux, EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
@@ -255,7 +255,7 @@ impl WindowBuilder {
         };
         let (transparent, visual_type) = match visual_type {
             Some(visual) => (true, visual),
-            None => (false, self.app.root_visual_type())
+            None => (false, self.app.root_visual_type()),
         };
         if transparent != self.transparent {
             warn!("Windows with transparent backgrounds do not work");
@@ -272,8 +272,14 @@ impl WindowBuilder {
         );
         if transparent {
             let colormap = conn.generate_id()?;
-            conn.create_colormap(ColormapAlloc::NONE, colormap, screen.root, visual_type.visual_id)?;
-            cw_values = cw_values.border_pixel(screen.white_pixel)
+            conn.create_colormap(
+                ColormapAlloc::NONE,
+                colormap,
+                screen.root,
+                visual_type.visual_id,
+            )?;
+            cw_values = cw_values
+                .border_pixel(screen.white_pixel)
                 .colormap(colormap);
         };
 
@@ -281,7 +287,11 @@ impl WindowBuilder {
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
         conn.create_window(
             // Window depth
-            if transparent { 32 } else { x11rb::COPY_DEPTH_FROM_PARENT },
+            if transparent {
+                32
+            } else {
+                x11rb::COPY_DEPTH_FROM_PARENT
+            },
             // The new window's ID
             id,
             // Parent window of this new window

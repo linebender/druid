@@ -25,7 +25,9 @@ use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::xfixes::ConnectionExt as _;
-use x11rb::protocol::xproto::{self, ConnectionExt, CreateWindowAux, EventMask, Visualtype, WindowClass};
+use x11rb::protocol::xproto::{
+    self, ConnectionExt, CreateWindowAux, EventMask, Visualtype, WindowClass,
+};
 use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
@@ -167,7 +169,7 @@ impl Application {
             .get(screen_num as usize)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
         let root_visual_type = util::get_visual_from_screen(&screen)
-                .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
+            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
 
         Ok(Application {
@@ -306,7 +308,9 @@ impl Application {
     pub(crate) fn argb_visual_type(&self) -> Option<Visualtype> {
         // Check if a composite manager is running
         let atom_name = format!("_NET_WM_CM_S{}", self.screen_num);
-        let owner = self.connection.intern_atom(false, atom_name.as_bytes())
+        let owner = self
+            .connection
+            .intern_atom(false, atom_name.as_bytes())
             .ok()
             .and_then(|cookie| cookie.reply().ok())
             .map(|reply| reply.atom)
