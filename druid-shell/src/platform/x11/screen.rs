@@ -14,19 +14,22 @@
 
 //! X11 Monitors and Screen information.
 
-use x11rb::errors::ReplyOrIdError;
 use x11rb::connection::Connection;
+use x11rb::errors::ReplyOrIdError;
 use x11rb::protocol::randr::{self, ConnectionExt as _, Crtc};
 use x11rb::protocol::xproto::{Screen, Timestamp};
 
 use crate::kurbo::Rect;
 use crate::screen::Monitor;
 
-fn monitor<Pos>(primary: bool, (x, y) : (Pos, Pos), (width, height): (u16, u16)) -> Monitor
-    where
-         Pos: Into<i32>
+fn monitor<Pos>(primary: bool, (x, y): (Pos, Pos), (width, height): (u16, u16)) -> Monitor
+where
+    Pos: Into<i32>
 {
-    let rect = Rect::from_points((x.into() as f64, y.into() as f64), (width as f64, height as f64));
+    let rect = Rect::from_points(
+        (x.into() as f64, y.into() as f64),
+        (width as f64, height as f64),
+    );
     // TODO: Support for work_rect. It's complicated...
     Monitor::new(primary, rect, rect)
 }
@@ -49,10 +52,16 @@ pub(crate) fn get_monitors() -> Vec<Monitor> {
     }
 }
 
-fn get_monitors_impl(conn: &impl Connection, screen_num: usize) -> Result<Vec<Monitor>, ReplyOrIdError> {
+fn get_monitors_impl(
+    conn: &impl Connection,
+    screen_num: usize,
+) -> Result<Vec<Monitor>, ReplyOrIdError> {
     let screen = &conn.setup().roots[screen_num];
 
-    if conn.extension_information(randr::X11_EXTENSION_NAME)?.is_none() {
+    if conn
+        .extension_information(randr::X11_EXTENSION_NAME)?
+        .is_none()
+    {
         return get_monitors_core(screen);
     }
 
@@ -67,12 +76,18 @@ fn get_monitors_impl(conn: &impl Connection, screen_num: usize) -> Result<Vec<Mo
     }
 }
 
-
 fn get_monitors_core(screen: &Screen) -> Result<Vec<Monitor>, ReplyOrIdError> {
-    Ok(vec![monitor(true, (0, 0), (screen.width_in_pixels, screen.height_in_pixels))])
+    Ok(vec![monitor(
+        true,
+        (0, 0),
+        (screen.width_in_pixels, screen.height_in_pixels),
+    )])
 }
 
-fn get_monitors_randr_monitors(conn: &impl Connection, screen: &Screen) -> Result<Vec<Monitor>, ReplyOrIdError> {
+fn get_monitors_randr_monitors(
+    conn: &impl Connection,
+    screen: &Screen,
+) -> Result<Vec<Monitor>, ReplyOrIdError> {
     let result = conn
         .randr_get_monitors(screen.root, true)?
         .reply()?
@@ -83,17 +98,29 @@ fn get_monitors_randr_monitors(conn: &impl Connection, screen: &Screen) -> Resul
     Ok(result)
 }
 
-fn get_monitors_randr_screen_resources_current(conn: &impl Connection, screen: &Screen) -> Result<Vec<Monitor>, ReplyOrIdError> {
-    let reply = conn.randr_get_screen_resources_current(screen.root)?.reply()?;
+fn get_monitors_randr_screen_resources_current(
+    conn: &impl Connection,
+    screen: &Screen,
+) -> Result<Vec<Monitor>, ReplyOrIdError> {
+    let reply = conn
+        .randr_get_screen_resources_current(screen.root)?
+        .reply()?;
     get_monitors_randr_crtcs_timestamp(conn, &reply.crtcs, reply.config_timestamp)
 }
 
-fn get_monitors_randr_screen_resources(conn: &impl Connection, screen: &Screen) -> Result<Vec<Monitor>, ReplyOrIdError> {
+fn get_monitors_randr_screen_resources(
+    conn: &impl Connection,
+    screen: &Screen,
+) -> Result<Vec<Monitor>, ReplyOrIdError> {
     let reply = conn.randr_get_screen_resources(screen.root)?.reply()?;
     get_monitors_randr_crtcs_timestamp(conn, &reply.crtcs, reply.config_timestamp)
 }
 
-fn get_monitors_randr_crtcs_timestamp(conn: &impl Connection, crtcs: &[Crtc], config_timestamp: Timestamp) -> Result<Vec<Monitor>, ReplyOrIdError> {
+fn get_monitors_randr_crtcs_timestamp(
+    conn: &impl Connection,
+    crtcs: &[Crtc],
+    config_timestamp: Timestamp,
+) -> Result<Vec<Monitor>, ReplyOrIdError> {
     // Request information about all CRTCs
     let requests = crtcs
         .iter()
@@ -106,7 +133,11 @@ fn get_monitors_randr_crtcs_timestamp(conn: &impl Connection, crtcs: &[Crtc], co
         let reply = request?.reply()?;
         // First CRTC is assumed to be the primary output
         let primary = result.is_empty();
-        result.push(monitor(primary, (reply.x, reply.y), (reply.width, reply.height)));
+        result.push(monitor(
+            primary,
+            (reply.x, reply.y),
+            (reply.width, reply.height),
+        ));
     }
     // TODO: I think we need to deduplicate monitors. In clone mode, each "clone" appears as its
     // own monitor otherwise.
