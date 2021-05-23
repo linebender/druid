@@ -24,7 +24,7 @@ use crate::screen::Monitor;
 
 fn monitor<Pos>(primary: bool, (x, y): (Pos, Pos), (width, height): (u16, u16)) -> Monitor
 where
-    Pos: Into<i32>
+    Pos: Into<i32>,
 {
     let rect = Rect::from_points(
         (x.into() as f64, y.into() as f64),
