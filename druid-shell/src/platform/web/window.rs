@@ -519,6 +519,14 @@ impl WindowHandle {
         warn!("WindowHandle::handle_titlebar unimplemented for web.");
     }
 
+    pub fn begin_move_drag(&self) {
+        warn!("WindowHandle::begin_move_drag is currently unimplemented for web.");
+    }
+
+    pub fn end_move_drag(&self) {
+        warn!("WindowHandle::end_move_drag is currently unimplemented for web.");
+    }
+
     pub fn close(&self) {
         // TODO
     }

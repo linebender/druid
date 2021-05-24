@@ -30,7 +30,6 @@ use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 use piet_common::PietText;
-use crate::MouseButton;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
@@ -219,12 +218,22 @@ impl WindowHandle {
 
     /// Tell the window manager to start a window drag using current mouse position.
     ///
+    /// You might not want to call this yourself, since the WindowDragHandle controller widget
+    /// handles everything for you in a cross-platform way (but there are limitations).
+    ///
+    /// Implemented only for Gtk.
     /// On Gtk, this must be called immediately after a MouseEvent with a button press is received.
     pub fn begin_move_drag(&self) {
         self.0.begin_move_drag()
     }
 
     /// Tell the window manager to end the current window drag, if any.
+    ///
+    /// You might not want to call this yourself, since the WindowDragHandle controller widget
+    /// handles everything for you in a cross-platform way (but there are limitations).
+    ///
+    /// Implemented only for Gtk.
+    /// On Gtk, this is ignored, as the drag immediately ends after the mouse button is released.
     pub fn end_move_drag(&self) {
         self.0.end_move_drag()
     }

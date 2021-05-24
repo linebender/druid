@@ -1521,6 +1521,14 @@ impl WindowHandle {
         warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
     }
 
+    pub fn begin_move_drag(&self) {
+        warn!("WindowHandle::begin_move_drag is currently unimplemented for X11 platforms.");
+    }
+
+    pub fn end_move_drag(&self) {
+        warn!("WindowHandle::end_move_drag is currently unimplemented for X11 platforms.");
+    }
+
     pub fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();

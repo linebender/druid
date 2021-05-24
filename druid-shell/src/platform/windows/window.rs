@@ -1818,16 +1818,6 @@ impl WindowHandle {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
     }
 
-    /// Tell the window manager to start a window drag using current mouse position.
-    pub fn begin_move_drag(&self) {
-        self.handle_titlebar(true);
-    }
-
-    /// Tell the window manager to end the current window drag, if any.
-    pub fn end_move_drag(&self) {
-        self.handle_titlebar(false);
-    }
-
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
@@ -1961,6 +1951,14 @@ impl WindowHandle {
         if let Some(w) = self.state.upgrade() {
             w.handle_titlebar.set(val);
         }
+    }
+
+    pub fn begin_move_drag(&self) {
+        warn!("WindowHandle::begin_move_drag is currently unimplemented for Windows. Use WindowHandle::handle_titlebar instead.");
+    }
+
+    pub fn end_move_drag(&self) {
+        warn!("WindowHandle::end_move_drag is currently unimplemented for Windows. Use WindowHandle::handle_titlebar instead.");
     }
 
     pub fn set_menu(&self, menu: Menu) {

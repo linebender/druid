@@ -990,20 +990,10 @@ impl WindowHandle {
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
-    }
-
-    /// Close the window.
-    pub fn close(&self) {
-        if let Some(state) = self.state.upgrade() {
-            state.closing.set(true);
-            state.window.close();
-        }
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk. Use WindowHandle::begin_move_drag instead.");
     }
 
     /// Tell the window manager to start a window drag using current mouse position.
-    ///
-    /// On Gtk, this must be called immediately after a MouseEvent with a button press is received.
     pub fn begin_move_drag(&self) {
         if let Some(state) = self.state.upgrade() {
             match state.last_mouse_button_press_event.take() { //Consume the mouse button event.
@@ -1015,14 +1005,22 @@ impl WindowHandle {
                         event.get_time(),
                     )
                 }
-                _ => warn!("Cannot drag window if no mouse button is currently down.")
+                _ => warn!("Cannot begin window drag if no mouse button is currently down.")
             }
         }
     }
 
     /// Tell the window manager to end the current window drag, if any.
     pub fn end_move_drag(&self) {
-        //Nothing to do on gtk.
+        //Nothing to do on gtk. Window drag immediately ends when mouse button is released.
+    }
+
+    /// Close the window.
+    pub fn close(&self) {
+        if let Some(state) = self.state.upgrade() {
+            state.closing.set(true);
+            state.window.close();
+        }
     }
 
     /// Bring this window to the front of the window stack and give it focus.

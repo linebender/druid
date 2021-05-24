@@ -1310,6 +1310,14 @@ impl WindowHandle {
         tracing::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
     }
 
+    pub fn begin_move_drag(&self) {
+        tracing::warn!("WindowHandle::begin_move_drag is currently unimplemented for Mac.");
+    }
+
+    pub fn end_move_drag(&self) {
+        tracing::warn!("WindowHandle::end_move_drag is currently unimplemented for Mac.");
+    }
+
     pub fn resizable(&self, resizable: bool) {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
