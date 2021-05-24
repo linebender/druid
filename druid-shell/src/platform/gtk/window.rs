@@ -26,7 +26,7 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint, EventButton};
 use gio::ApplicationExt;
 use gtk::prelude::*;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
@@ -177,6 +177,11 @@ pub(crate) struct WindowState {
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+    //Used for window drag. When a button press occurs, this will contain the whole gdk event.
+    //It is put to NONE immediately after a button release occurs, even if this is a different
+    //button. Consumed (i.e put to NONE) when a window drag is requested, preventing from initiating
+    //an other window drag from an other event source.
+    last_mouse_button_press_event: Cell<Option<gdk::EventButton>>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -296,6 +301,7 @@ impl WindowBuilder {
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
+            last_mouse_button_press_event: Cell::new(None),
         });
 
         self.app
@@ -474,6 +480,7 @@ impl WindowBuilder {
                         } else {
                             0
                         };
+                        state.last_mouse_button_press_event.set(Some(event.clone()));
                         if gtk_count == 0 || gtk_count == 1 {
                             handler.mouse_down(
                                 &MouseEvent {
@@ -500,6 +507,7 @@ impl WindowBuilder {
                     if let Some(button) = get_mouse_button(event.get_button()) {
                         let scale = state.scale.get();
                         let button_state = event.get_state();
+                        state.last_mouse_button_press_event.set(None);
                         handler.mouse_up(
                             &MouseEvent {
                                 pos: Point::from(event.get_position()).to_dp(scale),
@@ -991,6 +999,30 @@ impl WindowHandle {
             state.closing.set(true);
             state.window.close();
         }
+    }
+
+    /// Tell the window manager to start a window drag using current mouse position.
+    ///
+    /// On Gtk, this must be called immediately after a MouseEvent with a button press is received.
+    pub fn begin_move_drag(&self) {
+        if let Some(state) = self.state.upgrade() {
+            match state.last_mouse_button_press_event.take() { //Consume the mouse button event.
+                Some(event) if event.get_event_type() == gdk::EventType::ButtonPress => {
+                    state.window.begin_move_drag(
+                        event.get_button() as i32,
+                        event.get_root().0 as i32,
+                        event.get_root().1 as i32,
+                        event.get_time(),
+                    )
+                }
+                _ => warn!("Cannot drag window if no mouse button is currently down.")
+            }
+        }
+    }
+
+    /// Tell the window manager to end the current window drag, if any.
+    pub fn end_move_drag(&self) {
+        //Nothing to do on gtk.
     }
 
     /// Bring this window to the front of the window stack and give it focus.

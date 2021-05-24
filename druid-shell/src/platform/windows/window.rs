@@ -1818,6 +1818,16 @@ impl WindowHandle {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
     }
 
+    /// Tell the window manager to start a window drag using current mouse position.
+    pub fn begin_move_drag(&self) {
+        self.handle_titlebar(true);
+    }
+
+    /// Tell the window manager to end the current window drag, if any.
+    pub fn end_move_drag(&self) {
+        self.handle_titlebar(false);
+    }
+
     // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));

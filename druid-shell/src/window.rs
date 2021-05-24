@@ -30,6 +30,7 @@ use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 use piet_common::PietText;
+use crate::MouseButton;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
@@ -214,6 +215,18 @@ impl WindowHandle {
     /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Tell the window manager to start a window drag using current mouse position.
+    ///
+    /// On Gtk, this must be called immediately after a MouseEvent with a button press is received.
+    pub fn begin_move_drag(&self) {
+        self.0.begin_move_drag()
+    }
+
+    /// Tell the window manager to end the current window drag, if any.
+    pub fn end_move_drag(&self) {
+        self.0.end_move_drag()
     }
 
     /// Sets the position of the window in [display points](crate::Scale), relative to the origin of the
