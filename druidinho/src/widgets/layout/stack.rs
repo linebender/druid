@@ -15,6 +15,7 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use crate::kurbo::{common::FloatExt, Point, Rect, Size};
+use crate::piet::{Color, RenderContext};
 use crate::widget_host::WidgetHost;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 use druid_shell::{KeyEvent, TimerToken};
@@ -30,7 +31,7 @@ pub struct Stack<T: Axis> {
 pub type Row = Stack<Horizontal>;
 
 /// A vertical collection of widgets.
-pub type Column = Stack<Horizontal>;
+pub type Column = Stack<Vertical>;
 
 /// An axis in visual space.
 ///

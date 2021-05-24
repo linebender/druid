@@ -1,7 +1,7 @@
 use druidinho::piet::{Color, FontWeight};
 use druidinho::widgets::{
-    layout::{Align, Row, SizedBox},
-    Background, Text,
+    layout::{Align, Column, Row, SizedBox},
+    Background, Button, Text,
 };
 
 fn main() {
@@ -17,11 +17,13 @@ fn main() {
 
     let widget3 = Text::new("hello");
     let widget4 = Text::new(" world").font_size(24.0).weight(FontWeight::BOLD);
+    let button = Button::new("Click").on_click(|| println!("clicked"));
 
     let row = Row::new()
         .with_child(widget1)
         .with_child(widget2)
         .with_child(widget3)
         .with_child(widget4);
-    druidinho::launch(Align::new(row).centered()).unwrap()
+    let col = Column::new().with_child(row).with_child(button);
+    druidinho::launch(Align::new(col).centered()).unwrap()
 }

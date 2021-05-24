@@ -14,8 +14,8 @@ pub struct WidgetHost<W> {
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct WidgetState {
-    /// The mouse is inside the widget's frame.
-    pub(crate) hovered: bool,
+    ///// The mouse is inside the widget's frame.
+    //pub(crate) hovered: bool,
     /// The widget has mouse focus.
     ///
     /// The widget will receive all mouse events until it releases focus.
@@ -29,8 +29,8 @@ pub(crate) struct WidgetState {
 }
 
 impl WidgetState {
-    pub(crate) fn should_receive_mouse(&self) -> bool {
-        self.mouse_focus || self.hovered || self.child_mouse_focus
+    pub(crate) fn has_mouse_focus(&self) -> bool {
+        self.mouse_focus || self.child_mouse_focus
     }
 
     fn merge_up(&mut self, child: &mut WidgetState) {
@@ -62,6 +62,7 @@ impl<W: Widget> WidgetHost<W> {
         let mut child_ctx = EventCtx {
             state: &mut self.state,
             window: parent_ctx.window,
+            layout_state: parent_ctx.layout_state,
         };
         let r = f(&mut self.child, &mut child_ctx);
         parent_ctx.state.merge_up(child_ctx.state);
@@ -103,13 +104,23 @@ impl<W: Widget> Widget for WidgetHost<W> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
+        let mut child_ctx = LayoutCtx {
+            layout_state: ctx.layout_state,
+            state: &mut self.state,
+            window: ctx.window,
+        };
         // we always lay out eveything
-        self.child.layout(ctx, bc)
+        self.child.layout(&mut child_ctx, bc)
     }
 
     fn paint(&self, ctx: &mut PaintCtx) {
+        let mut child_ctx = PaintCtx {
+            layout_state: ctx.layout_state,
+            state: &self.state,
+            render_ctx: ctx.render_ctx,
+        };
         // we always paint everything
-        self.child.paint(ctx)
+        self.child.paint(&mut child_ctx)
     }
 }
 

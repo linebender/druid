@@ -1,21 +1,26 @@
+use crate::kurbo::Rect;
 use crate::piet::{Piet, PietText, RenderContext};
 use druid_shell::WindowHandle;
 
 use crate::widget_host::WidgetState;
+use crate::widgets::layout::LayoutState;
 
 pub struct EventCtx<'a> {
     pub(crate) window: &'a WindowHandle,
     pub(crate) state: &'a mut WidgetState,
+    pub(crate) layout_state: &'a LayoutState,
 }
 
 pub struct PaintCtx<'a, 'b> {
     pub(crate) state: &'a WidgetState,
+    pub(crate) layout_state: &'a LayoutState,
     pub(crate) render_ctx: &'a mut Piet<'b>,
 }
 
 pub struct LayoutCtx<'a> {
     pub(crate) window: &'a WindowHandle,
     pub(crate) state: &'a WidgetState,
+    pub(crate) layout_state: &'a LayoutState,
 }
 
 impl<'a> EventCtx<'a> {
@@ -24,7 +29,11 @@ impl<'a> EventCtx<'a> {
     }
 
     pub fn hovered(&self) -> bool {
-        self.state.hovered
+        self.layout_state.hovered
+    }
+
+    pub fn set_mouse_focus(&mut self, focus: bool) {
+        self.state.mouse_focus = focus;
     }
 
     pub fn mouse_focused(&self) -> bool {
@@ -33,6 +42,10 @@ impl<'a> EventCtx<'a> {
 
     pub fn keyboard_focused(&self) -> bool {
         self.state.keyboard_focus
+    }
+
+    pub fn request_paint(&mut self) {
+        self.window.invalidate();
     }
 }
 
@@ -58,7 +71,7 @@ impl<'c> std::ops::DerefMut for PaintCtx<'_, 'c> {
 
 impl PaintCtx<'_, '_> {
     pub fn hovered(&self) -> bool {
-        self.state.hovered
+        self.layout_state.hovered
     }
 
     pub fn mouse_focused(&self) -> bool {
@@ -67,6 +80,10 @@ impl PaintCtx<'_, '_> {
 
     pub fn keyboard_focused(&self) -> bool {
         self.state.keyboard_focus
+    }
+
+    pub fn frame(&self) -> Rect {
+        self.layout_state.size.to_rect()
     }
 
     pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCtx)) {

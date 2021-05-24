@@ -1,22 +1,23 @@
 use crate::kurbo::{Point, Size};
 use crate::piet::Piet;
 use crate::widget_host::{WidgetHost, WidgetState};
+use crate::widgets::layout::LayoutState;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
 use druid_shell::{IdleToken, KeyEvent, MouseEvent, Region, TimerToken, WindowHandle};
 
 pub struct Window {
     handle: WindowHandle,
     root_state: WidgetState,
-    window_size: Size,
+    layout_state: LayoutState,
     root: WidgetHost<Box<dyn Widget>>,
 }
 
 impl Window {
     fn with_event_ctx<R>(&mut self, f: impl FnOnce(&mut dyn Widget, &mut EventCtx) -> R) -> R {
-        //let mut widget_state = WidgetState::default();
         let mut ctx = EventCtx {
             window: &self.handle,
             state: &mut self.root_state,
+            layout_state: &self.layout_state,
         };
         f(&mut self.root, &mut ctx)
     }
@@ -25,7 +26,7 @@ impl Window {
         Window {
             handle,
             root: WidgetHost::new(root),
-            window_size: Size::ZERO,
+            layout_state: Default::default(),
             root_state: Default::default(),
         }
     }
@@ -37,9 +38,10 @@ impl Window {
     pub fn prepare_paint(&mut self) {
         let mut ctx = LayoutCtx {
             state: &self.root_state,
+            layout_state: &self.layout_state,
             window: &self.handle,
         };
-        let bc = BoxConstraints::tight(self.window_size.clone());
+        let bc = BoxConstraints::tight(self.layout_state.size);
         self.root.layout(&mut ctx, bc);
         self.root.set_origin(Point::ZERO);
     }
@@ -47,6 +49,7 @@ impl Window {
     pub fn paint(&mut self, piet: &mut Piet, _region: &Region) {
         let mut ctx = PaintCtx {
             state: &self.root_state,
+            layout_state: &self.layout_state,
             render_ctx: piet,
         };
 
@@ -54,7 +57,7 @@ impl Window {
     }
 
     pub fn size_changed(&mut self, new_size: Size) {
-        self.window_size = new_size;
+        self.layout_state.size = new_size;
         self.handle.invalidate();
     }
 
@@ -69,6 +72,7 @@ impl Window {
     }
 
     pub fn mouse_move(&mut self, event: &MouseEvent) {
+        //eprintln!("window mouse move {}", event.pos);
         let event = event.to_owned().into();
         self.with_event_ctx(|chld, ctx| chld.mouse_move(ctx, &event))
     }
