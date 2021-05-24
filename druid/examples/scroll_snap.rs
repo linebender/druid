@@ -22,7 +22,7 @@ struct ScrollSnapMember {
     a_single_number: u32,
 }
 
-fn main() {
+pub fn main() {
     let window = WindowDesc::new(build_window())
         .title("Window Snap")
         .window_size((WINDOW_SIZE, WINDOW_SIZE));
