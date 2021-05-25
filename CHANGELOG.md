@@ -57,6 +57,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
+- *gtk* windows can not be resized even if titlebar is hidden ([#1809] by [@blemelin])
 
 ### Deprecated
 
@@ -483,6 +484,7 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
+[@blemelin]: https://github.com/blemelin
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -726,6 +728,7 @@ Last release without a changelog :(
 [#1772]: https://github.com/linebender/druid/pull/1772
 [#1787]: https://github.com/linebender/druid/pull/1787
 [#1802]: https://github.com/linebender/druid/pull/1802
+[#1809]: https://github.com/linebender/druid/pull/1809
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
