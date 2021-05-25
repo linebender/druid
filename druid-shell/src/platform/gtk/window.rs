@@ -29,7 +29,7 @@ use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea, HeaderBar, SettingsExt};
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
@@ -149,6 +149,7 @@ enum IdleKind {
 // since the idea there is basically the same.
 pub(crate) struct WindowState {
     window: ApplicationWindow,
+    titlebar : HeaderBar,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
     is_transparent: Cell<bool>,
@@ -253,7 +254,7 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
-        window.set_decorated(self.show_titlebar);
+        window.set_decorated(true);
         let mut transparent = false;
         if self.transparent {
             if let Some(screen) = window.get_screen() {
@@ -276,12 +277,20 @@ impl WindowBuilder {
         let accel_group = AccelGroup::new();
         window.add_accel_group(&accel_group);
 
+        let titlebar = HeaderBar::new();
+        titlebar.set_title(Some(&self.title));
+        titlebar.set_show_close_button(true);
+        titlebar.set_visible(self.show_titlebar);
+        titlebar.set_no_show_all(true); //Allow the titlebar to be hidden at start if needed
+        window.set_titlebar(Some(&titlebar));
+
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.add(&vbox);
         let drawing_area = gtk::DrawingArea::new();
 
         let win_state = Arc::new(WindowState {
             window,
+            titlebar,
             scale: Cell::new(scale),
             area: Cell::new(area),
             is_transparent: Cell::new(transparent),
@@ -854,7 +863,13 @@ impl WindowHandle {
 
     pub fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(state) = self.state.upgrade() {
-            state.window.set_decorated(show_titlebar)
+            state.titlebar.set_visible(show_titlebar);
+        }
+    }
+
+    pub fn set_title(&self, title: impl Into<String>) {
+        if let Some(state) = self.state.upgrade() {
+            state.titlebar.set_title(Some(&(title.into())));
         }
     }
 
@@ -1179,12 +1194,6 @@ impl WindowHandle {
     pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
         if let Some(state) = self.state.upgrade() {
             state.defer(DeferredOp::ContextMenu(menu, self.clone()));
-        }
-    }
-
-    pub fn set_title(&self, title: impl Into<String>) {
-        if let Some(state) = self.state.upgrade() {
-            state.window.set_title(&(title.into()));
         }
     }
 }
