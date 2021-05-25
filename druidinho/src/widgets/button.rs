@@ -23,7 +23,7 @@ use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 /// A widget that provides simple visual styling options to a child.
 pub struct Button {
     text: LayoutHost<Text>,
-    on_click: Option<Box<dyn FnMut()>>,
+    on_click: Option<Box<dyn FnMut(&mut EventCtx)>>,
     hovered: bool,
 }
 
@@ -36,7 +36,7 @@ impl Button {
         }
     }
 
-    pub fn on_click(mut self, f: impl FnMut() + 'static) -> Self {
+    pub fn on_click(mut self, f: impl FnMut(&mut EventCtx) + 'static) -> Self {
         self.on_click = Some(Box::new(f));
         self
     }
@@ -55,7 +55,7 @@ impl Widget for Button {
     }
 
     fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
-        if event.button.is_left() && event.count == 1 {
+        if event.button.is_left() {
             ctx.set_mouse_focus(true);
             ctx.request_paint();
         }
@@ -67,7 +67,7 @@ impl Widget for Button {
             ctx.set_mouse_focus(false);
             if ctx.hovered() {
                 if let Some(f) = self.on_click.as_mut() {
-                    f()
+                    f(ctx)
                 }
             }
         }

@@ -16,6 +16,7 @@ pub trait Widget {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
         Size::ZERO
     }
+    fn update(&mut self) {}
     fn paint(&self, ctx: &mut PaintCtx) {}
 }
 
@@ -63,6 +64,9 @@ pub trait SingleChildContainer {
     fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
         self.widget_mut().timer(ctx, token)
     }
+    fn update(&mut self) {
+        self.widget_mut().update()
+    }
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
         self.widget_mut().layout(ctx, bc)
     }
@@ -95,6 +99,9 @@ impl<T: SingleChildContainer<Child = W>, W: Widget> Widget for T {
     }
     fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
         <Self as SingleChildContainer>::timer(self, ctx, token)
+    }
+    fn update(&mut self) {
+        <Self as SingleChildContainer>::update(self)
     }
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
         <Self as SingleChildContainer>::layout(self, ctx, bc)

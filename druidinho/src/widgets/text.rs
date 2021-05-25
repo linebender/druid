@@ -16,7 +16,7 @@
 
 use crate::kurbo::{Point, Size};
 use crate::piet::{
-    Color, FontFamily, FontWeight, PietTextLayout, RenderContext, Text as _, TextLayout,
+    Color, FontFamily, FontWeight, PietText, PietTextLayout, RenderContext, Text as _, TextLayout,
     TextLayoutBuilder,
 };
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
@@ -43,31 +43,29 @@ impl Text {
         }
     }
 
-    pub fn font_size(mut self, size: f64) -> Self {
+    pub fn set_text(&mut self, text: String) {
+        self.text = text;
+        self.text_obj = None;
+    }
+
+    pub fn set_font_size(&mut self, size: f64) {
         self.size = size;
-        self
     }
 
-    pub fn color(mut self, color: Color) -> Self {
+    pub fn set_color(&mut self, color: Color) {
         self.color = color;
-        self
     }
 
-    pub fn font(mut self, font: FontFamily) -> Self {
+    pub fn set_font(&mut self, font: FontFamily) {
         self.font = font;
-        self
     }
 
-    pub fn weight(mut self, weight: FontWeight) -> Self {
+    pub fn set_weight(&mut self, weight: FontWeight) {
         self.weight = weight;
-        self
     }
-}
 
-impl Widget for Text {
-    fn init(&mut self, ctx: &mut EventCtx) {
-        self.text_obj = ctx
-            .text()
+    fn rebuild_text(&mut self, mut factory: PietText) {
+        self.text_obj = factory
             .new_text_layout(self.text.clone())
             .font(self.font.clone(), self.size)
             .text_color(self.color.clone())
@@ -75,8 +73,17 @@ impl Widget for Text {
             .build()
             .ok();
     }
+}
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
+impl Widget for Text {
+    fn init(&mut self, ctx: &mut EventCtx) {
+        self.rebuild_text(ctx.text())
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
+        if self.text_obj.is_none() {
+            self.rebuild_text(ctx.text());
+        }
         let text_size = self
             .text_obj
             .as_ref()

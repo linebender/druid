@@ -47,6 +47,10 @@ impl<'a> EventCtx<'a> {
     pub fn request_paint(&mut self) {
         self.window.invalidate();
     }
+
+    pub fn request_update(&mut self) {
+        self.state.request_update = true;
+    }
 }
 
 impl LayoutCtx<'_> {

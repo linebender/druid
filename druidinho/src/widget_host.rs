@@ -26,6 +26,7 @@ pub(crate) struct WidgetState {
     pub(crate) keyboard_focus: bool,
     /// A descendent of the widget has keyboard focus
     child_keyboard_focus: bool,
+    pub(crate) request_update: bool,
 }
 
 impl WidgetState {
@@ -36,6 +37,7 @@ impl WidgetState {
     fn merge_up(&mut self, child: &mut WidgetState) {
         self.child_mouse_focus |= child.child_mouse_focus | child.mouse_focus;
         self.child_keyboard_focus |= child.child_keyboard_focus | child.keyboard_focus;
+        self.request_update |= child.request_update;
     }
 }
 
@@ -103,6 +105,11 @@ impl<W: Widget> Widget for WidgetHost<W> {
         self.with_child(ctx, |chld, ctx| chld.timer(ctx, token));
     }
 
+    fn update(&mut self) {
+        self.child.update();
+        self.state.request_update = false;
+    }
+
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {
         let mut child_ctx = LayoutCtx {
             layout_state: ctx.layout_state,
@@ -151,6 +158,10 @@ impl Widget for Box<dyn Widget> {
 
     fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
         self.deref_mut().timer(ctx, token);
+    }
+
+    fn update(&mut self) {
+        self.deref_mut().update();
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: BoxConstraints) -> Size {

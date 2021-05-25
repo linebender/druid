@@ -19,7 +19,14 @@ impl Window {
             state: &mut self.root_state,
             layout_state: &self.layout_state,
         };
-        f(&mut self.root, &mut ctx)
+
+        let r = f(&mut self.root, &mut ctx);
+        if self.root_state.request_update {
+            self.root.update();
+            self.root_state.request_update = false;
+        }
+
+        r
     }
 
     pub fn new(handle: WindowHandle, root: Box<dyn Widget>) -> Self {

@@ -199,6 +199,11 @@ impl<T: Axis> Widget for Stack<T> {
             .iter_mut()
             .for_each(|chld| chld.timer(ctx, token))
     }
+
+    fn update(&mut self) {
+        self.children.iter_mut().for_each(|chld| chld.update())
+    }
+
     fn paint(&self, ctx: &mut PaintCtx) {
         self.children.iter().for_each(|chld| chld.paint(ctx))
     }
