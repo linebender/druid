@@ -112,3 +112,6 @@ required-features = ["im"]
 [[example]]
 name = "widget_gallery"
 required-features = ["svg", "im", "image", "png"]
+
+[[example]]
+name = "custom_titlebar"
