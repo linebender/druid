@@ -996,7 +996,8 @@ impl WindowHandle {
     /// Tell the window manager to start a window drag using current mouse position.
     pub fn begin_move_drag(&self) {
         if let Some(state) = self.state.upgrade() {
-            match state.last_mouse_button_press_event.take() { //Consume the mouse button event.
+            match state.last_mouse_button_press_event.take() {
+                //Consume the mouse button event.
                 Some(event) if event.get_event_type() == gdk::EventType::ButtonPress => {
                     state.window.begin_move_drag(
                         event.get_button() as i32,
@@ -1005,7 +1006,7 @@ impl WindowHandle {
                         event.get_time(),
                     )
                 }
-                _ => warn!("Cannot begin window drag if no mouse button is currently down.")
+                _ => warn!("Cannot begin window drag if no mouse button is currently down."),
             }
         }
     }

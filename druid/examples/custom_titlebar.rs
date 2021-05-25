@@ -15,8 +15,8 @@
 //! This demonstrate how to create a custom title bar. Please note that this currently only
 //! works on Windows and Gtk.
 
-use druid::{AppLauncher, PlatformError, Widget, WindowDesc, WidgetExt, Color};
 use druid::widget::{Flex, Label, WindowDragHandle};
+use druid::{AppLauncher, Color, PlatformError, Widget, WidgetExt, WindowDesc};
 
 fn main() -> Result<(), PlatformError> {
     //Create a new windows without the default title bar of the platform.
@@ -27,30 +27,35 @@ fn main() -> Result<(), PlatformError> {
 }
 
 fn build_root_widget() -> impl Widget<()> {
-    Flex::column()
-        .with_child(build_title_bar())
+    Flex::column().with_child(build_title_bar())
 }
 
 fn build_title_bar() -> impl Widget<()> {
+    use druid::commands::{CLOSE_WINDOW, CONFIGURE_WINDOW};
     use druid::{WindowConfig, WindowState};
-    use druid::commands::{CONFIGURE_WINDOW, CLOSE_WINDOW};
 
     //Let's create a custom title bar. We need a label for the title, a minimize button, a maximize
     //button and an exit button.
-    let title_label = Label::new("My Application").padding((5.0,5.0));
-    let minimize_button = Label::new("🗕").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
-        ctx.submit_command(CONFIGURE_WINDOW.with(
-            WindowConfig::default().set_window_state(WindowState::Minimized)
-        ))
-    });
-    let maximize_button = Label::new("🗖").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
-        ctx.submit_command(CONFIGURE_WINDOW.with(
-            WindowConfig::default().set_window_state(WindowState::Maximized)
-        ))
-    });
-    let exit_button = Label::new("✕").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
-        ctx.submit_command(CLOSE_WINDOW)
-    });
+    let title_label = Label::new("My Application").padding((5.0, 5.0));
+    let minimize_button = Label::new("🗕")
+        .padding((5.0, 5.0))
+        .on_click(|ctx, _data, _env| {
+            ctx.submit_command(
+                CONFIGURE_WINDOW
+                    .with(WindowConfig::default().set_window_state(WindowState::Minimized)),
+            )
+        });
+    let maximize_button = Label::new("🗖")
+        .padding((5.0, 5.0))
+        .on_click(|ctx, _data, _env| {
+            ctx.submit_command(
+                CONFIGURE_WINDOW
+                    .with(WindowConfig::default().set_window_state(WindowState::Maximized)),
+            )
+        });
+    let exit_button = Label::new("✕")
+        .padding((5.0, 5.0))
+        .on_click(|ctx, _data, _env| ctx.submit_command(CLOSE_WINDOW));
 
     //Wrap the title label with the WindowDragHandle controller widget. Do not wrap the buttons,
     //because not only dragging from the buttons is strange, but on most platforms, clicks events

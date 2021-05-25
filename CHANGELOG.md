@@ -41,6 +41,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
+- `WindowDragHandle` controller widget to drag windows and move them for Windows and Gtk. ([#1807] by [@blemelin])
 
 ### Changed
 
@@ -483,6 +484,7 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
+[@blemelin]: https://github.com/blemelin
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -726,6 +728,7 @@ Last release without a changelog :(
 [#1772]: https://github.com/linebender/druid/pull/1772
 [#1787]: https://github.com/linebender/druid/pull/1787
 [#1802]: https://github.com/linebender/druid/pull/1802
+[#1807]: https://github.com/linebender/druid/pull/1807
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
