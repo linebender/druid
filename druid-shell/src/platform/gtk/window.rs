@@ -149,7 +149,7 @@ enum IdleKind {
 // since the idea there is basically the same.
 pub(crate) struct WindowState {
     window: ApplicationWindow,
-    titlebar : HeaderBar,
+    titlebar: HeaderBar,
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
     is_transparent: Cell<bool>,
