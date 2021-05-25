@@ -19,7 +19,7 @@ use druid::widget::{Flex, Label, WindowDragHandle};
 use druid::{AppLauncher, Color, PlatformError, Widget, WidgetExt, WindowDesc};
 
 fn main() -> Result<(), PlatformError> {
-    //Create a new windows without the default title bar of the platform.
+    //Create a new window without the default title bar of the platform.
     let window = WindowDesc::new(build_root_widget()).show_titlebar(false);
 
     //Launch the application.
