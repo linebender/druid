@@ -57,7 +57,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
-- *gtk* windows can noq be resized even if titlebar is hidden ([#1809] by [@blemelin])
+- *gtk* windows can now be resized even if titlebar is hidden ([#1809] by [@blemelin])
 
 ### Deprecated
 
