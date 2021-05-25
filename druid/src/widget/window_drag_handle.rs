@@ -36,7 +36,7 @@ use crate::widget::prelude::*;
 /// use druid::commands::CLOSE_WINDOW;
 ///
 /// let title_label = WindowDragHandle::new(Label::new("My Application"));
-/// let exit_button = Button::new("X").on_click(|ctx, _data, _env| ctx.submit_command(CLOSE_WINDOW));
+/// let exit_button = Button::new("X").on_click(|ctx, _data : &mut (), _env| ctx.submit_command(CLOSE_WINDOW));
 /// let title_bar = Flex::row().with_child(title_label).with_child(exit_button);
 /// ```
 ///
@@ -63,12 +63,13 @@ impl WindowDragHandle {
 impl<T: Data, W: Widget<T>> Controller<T, W> for WindowDragHandle {
     #[instrument(name = "WindowDragHandle", level = "trace", skip(self, child, ctx, event, data, env))]
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        match event {
-            #[cfg(all(feature = "gtk", target_os = "linux"))]
-            Event::MouseDown(_) => ctx.window().begin_move_drag(),
-            #[cfg(target_os = "windows")]
-            Event::MouseMove(_) => ctx.window().handle_titlebar(true),
-            _ => {}
+        #[cfg(all(feature = "gtk", target_os = "linux"))]
+        if let Event::MouseDown(_) = event {
+            ctx.window().begin_move_drag()
+        }
+        #[cfg(target_os = "windows")]
+        if let Event::MouseMove(_) = event {
+            ctx.window().handle_titlebar(true)
         }
         child.event(ctx, event, data, env);
     }

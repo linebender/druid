@@ -15,7 +15,7 @@
 //! This demonstrate how to create a custom title bar. Please note that this currently only
 //! works on Windows and Gtk.
 
-use druid::{AppLauncher, PlatformError, Widget, WindowDesc, WidgetExt, Color};
+use druid::{AppLauncher, Color, PlatformError, Widget, WidgetExt, WindowDesc};
 use druid::widget::{Flex, Label, WindowDragHandle};
 
 fn main() -> Result<(), PlatformError> {
@@ -37,18 +37,18 @@ fn build_title_bar() -> impl Widget<()> {
 
     //Let's create a custom title bar. We need a label for the title, a minimize button, a maximize
     //button and an exit button.
-    let title_label = Label::new("My Application").padding((5.0,5.0));
-    let minimize_button = Label::new("🗕").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
+    let title_label = Label::new("My Application").padding((5.0, 5.0));
+    let minimize_button = Label::new("🗕").padding((5.0, 5.0)).on_click(|ctx, _data, _env| {
         ctx.submit_command(CONFIGURE_WINDOW.with(
             WindowConfig::default().set_window_state(WindowState::Minimized)
         ))
     });
-    let maximize_button = Label::new("🗖").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
+    let maximize_button = Label::new("🗖").padding((5.0, 5.0)).on_click(|ctx, _data, _env| {
         ctx.submit_command(CONFIGURE_WINDOW.with(
             WindowConfig::default().set_window_state(WindowState::Maximized)
         ))
     });
-    let exit_button = Label::new("✕").padding((5.0,5.0)).on_click(|ctx, _data, _env| {
+    let exit_button = Label::new("✕").padding((5.0, 5.0)).on_click(|ctx, _data, _env| {
         ctx.submit_command(CLOSE_WINDOW)
     });
 
