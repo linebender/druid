@@ -881,7 +881,9 @@ impl WindowHandle {
 
     pub fn set_title(&self, title: impl Into<String>) {
         if let Some(state) = self.state.upgrade() {
-            state.titlebar.set_title(Some(&(title.into())));
+            let title = title.into();
+            state.window.set_title(&title);
+            state.titlebar.set_title(Some(&title));
         }
     }
 
