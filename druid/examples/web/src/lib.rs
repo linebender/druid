@@ -57,6 +57,7 @@ macro_rules! impl_example {
 impl_example!(anim);
 impl_example!(calc);
 impl_example!(cursor);
+impl_example!(custom_titlebar);
 impl_example!(custom_widget);
 impl_example!(disabled);
 impl_example!(either);

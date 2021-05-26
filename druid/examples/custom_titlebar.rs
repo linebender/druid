@@ -16,14 +16,14 @@
 //! works on Windows and Gtk.
 
 use druid::widget::{Flex, Label, WindowDragHandle};
-use druid::{AppLauncher, Color, PlatformError, Widget, WidgetExt, WindowDesc};
+use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 
-fn main() -> Result<(), PlatformError> {
+pub fn main() {
     //Create a new window without the default title bar of the platform.
     let window = WindowDesc::new(build_root_widget()).show_titlebar(false);
 
     //Launch the application.
-    AppLauncher::with_window(window).log_to_console().launch(())
+    AppLauncher::with_window(window).log_to_console().launch(()).expect("launch failed");
 }
 
 fn build_root_widget() -> impl Widget<()> {
