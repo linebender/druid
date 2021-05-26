@@ -1,5 +1,5 @@
-use druid::{AppLauncher, Data, Widget, WindowDesc};
 use druid::widget::{Button, Flex, Label};
+use druid::{AppLauncher, Data, Widget, WindowDesc};
 
 #[derive(Debug, Clone, Data)]
 struct ExampleData {
@@ -30,26 +30,26 @@ pub fn main() {
 }
 
 fn build_root_widget() -> impl Widget<ExampleData> {
-    let decorations_button = Button::new("Decorations")
-        .on_click(|ctx, data: &mut ExampleData, _env| {
+    let decorations_button =
+        Button::new("Decorations").on_click(|ctx, data: &mut ExampleData, _env| {
             data.is_decorated = !data.is_decorated;
             ctx.window().show_decorations(data.is_decorated);
         });
 
-    let titlebar_button = Button::new("Titlebar")
-        .on_click(|ctx, data: &mut ExampleData, _env| {
-            data.has_titlebar = !data.has_titlebar;
-            ctx.window().show_titlebar(data.has_titlebar);
-        });
+    let titlebar_button = Button::new("Titlebar").on_click(|ctx, data: &mut ExampleData, _env| {
+        data.has_titlebar = !data.has_titlebar;
+        ctx.window().show_titlebar(data.has_titlebar);
+    });
 
-    let resize_button = Button::new("Resize")
-        .on_click(|ctx, data: &mut ExampleData, _env| {
-            data.is_resizable = !data.is_resizable;
-            ctx.window().resizable(data.is_resizable);
-        });
+    let resize_button = Button::new("Resize").on_click(|ctx, data: &mut ExampleData, _env| {
+        data.is_resizable = !data.is_resizable;
+        ctx.window().resizable(data.is_resizable);
+    });
+
+    let help_label = Label::new("Click on any button to enable/disable a window feature");
 
     Flex::column()
-        .with_child(Label::new("Click on any button to enable/disable a window feature"))
+        .with_child(help_label)
         .with_child(decorations_button)
         .with_child(titlebar_button)
         .with_child(resize_button)

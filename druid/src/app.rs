@@ -275,7 +275,7 @@ impl Default for WindowConfig {
             size: None,
             min_size: None,
             position: None,
-            show_decorations : None,
+            show_decorations: None,
             resizable: None,
             show_titlebar: None,
             transparent: None,

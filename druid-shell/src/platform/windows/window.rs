@@ -746,7 +746,9 @@ impl WndProc for MyWndProc {
             WM_ACTIVATE => {
                 if LOWORD(wparam as u32) as u32 != 0 {
                     unsafe {
-                        if (!self.has_titlebar() || !self.has_decorations()) && !self.is_transparent() {
+                        if (!self.has_titlebar() || !self.has_decorations())
+                            && !self.is_transparent()
+                        {
                             // This makes windows paint the dropshadow around the window
                             // since we give it a "1 pixel frame" that we paint over anyway.
                             // From my testing top seems to be the best option when it comes to avoiding resize artifacts.

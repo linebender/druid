@@ -498,7 +498,7 @@ impl WindowBuilder {
     /// removing decorations also remove the drop shadow of the window.
     ///
     /// Implemented for Windows and Gtk only.
-    pub fn show_decorations(&mut self, show_decorations : bool) {
+    pub fn show_decorations(&mut self, show_decorations: bool) {
         self.0.show_decorations(show_decorations)
     }
 
