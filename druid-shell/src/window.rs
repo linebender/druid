@@ -187,6 +187,9 @@ impl WindowHandle {
     }
 
     /// Set whether the window should be resizable
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowHandle::show_decorations).
     pub fn resizable(&self, resizable: bool) {
         self.0.resizable(resizable)
     }
@@ -211,7 +214,22 @@ impl WindowHandle {
         self.0.handle_titlebar(val);
     }
 
+    /// Set whether the window should have any decorations.
+    ///
+    /// When undecorated, a window won't display a titlebar or have any resize controls. Note
+    /// that this is different from setting both [show_titlebar](WindowHandle::show_titlebar)
+    /// and [resizable](WindowHandle::resizable) to false. For example, on the *gtk* platform,
+    /// removing decorations also remove the drop shadow of the window.
+    ///
+    /// Implemented for Windows and Gtk only.
+    pub fn show_decorations(&self, show_decorations: bool) {
+        self.0.show_decorations(show_decorations)
+    }
+
     /// Set whether the window should show titlebar.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowHandle::show_decorations).
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }
@@ -472,12 +490,30 @@ impl WindowBuilder {
         self.0.set_min_size(size)
     }
 
+    /// Set whether the window should have any decorations.
+    ///
+    /// When undecorated, a window won't display a titlebar or have any resize controls. Note
+    /// that this is different from setting both [show_titlebar](WindowBuilder::show_titlebar)
+    /// and [resizable](WindowBuilder::resizable) to false. For example, on the *gtk* platform,
+    /// removing decorations also remove the drop shadow of the window.
+    ///
+    /// Implemented for Windows and Gtk only.
+    pub fn show_decorations(&mut self, show_decorations : bool) {
+        self.0.show_decorations(show_decorations)
+    }
+
     /// Set whether the window should be resizable.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowBuilder::show_decorations).
     pub fn resizable(&mut self, resizable: bool) {
         self.0.resizable(resizable)
     }
 
-    /// Set whether the window should have a titlebar and decorations.
+    /// Set whether the window should have a titlebar.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowBuilder::show_decorations).
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
     }

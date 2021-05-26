@@ -37,7 +37,7 @@ use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
@@ -192,6 +192,15 @@ impl WindowBuilder {
 
     pub fn set_min_size(&mut self, size: Size) {
         self.min_size = Some(size);
+    }
+
+    pub fn show_decorations(&mut self, _show_decorations: bool) {
+        //Note for future implementor.
+        //
+        //There is a "NSBorderlessWindowMask" flag on the "NSWindowStyleMask" struct that
+        //you could use to implement this feature. Unfortunately, this has been deprecated
+        //by Apple (see https://developer.apple.com/documentation/appkit/nswindowstylemask).
+        warn!("WindowHandle::show_decorations is currently unimplemented for Mac.");
     }
 
     pub fn resizable(&mut self, resizable: bool) {
@@ -1195,6 +1204,10 @@ impl WindowHandle {
             let title = make_nsstring(title);
             window.setTitle_(title);
         }
+    }
+
+    pub fn show_decorations(&self, _show_decorations: bool) {
+        warn!("WindowHandle::show_decorations is currently unimplemented for Mac.");
     }
 
     // TODO: Implement this

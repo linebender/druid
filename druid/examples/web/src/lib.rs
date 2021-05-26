@@ -84,4 +84,5 @@ impl_example!(textbox);
 impl_example!(transparency);
 impl_example!(view_switcher);
 impl_example!(widget_gallery);
+impl_example!(window_decorations);
 impl_example!(text);

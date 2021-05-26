@@ -127,6 +127,7 @@ pub(crate) struct WindowBuilder {
     state: Option<window::WindowState>,
     size: Size,
     min_size: Option<Size>,
+    show_decorations : bool,
     resizable: bool,
     show_titlebar: bool,
     transparent: bool,
@@ -195,6 +196,7 @@ impl WindowBuilder {
             level: None,
             state: None,
             min_size: None,
+            show_decorations : true,
             resizable: true,
             show_titlebar: true,
             transparent: false,
@@ -211,6 +213,10 @@ impl WindowBuilder {
 
     pub fn set_min_size(&mut self, size: Size) {
         self.min_size = Some(size);
+    }
+
+    pub fn show_decorations(&mut self, show_decorations: bool) {
+        self.show_decorations = show_decorations;
     }
 
     pub fn resizable(&mut self, resizable: bool) {
@@ -254,7 +260,7 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
-        window.set_decorated(true);
+        window.set_decorated(self.show_decorations);
         let mut transparent = false;
         if self.transparent {
             if let Some(screen) = window.get_screen() {
@@ -852,6 +858,12 @@ impl WindowHandle {
     pub fn show(&self) {
         if let Some(state) = self.state.upgrade() {
             state.window.show_all();
+        }
+    }
+
+    pub fn show_decorations(&self, show_decorations: bool) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.set_decorated(show_decorations);
         }
     }
 

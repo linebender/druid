@@ -91,6 +91,7 @@ pub(crate) struct WindowBuilder {
     title: String,
     menu: Option<Menu>,
     present_strategy: PresentStrategy,
+    show_decorations: bool,
     resizable: bool,
     show_titlebar: bool,
     size: Option<Size>,
@@ -155,6 +156,7 @@ enum DeferredOp {
     SaveAs(FileDialogOptions, FileDialogToken),
     Open(FileDialogOptions, FileDialogToken),
     ContextMenu(Menu, Point),
+    ShowDecorations(bool),
     ShowTitlebar(bool),
     SetPosition(Point),
     SetSize(Size),
@@ -217,6 +219,7 @@ struct WindowState {
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
     timers: Arc<Mutex<TimerSlots>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+    has_decorations: Cell<bool>,
     has_titlebar: Cell<bool>,
     is_transparent: Cell<bool>,
     // For resizable borders, window can still be resized with code.
@@ -354,7 +357,7 @@ fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
     }
 }
 
-fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
+fn set_style(hwnd: HWND, decorations: bool, resizable: bool, titlebar: bool) {
     unsafe {
         let mut style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
         if style == 0 {
@@ -365,12 +368,12 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
             return;
         }
 
-        if !resizable {
+        if !(resizable && decorations) {
             style &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
         } else {
             style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
         }
-        if !titlebar {
+        if !(titlebar && decorations) {
             style &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
         } else {
             style |= WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED;
@@ -517,6 +520,10 @@ impl MyWndProc {
         self.with_window_state(|state| state.has_menu.get())
     }
 
+    fn has_decorations(&self) -> bool {
+        self.with_window_state(|state| state.has_decorations.get())
+    }
+
     fn has_titlebar(&self) -> bool {
         self.with_window_state(|state| state.has_titlebar.get())
     }
@@ -575,13 +582,17 @@ impl MyWndProc {
                         );
                     };
                 },
+                DeferredOp::ShowDecorations(decorations) => {
+                    self.with_window_state(|s| s.has_decorations.set(decorations));
+                    set_style(hwnd, decorations, self.resizable(), self.has_titlebar());
+                }
                 DeferredOp::ShowTitlebar(titlebar) => {
                     self.with_window_state(|s| s.has_titlebar.set(titlebar));
-                    set_style(hwnd, self.resizable(), titlebar);
+                    set_style(hwnd, self.has_decorations(), self.resizable(), titlebar);
                 }
                 DeferredOp::SetResizable(resizable) => {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
-                    set_style(hwnd, resizable, self.has_titlebar());
+                    set_style(hwnd, self.has_decorations(), resizable, self.has_titlebar());
                 }
                 DeferredOp::SetWindowState(val) => {
                     let show = if self.handle.borrow().is_focusable() {
@@ -735,7 +746,7 @@ impl WndProc for MyWndProc {
             WM_ACTIVATE => {
                 if LOWORD(wparam as u32) as u32 != 0 {
                     unsafe {
-                        if !self.has_titlebar() && !self.is_transparent() {
+                        if (!self.has_titlebar() || !self.has_decorations()) && !self.is_transparent() {
                             // This makes windows paint the dropshadow around the window
                             // since we give it a "1 pixel frame" that we paint over anyway.
                             // From my testing top seems to be the best option when it comes to avoiding resize artifacts.
@@ -835,7 +846,7 @@ impl WndProc for MyWndProc {
                 Some(0)
             },
             WM_NCCALCSIZE => unsafe {
-                if wparam != 0 && !self.has_titlebar() {
+                if wparam != 0 && (!self.has_titlebar() || !self.has_decorations()) {
                     if let Ok(handle) = self.handle.try_borrow() {
                         if handle.get_window_state() == window::WindowState::Maximized {
                             // When maximized, windows still adds offsets for the frame
@@ -857,7 +868,7 @@ impl WndProc for MyWndProc {
             },
             WM_NCHITTEST => unsafe {
                 let mut hit = DefWindowProcW(hwnd, msg, wparam, lparam);
-                if !self.has_titlebar() && self.resizable() {
+                if (!self.has_titlebar() || !self.has_decorations()) && self.resizable() {
                     if let Ok(handle) = self.handle.try_borrow() {
                         if handle.get_window_state() != window::WindowState::Maximized {
                             let mut rect = RECT {
@@ -1243,6 +1254,7 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             menu: None,
+            show_decorations: true,
             resizable: true,
             show_titlebar: true,
             transparent: false,
@@ -1266,6 +1278,10 @@ impl WindowBuilder {
 
     pub fn set_min_size(&mut self, size: Size) {
         self.min_size = Some(size);
+    }
+
+    pub fn show_decorations(&mut self, show_decorations: bool) {
+        self.show_decorations = show_decorations
     }
 
     pub fn resizable(&mut self, resizable: bool) {
@@ -1385,6 +1401,7 @@ impl WindowBuilder {
                 idle_queue: Default::default(),
                 timers: Arc::new(Mutex::new(TimerSlots::new(1))),
                 deferred_queue: RefCell::new(Vec::new()),
+                has_decorations: Cell::new(self.show_decorations),
                 has_titlebar: Cell::new(self.show_titlebar),
                 is_resizable: Cell::new(self.resizable),
                 is_transparent: Cell::new(self.transparent),
@@ -1413,10 +1430,10 @@ impl WindowBuilder {
             };
             win.wndproc.connect(&handle, state);
 
-            if !self.resizable {
+            if !(self.resizable && self.show_decorations) {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
-            if !self.show_titlebar {
+            if !(self.show_titlebar && self.show_decorations) {
                 dwStyle &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
             }
 
@@ -1812,6 +1829,10 @@ impl WindowHandle {
                 }
             }
         }
+    }
+
+    pub fn show_decorations(&self, show_decorations: bool) {
+        self.defer(DeferredOp::ShowDecorations(show_decorations));
     }
 
     pub fn show_titlebar(&self, show_titlebar: bool) {

@@ -41,6 +41,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
+- Window decorations can now be enabled/disabled for *Windows* and *gtk* ([#1809] by [@blemelin])
 
 ### Changed
 
@@ -57,6 +58,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
+- Showing or hidding the window titlebar no longer removes window decorations for *Windows* and *gtk* ([#1809] by [@blemelin])
 - *gtk* windows can now be resized even if titlebar is hidden ([#1809] by [@blemelin])
 
 ### Deprecated

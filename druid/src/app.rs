@@ -57,6 +57,7 @@ pub struct WindowConfig {
     pub(crate) size: Option<Size>,
     pub(crate) min_size: Option<Size>,
     pub(crate) position: Option<Point>,
+    pub(crate) show_decorations: Option<bool>,
     pub(crate) resizable: Option<bool>,
     pub(crate) transparent: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
@@ -274,6 +275,7 @@ impl Default for WindowConfig {
             size: None,
             min_size: None,
             position: None,
+            show_decorations : None,
             resizable: None,
             show_titlebar: None,
             transparent: None,
@@ -336,13 +338,32 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the window should have any decorations.
+    ///
+    /// When undecorated, a window won't display a titlebar or have any resize controls. Note
+    /// that this is different from setting both [show_titlebar](WindowConfig::show_titlebar)
+    /// and [resizable](WindowConfig::resizable) to false. For example, on the *gtk* platform,
+    /// removing decorations also remove the drop shadow of the window.
+    ///
+    /// Implemented for Windows and Gtk only.
+    pub fn show_decorations(mut self, show_decorations: bool) -> Self {
+        self.show_decorations = Some(show_decorations);
+        self
+    }
+
     /// Set whether the window should be resizable.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowConfig::show_decorations).
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = Some(resizable);
         self
     }
 
-    /// Set whether the window should have a titlebar and decorations.
+    /// Set whether the window should have a titlebar.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowConfig::show_decorations).
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.show_titlebar = Some(show_titlebar);
         self
@@ -381,6 +402,10 @@ impl WindowConfig {
 
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
+        if let Some(show_decorations) = self.show_decorations {
+            builder.show_decorations(show_decorations);
+        }
+
         if let Some(resizable) = self.resizable {
             builder.resizable(resizable);
         }
@@ -418,6 +443,10 @@ impl WindowConfig {
 
     /// Apply this window configuration to the passed in WindowHandle
     pub fn apply_to_handle(&self, win_handle: &mut WindowHandle) {
+        if let Some(show_decorations) = self.show_decorations {
+            win_handle.show_decorations(show_decorations);
+        }
+
         if let Some(resizable) = self.resizable {
             win_handle.resizable(resizable);
         }
@@ -538,13 +567,32 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Builder-style method to set whether this window have decorations.
+    ///
+    /// When undecorated, a window won't display a titlebar or have any resize controls. Note
+    /// that this is different from setting both [show_titlebar](WindowDesc::show_titlebar)
+    /// and [resizable](WindowDesc::resizable) to false. For example, on the *gtk* platform,
+    /// removing decorations also remove the drop shadow of the window.
+    ///
+    /// Implemented for Windows and Gtk only.
+    pub fn show_decorations(mut self, show_decorations: bool) -> Self {
+        self.config = self.config.show_decorations(show_decorations);
+        self
+    }
+
     /// Builder-style method to set whether this window can be resized.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowDesc::show_decorations).
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.config = self.config.resizable(resizable);
         self
     }
 
     /// Builder-style method to set whether this window's titlebar is visible.
+    ///
+    /// Note that undecorated windows ignore this setting.
+    /// See [show_decorations](WindowDesc::show_decorations).
     pub fn show_titlebar(mut self, show_titlebar: bool) -> Self {
         self.config = self.config.show_titlebar(show_titlebar);
         self

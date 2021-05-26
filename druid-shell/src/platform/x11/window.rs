@@ -131,6 +131,10 @@ impl WindowBuilder {
         self.min_size = min_size;
     }
 
+    pub fn show_decorations(&mut self, _show_decorations: bool) {
+        warn!("WindowBuilder::show_decorations is currently unimplemented for X11 platforms.");
+    }
+
     pub fn resizable(&mut self, _resizable: bool) {
         warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
     }
@@ -1463,6 +1467,10 @@ impl WindowHandle {
         } else {
             error!("Window {} has already been dropped", self.id);
         }
+    }
+
+    pub fn show_decorations(&self, _show_decorations: bool) {
+        warn!("WindowHandle::show_decorations is currently unimplemented for X11 platforms.");
     }
 
     pub fn resizable(&self, resizable: bool) {

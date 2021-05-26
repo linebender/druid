@@ -367,6 +367,10 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn show_decorations(&mut self, _show_decorations: bool) {
+        // Ignored
+    }
+
     pub fn resizable(&mut self, _resizable: bool) {
         // Ignored
     }
@@ -469,6 +473,10 @@ impl WindowBuilder {
 impl WindowHandle {
     pub fn show(&self) {
         self.render_soon();
+    }
+
+    pub fn show_decorations(&self, _show_decorations: bool) {
+        warn!("WindowHandle::show_decorations is currently unimplemented for web.");
     }
 
     pub fn resizable(&self, _resizable: bool) {
