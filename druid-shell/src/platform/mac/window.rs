@@ -200,7 +200,7 @@ impl WindowBuilder {
         //There is a "NSBorderlessWindowMask" flag on the "NSWindowStyleMask" struct that
         //you could use to implement this feature. Unfortunately, this has been deprecated
         //by Apple (see https://developer.apple.com/documentation/appkit/nswindowstylemask).
-        warn!("WindowHandle::show_decorations is currently unimplemented for Mac.");
+        warn!("WindowBuilder::show_decorations is currently unimplemented for Mac.");
     }
 
     pub fn resizable(&mut self, resizable: bool) {
