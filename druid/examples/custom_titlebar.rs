@@ -23,7 +23,10 @@ pub fn main() {
     let window = WindowDesc::new(build_root_widget()).show_titlebar(false);
 
     //Launch the application.
-    AppLauncher::with_window(window).log_to_console().launch(()).expect("launch failed");
+    AppLauncher::with_window(window)
+        .log_to_console()
+        .launch(())
+        .expect("launch failed");
 }
 
 fn build_root_widget() -> impl Widget<()> {
