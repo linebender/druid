@@ -2,13 +2,15 @@ use crate::kurbo::Rect;
 use crate::piet::{Piet, PietText, RenderContext};
 use druid_shell::WindowHandle;
 
+use crate::widget::NoEvent;
 use crate::widget_host::WidgetState;
 use crate::widgets::layout::LayoutState;
 
-pub struct EventCtx<'a> {
+pub struct EventCtx<'a, M = NoEvent> {
     pub(crate) window: &'a WindowHandle,
     pub(crate) state: &'a mut WidgetState,
     pub(crate) layout_state: &'a LayoutState,
+    pub(crate) messages: &'a mut Vec<M>,
 }
 
 pub struct PaintCtx<'a, 'b> {
@@ -23,7 +25,7 @@ pub struct LayoutCtx<'a> {
     pub(crate) layout_state: &'a LayoutState,
 }
 
-impl<'a> EventCtx<'a> {
+impl<'a, M> EventCtx<'a, M> {
     pub fn text(&self) -> PietText {
         self.window.text()
     }

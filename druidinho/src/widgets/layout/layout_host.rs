@@ -46,11 +46,11 @@ impl<W> LayoutHost<W> {
         Rect::from_origin_size(self.state.origin, self.state.size).contains(mouse.pos)
     }
 
-    fn propagate_mouse_if_needed(
+    fn propagate_mouse_if_needed<M>(
         &mut self,
-        ctx: &mut EventCtx,
+        ctx: &mut EventCtx<M>,
         event: &MouseEvent,
-        f: impl FnOnce(&mut W, &mut EventCtx, &MouseEvent),
+        f: impl FnOnce(&mut W, &mut EventCtx<M>, &MouseEvent),
     ) {
         let was_hovered = self.state.hovered;
         self.state.hovered = self.contains(event);
@@ -60,6 +60,7 @@ impl<W> LayoutHost<W> {
             state: ctx.state,
             layout_state: &mut self.state,
             window: ctx.window,
+            messages: ctx.messages,
         };
         if was_hovered || ctx.layout_state.hovered || child_ctx.state.has_mouse_focus() {
             f(&mut self.child, &mut child_ctx, &mouse);
@@ -67,7 +68,7 @@ impl<W> LayoutHost<W> {
     }
 }
 
-impl<W: Widget> SingleChildContainer for LayoutHost<W> {
+impl<M, W: Widget<M>> SingleChildContainer<M> for LayoutHost<W> {
     type Child = W;
 
     fn widget(&self) -> &Self::Child {
@@ -77,15 +78,15 @@ impl<W: Widget> SingleChildContainer for LayoutHost<W> {
     fn widget_mut(&mut self) -> &mut Self::Child {
         &mut self.child
     }
-    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_down(&mut self, ctx: &mut EventCtx<M>, event: &MouseEvent) {
         self.propagate_mouse_if_needed(ctx, event, |child, ctx, e| child.mouse_down(ctx, e));
     }
 
-    fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_move(&mut self, ctx: &mut EventCtx<M>, event: &MouseEvent) {
         self.propagate_mouse_if_needed(ctx, event, |child, ctx, e| child.mouse_move(ctx, e));
     }
 
-    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_up(&mut self, ctx: &mut EventCtx<M>, event: &MouseEvent) {
         self.propagate_mouse_if_needed(ctx, event, |child, ctx, e| child.mouse_up(ctx, e));
     }
 

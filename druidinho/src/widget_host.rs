@@ -53,10 +53,10 @@ impl<W: Widget> WidgetHost<W> {
         self.child.set_origin(origin);
     }
 
-    fn with_child<R>(
+    fn with_child<R, M>(
         &mut self,
-        parent_ctx: &mut EventCtx,
-        f: impl FnOnce(&mut LayoutHost<W>, &mut EventCtx) -> R,
+        parent_ctx: &mut EventCtx<M>,
+        f: impl FnOnce(&mut LayoutHost<W>, &mut EventCtx<M>) -> R,
     ) -> R {
         self.state.child_keyboard_focus = false;
         self.state.child_mouse_focus = false;
@@ -65,6 +65,7 @@ impl<W: Widget> WidgetHost<W> {
             state: &mut self.state,
             window: parent_ctx.window,
             layout_state: parent_ctx.layout_state,
+            messages: parent_ctx.messages,
         };
         let r = f(&mut self.child, &mut child_ctx);
         parent_ctx.state.merge_up(child_ctx.state);

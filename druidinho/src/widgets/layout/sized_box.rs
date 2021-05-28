@@ -99,7 +99,7 @@ impl<W> SizedBox<W> {
     }
 }
 
-impl<W: Widget> SingleChildContainer for SizedBox<W> {
+impl<M, W: Widget<M>> SingleChildContainer<M> for SizedBox<W> {
     type Child = W;
 
     fn widget(&self) -> &Self::Child {

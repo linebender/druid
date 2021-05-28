@@ -33,7 +33,7 @@ impl<W> Updater<W> {
     }
 }
 
-impl<W: Widget> SingleChildContainer for Updater<W> {
+impl<M, W: Widget<M>> SingleChildContainer<M> for Updater<W> {
     type Child = W;
 
     fn widget(&self) -> &Self::Child {

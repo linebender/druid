@@ -14,10 +14,12 @@ pub struct Window {
 
 impl Window {
     fn with_event_ctx<R>(&mut self, f: impl FnOnce(&mut dyn Widget, &mut EventCtx) -> R) -> R {
+        let mut messages = Vec::new();
         let mut ctx = EventCtx {
             window: &self.handle,
             state: &mut self.root_state,
             layout_state: &self.layout_state,
+            messages: &mut messages,
         };
 
         let r = f(&mut self.root, &mut ctx);
