@@ -14,7 +14,6 @@
 
 //! X11 window creation and window management.
 
-use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
@@ -31,14 +30,13 @@ use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::errors::ReplyOrIdError;
-use x11rb::image::{BitsPerPixel, Image, ImageOrder, ScanlinePad};
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
     self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
-    EventMask, Gcontext, ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype,
-    WindowClass,
+    EventMask, Gcontext, ImageFormat, ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle,
+    Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -1734,27 +1732,31 @@ fn make_cursor(
             })
         })
         .collect::<Vec<u8>>();
-    let image = Image::new(
-        desc.image.width().try_into().expect("Invalid cursor width"),
-        desc.image
-            .height()
-            .try_into()
-            .expect("Invalid cursor height"),
-        ScanlinePad::Pad8,
-        32,
-        BitsPerPixel::B32,
-        ImageOrder::MSBFirst,
-        Cow::Owned(pixels),
-    )
-    .expect("We got the number of bytes for this image wrong?!");
+    let width = desc.image.width().try_into().expect("Invalid cursor width");
+    let height = desc
+        .image
+        .height()
+        .try_into()
+        .expect("Invalid cursor height");
 
     let pixmap = conn.generate_id()?;
     let gc = conn.generate_id()?;
     let picture = conn.generate_id()?;
-    conn.create_pixmap(32, pixmap, root_window, image.width(), image.height())?;
+    conn.create_pixmap(32, pixmap, root_window, width, height)?;
     conn.create_gc(gc, pixmap, &Default::default())?;
 
-    image.put(conn, pixmap, gc, 0, 0)?;
+    conn.put_image(
+        ImageFormat::Z_PIXMAP,
+        pixmap,
+        gc,
+        width,
+        height,
+        0,
+        0,
+        0,
+        32,
+        &pixels,
+    )?;
     conn.render_create_picture(picture, pixmap, argb32_format, &Default::default())?;
 
     conn.free_gc(gc)?;
