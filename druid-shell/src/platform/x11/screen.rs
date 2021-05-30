@@ -35,15 +35,20 @@ where
 }
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
-    // TODO: Change API to pass in the App. Until then, this creates a separate X11 connection
-    let (conn, screen_num) = match x11rb::connect(None) {
-        Ok(res) => res,
-        Err(err) => {
-            tracing::error!("Error in Screen::get_monitors(): {:?}", err);
-            return Vec::new();
-        }
+    let result = if let Some(app) = crate::Application::try_global() {
+        let app = app.platform_app;
+        get_monitors_impl(app.connection().as_ref(), app.screen_num() as usize)
+    } else {
+        let (conn, screen_num) = match x11rb::connect(None) {
+            Ok(res) => res,
+            Err(err) => {
+                tracing::error!("Error in Screen::get_monitors(): {:?}", err);
+                return Vec::new();
+            }
+        };
+        get_monitors_impl(&conn, screen_num)
     };
-    match get_monitors_impl(&conn, screen_num) {
+    match result {
         Ok(monitors) => monitors,
         Err(err) => {
             tracing::error!("Error in Screen::get_monitors(): {:?}", err);
