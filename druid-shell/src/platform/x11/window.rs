@@ -37,7 +37,8 @@ use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
     self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
-    EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    EventMask, Gcontext, ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype,
+    WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -1622,11 +1623,10 @@ impl WindowHandle {
                     None
                 }
                 Some(format) => {
-                    // BEGIN: Lots of code just to get the image into a RENDER Picture
-
                     let conn = w.app.connection();
-                    let screen = &conn.setup().roots[w.app.screen_num() as usize];
-                    match make_cursor(&**conn, screen.root, format, desc) {
+                    let setup = &conn.setup();
+                    let screen = &setup.roots[w.app.screen_num() as usize];
+                    match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
                         // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
                         Ok(cursor) => Some(cursor),
                         Err(err) => {
@@ -1697,11 +1697,18 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 
 fn make_cursor(
     conn: &XCBConnection,
+    byte_order: X11ImageOrder,
     root_window: u32,
     argb32_format: Pictformat,
     desc: &CursorDesc,
 ) -> Result<Cursor, ReplyOrIdError> {
     // BEGIN: Lots of code just to get the image into a RENDER Picture
+
+    fn multiply_alpha(color: u8, alpha: u8) -> u8 {
+        let (color, alpha) = (u16::from(color), u16::from(alpha));
+        let temp = color * alpha + 0x80u16;
+        ((temp + (temp >> 8)) >> 8) as u8
+    }
 
     // No idea how to sanely get the pixel values, so I'll go with 'insane':
     // Iterate over all pixels and build an array
@@ -1710,10 +1717,20 @@ fn make_cursor(
         .pixel_colors()
         .flat_map(|row| {
             row.flat_map(|color| {
-                // TODO: RENDER (likely) expects unpremultiplied alpha. We should convert.
                 let (r, g, b, a) = color.as_rgba8();
+                // RENDER wants premultiplied alpha
+                let (r, g, b) = (
+                    multiply_alpha(r, a),
+                    multiply_alpha(g, a),
+                    multiply_alpha(b, a),
+                );
+                // piet gives us rgba in this order, the server expects an u32 with argb.
+                let (b0, b1, b2, b3) = match byte_order {
+                    X11ImageOrder::LSB_FIRST => (b, g, r, a),
+                    _ => (a, r, g, b),
+                };
                 // TODO Ownership and flat_map don't go well together :-(
-                vec![r, g, b, a]
+                vec![b0, b1, b2, b3]
             })
         })
         .collect::<Vec<u8>>();
