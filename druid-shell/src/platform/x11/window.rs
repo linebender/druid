@@ -285,13 +285,10 @@ impl WindowBuilder {
 
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
+        let depth = if transparent { 32 } else { screen.root_depth };
         conn.create_window(
             // Window depth
-            if transparent {
-                32
-            } else {
-                x11rb::COPY_DEPTH_FROM_PARENT
-            },
+            depth,
             // The new window's ID
             id,
             // Parent window of this new window
@@ -349,7 +346,7 @@ impl WindowBuilder {
             buf_count,
             width_px,
             height_px,
-            screen.root_depth,
+            depth,
         )?);
 
         // Initialize some properties
