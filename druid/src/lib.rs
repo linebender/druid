@@ -166,8 +166,7 @@ mod mouse;
 pub mod scroll_component;
 mod sub_window;
 #[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
-mod tests;
+pub mod tests;
 pub mod text;
 pub mod theme;
 pub mod widget;
@@ -210,7 +209,6 @@ pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
 #[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
 
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]

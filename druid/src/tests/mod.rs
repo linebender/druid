@@ -14,9 +14,14 @@
 
 //! Additional unit tests that cross file or module boundaries.
 
-pub(crate) mod harness;
-mod helpers;
+#![allow(unused_imports)]
+
+pub mod harness;
+pub mod helpers;
+
+#[cfg(test)]
 mod invalidation_tests;
+#[cfg(test)]
 mod layout_tests;
 
 use std::cell::Cell;
@@ -31,7 +36,8 @@ use harness::*;
 use helpers::*;
 use kurbo::Vec2;
 
-fn move_mouse(p: impl Into<Point>) -> MouseEvent {
+/// Helper function to construct a "move to this position" mouse event.
+pub fn move_mouse(p: impl Into<Point>) -> MouseEvent {
     let pos = p.into();
     MouseEvent {
         pos,
@@ -45,7 +51,8 @@ fn move_mouse(p: impl Into<Point>) -> MouseEvent {
     }
 }
 
-fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
+/// Helper function to construct a "scroll by n ticks" mouse event.
+pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
     let pos = p.into();
     MouseEvent {
         pos,
@@ -66,6 +73,7 @@ fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
 /// directory will be cleaned up at the end of the PathBufs lifetime. This
 /// uses the `tempfile` crate.
 #[allow(dead_code)]
+#[cfg(test)]
 pub fn temp_dir_for_test() -> std::path::PathBuf {
     let current_exe_path = env::current_exe().unwrap();
     let mut exe_dir = current_exe_path.parent().unwrap();

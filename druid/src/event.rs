@@ -333,18 +333,19 @@ pub enum InternalLifeCycle {
     RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,
-    /// Testing only: request the `WidgetState` of a specific widget.
+    /// For testing: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
     /// somewhere in the tree is as expected. In that case you can dispatch
     /// this event, specifying the widget in question, and that widget will
     /// set its state in the provided `Cell`, if it exists.
-    #[cfg(test)]
     DebugRequestState {
+        /// the widget whose state is requested
         widget: WidgetId,
+        /// a cell used to store the a widget's state
         state_cell: StateCell,
     },
-    #[cfg(test)]
+    /// For testing: apply the given function on every widget.
     DebugInspectState(StateCheckFn),
 }
 
@@ -446,17 +447,14 @@ impl InternalLifeCycle {
             | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
             InternalLifeCycle::ParentWindowOrigin => false,
-            #[cfg(test)]
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
         }
     }
 }
 
-#[cfg(test)]
 pub(crate) use state_cell::{StateCell, StateCheckFn};
 
-#[cfg(test)]
 mod state_cell {
     use crate::core::WidgetState;
     use crate::WidgetId;
