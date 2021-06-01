@@ -73,7 +73,7 @@ pub struct WidgetPod<T, W> {
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
-pub(crate) struct WidgetState {
+pub struct WidgetState {
     pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
     /// method.
@@ -975,7 +975,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.state.needs_window_origin = false;
                     true
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
                         state_cell.set(self.state.clone());
@@ -986,7 +985,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(&widget)
                     }
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true

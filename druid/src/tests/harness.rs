@@ -84,6 +84,7 @@ impl<'a> TargetGuard<'a> {
     }
 }
 
+#[allow(missing_docs)]
 impl<T: Data> Harness<'_, T> {
     /// Create a new `Harness` with the given data and a root widget,
     /// and provide that harness to the passed in function.
@@ -189,7 +190,7 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Retrieve a copy of this widget's `WidgetState`, or die trying.
-    pub(crate) fn get_state(&mut self, widget: WidgetId) -> WidgetState {
+    pub fn get_state(&mut self, widget: WidgetId) -> WidgetState {
         match self.try_get_state(widget) {
             Some(thing) => thing,
             None => panic!("get_state failed for widget {:?}", widget),
@@ -197,7 +198,7 @@ impl<T: Data> Harness<'_, T> {
     }
 
     /// Attempt to retrieve a copy of this widget's `WidgetState`.
-    pub(crate) fn try_get_state(&mut self, widget: WidgetId) -> Option<WidgetState> {
+    pub fn try_get_state(&mut self, widget: WidgetId) -> Option<WidgetState> {
         let cell = StateCell::default();
         let state_cell = cell.clone();
         self.lifecycle(LifeCycle::Internal(InternalLifeCycle::DebugRequestState {
@@ -210,7 +211,7 @@ impl<T: Data> Harness<'_, T> {
     /// Inspect the `WidgetState` of each widget in the tree.
     ///
     /// The provided closure will be called on each widget.
-    pub(crate) fn inspect_state(&mut self, f: impl Fn(&WidgetState) + 'static) {
+    pub fn inspect_state(&mut self, f: impl Fn(&WidgetState) + 'static) {
         let checkfn = StateCheckFn::new(f);
         self.lifecycle(LifeCycle::Internal(InternalLifeCycle::DebugInspectState(
             checkfn,
