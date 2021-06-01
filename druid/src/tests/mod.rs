@@ -92,7 +92,7 @@ pub fn temp_dir_for_test() -> std::path::PathBuf {
 /// test that the first widget to request focus during an event gets it.
 #[test]
 fn propagate_hot() {
-    let (button, pad, root, empty) = widget_id4();
+    let [button, pad, root, empty] = widget_ids();
 
     let root_rec = Recording::default();
     let padding_rec = Recording::default();
@@ -210,7 +210,7 @@ fn take_focus() {
             })
     }
 
-    let (id_1, id_2, _id_3) = widget_id3();
+    let [id_1, id_2, _id_3] = widget_ids();
 
     // we use these so that we can check the widget's internal state
     let left_focus: Rc<Cell<Option<bool>>> = Default::default();
@@ -294,7 +294,7 @@ fn focus_changed() {
     let b_rec = Recording::default();
     let c_rec = Recording::default();
 
-    let (id_a, id_b, id_c) = widget_id3();
+    let [id_a, id_b, id_c] = widget_ids();
 
     // a contains b which contains c
     let c = make_focus_container(vec![]).record(&c_rec).with_id(id_c);
@@ -807,7 +807,7 @@ fn adding_child_lifecycle() {
 
 #[test]
 fn participate_in_autofocus() {
-    let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
+    let [id_1, id_2, id_3, id_4, id_5, id_6] = widget_ids();
 
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
@@ -848,7 +848,7 @@ fn participate_in_autofocus() {
 
 #[test]
 fn child_tracking() {
-    let (id_1, id_2, id_3, id_4) = widget_id4();
+    let [id_1, id_2, id_3, id_4] = widget_ids();
 
     let widget = Split::columns(
         SizedBox::empty().with_id(id_1),
@@ -876,8 +876,7 @@ fn child_tracking() {
 #[test]
 /// Test that all children are registered correctly after a child is replaced.
 fn register_after_adding_child() {
-    let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
-    let id_7 = WidgetId::next();
+    let [id_1, id_2, id_3, id_4, id_5, id_6, id_7] = widget_ids();
 
     let replacer = ReplaceChild::new(Slider::new().with_id(id_1), move || {
         Split::columns(Slider::new().with_id(id_2), Slider::new().with_id(id_3)).with_id(id_7)
