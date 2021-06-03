@@ -62,7 +62,7 @@ impl<T> Align<T> {
     }
 }
 
-impl<M, W: Widget<M>> SingleChildContainer<M> for Align<W> {
+impl<W: Widget> SingleChildContainer for Align<W> {
     type Child = LayoutHost<W>;
 
     fn widget(&self) -> &Self::Child {

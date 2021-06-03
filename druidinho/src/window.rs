@@ -1,5 +1,6 @@
 use crate::kurbo::{Point, Size};
 use crate::piet::Piet;
+use crate::widget::Never;
 use crate::widget_host::{WidgetHost, WidgetState};
 use crate::widgets::layout::LayoutState;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
@@ -9,17 +10,21 @@ pub struct Window {
     handle: WindowHandle,
     root_state: WidgetState,
     layout_state: LayoutState,
-    root: WidgetHost<Box<dyn Widget>>,
+    root: WidgetHost<Box<dyn Widget<Action = Never>>>,
 }
 
 impl Window {
-    fn with_event_ctx<R>(&mut self, f: impl FnOnce(&mut dyn Widget, &mut EventCtx) -> R) -> R {
+    fn with_event_ctx<R>(
+        &mut self,
+        f: impl FnOnce(&mut dyn Widget<Action = Never>, &mut EventCtx<Never>) -> R,
+    ) -> R {
         let mut messages = Vec::new();
         let mut ctx = EventCtx {
             window: &self.handle,
             state: &mut self.root_state,
             layout_state: &self.layout_state,
             messages: &mut messages,
+            never_messages: Vec::new(),
         };
 
         let r = f(&mut self.root, &mut ctx);
@@ -31,7 +36,7 @@ impl Window {
         r
     }
 
-    pub fn new(handle: WindowHandle, root: Box<dyn Widget>) -> Self {
+    pub fn new(handle: WindowHandle, root: Box<dyn Widget<Action = Never>>) -> Self {
         Window {
             handle,
             root: WidgetHost::new(root),

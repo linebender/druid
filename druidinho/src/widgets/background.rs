@@ -63,7 +63,7 @@ impl<W> Background<W> {
     }
 }
 
-impl<M, W: Widget<M>> SingleChildContainer<M> for Background<W> {
+impl<W: Widget> SingleChildContainer for Background<W> {
     type Child = LayoutHost<W>;
 
     fn widget(&self) -> &Self::Child {

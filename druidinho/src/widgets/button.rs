@@ -20,10 +20,13 @@ use crate::kurbo::{Insets, Point, Size};
 use crate::piet::{Color, RenderContext};
 use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 
+#[derive(Debug, Clone, Copy)]
+pub struct Click;
+
 /// A widget that provides simple visual styling options to a child.
 pub struct Button {
     text: LayoutHost<Text>,
-    on_click: Option<Box<dyn FnMut(&mut EventCtx)>>,
+    //on_click: Option<Box<dyn FnMut(&mut EventCtx<Click)>>,
     hovered: bool,
 }
 
@@ -31,44 +34,47 @@ impl Button {
     pub fn new(text: impl Into<String>) -> Self {
         Button {
             text: LayoutHost::new(Text::new(text)),
-            on_click: None,
+            //on_click: None,
             hovered: false,
         }
     }
 
-    pub fn on_click(mut self, f: impl FnMut(&mut EventCtx) + 'static) -> Self {
-        self.on_click = Some(Box::new(f));
-        self
-    }
+    //pub fn on_click(mut self, f: impl FnMut(&mut EventCtx) + 'static) -> Self {
+    //self.on_click = Some(Box::new(f));
+    //self
+    //}
 }
 
 impl Widget for Button {
-    fn init(&mut self, ctx: &mut EventCtx) {
-        self.text.init(ctx);
+    type Action = Click;
+    fn init(&mut self, ctx: &mut EventCtx<Click>) {
+        self.text.init(&mut ctx.as_never_ctx());
     }
 
-    fn mouse_move(&mut self, ctx: &mut EventCtx, _event: &MouseEvent) {
+    fn mouse_move(&mut self, ctx: &mut EventCtx<Click>, _event: &MouseEvent) {
         if ctx.hovered() != self.hovered {
             ctx.request_paint();
             self.hovered = ctx.hovered();
         }
     }
 
-    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_down(&mut self, ctx: &mut EventCtx<Click>, event: &MouseEvent) {
         if event.button.is_left() {
             ctx.set_mouse_focus(true);
             ctx.request_paint();
         }
     }
 
-    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_up(&mut self, ctx: &mut EventCtx<Click>, event: &MouseEvent) {
         if event.button.is_left() && ctx.mouse_focused() {
             ctx.request_paint();
             ctx.set_mouse_focus(false);
             if ctx.hovered() {
-                if let Some(f) = self.on_click.as_mut() {
-                    f(ctx)
-                }
+                ctx.submit_action(Click);
+                //ctx.
+                //if let Some(f) = self.on_click.as_mut() {
+                //f(ctx)
+                //}
             }
         }
     }

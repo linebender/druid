@@ -19,6 +19,7 @@ use crate::piet::{
     Color, FontFamily, FontWeight, PietText, PietTextLayout, RenderContext, Text as _, TextLayout,
     TextLayoutBuilder,
 };
+use crate::widget::Never;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
 
 /// A widget that provides simple visual styling options to a child.
@@ -76,7 +77,8 @@ impl Text {
 }
 
 impl Widget for Text {
-    fn init(&mut self, ctx: &mut EventCtx) {
+    type Action = Never;
+    fn init(&mut self, ctx: &mut EventCtx<Never>) {
         self.rebuild_text(ctx.text())
     }
 

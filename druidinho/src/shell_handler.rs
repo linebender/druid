@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use crate::kurbo::Size;
 use crate::piet::Piet;
+use crate::widget::Never;
 
 use druid_shell::{
     FileDialogToken, FileInfo, IdleToken, KeyEvent, MouseEvent, Region, Scale, TextFieldToken,
@@ -18,7 +19,7 @@ pub struct ShellHandler {
 }
 
 enum WindowConnection {
-    Waiting(Box<dyn Widget>),
+    Waiting(Box<dyn Widget<Action = Never>>),
     Connected(Rc<RefCell<Window>>),
     Closed,
     // a sentinel state only used during transitions
@@ -32,21 +33,21 @@ impl WindowConnection {
 }
 
 impl ShellHandler {
-    pub fn new(widget: impl Widget + 'static) -> Self {
+    pub fn new(widget: impl Widget<Action = Never> + 'static) -> Self {
         ShellHandler {
             inner: WindowConnection::Waiting(Box::new(widget)),
         }
     }
 
-    fn with_window<R>(&self, f: impl FnOnce(&Window) -> R) -> Option<R> {
-        match &self.inner {
-            WindowConnection::Connected(w) => Some(f(&*w.borrow())),
-            _ => {
-                eprintln!("missing window");
-                None
-            }
-        }
-    }
+    //fn with_window<R>(&self, f: impl FnOnce(&Window) -> R) -> Option<R> {
+        //match &self.inner {
+            //WindowConnection::Connected(w) => Some(f(&*w.borrow())),
+            //_ => {
+                //eprintln!("missing window");
+                //None
+            //}
+        //}
+    //}
 
     fn with_window_mut<R>(&mut self, f: impl FnOnce(&mut Window) -> R) -> Option<R> {
         match &mut self.inner {

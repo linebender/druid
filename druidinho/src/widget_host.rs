@@ -53,10 +53,10 @@ impl<W: Widget> WidgetHost<W> {
         self.child.set_origin(origin);
     }
 
-    fn with_child<R, M>(
+    fn with_child<R>(
         &mut self,
-        parent_ctx: &mut EventCtx<M>,
-        f: impl FnOnce(&mut LayoutHost<W>, &mut EventCtx<M>) -> R,
+        parent_ctx: &mut EventCtx<W::Action>,
+        f: impl FnOnce(&mut LayoutHost<W>, &mut EventCtx<W::Action>) -> R,
     ) -> R {
         self.state.child_keyboard_focus = false;
         self.state.child_mouse_focus = false;
@@ -66,6 +66,7 @@ impl<W: Widget> WidgetHost<W> {
             window: parent_ctx.window,
             layout_state: parent_ctx.layout_state,
             messages: parent_ctx.messages,
+            never_messages: Vec::new(),
         };
         let r = f(&mut self.child, &mut child_ctx);
         parent_ctx.state.merge_up(child_ctx.state);
@@ -74,35 +75,37 @@ impl<W: Widget> WidgetHost<W> {
 }
 
 impl<W: Widget> Widget for WidgetHost<W> {
-    fn init(&mut self, ctx: &mut EventCtx) {
+    type Action = W::Action;
+
+    fn init(&mut self, ctx: &mut EventCtx<Self::Action>) {
         self.with_child(ctx, |chld, ctx| chld.init(ctx))
     }
-    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_down(&mut self, ctx: &mut EventCtx<Self::Action>, event: &MouseEvent) {
         self.with_child(ctx, |chld, ctx| chld.mouse_down(ctx, event));
     }
-    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_up(&mut self, ctx: &mut EventCtx<Self::Action>, event: &MouseEvent) {
         self.with_child(ctx, |chld, ctx| chld.mouse_up(ctx, event));
     }
 
-    fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_move(&mut self, ctx: &mut EventCtx<Self::Action>, event: &MouseEvent) {
         self.with_child(ctx, |chld, ctx| chld.mouse_move(ctx, event));
     }
-    fn scroll(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn scroll(&mut self, ctx: &mut EventCtx<Self::Action>, event: &MouseEvent) {
         self.with_child(ctx, |chld, ctx| chld.scroll(ctx, event));
     }
-    fn key_down(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_down(&mut self, ctx: &mut EventCtx<Self::Action>, event: &KeyEvent) {
         if self.state.keyboard_focus || self.state.child_keyboard_focus {
             self.with_child(ctx, |chld, ctx| chld.key_down(ctx, event));
         }
     }
 
-    fn key_up(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_up(&mut self, ctx: &mut EventCtx<Self::Action>, event: &KeyEvent) {
         if self.state.keyboard_focus || self.state.child_keyboard_focus {
             self.with_child(ctx, |chld, ctx| chld.key_up(ctx, event));
         }
     }
 
-    fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
+    fn timer(&mut self, ctx: &mut EventCtx<Self::Action>, token: TimerToken) {
         self.with_child(ctx, |chld, ctx| chld.timer(ctx, token));
     }
 
@@ -132,32 +135,34 @@ impl<W: Widget> Widget for WidgetHost<W> {
     }
 }
 
-impl Widget for Box<dyn Widget> {
-    fn init(&mut self, ctx: &mut EventCtx) {
+impl<A> Widget for Box<dyn Widget<Action = A>> {
+    type Action = A;
+
+    fn init(&mut self, ctx: &mut EventCtx<A>) {
         self.deref_mut().init(ctx)
     }
-    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_down(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.deref_mut().mouse_down(ctx, event);
     }
-    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_up(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.deref_mut().mouse_up(ctx, event);
     }
 
-    fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_move(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.deref_mut().mouse_move(ctx, event);
     }
-    fn scroll(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn scroll(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.deref_mut().scroll(ctx, event);
     }
-    fn key_down(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_down(&mut self, ctx: &mut EventCtx<A>, event: &KeyEvent) {
         self.deref_mut().key_down(ctx, event);
     }
 
-    fn key_up(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_up(&mut self, ctx: &mut EventCtx<A>, event: &KeyEvent) {
         self.deref_mut().key_up(ctx, event);
     }
 
-    fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
+    fn timer(&mut self, ctx: &mut EventCtx<A>, token: TimerToken) {
         self.deref_mut().timer(ctx, token);
     }
 

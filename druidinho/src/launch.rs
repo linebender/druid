@@ -3,9 +3,10 @@ use crate::kurbo::Size;
 use druid_shell::{Application, Error as PlatformError, WindowBuilder};
 
 use crate::shell_handler::ShellHandler;
+use crate::widget::Never;
 use crate::Widget;
 
-pub fn launch(widget: impl Widget + 'static) -> Result<(), PlatformError> {
+pub fn launch(widget: impl Widget<Action = Never> + 'static) -> Result<(), PlatformError> {
     let app = Application::new()?;
     let handler = ShellHandler::new(widget);
     let mut builder = WindowBuilder::new(app.clone());

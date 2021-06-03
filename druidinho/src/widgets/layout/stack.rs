@@ -15,23 +15,22 @@
 //! A widget that arranges its children in a one-dimensional array.
 
 use crate::kurbo::{common::FloatExt, Point, Rect, Size};
-use crate::piet::{Color, RenderContext};
 use crate::widget_host::WidgetHost;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 use druid_shell::{KeyEvent, TimerToken};
 
 /// A container with either horizontal or vertical layout.
 #[derive(Default)]
-pub struct Stack<T: Axis> {
-    children: Vec<WidgetHost<Box<dyn Widget>>>,
+pub struct Stack<A, T: Axis> {
+    children: Vec<WidgetHost<Box<dyn Widget<Action = A>>>>,
     axis: T,
 }
 
 /// A horizontal collection of widgets.
-pub type Row = Stack<Horizontal>;
+pub type Row<A> = Stack<A, Horizontal>;
 
 /// A vertical collection of widgets.
-pub type Column = Stack<Vertical>;
+pub type Column<A> = Stack<A, Vertical>;
 
 /// An axis in visual space.
 ///
@@ -132,18 +131,21 @@ impl Axis for Vertical {
     }
 }
 
-impl<T: Axis + Default> Stack<T> {
+impl<A, T: Axis + Default> Stack<A, T> {
     /// Create a new collection.
     pub fn new() -> Self {
-        Default::default()
+        Stack {
+            axis: Default::default(),
+            children: Vec::new(),
+        }
     }
 }
 
-impl<T: Axis> Stack<T> {
+impl<A, T: Axis> Stack<A, T> {
     /// Builder-style variant of `add_child`.
     ///
     /// Convenient for assembling a group of widgets in a single expression.
-    pub fn with_child(mut self, child: impl Widget + 'static) -> Self {
+    pub fn with_child(mut self, child: impl Widget<Action = A> + 'static) -> Self {
         self.add_child(child);
         self
     }
@@ -153,48 +155,49 @@ impl<T: Axis> Stack<T> {
     /// See also [`with_child`].
     ///
     /// [`with_child`]: Flex::with_child
-    pub fn add_child(&mut self, child: impl Widget + 'static) {
-        let child: Box<dyn Widget> = Box::new(child);
+    pub fn add_child(&mut self, child: impl Widget<Action = A> + 'static) {
+        let child: Box<dyn Widget<Action = A>> = Box::new(child);
         let child = WidgetHost::new(child);
         self.children.push(child);
     }
 }
 
-impl<T: Axis> Widget for Stack<T> {
-    fn init(&mut self, ctx: &mut EventCtx) {
+impl<A, T: Axis> Widget for Stack<A, T> {
+    type Action = A;
+    fn init(&mut self, ctx: &mut EventCtx<A>) {
         self.children.iter_mut().for_each(|chld| chld.init(ctx))
     }
-    fn mouse_down(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_down(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.mouse_down(ctx, event))
     }
-    fn mouse_up(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_up(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.mouse_up(ctx, event))
     }
-    fn mouse_move(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn mouse_move(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.mouse_move(ctx, event))
     }
-    fn scroll(&mut self, ctx: &mut EventCtx, event: &MouseEvent) {
+    fn scroll(&mut self, ctx: &mut EventCtx<A>, event: &MouseEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.scroll(ctx, event))
     }
-    fn key_down(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_down(&mut self, ctx: &mut EventCtx<A>, event: &KeyEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.key_down(ctx, event))
     }
-    fn key_up(&mut self, ctx: &mut EventCtx, event: &KeyEvent) {
+    fn key_up(&mut self, ctx: &mut EventCtx<A>, event: &KeyEvent) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.key_up(ctx, event))
     }
-    fn timer(&mut self, ctx: &mut EventCtx, token: TimerToken) {
+    fn timer(&mut self, ctx: &mut EventCtx<A>, token: TimerToken) {
         self.children
             .iter_mut()
             .for_each(|chld| chld.timer(ctx, token))
