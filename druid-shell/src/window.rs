@@ -158,6 +158,8 @@ pub enum WindowLevel {
     DropDown,
     /// A modal dialog
     Modal,
+    /// A top level app window that will stay above other windows
+    AlwaysOnTop
 }
 
 /// Contains the different states a Window can be in.

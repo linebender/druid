@@ -905,12 +905,14 @@ impl WindowHandle {
                 WindowLevel::Tooltip => WindowTypeHint::Tooltip,
                 WindowLevel::DropDown => WindowTypeHint::DropdownMenu,
                 WindowLevel::Modal => WindowTypeHint::Dialog,
+                WindowLevel::AlwaysOnTop => WindowTypeHint::Normal,
             };
 
             state.window.set_type_hint(hint);
         }
 
         self.set_override_redirect(level);
+        self.set_keep_above(level);
     }
 
     /// The override-redirect flag tells the window manager not to mess with the window; it should
@@ -926,6 +928,19 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Some(window) = state.window.get_window() {
                 window.set_override_redirect(override_redirect);
+            }
+        }
+    }
+
+    fn set_keep_above(&self, level: WindowLevel) {
+        let keep_above = match level {
+            WindowLevel::AlwaysOnTop => true,
+            _ => false
+        };
+
+        if let Some(state) = self.state.upgrade() {
+            if let Some(window) = state.window.get_window() {
+                window.set_keep_above(keep_above);
             }
         }
     }

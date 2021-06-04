@@ -1307,7 +1307,7 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
+            WindowLevel::AppWindow | WindowLevel::Tooltip | WindowLevel::AlwaysOnTop => self.level = Some(level),
             _ => {
                 warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows platforms.", level);
             }
@@ -1370,6 +1370,9 @@ impl WindowBuilder {
                     }
                     WindowLevel::Modal => {
                         dwStyle = WS_OVERLAPPED;
+                        dwExStyle = WS_EX_TOPMOST;
+                    }
+                    WindowLevel::AlwaysOnTop => {
                         dwExStyle = WS_EX_TOPMOST;
                     }
                 }

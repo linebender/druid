@@ -92,6 +92,7 @@ mod levels {
             Tooltip => NSFloatingWindowLevel,
             DropDown => NSFloatingWindowLevel,
             Modal => NSModalPanelWindowLevel,
+            AlwaysOnTop => NSFloatingWindowLevel,
         }
     }
 }
