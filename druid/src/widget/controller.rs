@@ -14,6 +14,7 @@
 
 //! A widget-controlling widget.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 
@@ -132,6 +133,14 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
 
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.widget.debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

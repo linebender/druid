@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
 use crate::text::{
@@ -670,6 +671,15 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
         // Paint the border
         ctx.stroke(clip_rect, &border_color, border_width);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let text = data.slice(0..data.len()).unwrap_or_default();
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: text.to_string(),
+            ..Default::default()
+        }
     }
 }
 

@@ -15,6 +15,7 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
 use tracing::{instrument, trace, trace_span};
@@ -226,5 +227,13 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.child.paint(ctx, data, env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }
