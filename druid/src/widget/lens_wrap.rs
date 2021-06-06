@@ -20,6 +20,7 @@
 
 use std::marker::PhantomData;
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Lens};
@@ -136,6 +137,15 @@ where
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let child_state = self.lens.with(data, |data| self.inner.debug_state(data));
+        DebugState {
+            display_name: "LensWrap".to_string(),
+            children: vec![child_state],
+            ..Default::default()
+        }
     }
 }
 

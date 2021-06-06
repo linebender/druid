@@ -14,6 +14,7 @@
 
 //! A widget that provides an explicit identity to a child.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Size;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
@@ -77,6 +78,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
 
     fn id(&self) -> Option<WidgetId> {
         Some(self.id)
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.inner.debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

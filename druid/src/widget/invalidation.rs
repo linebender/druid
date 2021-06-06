@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::Data;
 use tracing::instrument;
@@ -92,5 +93,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for DebugInvalidation<T, W> {
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.inner.debug_state(data)],
+            ..Default::default()
+        }
     }
 }

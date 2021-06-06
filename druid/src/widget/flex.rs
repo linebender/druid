@@ -14,6 +14,7 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
@@ -866,6 +867,23 @@ impl<T: Data> Widget<T> for Flex<T> {
             let line = crate::kurbo::Line::new((0.0, my_baseline), (ctx.size().width, my_baseline));
             let stroke_style = crate::piet::StrokeStyle::new().dash_pattern(&[4.0, 4.0]);
             ctx.stroke_styled(line, &color, 1.0, &stroke_style);
+        }
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let children_state = self
+            .children
+            .iter()
+            .map(|child| {
+                let child_widget_pod = child.widget()?;
+                Some(child_widget_pod.widget().debug_state(data))
+            })
+            .flatten()
+            .collect();
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: children_state,
+            ..Default::default()
         }
     }
 }

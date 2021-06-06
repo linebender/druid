@@ -18,6 +18,7 @@ use std::ops::{Deref, DerefMut};
 
 use druid_shell::Cursor;
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
@@ -525,6 +526,14 @@ impl<T: Data> Widget<T> for Label<T> {
             tracing::warn!("Label text changed without call to update. See LabelAdapter::set_text for information.");
         }
         self.label.paint(ctx, &self.current_text, env)
+    }
+
+    fn debug_state(&self, _data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: self.current_text.to_string(),
+            ..Default::default()
+        }
     }
 }
 

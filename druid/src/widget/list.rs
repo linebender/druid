@@ -26,6 +26,7 @@ use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::debug_state::DebugState;
 use crate::{
     widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
@@ -406,5 +407,21 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 child.paint(ctx, child_data, env);
             }
         });
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let mut children = self.children.iter();
+        let mut children_state = Vec::with_capacity(data.data_len());
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                children_state.push(child.widget().debug_state(child_data));
+            }
+        });
+
+        DebugState {
+            display_name: "List".to_string(),
+            children: children_state,
+            ..Default::default()
+        }
     }
 }

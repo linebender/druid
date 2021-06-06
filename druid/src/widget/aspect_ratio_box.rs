@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::debug_state::DebugState;
+
 use druid::widget::prelude::*;
 use druid::Data;
 use tracing::{instrument, warn};
@@ -160,5 +162,13 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.id()
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.inner.debug_state(data)],
+            ..Default::default()
+        }
     }
 }
