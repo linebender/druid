@@ -130,7 +130,8 @@ impl Clipboard {
         let targets = clipboard.wait_for_targets().unwrap_or_default();
         targets
             .iter()
-            .map(|atom| unsafe { format!("{} ({})", atom.name(), atom.value()) })
+            // SAFETY: Atom::value() is 'self.0 as usize'. No idea why that is unsafe.
+            .map(|atom| format!("{} ({})", atom.name(), unsafe { atom.value() }))
             .collect()
     }
 }
