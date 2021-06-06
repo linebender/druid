@@ -64,17 +64,11 @@ impl Clipboard {
             let idx = idx as usize;
             if idx < formats.len() {
                 let item = &formats[idx];
-                let mut not_set = true;
-                if item.identifier == ClipboardFormat::TEXT {
-                    if let Ok(data) = std::str::from_utf8(&item.data) {
-                        sel.set_text(data);
-                        not_set = false;
-                    } else {
-                        tracing::warn!("Failed to put invalid utf8 text into the clipboard");
-                        // The code below will at least put it as "raw bytes"
-                    }
-                }
-                if not_set {
+                if let (ClipboardFormat::TEXT, Ok(data)) =
+                    (item.identifier, std::str::from_utf8(&item.data))
+                {
+                    sel.set_text(data);
+                } else {
                     let atom = Atom::intern(item.identifier);
                     let stride = 8;
                     sel.set(&atom, stride, item.data.as_slice());
