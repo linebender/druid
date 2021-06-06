@@ -67,6 +67,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
+- GTK: Replaced call to `std::str::from_utf8_unchecked` with `from_utf8` ([#1820] by [@psychon])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
@@ -726,6 +727,7 @@ Last release without a changelog :(
 [#1772]: https://github.com/linebender/druid/pull/1772
 [#1787]: https://github.com/linebender/druid/pull/1787
 [#1802]: https://github.com/linebender/druid/pull/1802
+[#1820]: https://github.com/linebender/druid/pull/1820
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
