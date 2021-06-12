@@ -91,20 +91,20 @@ pub fn get_argb_visual_type(
     conn: &XCBConnection,
     screen: &Screen,
 ) -> Result<Option<Visualtype>, ReplyError> {
-    fn find_visual_for_format(reply: &render::QueryPictFormatsReply, id: render::Pictformat) -> Option<Visualid> {
-        let find_in_depth = |depth: &render::Pictdepth| depth
-            .visuals
-            .iter()
-            .find(|visual| visual.format == id)
-            .map(|visual| visual.visual);
-        let find_in_screen = |screen: &render::Pictscreen| screen
-            .depths
-            .iter()
-            .find_map(find_in_depth);
-        reply
-            .screens
-            .iter()
-            .find_map(find_in_screen)
+    fn find_visual_for_format(
+        reply: &render::QueryPictFormatsReply,
+        id: render::Pictformat,
+    ) -> Option<Visualid> {
+        let find_in_depth = |depth: &render::Pictdepth| {
+            depth
+                .visuals
+                .iter()
+                .find(|visual| visual.format == id)
+                .map(|visual| visual.visual)
+        };
+        let find_in_screen =
+            |screen: &render::Pictscreen| screen.depths.iter().find_map(find_in_depth);
+        reply.screens.iter().find_map(find_in_screen)
     }
 
     // Getting a visual is already funny, but finding the ARGB32 visual is even more fun.
