@@ -688,10 +688,7 @@ impl<T: Data> AppState<T> {
                 tracing::warn!("SHOW_OPEN_PANEL command must target a window.")
             }
             _ => {
-                let handled = self.inner.borrow_mut().dispatch_cmd(cmd.clone());
-                if !handled.is_handled() && cmd.must_be_used() {
-                    tracing::warn!("{:?} was not handled.", cmd);
-                }
+                self.inner.borrow_mut().dispatch_cmd(cmd);
             }
         }
     }

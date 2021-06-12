@@ -25,18 +25,7 @@ use crate::{WidgetId, WindowId};
 /// The identity of a [`Selector`].
 ///
 /// [`Selector`]: struct.Selector.html
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub(crate) struct SelectorSymbol {
-    str: &'static str,
-    must_use: bool,
-}
-
-impl std::fmt::Debug for SelectorSymbol {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let must_use = if self.must_use { " (must_use)" } else { "" };
-        write!(f, "{}{}", self.str, must_use)
-    }
-}
+pub(crate) type SelectorSymbol = &'static str;
 
 /// An identifier for a particular command.
 ///
@@ -353,25 +342,8 @@ impl Selector<()> {
 
 impl<T> Selector<T> {
     /// Create a new `Selector` with the given string.
-    pub const fn new(str: &'static str) -> Selector<T> {
-        Selector(
-            SelectorSymbol {
-                str,
-                must_use: false,
-            },
-            PhantomData,
-        )
-    }
-
-    /// Create a `Selector` that must be used.
-    pub const fn must_use(str: &'static str) -> Selector<T> {
-        Selector(
-            SelectorSymbol {
-                str,
-                must_use: true,
-            },
-            PhantomData,
-        )
+    pub const fn new(s: &'static str) -> Selector<T> {
+        Selector(s, PhantomData)
     }
 
     /// Returns the `SelectorSymbol` identifying this `Selector`.
@@ -417,11 +389,6 @@ impl Command {
         .default_to(Target::Global)
     }
 
-    /// Checks if this command must be used.
-    pub fn must_be_used(&self) -> bool {
-        self.symbol.must_use
-    }
-
     /// A helper method for creating a `Notification` from a `Command`.
     ///
     /// This is slightly icky; it lets us do `SOME_SELECTOR.with(SOME_PAYLOAD)`
@@ -443,14 +410,6 @@ impl Command {
     /// [`Target`]: enum.Target.html
     pub fn to(mut self, target: impl Into<Target>) -> Self {
         self.target = target.into();
-        self
-    }
-
-    /// Make the `Command` must use.
-    ///
-    /// this will log warning if this `Command` is not handled.
-    pub fn must_use(mut self, must_use: bool) -> Self {
-        self.symbol.must_use = must_use;
         self
     }
 
@@ -492,7 +451,7 @@ impl Command {
         if self.symbol == selector.symbol() {
             Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
-                    "The selector {:?} exists twice with different types. See druid::Command::get for more information",
+                    "The selector \"{}\" exists twice with different types. See druid::Command::get for more information",
                     selector.symbol()
                 );
             }))
@@ -518,7 +477,7 @@ impl Command {
     pub fn get_unchecked<T: Any>(&self, selector: Selector<T>) -> &T {
         self.get(selector).unwrap_or_else(|| {
             panic!(
-                "Expected selector {:?} but the command was {:?}.",
+                "Expected selector \"{}\" but the command was \"{}\".",
                 selector.symbol(),
                 self.symbol
             )
@@ -545,7 +504,7 @@ impl Notification {
         if self.symbol == selector.symbol() {
             Some(self.payload.downcast_ref().unwrap_or_else(|| {
                 panic!(
-                    "The selector {:?} exists twice with different types. \
+                    "The selector \"{}\" exists twice with different types. \
                     See druid::Command::get for more information",
                     selector.symbol()
                 );
@@ -587,7 +546,7 @@ impl From<Selector> for Command {
 
 impl<T> std::fmt::Display for Selector<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Selector({:?}, {})", self.0, any::type_name::<T>())
+        write!(f, "Selector(\"{}\", {})", self.0, any::type_name::<T>())
     }
 }
 
@@ -637,7 +596,7 @@ impl std::fmt::Debug for Notification {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "Notification: Selector {:?} from {:?}",
+            "Notification: Selector {} from {:?}",
             self.symbol, self.source
         )
     }
