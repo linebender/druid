@@ -23,7 +23,7 @@ use x11rb::connection::RequestConnection;
 use x11rb::errors::ReplyError;
 use x11rb::protocol::randr::{ConnectionExt, ModeFlag};
 use x11rb::protocol::render::{self, ConnectionExt as _};
-use x11rb::protocol::xproto::{Screen, Visualtype, Window};
+use x11rb::protocol::xproto::{Screen, Visualid, Visualtype, Window};
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::window::TimerToken;
@@ -91,6 +91,24 @@ pub fn get_argb_visual_type(
     conn: &XCBConnection,
     screen: &Screen,
 ) -> Result<Option<Visualtype>, ReplyError> {
+    fn find_visual_for_format(reply: &render::QueryPictFormatsReply, id: render::Pictformat) -> Option<Visualid> {
+        let find_in_depth = |depth: &render::Pictdepth| depth
+            .visuals
+            .iter()
+            .find(|visual| visual.format == id)
+            .map(|visual| visual.visual);
+        let find_in_screen = |screen: &render::Pictscreen| screen
+            .depths
+            .iter()
+            .filter_map(find_in_depth)
+            .next();
+        reply
+            .screens
+            .iter()
+            .filter_map(find_in_screen)
+            .next()
+    }
+
     // Getting a visual is already funny, but finding the ARGB32 visual is even more fun.
     // RENDER has picture formats. Each format corresponds to a visual. Thus, we first find the
     // right picture format, then find the corresponding visual id, then the Visualtype.
@@ -119,25 +137,7 @@ pub fn get_argb_visual_type(
                     && format.direct.alpha_mask == 0xff
             })
             // Now find the corresponding visual ID
-            .and_then(|format| {
-                pict_formats
-                    .screens
-                    .iter()
-                    .filter_map(|screen| {
-                        screen
-                            .depths
-                            .iter()
-                            .filter_map(|depth| {
-                                depth
-                                    .visuals
-                                    .iter()
-                                    .find(|visual| visual.format == format.id)
-                                    .map(|visual| visual.visual)
-                            })
-                            .next()
-                    })
-                    .next()
-            })
+            .and_then(|format| find_visual_for_format(&pict_formats, format.id))
             // And finally, we can find the visual
             .and_then(|visual_id| find_visual_from_screen(screen, visual_id));
         Ok(res)
