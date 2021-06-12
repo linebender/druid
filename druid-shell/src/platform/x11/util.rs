@@ -100,13 +100,11 @@ pub fn get_argb_visual_type(
         let find_in_screen = |screen: &render::Pictscreen| screen
             .depths
             .iter()
-            .filter_map(find_in_depth)
-            .next();
+            .find_map(find_in_depth);
         reply
             .screens
             .iter()
-            .filter_map(find_in_screen)
-            .next()
+            .find_map(find_in_screen)
     }
 
     // Getting a visual is already funny, but finding the ARGB32 visual is even more fun.
