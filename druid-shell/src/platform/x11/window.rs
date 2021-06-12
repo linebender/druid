@@ -341,12 +341,7 @@ impl WindowBuilder {
         // other one). Otherwise, we only need one.
         let buf_count = if present_data.is_some() { 2 } else { 1 };
         let buffers = RefCell::new(Buffers::new(
-            conn,
-            id,
-            buf_count,
-            width_px,
-            height_px,
-            depth,
+            conn, id, buf_count, width_px, height_px, depth,
         )?);
 
         // Initialize some properties
