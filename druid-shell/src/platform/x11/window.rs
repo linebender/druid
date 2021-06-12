@@ -366,6 +366,7 @@ impl WindowBuilder {
             .set_normal_hints(conn.as_ref(), id)
             .context("set wm normal hints"));
 
+        // TODO: set _NET_WM_STATE
         let mut hints = WmHints::new();
         if let Some(state) = self.state {
             hints.initial_state = Some(match state {
@@ -375,6 +376,34 @@ impl WindowBuilder {
             });
         }
         log_x11!(hints.set(conn.as_ref(), id).context("set wm hints"));
+
+        // set level
+        {
+            let window_type = match self.level {
+                WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
+                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+            };
+
+            let conn = self.app.connection();
+            log_x11!(conn.change_property32(
+                xproto::PropMode::REPLACE,
+                id,
+                atoms._NET_WM_WINDOW_TYPE,
+                AtomEnum::ATOM,
+                &[window_type],
+            ));
+            if matches!(
+                self.level,
+                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+            ) {
+                log_x11!(conn.change_window_attributes(
+                    id,
+                    &ChangeWindowAttributesAux::new().override_redirect(1),
+                ));
+            }
+        }
 
         let window = Rc::new(Window {
             id,
@@ -396,7 +425,6 @@ impl WindowBuilder {
             active_text_field: Cell::new(None),
         });
 
-        window.set_level(self.level);
         window.set_title(&self.title);
         if let Some(pos) = self.position {
             window.set_position(pos);
@@ -562,7 +590,7 @@ atom_manager! {
         _NET_WM_WINDOW_TYPE_NORMAL,
         _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
         _NET_WM_WINDOW_TYPE_TOOLTIP,
-        _NET_WM_WINDOW_TYPE_DAILOG,
+        _NET_WM_WINDOW_TYPE_DIALOG,
     }
 }
 
@@ -863,30 +891,6 @@ impl Window {
                 .width(size.width as u32)
                 .height(size.height as u32),
         ));
-    }
-
-    fn set_level(&self, level: WindowLevel) {
-        let window_type = match level {
-            WindowLevel::AppWindow => self.atoms._NET_WM_WINDOW_TYPE_NORMAL,
-            WindowLevel::Tooltip => self.atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
-            WindowLevel::Modal => self.atoms._NET_WM_WINDOW_TYPE_DAILOG,
-            WindowLevel::DropDown => self.atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-        };
-
-        let conn = self.app.connection();
-        log_x11!(conn.change_property32(
-            xproto::PropMode::REPLACE,
-            self.id,
-            self.atoms._NET_WM_WINDOW_TYPE,
-            AtomEnum::ATOM,
-            &[window_type],
-        ));
-        if let WindowLevel::DropDown = level {
-            log_x11!(conn.change_window_attributes(
-                self.id,
-                &ChangeWindowAttributesAux::new().override_redirect(1),
-            ));
-        }
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -1621,12 +1625,8 @@ impl WindowHandle {
         Insets::ZERO
     }
 
-    pub fn set_level(&self, level: WindowLevel) {
-        if let Some(w) = self.window.upgrade() {
-            w.set_level(level);
-        } else {
-            error!("Window {} has already been dropped", self.id);
-        }
+    pub fn set_level(&self, _level: WindowLevel) {
+        warn!("WindowHandle::set_level unimplemented for X11 platforms.");
     }
 
     pub fn set_size(&self, size: Size) {
