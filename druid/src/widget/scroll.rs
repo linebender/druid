@@ -204,7 +204,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         bc.debug_check("Scroll");
 
         let old_size = self.clip.viewport().view_size;
-        let child_size = self.clip.layout(ctx, &bc, data, env);
+        let child_size = self.clip.layout(ctx, bc, data, env);
         log_size_warnings(child_size);
 
         let self_size = bc.constrain(child_size);

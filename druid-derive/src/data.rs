@@ -87,7 +87,7 @@ fn derive_enum(
     let impl_generics = generics_bounds(&input.generics);
     let (_, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    if is_c_style_enum(&s) {
+    if is_c_style_enum(s) {
         let res = quote! {
             impl<#impl_generics> ::druid::Data for #ident #ty_generics #where_clause {
                 fn same(&self, other: &Self) -> bool { self == other }
