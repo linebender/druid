@@ -64,8 +64,10 @@ impl Clipboard {
             let idx = idx as usize;
             if idx < formats.len() {
                 let item = &formats[idx];
-                if item.identifier == ClipboardFormat::TEXT {
-                    sel.set_text(unsafe { std::str::from_utf8_unchecked(&item.data) });
+                if let (ClipboardFormat::TEXT, Ok(data)) =
+                    (item.identifier, std::str::from_utf8(&item.data))
+                {
+                    sel.set_text(data);
                 } else {
                     let atom = Atom::intern(item.identifier);
                     let stride = 8;
@@ -130,7 +132,8 @@ impl Clipboard {
         let targets = clipboard.wait_for_targets().unwrap_or_default();
         targets
             .iter()
-            .map(|atom| unsafe { format!("{} ({})", atom.name(), atom.value()) })
+            // SAFETY: Atom::value() is 'self.0 as usize'. No idea why that is unsafe.
+            .map(|atom| format!("{} ({})", atom.name(), unsafe { atom.value() }))
             .collect()
     }
 }

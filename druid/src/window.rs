@@ -384,13 +384,11 @@ impl<T: Data> Window<T> {
         self.invalid.clear();
     }
 
-    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn invalid(&self) -> &Region {
         &self.invalid
     }
 
-    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn invalid_mut(&mut self) -> &mut Region {
         &mut self.invalid
@@ -479,7 +477,6 @@ impl<T: Data> Window<T> {
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(not(target_arch = "wasm32"))]
-    #[cfg(test)]
     pub(crate) fn just_layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.layout(queue, data, env)
     }
