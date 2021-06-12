@@ -143,7 +143,7 @@ impl WindowBuilder {
 
     pub fn set_size(&mut self, size: Size) {
         // zero sized window results in server error
-        self.size = if size == Size::ZERO {
+        self.size = if size.width == 0. || size.height == 0. {
             Size::new(1., 1.)
         } else {
             size
