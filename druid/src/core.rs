@@ -840,7 +840,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     ctx.is_handled = true
                 }
                 _ => {
-                    self.inner.event(&mut inner_ctx, &inner_event, data, env);
+                    self.inner.event(&mut inner_ctx, inner_event, data, env);
 
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
@@ -982,7 +982,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         // Recurse when the target widget could be our descendant.
                         // The bloom filter we're checking can return false positives.
-                        self.state.children.may_contain(&widget)
+                        self.state.children.may_contain(widget)
                     }
                 }
                 InternalLifeCycle::DebugInspectState(f) => {

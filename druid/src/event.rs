@@ -501,7 +501,7 @@ mod state_cell {
 
         pub(crate) fn call(&self, state: &WidgetState) {
             let mut panic_reporter = WidgetDrop(true, state.id);
-            (self.0)(&state);
+            (self.0)(state);
             panic_reporter.0 = false;
         }
     }

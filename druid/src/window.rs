@@ -300,7 +300,7 @@ impl<T: Data> Window<T> {
         }
 
         if let Some(cursor) = &widget_state.cursor {
-            self.handle.set_cursor(&cursor);
+            self.handle.set_cursor(cursor);
         } else if matches!(
             event,
             Event::MouseMove(..) | Event::Internal(InternalEvent::MouseLeave)

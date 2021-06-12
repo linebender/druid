@@ -246,7 +246,7 @@ impl WindowBuilder {
             .roots
             .get(screen_num as usize)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
-        let visual_type = util::get_visual_from_screen(&screen)
+        let visual_type = util::get_visual_from_screen(screen)
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let visual_id = visual_type.visual_id;
 

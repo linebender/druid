@@ -115,7 +115,7 @@ impl<L: Lens<State, In>, In: Data, State: Data> ScopeTransfer for LensScopeTrans
 
     fn read_input(&self, state: &mut State, data: &In) {
         self.lens.with_mut(state, |inner| {
-            if !inner.same(&data) {
+            if !inner.same(data) {
                 *inner = data.clone()
             }
         });
@@ -123,7 +123,7 @@ impl<L: Lens<State, In>, In: Data, State: Data> ScopeTransfer for LensScopeTrans
 
     fn write_back_input(&self, state: &State, data: &mut In) {
         self.lens.with(state, |inner| {
-            if !inner.same(&data) {
+            if !inner.same(data) {
                 *data = inner.clone();
             }
         });
