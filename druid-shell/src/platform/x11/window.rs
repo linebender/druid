@@ -16,7 +16,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::os::unix::io::RawFd;
 use std::panic::Location;
 use std::rc::{Rc, Weak};
@@ -32,8 +32,8 @@ use x11rb::connection::Connection;
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
-    EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent, ConnectionExt,
+    CreateGCAux, EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -59,7 +59,7 @@ use crate::{window, ScaledArea};
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util::{self, Timer};
+use super::util::Timer;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -100,6 +100,7 @@ pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
+    transparent: bool,
     size: Size,
 
     // TODO: implement min_size for X11
@@ -113,6 +114,7 @@ impl WindowBuilder {
             app,
             handler: None,
             title: String::new(),
+            transparent: false,
             size: Size::new(500.0, 400.0),
             min_size: Size::new(0.0, 0.0),
         }
@@ -139,8 +141,8 @@ impl WindowBuilder {
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
-    pub fn set_transparent(&mut self, _transparent: bool) {
-        // Ignored
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
     pub fn set_position(&mut self, _position: Point) {
@@ -246,11 +248,20 @@ impl WindowBuilder {
             .roots
             .get(screen_num as usize)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
-        let visual_type = util::get_visual_from_screen(screen)
-            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
-        let visual_id = visual_type.visual_id;
+        let visual_type = if self.transparent {
+            self.app.argb_visual_type()
+        } else {
+            None
+        };
+        let (transparent, visual_type) = match visual_type {
+            Some(visual) => (true, visual),
+            None => (false, self.app.root_visual_type()),
+        };
+        if transparent != self.transparent {
+            warn!("Windows with transparent backgrounds do not work");
+        }
 
-        let cw_values = xproto::CreateWindowAux::new().event_mask(
+        let mut cw_values = xproto::CreateWindowAux::new().event_mask(
             EventMask::EXPOSURE
                 | EventMask::STRUCTURE_NOTIFY
                 | EventMask::KEY_PRESS
@@ -259,12 +270,25 @@ impl WindowBuilder {
                 | EventMask::BUTTON_RELEASE
                 | EventMask::POINTER_MOTION,
         );
+        if transparent {
+            let colormap = conn.generate_id()?;
+            conn.create_colormap(
+                ColormapAlloc::NONE,
+                colormap,
+                screen.root,
+                visual_type.visual_id,
+            )?;
+            cw_values = cw_values
+                .border_pixel(screen.white_pixel)
+                .colormap(colormap);
+        };
 
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
+        let depth = if transparent { 32 } else { screen.root_depth };
         conn.create_window(
             // Window depth
-            x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+            depth,
             // The new window's ID
             id,
             // Parent window of this new window
@@ -283,12 +307,16 @@ impl WindowBuilder {
             // Window class type
             WindowClass::INPUT_OUTPUT,
             // Visual ID
-            visual_id,
+            visual_type.visual_id,
             // Window properties mask
             &cw_values,
         )?
         .check()
         .context("create window")?;
+
+        if let Some(colormap) = cw_values.colormap {
+            conn.free_colormap(colormap)?;
+        }
 
         // Allocate a graphics context (currently used only for copying pixels when present is
         // unavailable).
@@ -313,12 +341,7 @@ impl WindowBuilder {
         // other one). Otherwise, we only need one.
         let buf_count = if present_data.is_some() { 2 } else { 1 };
         let buffers = RefCell::new(Buffers::new(
-            conn,
-            id,
-            buf_count,
-            width_px,
-            height_px,
-            screen.root_depth,
+            conn, id, buf_count, width_px, height_px, depth,
         )?);
 
         // Initialize some properties
