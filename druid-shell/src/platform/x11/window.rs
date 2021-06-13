@@ -862,7 +862,7 @@ impl Window {
             let scale = window.scale.get();
             let geom = conn.get_geometry(window.id)?.reply()?;
             let cord = conn
-                .translate_coordinates(window.id, geom.root, geom.x, geom.y)?
+                .translate_coordinates(window.id, geom.root, 0, 0)?
                 .reply()?;
             Ok(Point::new(cord.dst_x as _, cord.dst_y as _).to_dp(scale))
         }
