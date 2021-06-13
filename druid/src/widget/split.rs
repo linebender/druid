@@ -390,8 +390,8 @@ impl<T: Data> Widget<T> for Split<T> {
 
     #[instrument(name = "Split", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        self.child1.update(ctx, &data, env);
-        self.child2.update(ctx, &data, env);
+        self.child1.update(ctx, data, env);
+        self.child2.update(ctx, data, env);
     }
 
     #[instrument(name = "Split", level = "trace", skip(self, ctx, bc, data, env))]
@@ -464,8 +464,8 @@ impl<T: Data> Widget<T> for Split<T> {
                 )
             }
         };
-        let child1_size = self.child1.layout(ctx, &child1_bc, &data, env);
-        let child2_size = self.child2.layout(ctx, &child2_bc, &data, env);
+        let child1_size = self.child1.layout(ctx, &child1_bc, data, env);
+        let child2_size = self.child2.layout(ctx, &child2_bc, data, env);
 
         // Top-left align for both children, out of laziness.
         // Reduce our unsplit direction to the larger of the two widgets
@@ -498,7 +498,7 @@ impl<T: Data> Widget<T> for Split<T> {
         } else {
             self.paint_stroked_bar(ctx, env);
         }
-        self.child1.paint(ctx, &data, env);
-        self.child2.paint(ctx, &data, env);
+        self.child1.paint(ctx, data, env);
+        self.child2.paint(ctx, data, env);
     }
 }

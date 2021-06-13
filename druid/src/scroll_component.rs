@@ -510,7 +510,7 @@ impl ScrollComponent {
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {
         if let LifeCycle::Size(_) = event {
             // Show the scrollbars any time our size changes
-            self.reset_scrollbar_fade(|d| ctx.request_timer(d), &env);
+            self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
         }
     }
 }
