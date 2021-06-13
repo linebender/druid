@@ -220,6 +220,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.old_data.is_some()
     }
 
+    /// Returns `true` if widget or any descendent is focused
+    pub fn has_focus(&self) -> bool {
+        self.state.has_focus
+    }
+
     /// Query the "active" state of the widget.
     pub fn is_active(&self) -> bool {
         self.state.is_active
