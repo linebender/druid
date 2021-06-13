@@ -42,6 +42,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Text input handles Delete key ([#1746] by [@bjorn])
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
 - X11: Add support for transparent windows ([#1803] by [@psychon])
+- `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
 
 ### Changed
 
@@ -730,6 +731,7 @@ Last release without a changelog :(
 [#1802]: https://github.com/linebender/druid/pull/1802
 [#1803]: https://github.com/linebender/druid/pull/1803
 [#1820]: https://github.com/linebender/druid/pull/1820
+[#1825]: https://github.com/linebender/druid/pull/1825
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
