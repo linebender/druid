@@ -29,11 +29,13 @@ use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVis
 use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
+use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent, ConnectionExt,
-    CreateGCAux, EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent,
+    ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap, PropMode,
+    Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -96,16 +98,28 @@ impl From<Visualtype> for xcb_visualtype_t {
     }
 }
 
+fn size_hints(resizable: bool, size: Size, min_size: Size) -> WmSizeHints {
+    let mut size_hints = WmSizeHints::new();
+    if resizable {
+        size_hints.min_size = Some((min_size.width as i32, min_size.height as i32));
+    } else {
+        size_hints.min_size = Some((size.width as i32, size.height as i32));
+        size_hints.max_size = Some((size.width as i32, size.height as i32));
+    }
+    size_hints
+}
+
 pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     transparent: bool,
+    position: Option<Point>,
     size: Size,
-
-    // TODO: implement min_size for X11
-    #[allow(dead_code)]
     min_size: Size,
+    resizable: bool,
+    level: WindowLevel,
+    state: Option<window::WindowState>,
 }
 
 impl WindowBuilder {
@@ -115,8 +129,12 @@ impl WindowBuilder {
             handler: None,
             title: String::new(),
             transparent: false,
+            position: None,
             size: Size::new(500.0, 400.0),
             min_size: Size::new(0.0, 0.0),
+            resizable: true,
+            level: WindowLevel::AppWindow,
+            state: None,
         }
     }
 
@@ -125,19 +143,24 @@ impl WindowBuilder {
     }
 
     pub fn set_size(&mut self, size: Size) {
-        self.size = size;
+        // zero sized window results in server error
+        self.size = if size.width == 0. || size.height == 0. {
+            Size::new(1., 1.)
+        } else {
+            size
+        };
     }
 
     pub fn set_min_size(&mut self, min_size: Size) {
-        warn!("WindowBuilder::set_min_size is implemented, but the setting is currently unused for X11 platforms.");
         self.min_size = min_size;
     }
 
-    pub fn resizable(&mut self, _resizable: bool) {
-        warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
+    pub fn resizable(&mut self, resizable: bool) {
+        self.resizable = resizable;
     }
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
+        // not sure how to do this, maybe _MOTIF_WM_HINTS?
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
@@ -145,16 +168,16 @@ impl WindowBuilder {
         self.transparent = transparent;
     }
 
-    pub fn set_position(&mut self, _position: Point) {
-        warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position);
     }
 
-    pub fn set_level(&mut self, _level: window::WindowLevel) {
-        warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+    pub fn set_level(&mut self, level: window::WindowLevel) {
+        self.level = level;
     }
 
-    pub fn set_window_state(&self, _state: window::WindowState) {
-        warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
+    pub fn set_window_state(&mut self, state: window::WindowState) {
+        self.state = Some(state);
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -283,6 +306,8 @@ impl WindowBuilder {
                 .colormap(colormap);
         };
 
+        let pos = self.position.unwrap_or_default().to_px(scale);
+
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
         let depth = if transparent { 32 } else { screen.root_depth };
@@ -295,9 +320,9 @@ impl WindowBuilder {
             // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
             screen.root,
             // X-coordinate of the new window
-            0,
+            pos.x as _,
             // Y-coordinate of the new window
-            0,
+            pos.y as _,
             // Width of the new window
             width_px,
             // Height of the new window
@@ -358,6 +383,50 @@ impl WindowBuilder {
             .context("set _NET_WM_PID")?;
         }
 
+        let min_size = self.min_size.to_px(scale);
+        log_x11!(size_hints(self.resizable, size_px, min_size)
+            .set_normal_hints(conn.as_ref(), id)
+            .context("set wm normal hints"));
+
+        // TODO: set _NET_WM_STATE
+        let mut hints = WmHints::new();
+        if let Some(state) = self.state {
+            hints.initial_state = Some(match state {
+                window::WindowState::Maximized => WmHintsState::Normal,
+                window::WindowState::Minimized => WmHintsState::Iconic,
+                window::WindowState::Restored => WmHintsState::Normal,
+            });
+        }
+        log_x11!(hints.set(conn.as_ref(), id).context("set wm hints"));
+
+        // set level
+        {
+            let window_type = match self.level {
+                WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
+                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+            };
+
+            let conn = self.app.connection();
+            log_x11!(conn.change_property32(
+                xproto::PropMode::REPLACE,
+                id,
+                atoms._NET_WM_WINDOW_TYPE,
+                AtomEnum::ATOM,
+                &[window_type],
+            ));
+            if matches!(
+                self.level,
+                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+            ) {
+                log_x11!(conn.change_window_attributes(
+                    id,
+                    &ChangeWindowAttributesAux::new().override_redirect(1),
+                ));
+            }
+        }
+
         let window = Rc::new(Window {
             id,
             gc,
@@ -367,6 +436,7 @@ impl WindowBuilder {
             atoms,
             area: Cell::new(ScaledArea::from_px(size_px, scale)),
             scale: Cell::new(scale),
+            min_size,
             invalid: RefCell::new(Region::EMPTY),
             destroyed: Cell::new(false),
             timer_queue: Mutex::new(BinaryHeap::new()),
@@ -376,7 +446,11 @@ impl WindowBuilder {
             buffers,
             active_text_field: Cell::new(None),
         });
+
         window.set_title(&self.title);
+        if let Some(pos) = self.position {
+            window.set_position(pos);
+        }
 
         let handle = WindowHandle::new(id, Rc::downgrade(&window));
         window.connect(handle.clone())?;
@@ -446,6 +520,8 @@ pub(crate) struct Window {
     atoms: WindowAtoms,
     area: Cell<ScaledArea>,
     scale: Cell<Scale>,
+    // min size in px
+    min_size: Size,
     /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
     destroyed: Cell<bool>,
     /// The region that was invalidated since the last time we rendered.
@@ -532,6 +608,11 @@ atom_manager! {
         _NET_WM_PID,
         _NET_WM_NAME,
         UTF8_STRING,
+        _NET_WM_WINDOW_TYPE,
+        _NET_WM_WINDOW_TYPE_NORMAL,
+        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+        _NET_WM_WINDOW_TYPE_TOOLTIP,
+        _NET_WM_WINDOW_TYPE_DIALOG,
     }
 }
 
@@ -649,7 +730,7 @@ impl Window {
     }
 
     // note: size is in px
-    fn set_size(&self, size: Size) -> Result<(), Error> {
+    fn size_changed(&self, size: Size) -> Result<(), Error> {
         let scale = self.scale.get();
         let new_size = {
             if size != self.area.get().size_px() {
@@ -785,13 +866,53 @@ impl Window {
     }
 
     /// Set whether the window should be resizable
-    fn resizable(&self, _resizable: bool) {
-        warn!("Window::resizeable is currently unimplemented for X11 platforms.");
+    fn resizable(&self, resizable: bool) {
+        let conn = self.app.connection().as_ref();
+        log_x11!(size_hints(resizable, self.size().size_px(), self.min_size)
+            .set_normal_hints(conn, self.id)
+            .context("set normal hints"));
     }
 
     /// Set whether the window should show titlebar
     fn show_titlebar(&self, _show_titlebar: bool) {
         warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    fn get_position(&self) -> Point {
+        fn _get_position(window: &Window) -> Result<Point, Error> {
+            let conn = window.app.connection();
+            let scale = window.scale.get();
+            let geom = conn.get_geometry(window.id)?.reply()?;
+            let cord = conn
+                .translate_coordinates(window.id, geom.root, 0, 0)?
+                .reply()?;
+            Ok(Point::new(cord.dst_x as _, cord.dst_y as _).to_dp(scale))
+        }
+        let pos = _get_position(self);
+        log_x11!(&pos);
+        pos.unwrap_or_default()
+    }
+
+    fn set_position(&self, pos: Point) {
+        let conn = self.app.connection();
+        let scale = self.scale.get();
+        let pos = pos.to_px(scale).expand();
+        log_x11!(conn.configure_window(
+            self.id,
+            &ConfigureWindowAux::new().x(pos.x as i32).y(pos.y as i32),
+        ));
+    }
+
+    fn set_size(&self, size: Size) {
+        let conn = self.app.connection();
+        let scale = self.scale.get();
+        let size = size.to_px(scale).expand();
+        log_x11!(conn.configure_window(
+            self.id,
+            &ConfigureWindowAux::new()
+                .width(size.width as u32)
+                .height(size.height as u32),
+        ));
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -1077,7 +1198,7 @@ impl Window {
     }
 
     pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
-        self.set_size(Size::new(event.width as f64, event.height as f64))
+        self.size_changed(Size::new(event.width as f64, event.height as f64))
     }
 
     pub fn handle_complete_notify(&self, event: &CompleteNotifyEvent) -> Result<(), Error> {
@@ -1504,13 +1625,21 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_position(&self, _position: Point) {
-        warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+    pub fn set_position(&self, position: Point) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_position(position);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn get_position(&self) -> Point {
-        warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
-        Point::new(0.0, 0.0)
+        if let Some(w) = self.window.upgrade() {
+            w.get_position()
+        } else {
+            error!("Window {} has already been dropped", self.id);
+            Point::new(0.0, 0.0)
+        }
     }
 
     pub fn content_insets(&self) -> Insets {
@@ -1519,16 +1648,24 @@ impl WindowHandle {
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_level unimplemented for X11 platforms.");
     }
 
-    pub fn set_size(&self, _size: Size) {
-        warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+    pub fn set_size(&self, size: Size) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_size(size);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn get_size(&self) -> Size {
-        warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
-        Size::new(0.0, 0.0)
+        if let Some(w) = self.window.upgrade() {
+            w.size().size_dp()
+        } else {
+            error!("Window {} has already been dropped", self.id);
+            Size::ZERO
+        }
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
