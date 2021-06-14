@@ -156,7 +156,7 @@ impl ResourceManager {
         for locale in &resolved_locales {
             let mut bundle = FluentBundle::new(resolved_locales.clone());
             for res_id in resource_ids {
-                let res = self.get_resource(&res_id, &locale.to_string());
+                let res = self.get_resource(res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
             }
             stack.push(bundle);

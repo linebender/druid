@@ -73,7 +73,7 @@ pub struct WidgetPod<T, W> {
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
-pub(crate) struct WidgetState {
+pub struct WidgetState {
     pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
     /// method.
@@ -218,6 +218,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`LifeCycle::WidgetAdded`]: ./enum.LifeCycle.html#variant.WidgetAdded
     pub fn is_initialized(&self) -> bool {
         self.old_data.is_some()
+    }
+
+    /// Returns `true` if widget or any descendent is focused
+    pub fn has_focus(&self) -> bool {
+        self.state.has_focus
     }
 
     /// Query the "active" state of the widget.
@@ -840,7 +845,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     ctx.is_handled = true
                 }
                 _ => {
-                    self.inner.event(&mut inner_ctx, &inner_event, data, env);
+                    self.inner.event(&mut inner_ctx, inner_event, data, env);
 
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
@@ -975,7 +980,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     self.state.needs_window_origin = false;
                     true
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
                         state_cell.set(self.state.clone());
@@ -983,10 +987,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         // Recurse when the target widget could be our descendant.
                         // The bloom filter we're checking can return false positives.
-                        self.state.children.may_contain(&widget)
+                        self.state.children.may_contain(widget)
                     }
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true

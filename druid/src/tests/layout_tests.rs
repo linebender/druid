@@ -46,7 +46,7 @@ fn simple_layout() {
 
 #[test]
 fn row_column() {
-    let (id1, id2, id3, id4, id5, id6) = widget_id6();
+    let [id1, id2, id3, id4, id5, id6] = widget_ids();
     let widget = Flex::row()
         .must_fill_main_axis(true)
         .with_flex_child(
@@ -81,7 +81,7 @@ fn row_column() {
 
 #[test]
 fn simple_paint_rect() {
-    let (id1, id2) = widget_id2();
+    let [id1, id2] = widget_ids();
 
     let widget = ModularWidget::<(), ()>::new(())
         .layout_fn(|_, ctx, bc, _, _| {

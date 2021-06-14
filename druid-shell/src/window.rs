@@ -97,7 +97,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         self.0.add_idle_callback(callback)
     }

@@ -42,7 +42,7 @@ const PROPERTIES: &[(&str, f64)] = &[
     ("Location", 60.0),
 ];
 
-#[allow(clippy::clippy::rc_buffer)]
+#[allow(clippy::rc_buffer)]
 #[derive(Clone, Data, Lens)]
 struct AppState {
     /// The text in the text field

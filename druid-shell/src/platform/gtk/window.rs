@@ -14,7 +14,6 @@
 
 //! GTK window creation and management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::c_void;
@@ -431,7 +430,7 @@ impl WindowBuilder {
                         // region, because there might be parts of the drawing area that were
                         // invalidated by external forces).
                         let alloc = widget.get_allocation();
-                        context.set_source_surface(&surface, 0.0, 0.0);
+                        context.set_source_surface(surface, 0.0, 0.0);
                         context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
                         context.fill();
                     });
@@ -1171,7 +1170,7 @@ impl WindowHandle {
                 old_menubar.deactivate();
                 vbox.remove(first_child);
             }
-            let menubar = menu.into_gtk_menubar(&self, &accel_group);
+            let menubar = menu.into_gtk_menubar(self, &accel_group);
             vbox.pack_start(&menubar, false, false, 0);
             menubar.show_all();
         }
@@ -1206,7 +1205,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
@@ -1235,11 +1234,11 @@ impl IdleHandle {
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
     let result = state.with_handler(|handler| {
-        let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
+        let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
 
         for item in queue {
             match item {
-                IdleKind::Callback(it) => it.call(handler.as_any()),
+                IdleKind::Callback(it) => it.call(handler),
                 IdleKind::Token(it) => handler.idle(it),
             }
         }

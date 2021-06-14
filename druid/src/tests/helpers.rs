@@ -15,6 +15,11 @@
 //! Helper types for test writing.
 //!
 //! This includes tools for making throwaway widgets more easily.
+//!
+//! Note: Some of these types are undocumented. They're meant to help maintainers of Druid and
+//! people trying to build a framework on top of Druid (like crochet), not to be user-facing.
+
+#![allow(missing_docs)]
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -53,12 +58,16 @@ pub struct ReplaceChild<T> {
 /// Make one like this:
 ///
 /// ```
+/// # use druid::widget::Label;
+/// # use druid::{WidgetExt, LifeCycle};
+/// use druid::tests::helpers::{Recording, Record, TestWidgetExt};
+/// use druid::tests::harness::Harness;
 /// let recording = Recording::default();
-/// let widget = Label::new().padding(4.0).record(&recording);
+/// let widget = Label::new("Hello").padding(4.0).record(&recording);
 ///
-/// Harness::create((), widget, |harness| {
-///     widget.send_initial_events();
-///     assert_matches!(recording.next(), Record::L(LifeCycle::WidgetAdded));
+/// Harness::create_simple((), widget, |harness| {
+///     harness.send_initial_events();
+///     assert!(matches!(recording.next(), Record::L(LifeCycle::WidgetAdded)));
 /// })
 /// ```
 pub struct Recorder<W> {
@@ -303,42 +312,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     }
 }
 
-// easily make a bunch of WidgetIds
-pub fn widget_id2() -> (WidgetId, WidgetId) {
-    (WidgetId::next(), WidgetId::next())
-}
+pub fn widget_ids<const N: usize>() -> [WidgetId; N] {
+    let mut ids = [WidgetId::reserved(0); N];
 
-pub fn widget_id3() -> (WidgetId, WidgetId, WidgetId) {
-    (WidgetId::next(), WidgetId::next(), WidgetId::next())
-}
+    for id in &mut ids {
+        *id = WidgetId::next()
+    }
 
-pub fn widget_id4() -> (WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
-}
-
-#[allow(dead_code)]
-pub fn widget_id5() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
-}
-
-pub fn widget_id6() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
+    ids
 }

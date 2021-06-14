@@ -98,7 +98,7 @@ impl Image {
         }
     }
 
-    /// A builder-style method for specifying the fill strategy.
+    /// Builder-style method for specifying the fill strategy.
     #[inline]
     pub fn fill_mode(mut self, mode: FillStrat) -> Self {
         self.fill = mode;
@@ -113,7 +113,7 @@ impl Image {
         // Invalidation not necessary
     }
 
-    /// A builder-style method for specifying the interpolation strategy.
+    /// Builder-style method for specifying the interpolation strategy.
     #[inline]
     pub fn interpolation_mode(mut self, interpolation: InterpolationMode) -> Self {
         self.interpolation = interpolation;
@@ -128,7 +128,7 @@ impl Image {
         // Invalidation not necessary
     }
 
-    /// Set the area of the image that will be displayed.
+    /// Builder-style method for setting the area of the image that will be displayed.
     ///
     /// If `None`, then the whole image will be displayed.
     #[inline]
