@@ -1,6 +1,6 @@
 use crate::kurbo::Size;
 use crate::shell::{KeyEvent, TimerToken};
-use crate::{EventCtx, BoxConstraints, MouseEvent, LayoutCtx, PaintCtx, Widget};
+use crate::{BoxConstraints, EventCtx, LayoutCtx, MouseEvent, PaintCtx, Widget};
 
 pub struct ActionMapper<W, In, Out> {
     child: W,
@@ -42,7 +42,8 @@ impl<W, In, Out> ActionMapper<W, In, Out> {
         std::mem::swap(&mut self.temp_parent_messages, parent_ctx.messages);
         let mapped = actions.drain(..).filter_map(|x| (map)(x, parent_ctx));
         self.temp_parent_messages.extend(mapped);
-        self.temp_parent_messages.extend(parent_ctx.messages.drain(..));
+        self.temp_parent_messages
+            .extend(parent_ctx.messages.drain(..));
         std::mem::swap(&mut self.temp_parent_messages, parent_ctx.messages);
 
         r

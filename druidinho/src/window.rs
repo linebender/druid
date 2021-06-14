@@ -1,48 +1,53 @@
 use crate::kurbo::{Point, Size};
 use crate::piet::Piet;
-use crate::widget::Never;
+
 use crate::widget_host::{WidgetHost, WidgetState};
 use crate::widgets::layout::LayoutState;
 use crate::{BoxConstraints, EventCtx, LayoutCtx, PaintCtx, Widget};
 use druid_shell::{IdleToken, KeyEvent, MouseEvent, Region, TimerToken, WindowHandle};
 
-pub struct Window {
+pub struct Window<T> {
     handle: WindowHandle,
     root_state: WidgetState,
     layout_state: LayoutState,
-    root: WidgetHost<Box<dyn Widget<Action = Never>>>,
+    root: WidgetHost<Box<dyn Widget<Action = T>>>,
+    pub(crate) messages: Vec<T>,
 }
 
-impl Window {
+impl<T> Window<T> {
     fn with_event_ctx<R>(
         &mut self,
-        f: impl FnOnce(&mut dyn Widget<Action = Never>, &mut EventCtx<Never>) -> R,
+        f: impl FnOnce(&mut dyn Widget<Action = T>, &mut EventCtx<T>) -> R,
     ) -> R {
-        let mut messages = Vec::new();
         let mut ctx = EventCtx {
             window: &self.handle,
             state: &mut self.root_state,
             layout_state: &self.layout_state,
-            messages: &mut messages,
+            messages: &mut self.messages,
             never_messages: Vec::new(),
         };
 
         let r = f(&mut self.root, &mut ctx);
-        if self.root_state.request_update {
-            self.root.update();
-            self.root_state.request_update = false;
-        }
+        //if self.root_state.request_update {
+        //self.root.update();
+        //self.root_state.request_update = false;
+        //}
 
         r
     }
 
-    pub fn new(handle: WindowHandle, root: Box<dyn Widget<Action = Never>>) -> Self {
+    pub fn new(handle: WindowHandle, root: Box<dyn Widget<Action = T>>) -> Self {
         Window {
             handle,
             root: WidgetHost::new(root),
+            messages: Default::default(),
             layout_state: Default::default(),
             root_state: Default::default(),
         }
+    }
+
+    pub fn update(&mut self) {
+        self.root.update();
     }
 
     pub fn window_connected(&mut self) {

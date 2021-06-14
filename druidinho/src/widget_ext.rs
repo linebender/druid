@@ -4,7 +4,7 @@ use crate::widgets::{
     layout::{Align, SizedBox},
     ActionMapper, Background,
 };
-use crate::{Widget, EventCtx};
+use crate::{EventCtx, Widget};
 
 pub trait WidgetExt: Sized {
     /// Wrap this widget in a [`SizedBox`] with an explicit width.
@@ -62,7 +62,10 @@ pub trait WidgetExt: Sized {
     }
 
     /// Handle all actions.
-    fn handle_actions<In>(self, mut f: impl FnMut(In, &mut EventCtx<Never>) + 'static) -> ActionMapper<Self, In, Never> {
+    fn handle_actions<In>(
+        self,
+        mut f: impl FnMut(In, &mut EventCtx<Never>) + 'static,
+    ) -> ActionMapper<Self, In, Never> {
         ActionMapper::new(self, move |x, ctx| {
             f(x, ctx);
             None

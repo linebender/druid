@@ -4,54 +4,74 @@ use std::rc::Rc;
 
 use crate::kurbo::Size;
 use crate::piet::Piet;
-use crate::widget::Never;
 
 use druid_shell::{
     FileDialogToken, FileInfo, IdleToken, KeyEvent, MouseEvent, Region, Scale, TextFieldToken,
     TimerToken, WinHandler, WindowHandle,
 };
 
-use super::{Widget, Window};
+use super::{App, LaunchCtx, Window};
 
-pub struct ShellHandler {
+pub struct ShellHandler<T> {
     //app: Application,
-    inner: WindowConnection,
+    inner: WindowConnection<T>,
 }
 
-enum WindowConnection {
-    Waiting(Box<dyn Widget<Action = Never>>),
-    Connected(Rc<RefCell<Window>>),
+enum WindowConnection<T> {
+    Waiting(Box<dyn App<Action = T>>),
+    //Connected(Rc<RefCell<Window<T>>>),
+    Connected {
+        window: Rc<RefCell<Window<T>>>,
+        app: Box<dyn App<Action = T>>,
+    },
     Closed,
     // a sentinel state only used during transitions
     Invalid,
 }
 
-impl WindowConnection {
-    fn transition(&mut self) -> WindowConnection {
+impl<T> WindowConnection<T> {
+    fn transition(&mut self) -> WindowConnection<T> {
         std::mem::replace(self, WindowConnection::Invalid)
     }
 }
 
-impl ShellHandler {
-    pub fn new(widget: impl Widget<Action = Never> + 'static) -> Self {
+impl<T> ShellHandler<T> {
+    pub fn new(widget: impl App<Action = T> + 'static) -> Self {
         ShellHandler {
             inner: WindowConnection::Waiting(Box::new(widget)),
         }
     }
 
+    fn after_event(&mut self) {
+        if let WindowConnection::Connected { app, window } = &mut self.inner {
+            let mut needs_update = false;
+            if !window.borrow().messages.is_empty() {
+                app.update(&window.borrow().messages, &mut needs_update);
+                window.borrow_mut().messages.clear();
+            }
+            if needs_update {
+                window.borrow_mut().update();
+            }
+        }
+    }
+
     //fn with_window<R>(&self, f: impl FnOnce(&Window) -> R) -> Option<R> {
-        //match &self.inner {
-            //WindowConnection::Connected(w) => Some(f(&*w.borrow())),
-            //_ => {
-                //eprintln!("missing window");
-                //None
-            //}
-        //}
+    //match &self.inner {
+    //WindowConnection::Connected(w) => Some(f(&*w.borrow())),
+    //_ => {
+    //eprintln!("missing window");
+    //None
+    //}
+    //}
     //}
 
-    fn with_window_mut<R>(&mut self, f: impl FnOnce(&mut Window) -> R) -> Option<R> {
+    fn with_window_mut<R>(&mut self, f: impl FnOnce(&mut Window<T>) -> R) -> Option<R> {
         match &mut self.inner {
-            WindowConnection::Connected(w) => Some(f(&mut *w.borrow_mut())),
+            WindowConnection::Connected { window, .. } => {
+                let r = Some(f(&mut *window.borrow_mut()));
+                self.after_event();
+                r
+            }
             _ => {
                 eprintln!("missing window");
                 None
@@ -60,13 +80,17 @@ impl ShellHandler {
     }
 }
 
-impl WinHandler for ShellHandler {
+impl<T: 'static> WinHandler for ShellHandler<T> {
     fn connect(&mut self, handle: &WindowHandle) {
         self.inner = match self.inner.transition() {
-            WindowConnection::Waiting(widget) => WindowConnection::Connected(Rc::new(
-                RefCell::new(Window::new(handle.clone(), widget)),
-            )),
-            WindowConnection::Connected(_) => panic!("window already connected"),
+            WindowConnection::Waiting(mut app) => {
+                let window = Rc::new(RefCell::new(Window::new(
+                    handle.clone(),
+                    app.launch(&mut LaunchCtx),
+                )));
+                WindowConnection::Connected { window, app }
+            }
+            WindowConnection::Connected { .. } => panic!("window already connected"),
             WindowConnection::Closed => panic!("window has been closed"),
             WindowConnection::Invalid => unreachable!(),
         };
@@ -92,22 +116,13 @@ impl WinHandler for ShellHandler {
         // TODO: Do something with the scale
     }
 
-    fn command(&mut self, _id: u32) {
-        //self.app_state.handle_system_cmd(id, Some(self.window_id));
-    }
+    fn command(&mut self, _id: u32) {}
 
-    fn save_as(&mut self, _token: FileDialogToken, _file_info: Option<FileInfo>) {
-        //self.app_state.handle_dialog_response(token, file_info);
-    }
+    fn save_as(&mut self, _token: FileDialogToken, _file_info: Option<FileInfo>) {}
 
-    fn open_file(&mut self, _token: FileDialogToken, _file_info: Option<FileInfo>) {
-        //self.app_state.handle_dialog_response(token, file_info);
-    }
+    fn open_file(&mut self, _token: FileDialogToken, _file_info: Option<FileInfo>) {}
 
     fn mouse_down(&mut self, event: &MouseEvent) {
-        // TODO: double-click detection (or is this done in druid-shell?)
-        //let event = Event::MouseDown(event.clone().into());
-        //self.app_state.do_window_event(event, self.window_id);
         self.with_window_mut(|w| w.mouse_down(event));
     }
 
