@@ -106,7 +106,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Radio");
 
-        let label_size = self.child_label.layout(ctx, &bc, data, env);
+        let label_size = self.child_label.layout(ctx, bc, data, env);
         let radio_diam = env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 

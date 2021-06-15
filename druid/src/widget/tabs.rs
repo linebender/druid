@@ -524,7 +524,7 @@ fn ensure_for_tabs<Content, TP: TabsPolicy + ?Sized>(
             existing_idx.push(contents.len());
             child
         } else {
-            f(&policy, key.clone())
+            f(policy, key.clone())
         };
         contents.push((key.clone(), next))
     }

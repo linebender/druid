@@ -52,7 +52,7 @@ pub enum FieldIdent {
 impl FieldIdent {
     pub fn unwrap_named(&self) -> syn::Ident {
         if let FieldIdent::Named(s) = self {
-            syn::Ident::new(&s, Span::call_site())
+            syn::Ident::new(s, Span::call_site())
         } else {
             panic!("Unwrap named called on unnamed FieldIdent");
         }
@@ -272,7 +272,7 @@ impl Field<LensAttrs> {
 impl<Attrs> Field<Attrs> {
     pub fn ident_tokens(&self) -> TokenTree {
         match self.ident {
-            FieldIdent::Named(ref s) => Ident::new(&s, Span::call_site()).into(),
+            FieldIdent::Named(ref s) => Ident::new(s, Span::call_site()).into(),
             FieldIdent::Unnamed(num) => Literal::usize_unsuffixed(num).into(),
         }
     }

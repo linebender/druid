@@ -75,7 +75,7 @@ pub trait EditableText: Sized {
 impl EditableText for String {
     fn cursor<'a>(&self, position: usize) -> Option<StringCursor> {
         let new_cursor = StringCursor {
-            text: &self,
+            text: self,
             position,
         };
 
