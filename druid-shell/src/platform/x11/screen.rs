@@ -139,13 +139,15 @@ fn get_monitors_randr_crtcs_timestamp(
     let mut result = Vec::new();
     for request in requests.into_iter() {
         let reply = request?.reply()?;
-        // First CRTC is assumed to be the primary output
-        let primary = result.is_empty();
-        result.push(monitor(
-            primary,
-            (reply.x, reply.y),
-            (reply.width, reply.height),
-        ));
+        if reply.width != 0 && reply.height != 0 {
+            // First CRTC is assumed to be the primary output
+            let primary = result.is_empty();
+            result.push(monitor(
+                primary,
+                (reply.x, reply.y),
+                (reply.width, reply.height),
+            ));
+        }
     }
     // TODO: I think we need to deduplicate monitors. In clone mode, each "clone" appears as its
     // own monitor otherwise.
