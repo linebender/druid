@@ -41,6 +41,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
+- X11 backend now supports custom cursors ([#1801] by [@psychon])
 - X11: Add support for transparent windows ([#1803] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
 
@@ -728,6 +729,7 @@ Last release without a changelog :(
 [#1764]: https://github.com/linebender/druid/pull/1764
 [#1772]: https://github.com/linebender/druid/pull/1772
 [#1787]: https://github.com/linebender/druid/pull/1787
+[#1801]: https://github.com/linebender/druid/pull/1800
 [#1802]: https://github.com/linebender/druid/pull/1802
 [#1803]: https://github.com/linebender/druid/pull/1803
 [#1820]: https://github.com/linebender/druid/pull/1820

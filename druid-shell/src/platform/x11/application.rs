@@ -22,8 +22,9 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
-use x11rb::connection::Connection;
+use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::present::ConnectionExt as _;
+use x11rb::protocol::render::{self, ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::ConnectionExt as _;
 use x11rb::protocol::xproto::{
     self, ConnectionExt, CreateWindowAux, EventMask, Visualtype, WindowClass,
@@ -90,6 +91,8 @@ pub(crate) struct Application {
     idle_write: RawFd,
     /// The major opcode of the Present extension, if it is supported.
     present_opcode: Option<u8>,
+    /// Support for the render extension in at least version 0.5?
+    render_argb32_pictformat_cursor: Option<Pictformat>,
 }
 
 /// The mutable `Application` state.
@@ -145,6 +148,36 @@ impl Application {
             }
         };
 
+        let pictformats = connection.render_query_pict_formats()?;
+        let render_create_cursor_supported = matches!(connection
+            .extension_information(render::X11_EXTENSION_NAME)?
+            .and_then(|_| connection.render_query_version(0, 5).ok())
+            .map(|cookie| cookie.reply())
+            .transpose()?,
+            Some(version) if version.major_version >= 1 || version.minor_version >= 5);
+        let render_argb32_pictformat_cursor = if render_create_cursor_supported {
+            pictformats
+                .reply()?
+                .formats
+                .iter()
+                .find(|format| {
+                    format.type_ == render::PictType::DIRECT
+                        && format.depth == 32
+                        && format.direct.red_shift == 16
+                        && format.direct.red_mask == 0xff
+                        && format.direct.green_shift == 8
+                        && format.direct.green_mask == 0xff
+                        && format.direct.blue_shift == 0
+                        && format.direct.blue_mask == 0xff
+                        && format.direct.alpha_shift == 24
+                        && format.direct.alpha_mask == 0xff
+                })
+                .map(|format| format.id)
+        } else {
+            drop(pictformats);
+            None
+        };
+
         let handle = x11rb::cursor::Handle::new(connection.as_ref(), screen_num, &rdb)?.reply()?;
         let load_cursor = |cursor| {
             handle
@@ -185,6 +218,7 @@ impl Application {
             root_visual_type,
             argb_visual_type,
             marker: std::marker::PhantomData,
+            render_argb32_pictformat_cursor,
         })
     }
 
@@ -233,6 +267,12 @@ impl Application {
     #[inline]
     pub(crate) fn present_opcode(&self) -> Option<u8> {
         self.present_opcode
+    }
+
+    /// Return the ARGB32 pictformat of the server, but only if RENDER's CreateCursor is supported
+    #[inline]
+    pub(crate) fn render_argb32_pictformat_cursor(&self) -> Option<Pictformat> {
+        self.render_argb32_pictformat_cursor
     }
 
     fn create_event_window(conn: &Rc<XCBConnection>, screen_num: i32) -> Result<u32, Error> {

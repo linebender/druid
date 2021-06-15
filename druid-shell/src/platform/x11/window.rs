@@ -16,7 +16,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
 use std::panic::Location;
 use std::rc::{Rc, Weak};
@@ -29,13 +29,15 @@ use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVis
 use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
+use x11rb::errors::ReplyOrIdError;
 use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
+use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
     self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent,
-    ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, Pixmap, PropMode,
-    Rectangle, Visualtype, WindowClass,
+    ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, ImageFormat,
+    ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -1027,8 +1029,7 @@ impl Window {
             Cursor::NotAllowed => cursors.not_allowed,
             Cursor::ResizeLeftRight => cursors.col_resize,
             Cursor::ResizeUpDown => cursors.row_resize,
-            // TODO: (x11/custom cursor)
-            Cursor::Custom(_) => None,
+            Cursor::Custom(custom) => Some(custom.0),
         };
         if cursor.is_none() {
             warn!("Unable to load cursor {:?}", cursor);
@@ -1771,9 +1772,30 @@ impl WindowHandle {
         }
     }
 
-    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        warn!("Custom cursors are not yet supported in the X11 backend");
-        None
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(w) = self.window.upgrade() {
+            match w.app.render_argb32_pictformat_cursor() {
+                None => {
+                    warn!("Custom cursors are not supported by the X11 server");
+                    None
+                }
+                Some(format) => {
+                    let conn = w.app.connection();
+                    let setup = &conn.setup();
+                    let screen = &setup.roots[w.app.screen_num() as usize];
+                    match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
+                        // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
+                        Ok(cursor) => Some(cursor),
+                        Err(err) => {
+                            error!("Failed to create custom cursor: {:?}", err);
+                            None
+                        }
+                    }
+                }
+            }
+        } else {
+            None
+        }
     }
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
@@ -1828,4 +1850,81 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 
         RawWindowHandle::Xcb(handle)
     }
+}
+
+fn make_cursor(
+    conn: &XCBConnection,
+    byte_order: X11ImageOrder,
+    root_window: u32,
+    argb32_format: Pictformat,
+    desc: &CursorDesc,
+) -> Result<Cursor, ReplyOrIdError> {
+    // BEGIN: Lots of code just to get the image into a RENDER Picture
+
+    fn multiply_alpha(color: u8, alpha: u8) -> u8 {
+        let (color, alpha) = (u16::from(color), u16::from(alpha));
+        let temp = color * alpha + 0x80u16;
+        ((temp + (temp >> 8)) >> 8) as u8
+    }
+
+    // No idea how to sanely get the pixel values, so I'll go with 'insane':
+    // Iterate over all pixels and build an array
+    let pixels = desc
+        .image
+        .pixel_colors()
+        .flat_map(|row| {
+            row.flat_map(|color| {
+                let (r, g, b, a) = color.as_rgba8();
+                // RENDER wants premultiplied alpha
+                let (r, g, b) = (
+                    multiply_alpha(r, a),
+                    multiply_alpha(g, a),
+                    multiply_alpha(b, a),
+                );
+                // piet gives us rgba in this order, the server expects an u32 with argb.
+                let (b0, b1, b2, b3) = match byte_order {
+                    X11ImageOrder::LSB_FIRST => (b, g, r, a),
+                    _ => (a, r, g, b),
+                };
+                // TODO Ownership and flat_map don't go well together :-(
+                vec![b0, b1, b2, b3]
+            })
+        })
+        .collect::<Vec<u8>>();
+    let width = desc.image.width().try_into().expect("Invalid cursor width");
+    let height = desc
+        .image
+        .height()
+        .try_into()
+        .expect("Invalid cursor height");
+
+    let pixmap = conn.generate_id()?;
+    let gc = conn.generate_id()?;
+    let picture = conn.generate_id()?;
+    conn.create_pixmap(32, pixmap, root_window, width, height)?;
+    conn.create_gc(gc, pixmap, &Default::default())?;
+
+    conn.put_image(
+        ImageFormat::Z_PIXMAP,
+        pixmap,
+        gc,
+        width,
+        height,
+        0,
+        0,
+        0,
+        32,
+        &pixels,
+    )?;
+    conn.render_create_picture(picture, pixmap, argb32_format, &Default::default())?;
+
+    conn.free_gc(gc)?;
+    conn.free_pixmap(pixmap)?;
+    // End: Lots of code just to get the image into a RENDER Picture
+
+    let cursor = conn.generate_id()?;
+    conn.render_create_cursor(cursor, picture, desc.hot.x as u16, desc.hot.y as u16)?;
+    conn.render_free_picture(picture)?;
+
+    Ok(Cursor::Custom(CustomCursor(cursor)))
 }
