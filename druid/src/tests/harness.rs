@@ -310,7 +310,7 @@ impl<T: Data> Inner<T> {
     #[allow(dead_code)]
     fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
         self.window
-            .do_paint(piet, &invalid, &mut self.cmds, &self.data, &self.env);
+            .do_paint(piet, invalid, &mut self.cmds, &self.data, &self.env);
     }
 }
 

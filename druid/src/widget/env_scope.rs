@@ -61,7 +61,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.event(ctx, event, data, &new_env)
     }
@@ -69,7 +69,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
         self.child.lifecycle(ctx, event, data, &new_env)
     }
 
@@ -80,7 +80,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.update(ctx, data, &new_env);
     }
@@ -90,9 +90,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         bc.debug_check("EnvScope");
 
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
-        let size = self.child.layout(ctx, &bc, data, &new_env);
+        let size = self.child.layout(ctx, bc, data, &new_env);
         self.child.set_origin(ctx, data, env, Point::ORIGIN);
         size
     }
@@ -100,7 +100,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
     #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.paint(ctx, data, &new_env);
     }

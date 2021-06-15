@@ -25,7 +25,9 @@ use anyhow::{anyhow, Context, Error};
 use x11rb::connection::Connection;
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::xfixes::ConnectionExt as _;
-use x11rb::protocol::xproto::{self, ConnectionExt, CreateWindowAux, EventMask, WindowClass};
+use x11rb::protocol::xproto::{
+    self, ConnectionExt, CreateWindowAux, EventMask, Visualtype, WindowClass,
+};
 use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
@@ -50,6 +52,11 @@ pub(crate) struct Application {
     /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
     marker: std::marker::PhantomData<*mut XCBConnection>,
+
+    /// The type of visual used by the root window
+    root_visual_type: Visualtype,
+    /// The visual for windows with transparent backgrounds, if supported
+    argb_visual_type: Option<Visualtype>,
 
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
@@ -156,6 +163,15 @@ impl Application {
             col_resize: load_cursor("col-resize"),
         };
 
+        let screen = connection
+            .setup()
+            .roots
+            .get(screen_num as usize)
+            .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
+        let root_visual_type = util::get_visual_from_screen(&screen)
+            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
+        let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
+
         Ok(Application {
             connection,
             rdb,
@@ -166,6 +182,8 @@ impl Application {
             cursors,
             idle_write,
             present_opcode,
+            root_visual_type,
+            argb_visual_type,
             marker: std::marker::PhantomData,
         })
     }
@@ -284,6 +302,33 @@ impl Application {
     #[inline]
     pub(crate) fn screen_num(&self) -> i32 {
         self.screen_num
+    }
+
+    #[inline]
+    pub(crate) fn argb_visual_type(&self) -> Option<Visualtype> {
+        // Check if a composite manager is running
+        let atom_name = format!("_NET_WM_CM_S{}", self.screen_num);
+        let owner = self
+            .connection
+            .intern_atom(false, atom_name.as_bytes())
+            .ok()
+            .and_then(|cookie| cookie.reply().ok())
+            .map(|reply| reply.atom)
+            .and_then(|atom| self.connection.get_selection_owner(atom).ok())
+            .and_then(|cookie| cookie.reply().ok())
+            .map(|reply| reply.owner);
+
+        if Some(x11rb::NONE) == owner {
+            tracing::debug!("_NET_WM_CM_Sn selection is unowned, not providing ARGB visual");
+            None
+        } else {
+            self.argb_visual_type
+        }
+    }
+
+    #[inline]
+    pub(crate) fn root_visual_type(&self) -> Visualtype {
+        self.root_visual_type
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.

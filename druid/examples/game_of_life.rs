@@ -37,7 +37,7 @@ static COLOURS: ColorScheme = &[
     Color::rgb8(0xE0, 0xAF, 0xAF), //Color::rgb(224,175,175)
 ];
 
-#[allow(clippy::clippy::rc_buffer)]
+#[allow(clippy::rc_buffer)]
 #[derive(Clone, Data, PartialEq)]
 struct Grid {
     storage: Arc<Vec<bool>>,

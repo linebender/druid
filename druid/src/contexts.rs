@@ -154,7 +154,7 @@ impl_context_method!(
 
         /// Returns a reference to the current `WindowHandle`.
         pub fn window(&self) -> &WindowHandle {
-            &self.state.window
+            self.state.window
         }
 
         /// Get the `WindowId` of the current window.
