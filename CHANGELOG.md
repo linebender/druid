@@ -51,6 +51,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Linux extension: primary_clipboard ([#1843] by [@Maan2003])
 - x11: Implement primary_clipboard ([#1867] by [@psychon])
 - x11: Set WM_CLASS property ([#1868] by [@psychon])
+- Expose `RawWindowHandle` for `WindowHandle` under the `raw-win-handle` feature ([#1828] by [@djeedai])
 
 ### Changed
 
@@ -751,6 +752,7 @@ Last release without a changelog :(
 [#1805]: https://github.com/linebender/druid/pull/1805
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
+[#1828]: https://github.com/linebender/druid/pull/1828
 [#1843]: https://github.com/linebender/druid/pull/1843
 [#1850]: https://github.com/linebender/druid/pull/1850
 [#1851]: https://github.com/linebender/druid/pull/1851
