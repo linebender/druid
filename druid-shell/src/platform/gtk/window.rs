@@ -369,7 +369,7 @@ impl WindowBuilder {
         win_state
             .drawing_area
             .connect_realize(clone!(handle => move |drawing_area| {
-                if let Some(clock) = drawing_area.frame_clock() {
+                if let Some(clock) = drawing_area.get_frame_clock() {
                     clock.connect_before_paint(clone!(handle => move |_clock|{
                         if let Some(state) = handle.state.upgrade() {
                             state.in_draw.set(true);
