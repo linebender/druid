@@ -29,7 +29,7 @@ use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
+use gtk::{AccelGroup, ApplicationWindow, BinExt, DrawingArea, SettingsExt};
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
