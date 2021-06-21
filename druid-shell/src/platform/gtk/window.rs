@@ -177,6 +177,10 @@ pub(crate) struct WindowState {
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+
+
+    request_animation: Cell<bool>,
+    in_draw: Cell<bool>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -296,6 +300,8 @@ impl WindowBuilder {
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
+            request_animation: Cell::new(false),
+            in_draw: Cell::new(false),
         });
 
         self.app
@@ -360,6 +366,32 @@ impl WindowBuilder {
                 min_size_px.height.round() as i32,
             );
         }
+
+
+        win_state.drawing_area.connect_realize(clone!(handle => move |drawing_area| {
+            if let Some(clock) = drawing_area.frame_clock() {
+                clock.connect_before_paint(clone!(handle => move |_clock|{
+                    if let Some(state) = handle.state.upgrade() {
+                        state.in_draw.set(true);
+                    }
+                }));
+                clock.connect_after_paint(clone!(handle => move |_clock|{
+                    if let Some(state) = handle.state.upgrade() {
+                        state.in_draw.set(false);
+                        if state.request_animation.get() {
+                            state.request_animation.set(false);
+                            let vbox = window.first_child().unwrap()
+                                .downcast::<gtk::Box>()
+                                .unwrap();
+                            let first_child = &vbox.last_child().unwrap();
+                            if first_child.is::<gtk::DrawingArea>() {
+                                first_child.queue_draw();
+                            }
+                        }
+                    }
+                }));
+            }
+
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
@@ -780,7 +812,17 @@ impl WindowState {
     /// Queues a call to `prepare_paint` and `paint`, but without marking any region for
     /// invalidation.
     fn request_anim_frame(&self) {
-        self.window.queue_draw();
+        if self.in_draw.get() {
+            self.request_animation.set(true);
+        } else {
+            let vbox = self.window.first_child().unwrap()
+                    .downcast::<gtk::Box>()
+                    .unwrap();
+            let first_child = &vbox.last_child().unwrap();
+            if first_child.is::<gtk::DrawingArea>() {
+                first_child.queue_draw();
+            }
+        }
     }
 
     /// Invalidates a rectangle, given in display points.
