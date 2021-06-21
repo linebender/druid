@@ -2126,7 +2126,7 @@ impl WindowHandle {
 
     fn take_idle_queue(&self) -> Vec<IdleKind> {
         if let Some(w) = self.state.upgrade() {
-            mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
+            mem::take(&mut w.idle_queue.lock().unwrap())
         } else {
             Vec::new()
         }

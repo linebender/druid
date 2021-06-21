@@ -262,7 +262,7 @@ impl Formatter<PostalCode> for CanadianPostalCodeFormatter {
         }
     }
 
-    #[allow(clippy::clippy::many_single_char_names, clippy::clippy::match_ref_pats)]
+    #[allow(clippy::many_single_char_names, clippy::match_ref_pats)]
     fn value(&self, input: &str) -> Result<PostalCode, ValidationError> {
         match input.as_bytes() {
             &[a, b, c, d, e, f] => PostalCode::from_bytes([a, b, c, d, e, f]),
@@ -298,7 +298,7 @@ impl PostalCode {
     }
 }
 
-#[allow(clippy::clippy::many_single_char_names)]
+#[allow(clippy::many_single_char_names)]
 impl std::fmt::Display for PostalCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let [a, b, c, d, e, g] = self.chars;
