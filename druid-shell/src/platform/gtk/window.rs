@@ -1209,11 +1209,9 @@ impl IdleHandle {
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            queue.push(IdleKind::Callback(Box::new(callback)));
             if queue.is_empty() {
-                queue.push(IdleKind::Callback(Box::new(callback)));
                 glib::idle_add(move || run_idle(&state));
-            } else {
-                queue.push(IdleKind::Callback(Box::new(callback)));
             }
         }
     }
@@ -1221,11 +1219,9 @@ impl IdleHandle {
     pub fn add_idle_token(&self, token: IdleToken) {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            queue.push(IdleKind::Token(token));
             if queue.is_empty() {
-                queue.push(IdleKind::Token(token));
                 glib::idle_add(move || run_idle(&state));
-            } else {
-                queue.push(IdleKind::Token(token));
             }
         }
     }

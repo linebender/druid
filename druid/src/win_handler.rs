@@ -96,7 +96,7 @@ struct Inner<T> {
     root_menu: Option<MenuManager<T>>,
     /// The id of the most-recently-focused window that has a menu. On macOS, this
     /// is the window that's currently in charge of the app menu.
-    #[allow(unused_variables)]
+    #[allow(unused)]
     menu_window: Option<WindowId>,
     pub(crate) env: Env,
     pub(crate) data: T,
