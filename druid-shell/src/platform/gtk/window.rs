@@ -29,7 +29,7 @@ use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, BinExt, DrawingArea, SettingsExt};
+use gtk::{AccelGroup, ApplicationWindow, ContainerExt, DrawingArea, SettingsExt};
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
@@ -380,10 +380,10 @@ impl WindowBuilder {
                             state.in_draw.set(false);
                             if state.request_animation.get() {
                                 state.request_animation.set(false);
-                                let vbox = window.first_child().unwrap()
+                                let vbox = window.get_children().first().unwrap()
                                     .downcast::<gtk::Box>()
                                     .unwrap();
-                                let first_child = &vbox.last_child().unwrap();
+                                let first_child = &vbox.get_children().last().unwrap();
                                 if first_child.is::<gtk::DrawingArea>() {
                                     first_child.queue_draw();
                                 }
@@ -817,11 +817,12 @@ impl WindowState {
         } else {
             let vbox = self
                 .window
-                .first_child()
+                .get_children()
+                .first()
                 .unwrap()
                 .downcast::<gtk::Box>()
                 .unwrap();
-            let first_child = &vbox.last_child().unwrap();
+            let first_child = &vbox.get_children().last().unwrap();
             if first_child.is::<gtk::DrawingArea>() {
                 first_child.queue_draw();
             }
@@ -1210,7 +1211,7 @@ impl WindowHandle {
                 .downcast::<gtk::Box>()
                 .unwrap();
 
-            let first_child = &vbox.get_children()[0];
+            let first_child = &vbox.get_children().first().unwrap();
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
                 vbox.remove(first_child);
