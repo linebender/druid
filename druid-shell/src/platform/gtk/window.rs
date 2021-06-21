@@ -382,8 +382,8 @@ impl WindowBuilder {
                                 state.request_animation.set(false);
                                 let vbox = state.window.get_children().first().unwrap()
                                     .downcast::<gtk::Box>()
-                                    .unwrap();
-                                let first_child = &vbox.get_children().last().unwrap();
+                                    .unwrap().clone();
+                                let first_child = vbox.get_children().last().unwrap().clone();
                                 if first_child.is::<gtk::DrawingArea>() {
                                     first_child.queue_draw();
                                 }
@@ -1212,7 +1212,7 @@ impl WindowHandle {
                 .downcast::<gtk::Box>()
                 .unwrap();
 
-            let first_child = vbox.get_children().first().unwrap();
+            let first_child = vbox.get_children().first().unwrap().clone();
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
                 vbox.remove(old_menubar);
