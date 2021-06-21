@@ -178,7 +178,6 @@ pub(crate) struct WindowState {
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
 
-
     request_animation: Cell<bool>,
     in_draw: Cell<bool>,
 }
@@ -367,31 +366,32 @@ impl WindowBuilder {
             );
         }
 
-
-        win_state.drawing_area.connect_realize(clone!(handle => move |drawing_area| {
-            if let Some(clock) = drawing_area.frame_clock() {
-                clock.connect_before_paint(clone!(handle => move |_clock|{
-                    if let Some(state) = handle.state.upgrade() {
-                        state.in_draw.set(true);
-                    }
-                }));
-                clock.connect_after_paint(clone!(handle => move |_clock|{
-                    if let Some(state) = handle.state.upgrade() {
-                        state.in_draw.set(false);
-                        if state.request_animation.get() {
-                            state.request_animation.set(false);
-                            let vbox = window.first_child().unwrap()
-                                .downcast::<gtk::Box>()
-                                .unwrap();
-                            let first_child = &vbox.last_child().unwrap();
-                            if first_child.is::<gtk::DrawingArea>() {
-                                first_child.queue_draw();
+        win_state
+            .drawing_area
+            .connect_realize(clone!(handle => move |drawing_area| {
+                if let Some(clock) = drawing_area.frame_clock() {
+                    clock.connect_before_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(true);
+                        }
+                    }));
+                    clock.connect_after_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(false);
+                            if state.request_animation.get() {
+                                state.request_animation.set(false);
+                                let vbox = window.first_child().unwrap()
+                                    .downcast::<gtk::Box>()
+                                    .unwrap();
+                                let first_child = &vbox.last_child().unwrap();
+                                if first_child.is::<gtk::DrawingArea>() {
+                                    first_child.queue_draw();
+                                }
                             }
                         }
-                    }
-                }));
-            }
-
+                    }));
+                }
+            }));
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
@@ -815,9 +815,12 @@ impl WindowState {
         if self.in_draw.get() {
             self.request_animation.set(true);
         } else {
-            let vbox = self.window.first_child().unwrap()
-                    .downcast::<gtk::Box>()
-                    .unwrap();
+            let vbox = self
+                .window
+                .first_child()
+                .unwrap()
+                .downcast::<gtk::Box>()
+                .unwrap();
             let first_child = &vbox.last_child().unwrap();
             if first_child.is::<gtk::DrawingArea>() {
                 first_child.queue_draw();
