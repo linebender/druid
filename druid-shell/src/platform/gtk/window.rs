@@ -382,7 +382,7 @@ impl WindowBuilder {
                                 state.request_animation.set(false);
                                 let vbox = state.window.get_children().first().unwrap().clone()
                                     .downcast::<gtk::Box>()
-                                    .unwrap().clone();
+                                    .unwrap();
                                 let first_child = vbox.get_children().last().unwrap().clone();
                                 if first_child.is::<gtk::DrawingArea>() {
                                     first_child.queue_draw();
