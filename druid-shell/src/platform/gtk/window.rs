@@ -380,7 +380,7 @@ impl WindowBuilder {
                             state.in_draw.set(false);
                             if state.request_animation.get() {
                                 state.request_animation.set(false);
-                                let vbox = window.get_children().first().unwrap()
+                                let vbox = state.window.get_children().first().unwrap()
                                     .downcast::<gtk::Box>()
                                     .unwrap();
                                 let first_child = &vbox.get_children().last().unwrap();
@@ -815,14 +815,15 @@ impl WindowState {
         if self.in_draw.get() {
             self.request_animation.set(true);
         } else {
-            let vbox = self
+            let vbox = &self
                 .window
                 .get_children()
                 .first()
                 .unwrap()
+                .clone()
                 .downcast::<gtk::Box>()
                 .unwrap();
-            let first_child = &vbox.get_children().last().unwrap();
+            let first_child = vbox.get_children().last().unwrap();
             if first_child.is::<gtk::DrawingArea>() {
                 first_child.queue_draw();
             }
@@ -1214,7 +1215,7 @@ impl WindowHandle {
             let first_child = vbox.get_children().first().unwrap();
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
-                vbox.remove(first_child);
+                vbox.remove(old_menubar);
             }
             let menubar = menu.into_gtk_menubar(self, &accel_group);
             vbox.pack_start(&menubar, false, false, 0);
