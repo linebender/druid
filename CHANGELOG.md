@@ -43,6 +43,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `lens` macro can access nested fields ([#1764] by [@Maan2003])
 - X11 backend now supports custom cursors ([#1801] by [@psychon])
 - X11: Add support for transparent windows ([#1803] by [@psychon])
+- X11: Added support for `get_monitors` ([#1804] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
 
 ### Changed
@@ -732,6 +733,7 @@ Last release without a changelog :(
 [#1801]: https://github.com/linebender/druid/pull/1800
 [#1802]: https://github.com/linebender/druid/pull/1802
 [#1803]: https://github.com/linebender/druid/pull/1803
+[#1804]: https://github.com/linebender/druid/pull/1804
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
 
