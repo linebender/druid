@@ -1209,6 +1209,7 @@ impl IdleHandle {
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
                 glib::idle_add(move || run_idle(&state));
@@ -1221,6 +1222,7 @@ impl IdleHandle {
     pub fn add_idle_token(&self, token: IdleToken) {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
                 glib::idle_add(move || run_idle(&state));

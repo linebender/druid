@@ -897,10 +897,7 @@ extern "C" fn run_idle(this: &mut Object, _: Sel) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    let queue: Vec<_> = mem::replace(
-        &mut view_state.idle_queue.lock().expect("queue"),
-        Vec::new(),
-    );
+    let queue: Vec<_> = mem::take(&mut view_state.idle_queue.lock().expect("queue"));
     for item in queue {
         match item {
             IdleKind::Callback(it) => it.call(&mut *view_state.handler),
