@@ -29,7 +29,7 @@ use cairo::Surface;
 use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
 use gio::ApplicationExt;
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, ContainerExt, DrawingArea, SettingsExt};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
@@ -815,18 +815,7 @@ impl WindowState {
         if self.in_draw.get() {
             self.request_animation.set(true);
         } else {
-            let vbox = &self
-                .window
-                .get_children()
-                .first()
-                .unwrap()
-                .clone()
-                .downcast::<gtk::Box>()
-                .unwrap();
-            let first_child = vbox.get_children().last().unwrap().clone();
-            if first_child.is::<gtk::DrawingArea>() {
-                first_child.queue_draw();
-            }
+            self.drawing_area.queue_draw()
         }
     }
 
@@ -1203,7 +1192,6 @@ impl WindowHandle {
     pub fn set_menu(&self, menu: Menu) {
         if let Some(state) = self.state.upgrade() {
             let window = &state.window;
-
             let accel_group = AccelGroup::new();
             window.add_accel_group(&accel_group);
 
@@ -1212,7 +1200,7 @@ impl WindowHandle {
                 .downcast::<gtk::Box>()
                 .unwrap();
 
-            let first_child = vbox.get_children().first().unwrap().clone();
+            let first_child = &vbox.get_children()[0];
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
                 vbox.remove(old_menubar);
