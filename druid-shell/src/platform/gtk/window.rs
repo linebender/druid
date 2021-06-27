@@ -177,6 +177,9 @@ pub(crate) struct WindowState {
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+
+    request_animation: Cell<bool>,
+    in_draw: Cell<bool>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -296,6 +299,8 @@ impl WindowBuilder {
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
+            request_animation: Cell::new(false),
+            in_draw: Cell::new(false),
         });
 
         self.app
@@ -360,6 +365,27 @@ impl WindowBuilder {
                 min_size_px.height.round() as i32,
             );
         }
+
+        win_state
+            .drawing_area
+            .connect_realize(clone!(handle => move |drawing_area| {
+                if let Some(clock) = drawing_area.get_frame_clock() {
+                    clock.connect_before_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(true);
+                        }
+                    }));
+                    clock.connect_after_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(false);
+                            if state.request_animation.get() {
+                                state.request_animation.set(false);
+                                state.drawing_area.queue_draw();
+                            }
+                        }
+                    }));
+                }
+            }));
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
@@ -780,7 +806,11 @@ impl WindowState {
     /// Queues a call to `prepare_paint` and `paint`, but without marking any region for
     /// invalidation.
     fn request_anim_frame(&self) {
-        self.window.queue_draw();
+        if self.in_draw.get() {
+            self.request_animation.set(true);
+        } else {
+            self.drawing_area.queue_draw()
+        }
     }
 
     /// Invalidates a rectangle, given in display points.
@@ -1156,7 +1186,6 @@ impl WindowHandle {
     pub fn set_menu(&self, menu: Menu) {
         if let Some(state) = self.state.upgrade() {
             let window = &state.window;
-
             let accel_group = AccelGroup::new();
             window.add_accel_group(&accel_group);
 
@@ -1168,7 +1197,7 @@ impl WindowHandle {
             let first_child = &vbox.get_children()[0];
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
-                vbox.remove(first_child);
+                vbox.remove(old_menubar);
             }
             let menubar = menu.into_gtk_menubar(self, &accel_group);
             vbox.pack_start(&menubar, false, false, 0);
