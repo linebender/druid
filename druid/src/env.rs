@@ -54,7 +54,7 @@ pub struct Env(Arc<EnvImpl>);
 #[derive(Clone)]
 struct EnvImpl {
     map: HashMap<ArcStr, Value>,
-    l10n: Arc<L10nManager>,
+    l10n: Option<Arc<L10nManager>>,
 }
 
 /// A typed [`Env`] key.
@@ -228,7 +228,7 @@ impl Env {
     ///
     /// ```no_run
     /// # use druid::Env;
-    /// # let env = Env::default();
+    /// # let env = Env::empty();
     /// # let widget_id = 0;
     /// # let my_rect = druid::Rect::ZERO;
     /// if env.get(Env::DEBUG_WIDGET) {
@@ -359,9 +359,11 @@ impl Env {
     /// Returns a reference to the [`L10nManager`], which handles localization
     /// resources.
     ///
+    /// This always exists on the base `Env` configured by druid.
+    ///
     /// [`L10nManager`]: struct.L10nManager.html
-    pub(crate) fn localization_manager(&self) -> &L10nManager {
-        &self.0.l10n
+    pub(crate) fn localization_manager(&self) -> Option<&L10nManager> {
+        self.0.l10n.as_deref()
     }
 
     /// Given an id, returns one of 18 distinct colors
@@ -504,18 +506,26 @@ static DEBUG_COLOR: &[Color] = &[
     Color::rgb8(0, 0, 0),
 ];
 
-impl Default for Env {
-    fn default() -> Self {
+impl Env {
+    /// Returns an empty `Env`.
+    ///
+    /// This is useful for creating a set of overrides.
+    pub fn empty() -> Self {
+        Env(Arc::new(EnvImpl {
+            l10n: None,
+            map: HashMap::new(),
+        }))
+    }
+
+    pub(crate) fn with_default_i10n() -> Self {
         Env::with_i10n(vec!["builtin.ftl".into()], "./resources/i18n/")
     }
-}
 
-impl Env {
     pub(crate) fn with_i10n(resources: Vec<String>, base_dir: &str) -> Self {
         let l10n = L10nManager::new(resources, base_dir);
 
         let inner = EnvImpl {
-            l10n: Arc::new(l10n),
+            l10n: Some(Arc::new(l10n)),
             map: HashMap::new(),
         };
 
@@ -647,7 +657,7 @@ mod tests {
     #[test]
     fn string_key_or_value() {
         const MY_KEY: Key<ArcStr> = Key::new("org.linebender.test.my-string-key");
-        let env = Env::default().adding(MY_KEY, "Owned");
+        let env = Env::empty().adding(MY_KEY, "Owned");
         assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 
         let key: KeyOrValue<ArcStr> = MY_KEY.into();

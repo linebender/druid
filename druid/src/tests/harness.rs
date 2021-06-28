@@ -154,7 +154,7 @@ impl<T: Data> Harness<'_, T> {
 
             let inner = Inner {
                 data,
-                env: Env::default(),
+                env: Env::with_default_i10n(),
                 window,
                 cmds: Default::default(),
             };
