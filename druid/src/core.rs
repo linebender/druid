@@ -1411,7 +1411,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = Env::default();
+        let env = Env::with_default_i10n();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &1, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));
