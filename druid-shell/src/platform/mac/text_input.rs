@@ -65,6 +65,8 @@ unsafe impl objc::Encode for NSRange {
     }
 }
 
+// BOOL is i8 on x86, but bool on aarch64
+#[cfg_attr(target_arch = "aarch64", allow(clippy::useless_conversion))]
 pub extern "C" fn has_marked_text(this: &mut Object, _: Sel) -> BOOL {
     with_edit_lock_from_window(this, false, |edit_lock| {
         edit_lock.composition_range().is_some()
