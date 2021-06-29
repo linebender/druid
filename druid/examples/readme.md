@@ -162,37 +162,37 @@ cargo run --example view_switcher
 ```
 Very similar to [tabs](##Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
 
-## Showcases
+# Showcases
 
-### Calc
+## Calc
 ```
 cargo run --example calc
 ```
 
 This is a showcase of a simple calculator. There are better ways to implement the calculator logic, but it provides all the standard operations like addition division multiplication C and CE.
 
-### Event Viewer
+## Event Viewer
 ```
 cargo run --example event_viewer
 ```
 
 Used as a debugging tool, this prints out mouse and keyboard events as they are received by Druid.
 
-### Flex
+## Flex
 ```
 cargo run --example flex
 ```
 
 Flex shows off all the things you can do with flex elements. You can play with all the setings and it will change in real-time.
 
-### Game Of Life
+## Game Of Life
 ```
 cargo run --example game_of_life
 ```
 
 A simple implementation of Conway's game of life. You can change the evolution speed, and pauze so you can take your time making your own creations!
 
-### Image
+## Image
 ```
 cargo run --example image
 ```
@@ -201,14 +201,14 @@ Image shows off all the knobs you can turn on images. You can play with them wit
 
 Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in druid, you will still see this because that's how the image actually looks.
 
-### Scroll Colors
+## Scroll Colors
 ```
 cargo run --example scroll_colors
 ```
 
 This is a showcase is scrolling through an image gradient square. The square is devided into smaller squares each with a unique color. There are other ways to to this like one big widget with an image for example.
 
-### Widget Gallery
+## Widget Gallery
 ```
 cargo run --example widget_gallery
 ```
