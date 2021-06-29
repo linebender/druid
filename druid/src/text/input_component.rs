@@ -27,7 +27,12 @@ use super::{
 use crate::kurbo::{Line, Point, Rect, Vec2};
 use crate::piet::TextLayout as _;
 use crate::widget::prelude::*;
-use crate::{text, theme, Cursor, Env, Modifiers, Selector, TextAlignment, UpdateCtx};
+use crate::{
+    text, theme, Cursor, Env, FontDescriptor, KeyOrValue, Modifiers, Selector, TextAlignment,
+    UpdateCtx,
+};
+
+const PROTECTED_TEXT_CHAR: char = '•';
 
 /// A widget that accepts text input.
 ///
@@ -80,6 +85,7 @@ pub struct EditSession<T> {
     /// you should avoid doing things like rebuilding this layout manually, or
     /// setting the text directly.
     pub layout: TextLayout<T>,
+    protected_input_layout: Option<TextLayout<String>>,
     /// If the platform modifies the text, this contains the new text;
     /// we update the app `Data` with this text on the next update pass.
     external_text_change: Option<T>,
@@ -344,6 +350,10 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 let selection = self.borrow_mut().take_external_selection_change();
                 if let Some(text) = text {
                     self.borrow_mut().layout.set_text(text.clone());
+                    if let Some(protected) = self.borrow_mut().protected_input_layout.as_mut() {
+                        let protected_text = compute_protected_text(&text);
+                        protected.set_text(protected_text);
+                    }
                     *data = text;
                 }
                 if let Some(selection) = selection {
@@ -369,6 +379,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 );
                 self.borrow_mut().layout.set_text(data.to_owned());
                 self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+                if self.borrow().protected_input_layout.is_some() {
+                    let mut inner = self.borrow_mut();
+                    let protected_text = compute_protected_text(data);
+                    let protected_layout = inner.protected_input_layout.as_mut().unwrap();
+                    protected_layout.set_text(protected_text);
+                    protected_layout.rebuild_if_needed(ctx.text(), env);
+                }
             }
             //FIXME: this should happen in the parent too?
             LifeCycle::Internal(crate::InternalLifeCycle::ParentWindowOrigin)
@@ -423,6 +440,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
 
         self.borrow_mut().layout.set_wrap_width(bc.max().width);
         self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+        if let Some(protected) = self.borrow_mut().protected_input_layout.as_mut() {
+            protected.rebuild_if_needed(ctx.text(), env);
+        }
         let metrics = self.borrow().layout.layout_metrics();
         let width = if bc.max().width.is_infinite() || bc.max().width < f64::MAX {
             metrics.trailing_whitespace_width
@@ -479,7 +499,12 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 ctx.fill(rounded, &selection_color);
             }
         }
-        self.borrow().layout.draw(ctx, text_offset.to_point());
+
+        if let Some(layout) = self.borrow().protected_input_layout.as_ref() {
+            layout.draw(ctx, text_offset.to_point());
+        } else {
+            self.borrow().layout.draw(ctx, text_offset.to_point());
+        }
     }
 }
 
@@ -522,6 +547,43 @@ impl<T> EditSession<T> {
     /// the minimum layout size.
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
         self.alignment = alignment;
+    }
+
+    /// Set the text size.
+    pub fn set_text_size(&mut self, size: KeyOrValue<f64>) {
+        self.layout.set_text_size(size.clone());
+        if let Some(protected) = self.protected_input_layout.as_mut() {
+            protected.set_text_size(size);
+        }
+    }
+
+    /// Set the font.
+    pub fn set_font(&mut self, font: KeyOrValue<FontDescriptor>) {
+        // if this is protected input we always use a monospace font to ensure
+        // that cursor positions look right.
+        if self.protected_input_layout.is_none() {
+            self.layout.set_font(font);
+        }
+    }
+
+    /// Set whether or not the text is 'protected' (a password, e.g.).
+    ///
+    /// We will draw a replacement character for each grapheme in the protected
+    /// string.
+    pub fn set_protected_input(&mut self, protected: bool) {
+        if protected && self.protected_input_layout.is_none() {
+            let mut layout = TextLayout::new();
+            layout.set_text(String::new());
+            layout.set_font(FontDescriptor::new(druid::FontFamily::MONOSPACE));
+            self.protected_input_layout = Some(layout);
+            // set our layout to be mono, to match
+            self.layout
+                .set_font(FontDescriptor::new(druid::FontFamily::MONOSPACE));
+        } else if !protected {
+            self.protected_input_layout = None;
+            // this codepath isn't used; if we used it we would have
+            // to think a bit more about fonts
+        }
     }
 
     /// Returns any invalidation action that should be passed to the platform.
@@ -816,6 +878,11 @@ impl<T: TextStorage + EditableText> EditSession<T> {
         {
             self.update_pending_invalidation(ImeInvalidation::Reset);
             self.layout.set_text(new_data.clone());
+
+            if let Some(protected) = self.protected_input_layout.as_mut() {
+                let protected_text = compute_protected_text(new_data);
+                protected.set_text(protected_text);
+            }
         }
         if self.layout.needs_rebuild_after_update(ctx) {
             ctx.request_layout();
@@ -826,6 +893,9 @@ impl<T: TextStorage + EditableText> EditSession<T> {
             self.update_pending_invalidation(ImeInvalidation::SelectionChanged);
         }
         self.layout.rebuild_if_needed(ctx.text(), env);
+        if let Some(protected) = self.protected_input_layout.as_mut() {
+            protected.rebuild_if_needed(ctx.text(), env);
+        }
     }
 }
 
@@ -928,6 +998,7 @@ impl<T> Default for TextComponent<T> {
     fn default() -> Self {
         let inner = EditSession {
             layout: TextLayout::new(),
+            protected_input_layout: None,
             external_scroll_to: None,
             external_text_change: None,
             external_selection_change: None,
@@ -951,4 +1022,11 @@ impl<T> Default for TextComponent<T> {
             has_focus: false,
         }
     }
+}
+
+fn compute_protected_text<T: EditableText>(text: &T) -> String {
+    let len = text.len();
+    let all = text.slice(0..len).unwrap_or_else(|| "".into());
+    let cursor = unicode_segmentation::UnicodeSegmentation::graphemes(all.as_ref(), true);
+    cursor.map(|_| PROTECTED_TEXT_CHAR).collect()
 }

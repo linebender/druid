@@ -21,8 +21,8 @@ use std::sync::Arc;
 
 use druid::widget::{Flex, Label, TextBox};
 use druid::{
-    AppLauncher, Color, Data, Env, Lens, LocalizedString, Menu, Widget, WidgetExt, WindowDesc,
-    WindowId,
+    AppLauncher, Color, Data, Env, FontDescriptor, FontFamily, Lens, LocalizedString, Menu, Widget,
+    WidgetExt, WindowDesc, WindowId,
 };
 
 const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Text Options");
@@ -39,6 +39,7 @@ const EXPLAINER: &str = "\
 struct AppState {
     multi: Arc<String>,
     single: Arc<String>,
+    password: Arc<String>,
 }
 
 pub fn main() {
@@ -52,6 +53,7 @@ pub fn main() {
     let initial_state = AppState {
         single: "".to_string().into(),
         multi: "".to_string().into(),
+        password: "".to_string().into(),
     };
 
     // start the application
@@ -76,6 +78,13 @@ fn build_root_widget() -> impl Widget<AppState> {
             TextBox::new()
                 .with_placeholder("Single")
                 .lens(AppState::single),
+        )
+        .with_default_spacer()
+        .with_child(
+            TextBox::protected()
+                .with_font(FontDescriptor::new(FontFamily::MONOSPACE))
+                .with_placeholder("Password")
+                .lens(AppState::password),
         )
         .with_default_spacer()
         .with_flex_child(
