@@ -61,6 +61,7 @@ mod scale;
 mod screen;
 mod window;
 
+pub mod platform;
 pub mod text;
 
 pub use application::{AppHandler, Application};
