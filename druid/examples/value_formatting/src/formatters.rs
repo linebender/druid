@@ -165,6 +165,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
                 Validation::failure(CurrencyValidationError::TooManyCharsAfterDecimal)
             }
             (Some(c), None, _) if c.is_ascii_digit() => Validation::success(),
+            (Some(c), None, _) => Validation::failure(CurrencyValidationError::InvalidChar(c)),
             (None, None, _) => Validation::success(),
             (Some(c1), Some(c2), _) if c1.is_ascii_digit() && c2.is_ascii_digit() => {
                 Validation::success()
@@ -173,7 +174,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
                 let bad_char = if c1.is_ascii_digit() { other } else { c1 };
                 Validation::failure(CurrencyValidationError::InvalidChar(bad_char))
             }
-            _ => unreachable!(),
+            other => panic!("unexpected: {:?}", other),
         }
     }
 }
