@@ -16,9 +16,11 @@
 
 use gdk::ModifierType;
 use gtk::{
-    AccelGroup, GtkMenuExt, GtkMenuItemExt, Menu as GtkMenu, MenuBar as GtkMenuBar,
-    MenuItem as GtkMenuItem, MenuShellExt, SeparatorMenuItemBuilder, WidgetExt,
+    AccelGroup, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
+    SeparatorMenuItemBuilder,
 };
+
+use gtk::prelude::{GtkMenuExt, GtkMenuItemExt, MenuShellExt, WidgetExt};
 
 use super::keycodes;
 use super::window::WindowHandle;

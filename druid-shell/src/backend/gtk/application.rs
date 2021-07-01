@@ -15,8 +15,10 @@
 //! GTK implementation of features at the application scope.
 
 use gio::prelude::ApplicationExtManual;
-use gio::{ApplicationExt, ApplicationFlags, Cancellable};
-use gtk::{Application as GtkApplication, GtkApplicationExt};
+use gio::{ApplicationFlags, Cancellable};
+use gtk::Application as GtkApplication;
+
+use gtk::prelude::{ApplicationExt, GtkApplicationExt};
 
 use crate::application::AppHandler;
 
@@ -31,7 +33,7 @@ pub(crate) struct Application {
 impl Application {
     pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
-        let gtk_app = match GtkApplication::new(
+        let gtk_app = GtkApplication::new(
             Some("com.github.linebender.druid"),
             // TODO we set this to avoid connecting to an existing running instance
             // of "com.github.linebender.druid" after which we would never receive
@@ -39,10 +41,7 @@ impl Application {
             // Which shows another way once we have in place a mechanism for
             // communication with remote instances.
             ApplicationFlags::NON_UNIQUE,
-        ) {
-            Ok(app) => app,
-            Err(err) => return Err(Error::BoolError(err)),
-        };
+        );
 
         gtk_app.connect_activate(|_app| {
             tracing::info!("gtk: Activated application");
@@ -61,12 +60,11 @@ impl Application {
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        // TODO: should we pass the command line arguments?
-        self.gtk_app.run(&[]);
+        self.gtk_app.run();
     }
 
     pub fn quit(&self) {
-        match self.gtk_app.get_active_window() {
+        match self.gtk_app.active_window() {
             None => {
                 // no application is running, main is not running
             }
@@ -84,7 +82,7 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        let mut locale: String = glib::get_language_names()[0].as_str().into();
+        let mut locale: String = glib::language_names()[0].as_str().into();
         // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
         if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
             locale.truncate(idx);

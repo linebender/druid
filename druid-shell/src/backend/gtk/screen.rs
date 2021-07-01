@@ -26,7 +26,7 @@ fn translate_gdk_rectangle(r: gdk::Rectangle) -> Rect {
 }
 
 fn translate_gdk_monitor(mon: gdk::Monitor) -> Monitor {
-    let area = translate_gdk_rectangle(mon.get_geometry());
+    let area = translate_gdk_rectangle(mon.geometry());
     Monitor::new(
         mon.is_primary(),
         area,
@@ -41,8 +41,8 @@ pub(crate) fn get_monitors() -> Vec<Monitor> {
         .list_displays()
         .iter()
         .flat_map(|display: &Display| {
-            (0..display.get_n_monitors())
-                .map(move |i| display.get_monitor(i).map(translate_gdk_monitor))
+            (0..display.n_monitors())
+                .map(move |i| display.monitor(i).map(translate_gdk_monitor))
                 .flatten()
         })
         .collect()
