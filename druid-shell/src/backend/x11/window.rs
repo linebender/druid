@@ -765,7 +765,7 @@ impl Window {
         let invalid = std::mem::replace(&mut *borrow_mut!(self.invalid)?, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
-            let cairo_ctx = cairo::Context::new(&surface);
+            let cairo_ctx = cairo::Context::new(&surface).unwrap();
             let scale = self.scale.get();
             for rect in invalid.rects() {
                 let rect = rect.to_px(scale);

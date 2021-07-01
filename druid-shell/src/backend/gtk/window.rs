@@ -14,8 +14,9 @@
 
 //! GTK window creation and management.
 
+use gtk::traits::SettingsExt;
 use std::cell::{Cell, RefCell};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::ffi::c_void;
 use std::os::raw::{c_int, c_uint};
 use std::panic::Location;
@@ -26,10 +27,11 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowExt, WindowTypeHint};
-use gio::ApplicationExt;
+use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowTypeHint};
 use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea, SettingsExt};
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+
+use instant::Duration;
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
@@ -259,8 +261,8 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
         let mut transparent = false;
         if self.transparent {
-            if let Some(screen) = window.get_screen() {
-                let visual = screen.get_rgba_visual();
+            if let Some(screen) = window.screen() {
+                let visual = screen.rgba_visual();
                 transparent = visual.is_some();
                 window.set_visual(visual.as_ref());
             }
@@ -268,8 +270,7 @@ impl WindowBuilder {
         window.set_app_paintable(transparent);
 
         // Get the scale factor based on the GTK reported DPI
-        let scale_factor =
-            window.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI;
+        let scale_factor = window.display().default_screen().resolution() / SCALE_TARGET_DPI;
         let scale = Scale::new(scale_factor, scale_factor);
         let area = ScaledArea::from_dp(self.size, scale);
         let size_px = area.size_px();
@@ -369,7 +370,7 @@ impl WindowBuilder {
         win_state
             .drawing_area
             .connect_realize(clone!(handle => move |drawing_area| {
-                if let Some(clock) = drawing_area.get_frame_clock() {
+                if let Some(clock) = drawing_area.frame_clock() {
                     clock.connect_before_paint(clone!(handle => move |_clock|{
                         if let Some(state) = handle.state.upgrade() {
                             state.in_draw.set(true);
@@ -393,8 +394,8 @@ impl WindowBuilder {
                 let mut scale_changed = false;
                 // Check if the GTK reported DPI has changed,
                 // so that we can change our scale factor without restarting the application.
-                if let Some(scale_factor) = state.window.get_window()
-                    .map(|w| w.get_display().get_default_screen().get_resolution() / SCALE_TARGET_DPI) {
+                if let Some(scale_factor) = state.window.window()
+                    .map(|w| w.display().default_screen().resolution() / SCALE_TARGET_DPI) {
                     let reported_scale = Scale::new(scale_factor, scale_factor);
                     if scale != reported_scale {
                         scale = reported_scale;
@@ -406,7 +407,7 @@ impl WindowBuilder {
 
                 // Create a new cairo surface if necessary (either because there is no surface, or
                 // because the size or scale changed).
-                let extents = widget.get_allocation();
+                let extents = widget.allocation();
                 let size_px = Size::new(extents.width as f64, extents.height as f64);
                 let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
                 if no_surface || scale_changed || state.area.get().size_px() != size_px {
@@ -435,7 +436,7 @@ impl WindowBuilder {
                     // because we don't return control to the system or re-borrow the surface from
                     // any code that the client can call.
                     state.with_handler_and_dont_check_the_other_borrows(|handler| {
-                        let surface_context = cairo::Context::new(surface);
+                        let surface_context = cairo::Context::new(surface).unwrap();
 
                         // Clip to the invalid region, in order that our surface doesn't get
                         // messed up if there's any painting outside them.
@@ -455,10 +456,11 @@ impl WindowBuilder {
                         // Copy the entire surface to the drawing area (not just the invalid
                         // region, because there might be parts of the drawing area that were
                         // invalidated by external forces).
-                        let alloc = widget.get_allocation();
-                        context.set_source_surface(surface, 0.0, 0.0);
+                       // TODO: how are we supposed to handle these errors? What can we do besides panic? Probably nothing right?
+                        let alloc = widget.allocation();
+                        context.set_source_surface(surface, 0.0, 0.0).unwrap();
                         context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
-                        context.fill();
+                        context.fill().unwrap();
                     });
                 } else {
                     warn!("Drawing was skipped because there was no surface");
@@ -472,8 +474,8 @@ impl WindowBuilder {
             clone!(handle => move |widget, _prev_screen| {
                 if let Some(state) = handle.state.upgrade() {
 
-                    if let Some(screen) = widget.get_screen(){
-                        let visual = screen.get_rgba_visual();
+                    if let Some(screen) = widget.screen(){
+                        let visual = screen.rgba_visual();
                         state.is_transparent.set(visual.is_some());
                         widget.set_visual(visual.as_ref());
                     }
@@ -484,16 +486,16 @@ impl WindowBuilder {
         win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
                 state.with_handler(|handler| {
-                    if let Some(button) = get_mouse_button(event.get_button()) {
+                    if let Some(button) = get_mouse_button(event.button()) {
                         let scale = state.scale.get();
-                        let button_state = event.get_state();
-                        let gtk_count = get_mouse_click_count(event.get_event_type());
-                        let pos: Point =  event.get_position().into();
+                        let button_state = event.state();
+                        let gtk_count = get_mouse_click_count(event.event_type());
+                        let pos: Point =  event.position().into();
                         let count = if gtk_count == 1 {
-                            let settings = state.drawing_area.get_settings().unwrap();
-                            let thresh_dist = settings.get_property_gtk_double_click_distance();
+                            let settings = state.drawing_area.settings().unwrap();
+                            let thresh_dist = settings.gtk_double_click_distance();
                             state.click_counter.set_distance(thresh_dist.into());
-                            if let Ok(ms) = settings.get_property_gtk_double_click_time().try_into() {
+                            if let Ok(ms) = settings.gtk_double_click_time().try_into() {
                                 state.click_counter.set_interval_ms(ms);
                             }
                             state.click_counter.count_for_click(pos)
@@ -523,12 +525,12 @@ impl WindowBuilder {
         win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
             if let Some(state) = handle.state.upgrade() {
                 state.with_handler(|handler| {
-                    if let Some(button) = get_mouse_button(event.get_button()) {
+                    if let Some(button) = get_mouse_button(event.button()) {
                         let scale = state.scale.get();
-                        let button_state = event.get_state();
+                        let button_state = event.state();
                         handler.mouse_up(
                             &MouseEvent {
-                                pos: Point::from(event.get_position()).to_dp(scale),
+                                pos: Point::from(event.position()).to_dp(scale),
                                 buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
                                 mods: get_modifiers(button_state),
                                 count: 0,
@@ -548,9 +550,9 @@ impl WindowBuilder {
             clone!(handle => move |_widget, motion| {
                 if let Some(state) = handle.state.upgrade() {
                     let scale = state.scale.get();
-                    let motion_state = motion.get_state();
+                    let motion_state = motion.state();
                     let mouse_event = MouseEvent {
-                        pos: Point::from(motion.get_position()).to_dp(scale),
+                        pos: Point::from(motion.position()).to_dp(scale),
                         buttons: get_mouse_buttons_from_modifiers(motion_state),
                         mods: get_modifiers(motion_state),
                         count: 0,
@@ -570,9 +572,9 @@ impl WindowBuilder {
             clone!(handle => move |_widget, crossing| {
                 if let Some(state) = handle.state.upgrade() {
                     let scale = state.scale.get();
-                    let crossing_state = crossing.get_state();
+                    let crossing_state = crossing.state();
                     let mouse_event = MouseEvent {
-                        pos: Point::from(crossing.get_position()).to_dp(scale),
+                        pos: Point::from(crossing.position()).to_dp(scale),
                         buttons: get_mouse_buttons_from_modifiers(crossing_state),
                         mods: get_modifiers(crossing_state),
                         count: 0,
@@ -593,12 +595,12 @@ impl WindowBuilder {
             .connect_scroll_event(clone!(handle => move |_widget, scroll| {
                 if let Some(state) = handle.state.upgrade() {
                     let scale = state.scale.get();
-                    let mods = get_modifiers(scroll.get_state());
+                    let mods = get_modifiers(scroll.state());
 
                     // The magic "120"s are from Microsoft's documentation for WM_MOUSEWHEEL.
                     // They claim that one "tick" on a scroll wheel should be 120 units.
                     let shift = mods.shift();
-                    let wheel_delta = match scroll.get_direction() {
+                    let wheel_delta = match scroll.direction() {
                         ScrollDirection::Up if shift => Some(Vec2::new(-120.0, 0.0)),
                         ScrollDirection::Up => Some(Vec2::new(0.0, -120.0)),
                         ScrollDirection::Down if shift => Some(Vec2::new(120.0, 0.0)),
@@ -607,7 +609,7 @@ impl WindowBuilder {
                         ScrollDirection::Right => Some(Vec2::new(120.0, 0.0)),
                         ScrollDirection::Smooth => {
                             //TODO: Look at how gtk's scroll containers implements it
-                            let (mut delta_x, mut delta_y) = scroll.get_delta();
+                            let (mut delta_x, mut delta_y) = scroll.delta();
                             delta_x *= 120.;
                             delta_y *= 120.;
                             if shift {
@@ -627,8 +629,8 @@ impl WindowBuilder {
 
                     if let Some(wheel_delta) = wheel_delta {
                         let mouse_event = MouseEvent {
-                            pos: Point::from(scroll.get_position()).to_dp(scale),
-                            buttons: get_mouse_buttons_from_modifiers(scroll.get_state()),
+                            pos: Point::from(scroll.position()).to_dp(scale),
+                            buttons: get_mouse_buttons_from_modifiers(scroll.state()),
                             mods,
                             count: 0,
                             focus: false,
@@ -648,7 +650,7 @@ impl WindowBuilder {
             .connect_key_press_event(clone!(handle => move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
 
-                    let hw_keycode = key.get_hardware_keycode();
+                    let hw_keycode = key.hardware_keycode();
                     let repeat = state.current_keycode.get() == Some(hw_keycode);
 
                     state.current_keycode.set(Some(hw_keycode));
@@ -666,7 +668,7 @@ impl WindowBuilder {
             .connect_key_release_event(clone!(handle => move |_widget, key| {
                 if let Some(state) = handle.state.upgrade() {
 
-                    if state.current_keycode.get() == Some(key.get_hardware_keycode()) {
+                    if state.current_keycode.get() == Some(key.hardware_keycode()) {
                         state.current_keycode.set(None);
                     }
 
@@ -720,7 +722,7 @@ impl WindowBuilder {
         win_state.drawing_area.realize();
         win_state
             .drawing_area
-            .get_window()
+            .window()
             .expect("realize didn't create window")
             .set_event_compression(false);
 
@@ -787,7 +789,7 @@ impl WindowState {
             }
             *surface = None;
 
-            if let Some(w) = self.drawing_area.get_window() {
+            if let Some(w) = self.drawing_area.window() {
                 if self.is_transparent.get() {
                     *surface = w.create_similar_surface(cairo::Content::ColorAlpha, width, height);
                 } else {
@@ -866,9 +868,9 @@ impl WindowState {
                     self.window.add_accel_group(&accel_group);
 
                     let menu = menu.into_gtk_menu(&handle, &accel_group);
-                    menu.set_property_attach_widget(Some(&self.window));
+                    menu.set_attach_widget(Some(&self.window));
                     menu.show_all();
-                    menu.popup_easy(3, gtk::get_current_event_time());
+                    menu.popup_easy(3, gtk::current_event_time());
                 }
             }
         }
@@ -903,7 +905,7 @@ impl WindowHandle {
 
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
-            let (x, y) = state.window.get_position();
+            let (x, y) = state.window.position();
             Point::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
@@ -920,8 +922,8 @@ impl WindowHandle {
     pub fn content_insets(&self) -> Insets {
         if let Some(state) = self.state.upgrade() {
             let scale = state.scale.get();
-            let (width_px, height_px) = state.window.get_size();
-            let alloc_px = state.drawing_area.get_allocation();
+            let (width_px, height_px) = state.window.size();
+            let alloc_px = state.drawing_area.allocation();
             let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
             let alloc = Rect::from_origin_size(
                 (alloc_px.x as f64, alloc_px.y as f64),
@@ -960,7 +962,7 @@ impl WindowHandle {
             WindowLevel::Tooltip | WindowLevel::DropDown | WindowLevel::Modal => true,
         };
         if let Some(state) = self.state.upgrade() {
-            if let Some(window) = state.window.get_window() {
+            if let Some(window) = state.window.window() {
                 window.set_override_redirect(override_redirect);
             }
         }
@@ -977,7 +979,7 @@ impl WindowHandle {
 
     pub fn get_size(&self) -> Size {
         if let Some(state) = self.state.upgrade() {
-            let (x, y) = state.window.get_size();
+            let (x, y) = state.window.size();
             Size::new(x as f64, y as f64).to_dp(state.scale.get())
         } else {
             warn!("Could not get size for GTK window");
@@ -1007,8 +1009,8 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if state.window.is_maximized() {
                 return Maximized;
-            } else if let Some(window) = state.window.get_parent_window() {
-                let state = window.get_state();
+            } else if let Some(window) = state.window.parent_window() {
+                let state = window.state();
                 if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
                     return Minimized;
                 }
@@ -1089,15 +1091,7 @@ impl WindowHandle {
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         let interval = deadline
             .checked_duration_since(Instant::now())
-            .unwrap_or_default()
-            .as_millis();
-        let interval = match u32::try_from(interval) {
-            Ok(iv) => iv,
-            Err(_) => {
-                warn!("timer duration exceeds gtk max of 2^32 millis");
-                u32::max_value()
-            }
-        };
+            .unwrap_or_default();
 
         let token = TimerToken::next();
 
@@ -1113,7 +1107,7 @@ impl WindowHandle {
     }
 
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        if let Some(gdk_window) = self.state.upgrade().and_then(|s| s.window.get_window()) {
+        if let Some(gdk_window) = self.state.upgrade().and_then(|s| s.window.window()) {
             let cursor = make_gdk_cursor(cursor, &gdk_window);
             gdk_window.set_cursor(cursor.as_ref());
         }
@@ -1121,7 +1115,7 @@ impl WindowHandle {
 
     pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
         if let Some(state) = self.state.upgrade() {
-            if let Some(gdk_window) = state.window.get_window() {
+            if let Some(gdk_window) = state.window.window() {
                 // TODO: gtk::Pixbuf expects unpremultiplied alpha. We should convert.
                 let has_alpha = !matches!(desc.image.format(), ImageFormat::Rgb);
                 let bytes_per_pixel = desc.image.format().bytes_per_pixel();
@@ -1137,7 +1131,7 @@ impl WindowHandle {
                     (desc.image.width() * bytes_per_pixel) as i32,
                 );
                 let c = gdk::Cursor::from_pixbuf(
-                    &gdk_window.get_display(),
+                    &gdk_window.display(),
                     &pixbuf,
                     desc.hot.x.round() as i32,
                     desc.hot.y.round() as i32,
@@ -1195,12 +1189,9 @@ impl WindowHandle {
             let accel_group = AccelGroup::new();
             window.add_accel_group(&accel_group);
 
-            let vbox = window.get_children()[0]
-                .clone()
-                .downcast::<gtk::Box>()
-                .unwrap();
+            let vbox = window.children()[0].clone().downcast::<gtk::Box>().unwrap();
 
-            let first_child = &vbox.get_children()[0];
+            let first_child = &vbox.children()[0];
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
                 vbox.remove(old_menubar);
@@ -1287,7 +1278,8 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
         // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
         // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
         let state = Arc::clone(state);
-        glib::timeout_add(16, move || run_idle(&state));
+        let timeout = Duration::from_millis(16);
+        glib::timeout_add(timeout, move || run_idle(&state));
     }
     glib::source::Continue(false)
 }
@@ -1297,7 +1289,7 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cur
         Some(custom.0.clone())
     } else {
         gdk::Cursor::from_name(
-            &gdk_window.get_display(),
+            &gdk_window.display(),
             #[allow(deprecated)]
             match cursor {
                 // cursor name values from https://www.w3.org/TR/css-ui-3/#cursor
@@ -1385,13 +1377,13 @@ fn get_modifiers(modifiers: gdk::ModifierType) -> Modifiers {
 }
 
 fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
-    let keyval = key.get_keyval();
-    let hardware_keycode = key.get_hardware_keycode();
+    let keyval = key.keyval();
+    let hardware_keycode = key.hardware_keycode();
 
     let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or_else(|| keyval.clone());
 
-    let text = gdk::keys::keyval_to_unicode(*keyval);
-    let mods = get_modifiers(key.get_state());
+    let text = keyval.to_unicode();
+    let mods = get_modifiers(key.state());
     let key = keycodes::raw_key_to_key(keyval).unwrap_or_else(|| {
         if let Some(c) = text {
             if c >= ' ' && c != '\x7f' {

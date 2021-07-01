@@ -17,7 +17,9 @@
 use std::ffi::OsString;
 
 use anyhow::anyhow;
-use gtk::{FileChooserAction, FileChooserExt, FileFilter, NativeDialogExt, ResponseType, Window};
+use gtk::{FileChooserAction, FileFilter, ResponseType, Window};
+
+use gtk::prelude::{FileChooserExt, NativeDialogExt};
 
 use crate::dialog::{FileDialogOptions, FileDialogType, FileSpec};
 use crate::Error;
@@ -96,7 +98,7 @@ pub(crate) fn get_file_dialog_path(
     let result = dialog.run();
 
     let result = match result {
-        ResponseType::Accept => match dialog.get_filename() {
+        ResponseType::Accept => match dialog.filename() {
             Some(path) => Ok(path.into_os_string()),
             None => Err(anyhow!("No path received for filename")),
         },
