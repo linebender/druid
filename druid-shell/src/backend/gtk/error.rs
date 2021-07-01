@@ -16,7 +16,7 @@
 
 use std::fmt;
 
-use glib::{BoolError, Error as GLibError};
+use gtk::glib::{BoolError, Error as GLibError};
 
 /// GTK backend errors.
 #[derive(Debug, Clone)]

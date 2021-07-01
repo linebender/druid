@@ -14,7 +14,7 @@
 
 //! GTK implementation of menus.
 
-use gdk::ModifierType;
+use gtk::gdk::ModifierType;
 use gtk::{
     AccelGroup, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
     SeparatorMenuItemBuilder,
@@ -166,7 +166,7 @@ fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: 
     );
 }
 
-fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> gdk::ModifierType {
+fn modifiers_to_gdk_modifier_type(raw_modifiers: RawMods) -> ModifierType {
     let mut result = ModifierType::empty();
 
     let modifiers: Modifiers = raw_modifiers.into();

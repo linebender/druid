@@ -15,8 +15,8 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 default = ["gtk"]
-gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf"]
-x11 = ["x11rb", "nix", "cairo-sys-rs", "bindgen", "pkg-config"]
+gtk = ["gdk-sys", "glib-sys", "gtk-sys", "gtk-rs"]
+x11 = ["x11rb", "nix", "cairo-sys-rs"]
 # Implement HasRawWindowHandle for WindowHandle
 raw-win-handle = ["raw-window-handle"]
 
@@ -79,13 +79,9 @@ bitflags = "1.2.1"
 # TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.14.0", default_features = false, optional = true }
-gio = { version = "0.14.0", optional = true }
-gdk = { version = "0.14.0", optional = true }
-gdk-pixbuf = { version = "0.14.0", optional = true }
 gdk-sys = { version = "0.14.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
 gtk-rs = { version = "0.14.0", features = ["v3_22"], package = "gtk", optional = true }
-glib = { version = "0.14.0", optional = true }
 glib-sys = { version = "0.14.0", optional = true }
 gtk-sys = { version = "0.14.0", optional = true }
 nix = { version = "0.18.0", optional = true }

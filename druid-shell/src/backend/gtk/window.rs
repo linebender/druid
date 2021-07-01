@@ -14,7 +14,6 @@
 
 //! GTK window creation and management.
 
-use gtk::traits::SettingsExt;
 use std::cell::{Cell, RefCell};
 use std::convert::TryInto;
 use std::ffi::c_void;
@@ -25,11 +24,21 @@ use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use gtk::gdk_pixbuf::Colorspace::Rgb;
+use gtk::gdk_pixbuf::Pixbuf;
+use gtk::glib::source::Continue;
+use gtk::glib::translate::FromGlib;
+use gtk::prelude::*;
+use gtk::traits::SettingsExt;
+use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+
+use gdk_sys::GdkKeymapKey;
+
 use anyhow::anyhow;
 use cairo::Surface;
-use gdk::{EventKey, EventMask, ModifierType, ScrollDirection, WindowTypeHint};
-use gtk::prelude::*;
-use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
+use gtk::gdk::{
+    EventKey, EventMask, EventType, ModifierType, ScrollDirection, Window, WindowTypeHint,
+};
 
 use instant::Duration;
 use tracing::{error, warn};
@@ -185,7 +194,7 @@ pub(crate) struct WindowState {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct CustomCursor(gdk::Cursor);
+pub struct CustomCursor(gtk::gdk::Cursor);
 
 impl WindowBuilder {
     pub fn new(app: Application) -> WindowBuilder {
@@ -1011,7 +1020,7 @@ impl WindowHandle {
                 return Maximized;
             } else if let Some(window) = state.window.parent_window() {
                 let state = window.state();
-                if (state & gdk::WindowState::ICONIFIED) == gdk::WindowState::ICONIFIED {
+                if (state & gtk::gdk::WindowState::ICONIFIED) == gtk::gdk::WindowState::ICONIFIED {
                     return Minimized;
                 }
             }
@@ -1096,11 +1105,11 @@ impl WindowHandle {
         let token = TimerToken::next();
 
         if let Some(state) = self.state.upgrade() {
-            glib::timeout_add(interval, move || {
+            gtk::glib::timeout_add(interval, move || {
                 if state.with_handler(|h| h.timer(token)).is_some() {
-                    return glib::Continue(false);
+                    return Continue(false);
                 }
-                glib::Continue(true)
+                Continue(true)
             });
         }
         token
@@ -1116,12 +1125,12 @@ impl WindowHandle {
     pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
         if let Some(state) = self.state.upgrade() {
             if let Some(gdk_window) = state.window.window() {
-                // TODO: gtk::Pixbuf expects unpremultiplied alpha. We should convert.
+                // TODO: Pixbuf expects unpremultiplied alpha. We should convert.
                 let has_alpha = !matches!(desc.image.format(), ImageFormat::Rgb);
                 let bytes_per_pixel = desc.image.format().bytes_per_pixel();
-                let pixbuf = gdk_pixbuf::Pixbuf::from_mut_slice(
+                let pixbuf = Pixbuf::from_mut_slice(
                     desc.image.raw_pixels().to_owned(),
-                    gdk_pixbuf::Colorspace::Rgb,
+                    Rgb,
                     has_alpha,
                     // bits_per_sample
                     8,
@@ -1130,7 +1139,7 @@ impl WindowHandle {
                     // row stride (in bytes)
                     (desc.image.width() * bytes_per_pixel) as i32,
                 );
-                let c = gdk::Cursor::from_pixbuf(
+                let c = gtk::gdk::Cursor::from_pixbuf(
                     &gdk_window.display(),
                     &pixbuf,
                     desc.hot.x.round() as i32,
@@ -1238,7 +1247,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
-                glib::idle_add(move || run_idle(&state));
+                gtk::glib::idle_add(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Callback(Box::new(callback)));
             }
@@ -1251,7 +1260,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
-                glib::idle_add(move || run_idle(&state));
+                gtk::glib::idle_add(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Token(token));
             }
@@ -1259,7 +1268,7 @@ impl IdleHandle {
     }
 }
 
-fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
+fn run_idle(state: &Arc<WindowState>) -> Continue {
     util::assert_main_thread();
     let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
@@ -1275,20 +1284,20 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     if result.is_none() {
         warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
-        // to empty the idle queue. Returning glib::source::Continue(true) achieves this but
+        // to empty the idle queue. Returning Continue(true) achieves this but
         // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
         let state = Arc::clone(state);
         let timeout = Duration::from_millis(16);
-        glib::timeout_add(timeout, move || run_idle(&state));
+        gtk::glib::timeout_add(timeout, move || run_idle(&state));
     }
-    glib::source::Continue(false)
+    Continue(false)
 }
 
-fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
+fn make_gdk_cursor(cursor: &Cursor, gdk_window: &Window) -> Option<gtk::gdk::Cursor> {
     if let Cursor::Custom(custom) = cursor {
         Some(custom.0.clone())
     } else {
-        gdk::Cursor::from_name(
+        gtk::gdk::Cursor::from_name(
             &gdk_window.display(),
             #[allow(deprecated)]
             match cursor {
@@ -1319,7 +1328,7 @@ fn get_mouse_button(button: u32) -> Option<MouseButton> {
     }
 }
 
-fn get_mouse_buttons_from_modifiers(modifiers: gdk::ModifierType) -> MouseButtons {
+fn get_mouse_buttons_from_modifiers(modifiers: ModifierType) -> MouseButtons {
     let mut buttons = MouseButtons::new();
     if modifiers.contains(ModifierType::BUTTON1_MASK) {
         buttons.insert(MouseButton::Left);
@@ -1342,12 +1351,12 @@ fn get_mouse_buttons_from_modifiers(modifiers: gdk::ModifierType) -> MouseButton
     buttons
 }
 
-fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
+fn get_mouse_click_count(event_type: EventType) -> u8 {
     match event_type {
-        gdk::EventType::ButtonPress => 1,
-        gdk::EventType::DoubleButtonPress => 2,
-        gdk::EventType::TripleButtonPress => 3,
-        gdk::EventType::ButtonRelease => 0,
+        EventType::ButtonPress => 1,
+        EventType::DoubleButtonPress => 2,
+        EventType::TripleButtonPress => 3,
+        EventType::ButtonRelease => 0,
         _ => {
             warn!("Unexpected mouse click event type: {:?}", event_type);
             0
@@ -1355,7 +1364,7 @@ fn get_mouse_click_count(event_type: gdk::EventType) -> u8 {
     }
 }
 
-const MODIFIER_MAP: &[(gdk::ModifierType, Modifiers)] = &[
+const MODIFIER_MAP: &[(ModifierType, Modifiers)] = &[
     (ModifierType::SHIFT_MASK, Modifiers::SHIFT),
     (ModifierType::MOD1_MASK, Modifiers::ALT),
     (ModifierType::CONTROL_MASK, Modifiers::CONTROL),
@@ -1366,7 +1375,7 @@ const MODIFIER_MAP: &[(gdk::ModifierType, Modifiers)] = &[
     (ModifierType::MOD2_MASK, Modifiers::NUM_LOCK),
 ];
 
-fn get_modifiers(modifiers: gdk::ModifierType) -> Modifiers {
+fn get_modifiers(modifiers: ModifierType) -> Modifiers {
     let mut result = Modifiers::empty();
     for &(gdk_mod, modifier) in MODIFIER_MAP {
         if modifiers.contains(gdk_mod) {
@@ -1413,19 +1422,18 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
 /// Map a hardware keycode to a keyval by performing a lookup in the keymap and finding the
 /// keyval with the lowest group and level
 fn hardware_keycode_to_keyval(keycode: u16) -> Option<keycodes::RawKey> {
-    use glib::translate::FromGlib;
     unsafe {
         let keymap = gdk_sys::gdk_keymap_get_default();
 
         let mut nkeys = 0;
-        let mut keys: *mut gdk_sys::GdkKeymapKey = ptr::null_mut();
+        let mut keys: *mut GdkKeymapKey = ptr::null_mut();
         let mut keyvals: *mut c_uint = ptr::null_mut();
 
         // call into gdk to retrieve the keyvals and keymap keys
         gdk_sys::gdk_keymap_get_entries_for_keycode(
             keymap,
             c_uint::from(keycode),
-            &mut keys as *mut *mut gdk_sys::GdkKeymapKey,
+            &mut keys as *mut *mut GdkKeymapKey,
             &mut keyvals as *mut *mut c_uint,
             &mut nkeys as *mut c_int,
         );
