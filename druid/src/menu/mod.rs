@@ -243,7 +243,7 @@ impl<T: Data> MenuManager<T> {
             ctx.current
         } else {
             tracing::error!("tried to refresh uninitialized menus");
-            PlatformMenu::new()
+            PlatformMenu::new("")
         }
     }
 }
@@ -267,9 +267,9 @@ impl MenuBuildCtx {
     fn new(popup: bool) -> MenuBuildCtx {
         MenuBuildCtx {
             current: if popup {
-                PlatformMenu::new_for_popup()
+                PlatformMenu::new_for_popup("")
             } else {
-                PlatformMenu::new()
+                PlatformMenu::new("")
             },
         }
     }
