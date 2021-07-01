@@ -22,7 +22,7 @@ use crate::{
     KeyEvent, KeyState, Modifiers,
 };
 use keyboard_types::{Code, Key};
-use std::os::raw::c_int;
+use std::os::raw::{c_char, c_int};
 use std::{convert::TryFrom, ptr};
 use x11rb::xcb_ffi::XCBConnection;
 
@@ -108,7 +108,7 @@ pub struct Keymap(*mut xkb_keymap);
 
 impl Keymap {
     pub fn state(&self) -> State {
-        State(unsafe { xkb_state_new(self.0) })
+        State::new(self)
     }
 }
 
@@ -126,9 +126,41 @@ impl Drop for Keymap {
     }
 }
 
-pub struct State(*mut xkb_state);
+pub struct State {
+    state: *mut xkb_state,
+    mods: ModsIndices,
+}
+
+#[derive(Clone, Copy)]
+pub struct ModsIndices {
+    control: xkb_mod_index_t,
+    shift: xkb_mod_index_t,
+    alt: xkb_mod_index_t,
+    super_: xkb_mod_index_t,
+    caps_lock: xkb_mod_index_t,
+    num_lock: xkb_mod_index_t,
+}
 
 impl State {
+    pub fn new(keymap: &Keymap) -> Self {
+        let keymap = keymap.0;
+        let state = unsafe { xkb_state_new(keymap) };
+        let mod_idx = |str: &'static [u8]| unsafe {
+            xkb_keymap_mod_get_index(keymap, str.as_ptr() as *mut c_char)
+        };
+        Self {
+            state,
+            mods: ModsIndices {
+                control: mod_idx(XKB_MOD_NAME_CTRL),
+                shift: mod_idx(XKB_MOD_NAME_SHIFT),
+                alt: mod_idx(XKB_MOD_NAME_ALT),
+                super_: mod_idx(XKB_MOD_NAME_LOGO),
+                caps_lock: mod_idx(XKB_MOD_NAME_CAPS),
+                num_lock: mod_idx(XKB_MOD_NAME_NUM),
+            },
+        }
+    }
+
     pub fn key_event(&self, scancode: u32, state: KeyState) -> KeyEvent {
         let code = u16::try_from(scancode)
             .map(hardware_keycode_to_code)
@@ -145,60 +177,29 @@ impl State {
         // Update xkb's state (e.g. return capitals if we've pressed shift)
         unsafe {
             xkb_state_update_key(
-                self.0,
+                self.state,
                 scancode,
                 match state {
                     KeyState::Down => XKB_KEY_DOWN,
                     KeyState::Up => XKB_KEY_UP,
                 },
             );
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_CTRL.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
+            // compiler will unroll this loop
+            // FIXME(msrv): remove .iter().cloned() when msrv is >= 1.53
+            for (idx, mod_) in [
+                (self.mods.control, Modifiers::CONTROL),
+                (self.mods.shift, Modifiers::SHIFT),
+                (self.mods.super_, Modifiers::SUPER),
+                (self.mods.alt, Modifiers::ALT),
+                (self.mods.caps_lock, Modifiers::CAPS_LOCK),
+                (self.mods.num_lock, Modifiers::NUM_LOCK),
+            ]
+            .iter()
+            .cloned()
             {
-                mods |= Modifiers::CONTROL;
-            }
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_SHIFT.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
-            {
-                mods |= Modifiers::SHIFT;
-            }
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_ALT.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
-            {
-                mods |= Modifiers::ALT;
-            }
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_CAPS.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
-            {
-                mods |= Modifiers::CAPS_LOCK;
-            }
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_LOGO.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
-            {
-                mods |= Modifiers::SUPER;
-            }
-            if xkb_state_mod_name_is_active(
-                self.0,
-                XKB_MOD_NAME_NUM.as_ptr() as *const _,
-                XKB_STATE_MODS_EFFECTIVE,
-            ) != 0
-            {
-                mods |= Modifiers::NUM_LOCK;
+                if xkb_state_mod_index_is_active(self.state, idx, XKB_STATE_MODS_EFFECTIVE) != 0 {
+                    mods |= mod_;
+                }
             }
         }
         KeyEvent {
@@ -223,7 +224,7 @@ impl State {
     }
 
     fn key_get_one_sym(&self, scancode: u32) -> u32 {
-        unsafe { xkb_state_key_get_one_sym(self.0, scancode) }
+        unsafe { xkb_state_key_get_one_sym(self.state, scancode) }
     }
 
     /// Get the string representation of a key.
@@ -232,7 +233,7 @@ impl State {
     fn key_get_utf8(&self, scancode: u32) -> Option<String> {
         unsafe {
             // First get the size we will need
-            let len = xkb_state_key_get_utf8(self.0, scancode, ptr::null_mut(), 0);
+            let len = xkb_state_key_get_utf8(self.state, scancode, ptr::null_mut(), 0);
             if len == 0 {
                 return None;
             }
@@ -240,7 +241,7 @@ impl State {
             let len = usize::try_from(len).unwrap() + 1;
             let mut buf: Vec<u8> = Vec::new();
             buf.resize(len, 0);
-            xkb_state_key_get_utf8(self.0, scancode, buf.as_mut_ptr() as *mut i8, len);
+            xkb_state_key_get_utf8(self.state, scancode, buf.as_mut_ptr() as *mut c_char, len);
             debug_assert!(buf[buf.len() - 1] == 0);
             buf.pop();
             Some(String::from_utf8(buf).unwrap())
@@ -250,20 +251,22 @@ impl State {
 
 impl Clone for State {
     fn clone(&self) -> Self {
-        Self(unsafe { xkb_state_ref(self.0) })
+        Self {
+            state: unsafe { xkb_state_ref(self.state) },
+            mods: self.mods,
+        }
     }
 }
 
 impl Drop for State {
     fn drop(&mut self) {
         unsafe {
-            xkb_state_unref(self.0);
+            xkb_state_unref(self.state);
         }
     }
 }
 
 /// Map from an xkb_common key code to a key, if possible.
-// I couldn't find the commented out keys
 fn map_key(keysym: u32) -> Key {
     use Key::*;
     match keysym {
