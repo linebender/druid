@@ -13,5 +13,3 @@ default-members = [
     "druid-shell",
     "druid-derive",
 ]
-[patch.crates-io]
-piet-common = { path = '../piet/piet-common' }
