@@ -18,8 +18,11 @@
 
 use std::ffi::OsString;
 
+use cocoa::appkit::NSView;
 use cocoa::base::{id, nil, NO, YES};
-use cocoa::foundation::{NSArray, NSAutoreleasePool, NSInteger, NSURL};
+use cocoa::foundation::{
+    NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSURL,
+};
 use objc::{class, msg_send, sel, sel_impl};
 
 use super::util::{from_nsstring, make_nsstring};
@@ -29,12 +32,16 @@ pub(crate) type NSModalResponse = NSInteger;
 const NSModalResponseOK: NSInteger = 1;
 const NSModalResponseCancel: NSInteger = 0;
 
-pub(crate) unsafe fn get_path(panel: id, result: NSModalResponse) -> Option<OsString> {
+pub(crate) unsafe fn get_path(
+    panel: id,
+    options: FileDialogOptions,
+    result: NSModalResponse,
+) -> Option<OsString> {
     match result {
         NSModalResponseOK => {
             let url: id = msg_send![panel, URL];
             let path: id = msg_send![url, path];
-            let path: OsString = from_nsstring(path).into();
+            let path: OsString = from_nsstring(rewritten_path(panel, path, options)).into();
             Some(path)
         }
         NSModalResponseCancel => None,
@@ -109,6 +116,16 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
         }
     }
 
+    // If we have non-empty allowed types and a file save dialog,
+    // we add a accessory view to set the file format
+    match (&options.allowed_types, ty) {
+        (Some(allowed_types), FileDialogType::Save) if !allowed_types.is_empty() => {
+            let accessory_view = allowed_types_accessory_view(&allowed_types);
+            let _: () = msg_send![panel, setAccessoryView: accessory_view];
+        }
+        _ => (),
+    }
+
     if set_type_filter {
         // If a default type was specified, then we must reorder the allowed types,
         // because there's no way to specify the default type other than having it be first.
@@ -141,4 +158,112 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
         }
     }
     panel
+}
+
+// AppKit has a build-in file format accessory view. However, this is only
+// displayed for `NSDocument` based apps. We have to construct our own `NSView`
+// hierachy to implement something similar.
+unsafe fn allowed_types_accessory_view(allowed_types: &[crate::FileSpec]) -> id {
+    // Build the View Structure required to have file format popup.
+    // This requires a container view, a label, a popup button,
+    // and some layout code to make sure it behaves correctly for
+    // fixed size and resizable views
+    let total_frame = NSRect::new(
+        NSPoint { x: 0.0, y: 0.0 },
+        NSSize {
+            width: 320.0,
+            height: 30.0,
+        },
+    );
+
+    let padding = 10.0;
+
+    // Prepare the label
+    let (label, label_size) = file_format_label();
+
+    // Place the label centered (similar to the popup button)
+    label.setFrameOrigin(NSPoint {
+        x: padding,
+        y: label_size.height / 2.0,
+    });
+
+    // Prepare the popup button
+    let popup_frame = NSRect::new(
+        NSPoint {
+            x: padding + label_size.width + padding,
+            y: 0.0,
+        },
+        NSSize {
+            width: total_frame.size.width - (padding * 3.0) - label_size.width,
+            height: total_frame.size.height,
+        },
+    );
+
+    let popup_button = file_format_popup_button(allowed_types, popup_frame);
+
+    // Prepare the container
+    let container_view: id = msg_send![class!(NSView), alloc];
+    let container_view: id = container_view.initWithFrame_(total_frame);
+
+    container_view.addSubview_(label);
+    container_view.addSubview_(popup_button);
+
+    container_view.autorelease()
+}
+
+const FileFormatPopoverTag: NSInteger = 10;
+
+unsafe fn file_format_popup_button(allowed_types: &[crate::FileSpec], popup_frame: NSRect) -> id {
+    let popup_button: id = msg_send![class!(NSPopUpButton), alloc];
+    let _: () = msg_send![popup_button, initWithFrame:popup_frame pullsDown:false];
+    for allowed_type in allowed_types {
+        let title = NSString::alloc(nil)
+            .init_str(allowed_type.name)
+            .autorelease();
+        msg_send![popup_button, addItemWithTitle: title]
+    }
+    let _: () = msg_send![popup_button, setTag: FileFormatPopoverTag];
+    popup_button.autorelease()
+}
+
+unsafe fn file_format_label() -> (id, NSSize) {
+    let label: id = msg_send![class!(NSTextField), new];
+    let _: () = msg_send![label, setBezeled:false];
+    let _: () = msg_send![label, setDrawsBackground:false];
+    // FIXME: As we have to roll our own view hierachy, we're not getting a translated
+    // title here. So we ought to find a way to translate this.
+    let title = NSString::alloc(nil).init_str("File Format:").autorelease();
+    let _: () = msg_send![label, setStringValue: title];
+    let _: () = msg_send![label, sizeToFit];
+    (label.autorelease(), label.frame().size)
+}
+
+/// Take a panel, a chosen path, and the file dialog options
+/// and rewrite the path to utilize the chosen file format.
+unsafe fn rewritten_path(panel: id, path: id, options: FileDialogOptions) -> id {
+    let allowed_types = match options.allowed_types {
+        Some(t) if !t.is_empty() => t,
+        _ => return path,
+    };
+    let accessory: id = msg_send![panel, accessoryView];
+    if accessory == nil {
+        return path;
+    }
+    let popup_button: id = msg_send![accessory, viewWithTag: FileFormatPopoverTag];
+    if popup_button == nil {
+        return path;
+    }
+    let index: NSInteger = msg_send![popup_button, indexOfSelectedItem];
+    let extension = allowed_types[index as usize].extensions[0];
+
+    // Remove any extension the user might have entered and replace it with the
+    // selected extension.
+    // We're using `NSString` methods instead of `String` simply because
+    // they are made for this purpose and simplify the implementation.
+    let path: id = msg_send![path, stringByDeletingPathExtension];
+    let path: id = msg_send![
+        path,
+        stringByAppendingPathExtension: make_nsstring(extension)
+    ];
+    path.autorelease()
 }
