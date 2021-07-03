@@ -70,7 +70,8 @@ fn main() {
     tracing_subscriber::fmt().init();
     let app = Application::new().unwrap();
 
-    let mut file_menu = Menu::new("Menu");
+    let mut file_menu = Menu::new();
+    file_menu.set_title("Menu");
     file_menu.add_item(
         0x100,
         "E&xit",
@@ -79,7 +80,8 @@ fn main() {
         false,
     );
 
-    let mut menubar = Menu::new("Menu");
+    let mut menubar = Menu::new();
+    menubar.set_title("Menubar");
     menubar.add_dropdown(file_menu, "Application", true);
 
     let mut builder = WindowBuilder::new(app.clone());

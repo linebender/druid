@@ -123,7 +123,8 @@ impl WinHandler for HelloState {
 
 fn main() {
     tracing_subscriber::fmt().init();
-    let mut file_menu = Menu::new("File Menu");
+    let mut file_menu = Menu::new();
+    file_menu.set_title("File Menu");
     file_menu.add_item(
         0x100,
         "E&xit",
@@ -138,8 +139,9 @@ fn main() {
         true,
         false,
     );
-    let mut menubar = Menu::new("Menubar");
-    menubar.add_dropdown(Menu::new("Application"), "Application", true);
+    let mut menubar = Menu::new();
+    menubar.set_title("Menubar");
+    menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
     let app = Application::new().unwrap();
