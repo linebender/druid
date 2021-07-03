@@ -55,7 +55,7 @@ mod hotkey;
 mod keyboard;
 mod menu;
 mod mouse;
-mod platform;
+mod backend;
 mod region;
 mod scale;
 mod screen;

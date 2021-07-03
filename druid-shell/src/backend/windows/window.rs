@@ -1309,7 +1309,7 @@ impl WindowBuilder {
         match level {
             WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
             _ => {
-                warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows platforms.", level);
+                warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows backend.", level);
             }
         }
     }

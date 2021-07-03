@@ -14,7 +14,7 @@
 
 //! macOS platform errors.
 
-//TODO: add a platform error for macOS, based on NSError
+//TODO: add a backend error for macOS, based on NSError
 
 #[derive(Debug, Clone)]
 pub struct Error;
