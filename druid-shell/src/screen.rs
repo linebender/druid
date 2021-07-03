@@ -14,8 +14,8 @@
 
 //! Module to get information about monitors
 
-use crate::kurbo::Rect;
 use crate::backend;
+use crate::kurbo::Rect;
 use std::fmt;
 use std::fmt::Display;
 

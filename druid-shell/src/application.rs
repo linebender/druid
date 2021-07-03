@@ -18,9 +18,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::backend::application as backend;
 use crate::clipboard::Clipboard;
 use crate::error::Error;
-use crate::backend::application as backend;
 use crate::util;
 
 /// A top-level handler that is not associated with any window.
@@ -81,10 +81,7 @@ impl Application {
         util::claim_main_thread();
         let backend_app = backend::Application::new()?;
         let state = Rc::new(RefCell::new(State { running: false }));
-        let app = Application {
-            backend_app,
-            state,
-        };
+        let app = Application { backend_app, state };
         GLOBAL_APP.with(|global_app| {
             *global_app.borrow_mut() = Some(app.clone());
         });

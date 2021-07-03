@@ -18,6 +18,7 @@ use std::any::Any;
 use std::time::Duration;
 
 use crate::application::Application;
+use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
@@ -25,7 +26,6 @@ use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, CursorDesc, MouseEvent};
-use crate::backend::window as backend;
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
