@@ -29,16 +29,22 @@ pub struct Menu(platform::Menu);
 
 impl Menu {
     /// Create a new empty window or application menu.
-    pub fn new<T: AsRef<str>>(title: T) -> Menu {
-        Menu(platform::Menu::new(title))
+    pub fn new() -> Menu {
+        Menu(platform::Menu::new())
     }
 
     /// Create a new empty context menu.
     ///
     /// Some platforms distinguish between these types of menus, and some
     /// do not.
-    pub fn new_for_popup<T: AsRef<str>>(title: T) -> Menu {
-        Menu(platform::Menu::new_for_popup(title))
+    pub fn new_for_popup() -> Menu {
+        Menu(platform::Menu::new_for_popup())
+    }
+
+    /// Set the title of the menu.
+    /// This affects only macOS apps where it sets the `title` property
+    pub fn set_title<T: AsRef<str>>(&self, title: T) {
+        self.0.set_title(title)
     }
 
     /// Consume this `Menu`, returning the platform menu object.
