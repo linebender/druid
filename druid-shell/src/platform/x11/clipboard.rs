@@ -75,12 +75,10 @@ impl Clipboard {
     }
 
     pub fn get_string(&self) -> Option<String> {
-        for target in STRING_TARGETS.iter() {
-            if let Some(data) = self.get_format(target) {
-                return String::from_utf8(data).ok();
-            }
-        }
-        None
+        STRING_TARGETS
+            .iter()
+            .find_map(|target| self.get_format(target))
+            .and_then(|data| String::from_utf8(data).ok())
     }
 
     pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
