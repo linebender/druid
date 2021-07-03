@@ -64,6 +64,8 @@ impl Menu {
         }
     }
 
+    pub fn set_title<T: AsRef<str>>(&self, _title: T) {}
+
     pub fn into_hmenu(self) -> HMENU {
         let hmenu = self.hmenu;
         mem::forget(self);

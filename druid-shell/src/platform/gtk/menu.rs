@@ -52,6 +52,8 @@ impl Menu {
         Menu { items: Vec::new() }
     }
 
+    pub fn set_title<T: AsRef<str>>(&self, _title: T) {}
+
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
         // TODO: implement enabled dropdown
         self.items
