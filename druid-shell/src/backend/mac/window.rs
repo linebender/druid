@@ -1167,8 +1167,7 @@ impl WindowHandle {
         unsafe {
             let panel = dialog::build_panel(ty, opts.clone());
             let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
-                let url = dialog::get_path(panel, opts.clone(), response)
-                    .map(|s| FileInfo { path: s.into() });
+                let url = dialog::get_file_info(panel, opts.clone(), response);
                 let view = self_clone.nsview.load();
                 if let Some(view) = (*view).as_ref() {
                     let view_state: *mut c_void = *view.get_ivar("viewState");

@@ -27,22 +27,27 @@ use objc::{class, msg_send, sel, sel_impl};
 
 use super::util::{from_nsstring, make_nsstring};
 use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::{FileInfo, FileSpec};
 
 pub(crate) type NSModalResponse = NSInteger;
 const NSModalResponseOK: NSInteger = 1;
 const NSModalResponseCancel: NSInteger = 0;
 
-pub(crate) unsafe fn get_path(
+pub(crate) unsafe fn get_file_info(
     panel: id,
     options: FileDialogOptions,
     result: NSModalResponse,
-) -> Option<OsString> {
+) -> Option<FileInfo> {
     match result {
         NSModalResponseOK => {
             let url: id = msg_send![panel, URL];
             let path: id = msg_send![url, path];
-            let path: OsString = from_nsstring(rewritten_path(panel, path, options)).into();
-            Some(path)
+            let (path, format) = rewritten_path(panel, path, options);
+            let path: OsString = from_nsstring(path).into();
+            Some(FileInfo {
+                path: path.into(),
+                format,
+            })
         }
         NSModalResponseCancel => None,
         _ => unreachable!(),
@@ -240,21 +245,26 @@ unsafe fn file_format_label() -> (id, NSSize) {
 
 /// Take a panel, a chosen path, and the file dialog options
 /// and rewrite the path to utilize the chosen file format.
-unsafe fn rewritten_path(panel: id, path: id, options: FileDialogOptions) -> id {
+unsafe fn rewritten_path(
+    panel: id,
+    path: id,
+    options: FileDialogOptions,
+) -> (id, Option<FileSpec>) {
     let allowed_types = match options.allowed_types {
         Some(t) if !t.is_empty() => t,
-        _ => return path,
+        _ => return (path, None),
     };
     let accessory: id = msg_send![panel, accessoryView];
     if accessory == nil {
-        return path;
+        return (path, None);
     }
     let popup_button: id = msg_send![accessory, viewWithTag: FileFormatPopoverTag];
     if popup_button == nil {
-        return path;
+        return (path, None);
     }
     let index: NSInteger = msg_send![popup_button, indexOfSelectedItem];
-    let extension = allowed_types[index as usize].extensions[0];
+    let file_spec = allowed_types[index as usize];
+    let extension = file_spec.extensions[0];
 
     // Remove any extension the user might have entered and replace it with the
     // selected extension.
@@ -265,5 +275,5 @@ unsafe fn rewritten_path(panel: id, path: id, options: FileDialogOptions) -> id 
         path,
         stringByAppendingPathExtension: make_nsstring(extension)
     ];
-    path.autorelease()
+    (path.autorelease(), Some(file_spec))
 }
