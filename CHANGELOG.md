@@ -45,6 +45,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: Add support for transparent windows ([#1803] by [@psychon])
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
+- x11: Add support for getting clipboard contents ([#1805] by [@psychon])
 
 ### Changed
 
@@ -734,6 +735,7 @@ Last release without a changelog :(
 [#1802]: https://github.com/linebender/druid/pull/1802
 [#1803]: https://github.com/linebender/druid/pull/1803
 [#1804]: https://github.com/linebender/druid/pull/1804
+[#1805]: https://github.com/linebender/druid/pull/1805
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
 
