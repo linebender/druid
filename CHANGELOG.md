@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
