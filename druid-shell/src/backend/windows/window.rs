@@ -79,7 +79,7 @@ use crate::window::{
     FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
 
-/// The platform target DPI.
+/// The backend target DPI.
 ///
 /// Windows considers 96 the default value which represents a 1.0 scale factor.
 pub(crate) const SCALE_TARGET_DPI: f64 = 96.0;

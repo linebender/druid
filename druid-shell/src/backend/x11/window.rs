@@ -163,7 +163,7 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         // not sure how to do this, maybe _MOTIF_WM_HINTS?
-        warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 backend.");
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
@@ -877,7 +877,7 @@ impl Window {
 
     /// Set whether the window should show titlebar
     fn show_titlebar(&self, _show_titlebar: bool) {
-        warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("Window::show_titlebar is currently unimplemented for X11 backend.");
     }
 
     fn get_position(&self) -> Point {
@@ -1644,12 +1644,12 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        warn!("WindowHandle::content_insets unimplemented for X11 platforms.");
+        warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
     pub fn set_size(&self, size: Size) {
@@ -1670,16 +1670,16 @@ impl WindowHandle {
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
-        warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_window_state is currently unimplemented for X11 backend.");
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::get_window_state is currently unimplemented for X11 backend.");
         window::WindowState::Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 backend.");
     }
 
     pub fn bring_to_front_and_focus(&self) {
@@ -1800,19 +1800,19 @@ impl WindowHandle {
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file
-        warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::open_file is currently unimplemented for X11 backend.");
         None
     }
 
     pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as
-        warn!("WindowHandle::save_as is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::save_as is currently unimplemented for X11 backend.");
         None
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
-        warn!("WindowHandle::show_context_menu is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::show_context_menu is currently unimplemented for X11 backend.");
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {

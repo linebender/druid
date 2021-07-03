@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Logic that is shared by more than one platform.
+//! Logic that is shared by more than one backend.
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "linux"))] {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Web platform errors.
+//! Web backend errors.
 
 use wasm_bindgen::JsValue;
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS platform errors.
+//! macOS backend errors.
 
 //TODO: add a backend error for macOS, based on NSError
 

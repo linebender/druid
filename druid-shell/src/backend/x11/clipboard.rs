@@ -66,12 +66,12 @@ impl Clipboard {
 
     pub fn put_string(&mut self, _s: impl AsRef<str>) {
         // TODO(x11/clipboard): implement Clipboard::put_string
-        warn!("Clipboard::put_string is currently unimplemented for X11 platforms.");
+        warn!("Clipboard::put_string is currently unimplemented for X11 backend.");
     }
 
     pub fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
         // TODO(x11/clipboard): implement Clipboard::put_formats
-        warn!("Clipboard::put_formats is currently unimplemented for X11 platforms.");
+        warn!("Clipboard::put_formats is currently unimplemented for X11 backend.");
     }
 
     pub fn get_string(&self) -> Option<String> {
