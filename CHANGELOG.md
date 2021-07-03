@@ -489,6 +489,7 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
+[@DrGabble]: https://github.com/DrGabble
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
