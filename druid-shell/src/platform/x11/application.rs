@@ -510,20 +510,17 @@ impl Application {
                     .context("IDLE_NOTIFY - failed to handle")?;
             }
             Event::SelectionClear(ev) => {
-                self
-                    .clipboard
+                self.clipboard
                     .handle_clear(ev)
                     .context("SELECTION_CLEAR event handling")?;
             }
             Event::SelectionRequest(ev) => {
-                self
-                    .clipboard
+                self.clipboard
                     .handle_request(ev)
                     .context("SELECTION_REQUEST event handling")?;
             }
             Event::PropertyNotify(ev) => {
-                self
-                    .clipboard
+                self.clipboard
                     .handle_property_notify(ev)
                     .context("PROPERTY_NOTIFY event handling")?;
             }

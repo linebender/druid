@@ -23,9 +23,9 @@ use x11rb::connection::{Connection, RequestConnection};
 use x11rb::errors::{ConnectionError, ReplyError, ReplyOrIdError};
 use x11rb::protocol::xproto::{
     Atom, AtomEnum, ChangeWindowAttributesAux, ConnectionExt, EventMask, GetPropertyReply,
-    GetPropertyType, Property, PropertyNotifyEvent, PropMode, SelectionClearEvent,
-    SelectionNotifyEvent, SelectionRequestEvent, SELECTION_NOTIFY_EVENT, Timestamp, Window,
-    WindowClass,
+    GetPropertyType, PropMode, Property, PropertyNotifyEvent, SelectionClearEvent,
+    SelectionNotifyEvent, SelectionRequestEvent, Timestamp, Window, WindowClass,
+    SELECTION_NOTIFY_EVENT,
 };
 use x11rb::protocol::Event;
 use x11rb::wrapper::ConnectionExt as _;
@@ -56,31 +56,43 @@ x11rb::atom_manager! {
 #[derive(Debug, Clone)]
 pub struct Clipboard(Rc<RefCell<ClipboardState>>);
 
-impl Clipboard{
+impl Clipboard {
     pub(crate) fn new(
         connection: Rc<XCBConnection>,
         screen_num: usize,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
     ) -> Result<Self, ReplyOrIdError> {
-        Ok(Self(Rc::new(RefCell::new(ClipboardState::new(connection, screen_num, event_queue, timestamp)?))))
+        Ok(Self(Rc::new(RefCell::new(ClipboardState::new(
+            connection,
+            screen_num,
+            event_queue,
+            timestamp,
+        )?))))
     }
 
     pub(crate) fn handle_clear(&self, event: &SelectionClearEvent) -> Result<(), ConnectionError> {
         self.0.borrow_mut().handle_clear(event)
     }
 
-    pub(crate) fn handle_request(&self, event: &SelectionRequestEvent) -> Result<(), ReplyOrIdError> {
+    pub(crate) fn handle_request(
+        &self,
+        event: &SelectionRequestEvent,
+    ) -> Result<(), ReplyOrIdError> {
         self.0.borrow_mut().handle_request(event)
     }
 
-    pub(crate) fn handle_property_notify(&self, event: &PropertyNotifyEvent) -> Result<(), ReplyOrIdError> {
+    pub(crate) fn handle_property_notify(
+        &self,
+        event: &PropertyNotifyEvent,
+    ) -> Result<(), ReplyOrIdError> {
         self.0.borrow_mut().handle_property_notify(event)
     }
 
     pub fn put_string(&mut self, s: impl AsRef<str>) {
         let bytes = s.as_ref().as_bytes();
-        let formats = STRING_TARGETS.iter()
+        let formats = STRING_TARGETS
+            .iter()
             .map(|format| ClipboardFormat::new(format, bytes))
             .collect::<Vec<_>>();
         self.put_formats(&formats);
@@ -146,7 +158,11 @@ impl ClipboardState {
         let contents = ClipboardContents::new(conn, self.screen_num, formats)?;
 
         // Become CLIPBOARD selection owner
-        conn.set_selection_owner(contents.owner_window, self.atoms.CLIPBOARD, self.timestamp.get())?;
+        conn.set_selection_owner(
+            contents.owner_window,
+            self.atoms.CLIPBOARD,
+            self.timestamp.get(),
+        )?;
 
         // Check if we really are the selection owner; this might e.g. fail if our timestamp is too
         // old and some other program became the selection owner with a newer timestamp
@@ -183,7 +199,9 @@ impl ClipboardState {
     fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
         if let Some(contents) = self.contents.as_ref() {
             // We are the selection owner and can directly return the result
-            contents.data.iter()
+            contents
+                .data
+                .iter()
                 .find(|(_, fmt, _)| fmt == format)
                 .map(|(_, _, data)| data.to_vec())
         } else {
@@ -195,7 +213,9 @@ impl ClipboardState {
     fn available_type_names(&self) -> Vec<String> {
         if let Some(contents) = self.contents.as_ref() {
             // We are the selection owner and can directly return the result
-            return contents.data.iter()
+            return contents
+                .data
+                .iter()
                 .map(|(_, format, _)| format.to_string())
                 .collect();
         }
@@ -358,7 +378,9 @@ impl ClipboardState {
         // TODO: ICCCM has TIMESTAMP as a required target (but no one uses it...?)
         if event.target == self.atoms.TARGETS {
             // TARGETS is a special case: reply is list of u32
-            let mut atoms = contents.data.iter()
+            let mut atoms = contents
+                .data
+                .iter()
                 .map(|(atom, _, _)| *atom)
                 .collect::<Vec<_>>();
             atoms.push(self.atoms.TARGETS);
@@ -371,7 +393,9 @@ impl ClipboardState {
             )?;
         } else {
             // Find the request target
-            let content = contents.data.iter()
+            let content = contents
+                .data
+                .iter()
                 .find(|(atom, _, _)| *atom == event.target);
             match content {
                 None => {
@@ -425,7 +449,10 @@ impl ClipboardState {
         Ok(())
     }
 
-    fn handle_property_notify(&mut self, event: &PropertyNotifyEvent) -> Result<(), ReplyOrIdError> {
+    fn handle_property_notify(
+        &mut self,
+        event: &PropertyNotifyEvent,
+    ) -> Result<(), ReplyOrIdError> {
         fn matches(transfer: &IncrementalTransfer, event: &PropertyNotifyEvent) -> bool {
             transfer.requestor == event.window && transfer.property == event.atom
         }
@@ -435,12 +462,17 @@ impl ClipboardState {
         }
         // Deleting the target property indicates that an INCR transfer should continue. Find that
         // transfer
-        if let Some(transfer) = self.incremental.iter_mut().find(|transfer| matches(transfer, event)) {
+        if let Some(transfer) = self
+            .incremental
+            .iter_mut()
+            .find(|transfer| matches(transfer, event))
+        {
             let done = transfer.continue_incremental(&*self.connection)?;
             if done {
                 debug!("INCR transfer finished");
                 // Remove the transfer
-                self.incremental.retain(|transfer| !matches(transfer, event));
+                self.incremental
+                    .retain(|transfer| !matches(transfer, event));
             }
         }
         Ok(())
@@ -460,12 +492,25 @@ impl ClipboardContents {
         formats: &[ClipboardFormat],
     ) -> Result<Self, ReplyOrIdError> {
         // Send InternAtom requests for all formats
-        let data = formats.iter()
-            .map(|format| conn.intern_atom(false, format.identifier.as_bytes()).map(|cookie| (cookie, format)))
+        let data = formats
+            .iter()
+            .map(|format| {
+                conn.intern_atom(false, format.identifier.as_bytes())
+                    .map(|cookie| (cookie, format))
+            })
             .collect::<Result<Vec<_>, ConnectionError>>()?;
         // Get the replies for all InternAtom requests
-        let data = data.into_iter()
-            .map(|(cookie, format)| cookie.reply().map(|reply| (reply.atom, format.identifier.to_string(), Rc::new(format.data.clone()))))
+        let data = data
+            .into_iter()
+            .map(|(cookie, format)| {
+                cookie.reply().map(|reply| {
+                    (
+                        reply.atom,
+                        format.identifier.to_string(),
+                        Rc::new(format.data.clone()),
+                    )
+                })
+            })
             .collect::<Result<Vec<_>, ReplyError>>()?;
 
         let owner_window = conn.generate_id()?;
@@ -482,10 +527,7 @@ impl ClipboardContents {
             x11rb::COPY_FROM_PARENT,
             &Default::default(),
         )?;
-        Ok(Self {
-            owner_window,
-            data,
-        })
+        Ok(Self { owner_window, data, })
     }
 
     fn destroy(&mut self, conn: &XCBConnection) -> Result<(), ConnectionError> {
@@ -506,7 +548,12 @@ struct IncrementalTransfer {
 }
 
 impl IncrementalTransfer {
-    fn new(conn: &XCBConnection, event: &SelectionRequestEvent, data: Rc<Vec<u8>>, incr: Atom) -> Result<Self, ConnectionError> {
+    fn new(
+        conn: &XCBConnection,
+        event: &SelectionRequestEvent,
+        data: Rc<Vec<u8>>,
+        incr: Atom,
+    ) -> Result<Self, ConnectionError> {
         // We need PropertyChange events on the window
         conn.change_window_attributes(
             event.requestor,
@@ -582,11 +629,16 @@ impl Drop for WindowContainer<'_> {
 fn maximum_property_length(connection: &XCBConnection) -> usize {
     let change_property_header_size = 24;
     // Apply an arbitraty limit to the property size to not stress the server too much
-    let max_request_length = connection.maximum_request_bytes().min(usize::from(u16::MAX));
+    let max_request_length = connection
+        .maximum_request_bytes()
+        .min(usize::from(u16::MAX));
     max_request_length - change_property_header_size
 }
 
-fn reject_transfer(conn: &XCBConnection, event: &SelectionRequestEvent) -> Result<(), ConnectionError> {
+fn reject_transfer(
+    conn: &XCBConnection,
+    event: &SelectionRequestEvent,
+) -> Result<(), ConnectionError> {
     let event = SelectionNotifyEvent {
         response_type: SELECTION_NOTIFY_EVENT,
         sequence: 0,
