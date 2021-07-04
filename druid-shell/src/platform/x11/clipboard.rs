@@ -19,10 +19,11 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 
 use x11rb::connection::Connection;
-use x11rb::errors::ReplyOrIdError;
+use x11rb::errors::{ConnectionError, ReplyOrIdError};
 use x11rb::protocol::xproto::{
     AtomEnum, ChangeWindowAttributesAux, ConnectionExt, EventMask, GetPropertyReply,
-    GetPropertyType, Property, Timestamp, WindowClass,
+    GetPropertyType, Property, PropertyNotifyEvent, SelectionClearEvent, SelectionRequestEvent,
+    Timestamp, WindowClass,
 };
 use x11rb::protocol::Event;
 use x11rb::xcb_ffi::XCBConnection;
@@ -41,6 +42,14 @@ const STRING_TARGETS: [&str; 5] = [
     "text/plain",
 ];
 
+x11rb::atom_manager! {
+    ClipboardAtoms: ClipboardAtomsCookie {
+        CLIPBOARD,
+        TARGETS,
+        INCR,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Clipboard(Rc<RefCell<ClipboardState>>);
 
@@ -50,8 +59,20 @@ impl Clipboard{
         screen_num: usize,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
-    ) -> Self {
-        Self(Rc::new(RefCell::new(ClipboardState::new(connection, screen_num, event_queue, timestamp))))
+    ) -> Result<Self, ReplyOrIdError> {
+        Ok(Self(Rc::new(RefCell::new(ClipboardState::new(connection, screen_num, event_queue, timestamp)?))))
+    }
+
+    pub(crate) fn handle_clear(&self, event: &SelectionClearEvent) -> Result<(), ConnectionError> {
+        self.0.borrow_mut().handle_clear(event)
+    }
+
+    pub(crate) fn handle_request(&self, event: &SelectionRequestEvent) -> Result<(), ReplyOrIdError> {
+        self.0.borrow_mut().handle_request(event)
+    }
+
+    pub(crate) fn handle_property_notify(&self, event: &PropertyNotifyEvent) -> Result<(), ReplyOrIdError> {
+        self.0.borrow_mut().handle_property_notify(event)
     }
 
     pub fn put_string(&mut self, s: impl AsRef<str>) {
@@ -83,6 +104,7 @@ impl Clipboard{
 struct ClipboardState {
     connection: Rc<XCBConnection>,
     screen_num: usize,
+    atoms: ClipboardAtoms,
     event_queue: Rc<RefCell<VecDeque<Event>>>,
     timestamp: Rc<Cell<Timestamp>>,
 }
@@ -93,18 +115,22 @@ impl ClipboardState {
         screen_num: usize,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, ReplyOrIdError> {
+        let atoms = ClipboardAtoms::new(&*connection)?.reply()?;
+        Ok(Self {
             connection,
             screen_num,
+            atoms,
             event_queue,
             timestamp,
-        }
+        })
     }
 
-    fn put_string(&mut self, _s: impl AsRef<str>) {
-        // TODO(x11/clipboard): implement Clipboard::put_string
-        warn!("Clipboard::put_string is currently unimplemented for X11 platforms.");
+    fn put_string(&mut self, s: &str) {
+        let formats = STRING_TARGETS.iter()
+            .map(|format| ClipboardFormat::new(format, s.as_bytes()))
+            .collect::<Vec<_>>();
+        self.put_formats(&formats);
     }
 
     fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
@@ -178,23 +204,14 @@ impl ClipboardState {
         debug!("Getting clipboard contents in format {}", format);
 
         let conn = &*self.connection;
-        let (format_atom, clipboard_atom, incr_atom) = {
-            let format = conn.intern_atom(false, format.as_bytes())?;
-            let clipboard = conn.intern_atom(false, b"CLIPBOARD")?;
-            let incr = conn.intern_atom(false, b"INCR")?;
-            (
-                format.reply()?.atom,
-                clipboard.reply()?.atom,
-                incr.reply()?.atom,
-            )
-        };
+        let format_atom = conn.intern_atom(false, format.as_bytes())?.reply()?.atom;
 
         // Create a window for the transfer
         let window = WindowContainer::new(conn, self.screen_num)?;
 
         conn.convert_selection(
             window.window,
-            clipboard_atom,
+            self.atoms.CLIPBOARD,
             format_atom,
             TRANSFER_ATOM,
             self.timestamp.get(),
@@ -233,7 +250,7 @@ impl ClipboardState {
             )?
             .reply()?;
 
-        if property.type_ != incr_atom {
+        if property.type_ != self.atoms.INCR {
             debug!("Got selection contents directly");
             return Ok(Some(converter(property)));
         }
@@ -269,6 +286,19 @@ impl ClipboardState {
             }
         }
     }
+
+    fn handle_clear(&self, _event: &SelectionClearEvent) -> Result<(), ConnectionError> {
+        Ok(())
+    }
+
+    fn handle_request(&self, _event: &SelectionRequestEvent) -> Result<(), ReplyOrIdError> {
+        Ok(())
+    }
+
+    fn handle_property_notify(&self, _event: &PropertyNotifyEvent) -> Result<(), ReplyOrIdError> {
+        Ok(())
+    }
+
 }
 
 struct WindowContainer<'a> {

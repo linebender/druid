@@ -220,7 +220,7 @@ impl Application {
             screen_num,
             Rc::clone(&pending_events),
             Rc::clone(&timestamp),
-        );
+        )?;
 
         Ok(Application {
             connection,
@@ -508,6 +508,24 @@ impl Application {
                     .context("IDLE_NOTIFY - failed to get window")?;
                 w.handle_idle_notify(ev)
                     .context("IDLE_NOTIFY - failed to handle")?;
+            }
+            Event::SelectionClear(ev) => {
+                self
+                    .clipboard
+                    .handle_clear(ev)
+                    .context("SELECTION_CLEAR event handling")?;
+            }
+            Event::SelectionRequest(ev) => {
+                self
+                    .clipboard
+                    .handle_request(ev)
+                    .context("SELECTION_REQUEST event handling")?;
+            }
+            Event::PropertyNotify(ev) => {
+                self
+                    .clipboard
+                    .handle_property_notify(ev)
+                    .context("PROPERTY_NOTIFY event handling")?;
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
