@@ -14,6 +14,7 @@
 
 //! A button widget.
 
+use crate::shell::Cursor;
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
 use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
@@ -127,6 +128,13 @@ impl<T: Data> Widget<T> for Button<T> {
                     trace!("Button {:?} released", ctx.widget_id());
                 }
                 ctx.set_active(false);
+            }
+            Event::MouseMove(_) => {
+                if !ctx.is_disabled() {
+                    ctx.set_cursor(&Cursor::Pointer);
+                } else {
+                    ctx.clear_cursor();
+                }
             }
             _ => (),
         }
