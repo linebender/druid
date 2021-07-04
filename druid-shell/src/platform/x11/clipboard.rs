@@ -449,10 +449,7 @@ impl ClipboardState {
         Ok(())
     }
 
-    fn handle_property_notify(
-        &mut self,
-        event: PropertyNotifyEvent,
-    ) -> Result<(), ReplyOrIdError> {
+    fn handle_property_notify(&mut self, event: PropertyNotifyEvent) -> Result<(), ReplyOrIdError> {
         fn matches(transfer: &IncrementalTransfer, event: PropertyNotifyEvent) -> bool {
             transfer.requestor == event.window && transfer.property == event.atom
         }
@@ -527,7 +524,7 @@ impl ClipboardContents {
             x11rb::COPY_FROM_PARENT,
             &Default::default(),
         )?;
-        Ok(Self { owner_window, data, })
+        Ok(Self { owner_window, data })
     }
 
     fn destroy(&mut self, conn: &XCBConnection) -> Result<(), ConnectionError> {
