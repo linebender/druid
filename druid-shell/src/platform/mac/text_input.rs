@@ -19,7 +19,7 @@
 // apple's documentation on text editing is also very helpful:
 // https://developer.apple.com/library/archive/documentation/TextFonts/Conceptual/CocoaTextArchitecture/TextEditing/TextEditing.html#//apple_ref/doc/uid/TP40009459-CH3-SW3
 
-#![allow(clippy::clippy::upper_case_acronyms, non_snake_case)]
+#![allow(clippy::upper_case_acronyms, non_snake_case)]
 
 use std::ffi::c_void;
 use std::ops::Range;
@@ -65,6 +65,8 @@ unsafe impl objc::Encode for NSRange {
     }
 }
 
+// BOOL is i8 on x86, but bool on aarch64
+#[cfg_attr(target_arch = "aarch64", allow(clippy::useless_conversion))]
 pub extern "C" fn has_marked_text(this: &mut Object, _: Sel) -> BOOL {
     with_edit_lock_from_window(this, false, |edit_lock| {
         edit_lock.composition_range().is_some()

@@ -241,7 +241,8 @@ impl<T: Clone> SpanSet<T> {
     //as requred for insertions in the interior of a span.
     //TODO: this isn't currently used; it should be used if we use spans with
     //some editable type.
-    #[allow(dead_code)]
+    // the branches are much more readable without sharing code
+    #[allow(dead_code, clippy::branches_sharing_code)]
     fn edit(&mut self, changed: Range<usize>, new_len: usize) {
         let old_len = changed.len();
         let mut to_insert = None;

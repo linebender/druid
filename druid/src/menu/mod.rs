@@ -188,7 +188,7 @@ impl<T: Data> MenuManager<T> {
         env: &Env,
     ) {
         if let Some(m) = &mut self.menu {
-            let mut ctx = MenuEventCtx { queue, window };
+            let mut ctx = MenuEventCtx { window, queue };
             m.activate(&mut ctx, id, data, env);
         }
     }

@@ -73,7 +73,7 @@ pub struct WidgetPod<T, W> {
 /// [`paint`]: trait.Widget.html#tymethod.paint
 /// [`WidgetPod`]: struct.WidgetPod.html
 #[derive(Clone)]
-pub(crate) struct WidgetState {
+pub struct WidgetState {
     pub(crate) id: WidgetId,
     /// The size of the child; this is the value returned by the child's layout
     /// method.
@@ -126,6 +126,9 @@ pub(crate) struct WidgetState {
     pub(crate) is_active: bool,
 
     pub(crate) needs_layout: bool,
+
+    /// Because of some scrolling or something, `parent_window_origin` needs to be updated.
+    pub(crate) needs_window_origin: bool,
 
     /// Any descendant is active.
     has_active: bool,
@@ -215,6 +218,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`LifeCycle::WidgetAdded`]: ./enum.LifeCycle.html#variant.WidgetAdded
     pub fn is_initialized(&self) -> bool {
         self.old_data.is_some()
+    }
+
+    /// Returns `true` if widget or any descendent is focused
+    pub fn has_focus(&self) -> bool {
+        self.state.has_focus
     }
 
     /// Query the "active" state of the widget.
@@ -308,10 +316,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Scroll`]: widget/struct.Scroll.html
     pub fn set_viewport_offset(&mut self, offset: Vec2) {
         if offset != self.state.viewport_offset {
-            // We need the parent_window_origin recalculated.
-            // It should be possible to just trigger the InternalLifeCycle::ParentWindowOrigin here,
-            // instead of full layout. Would need more management in WidgetState.
-            self.state.needs_layout = true;
+            self.state.needs_window_origin = true;
         }
         self.state.viewport_offset = offset;
     }
@@ -560,12 +565,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         self.state.needs_layout = false;
+        self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
-        let child_mouse_pos = match ctx.mouse_pos {
-            Some(pos) => Some(pos - self.layout_rect().origin().to_vec2() + self.viewport_offset()),
-            None => None,
-        };
+        let child_mouse_pos = ctx
+            .mouse_pos
+            .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());
         let prev_size = self.state.size;
 
         let mut child_ctx = LayoutCtx {
@@ -840,7 +845,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     ctx.is_handled = true
                 }
                 _ => {
-                    self.inner.event(&mut inner_ctx, &inner_event, data, env);
+                    self.inner.event(&mut inner_ctx, inner_event, data, env);
 
                     inner_ctx.widget_state.has_active |= inner_ctx.widget_state.is_active;
                     ctx.is_handled |= inner_ctx.is_handled;
@@ -972,9 +977,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
                 InternalLifeCycle::ParentWindowOrigin => {
                     self.state.parent_window_origin = ctx.widget_state.window_origin();
+                    self.state.needs_window_origin = false;
                     true
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
                         state_cell.set(self.state.clone());
@@ -982,10 +987,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     } else {
                         // Recurse when the target widget could be our descendant.
                         // The bloom filter we're checking can return false positives.
-                        self.state.children.may_contain(&widget)
+                        self.state.children.may_contain(widget)
                     }
                 }
-                #[cfg(test)]
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true
@@ -1151,7 +1155,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         None
                     },
                 };
-                let command = Command::new(SUB_WINDOW_PARENT_TO_HOST, update, *host);
+                let command = SUB_WINDOW_PARENT_TO_HOST.with(update).to(*host);
                 ctx.submit_command(command);
             }
         }
@@ -1213,6 +1217,7 @@ impl WidgetState {
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
+            needs_window_origin: false,
             is_active: false,
             has_active: false,
             has_focus: false,
@@ -1274,6 +1279,7 @@ impl WidgetState {
         child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
+        self.needs_window_origin |= child_state.needs_window_origin;
         self.request_anim |= child_state.request_anim;
         self.children_disabled_changed |= child_state.children_disabled_changed;
         self.children_disabled_changed |=

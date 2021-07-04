@@ -576,7 +576,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         };
 
         // Paint the background
-        let clip_rect = Size::new(size.width - border_width, size.height)
+        let clip_rect = size
             .to_rect()
             .inset(-border_width / 2.0)
             .to_rounded_rect(env.get(theme::TEXTBOX_BORDER_RADIUS));
@@ -606,11 +606,15 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
             let padding_offset = Vec2::new(textbox_insets.x0, textbox_insets.y0);
 
-            let cursor = if data.is_empty() {
+            let mut cursor = if data.is_empty() {
                 cursor_line + padding_offset
             } else {
                 cursor_line + padding_offset - self.inner.offset()
             };
+
+            // Snap the cursor to the pixel grid so it stays sharp.
+            cursor.p0.x = cursor.p0.x.trunc() + 0.5;
+            cursor.p1.x = cursor.p0.x;
 
             ctx.with_save(|ctx| {
                 ctx.clip(clip_rect);

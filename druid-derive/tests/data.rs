@@ -60,21 +60,18 @@ fn test_data_derive_same() {
 
     let singletuple = SingleTupleStruct(true);
     assert!(singletuple.same(&singletuple));
-    assert_eq!(false, singletuple.same(&SingleTupleStruct(false)));
+    assert!(!singletuple.same(&SingleTupleStruct(false)));
 
     let multituple = MultiTupleStruct(false, 33, "Test".to_string());
     assert!(multituple.same(&multituple));
-    assert_eq!(
-        false,
-        multituple.same(&MultiTupleStruct(true, 33, "Test".to_string()))
-    );
+    assert!(!multituple.same(&MultiTupleStruct(true, 33, "Test".to_string())));
 
     let empty_field = EmptyFieldStruct {};
     assert!(empty_field.same(&empty_field));
 
     let singlefield = SingleFieldStruct { a: true };
     assert!(singlefield.same(&singlefield));
-    assert_eq!(false, singlefield.same(&SingleFieldStruct { a: false }));
+    assert!(!singlefield.same(&SingleFieldStruct { a: false }));
 
     let multifield = MultiFieldStruct {
         a: false,
@@ -82,14 +79,11 @@ fn test_data_derive_same() {
         c: "Test".to_string(),
     };
     assert!(multifield.same(&multifield));
-    assert_eq!(
-        false,
-        multifield.same(&MultiFieldStruct {
-            a: false,
-            b: 33,
-            c: "Fail".to_string()
-        })
-    );
+    assert!(!multifield.same(&MultiFieldStruct {
+        a: false,
+        b: 33,
+        c: "Fail".to_string()
+    }));
 
     #[derive(Clone, Data)]
     struct Value(u32);
@@ -98,19 +92,13 @@ fn test_data_derive_same() {
 
     let v = TypeParamForUserTraitStruct { a: Value(1) };
     assert!(v.same(&v));
-    assert_eq!(false, v.same(&TypeParamForUserTraitStruct { a: Value(2) }));
+    assert!(!v.same(&TypeParamForUserTraitStruct { a: Value(2) }));
 
     let v = TypeParamForUserTraitWithWhereClauseStruct { b: Value(3) };
     assert!(v.same(&v));
-    assert_eq!(
-        false,
-        v.same(&TypeParamForUserTraitWithWhereClauseStruct { b: Value(6) })
-    );
+    assert!(!v.same(&TypeParamForUserTraitWithWhereClauseStruct { b: Value(6) }));
 
     let v = TypeParamForUserTraitAndLifetimeEnum::V1(Value(10));
     assert!(v.same(&v));
-    assert_eq!(
-        false,
-        v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12)))
-    );
+    assert!(!v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12))));
 }

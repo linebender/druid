@@ -61,9 +61,7 @@ fn invalidate_scroll() {
         y1: 50.,
     };
 
-    struct Invalidator {
-        invalid: bool,
-    }
+    struct Invalidator;
 
     impl<T: Data> Widget<T> for Invalidator {
         fn event(&mut self, ctx: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {
@@ -84,13 +82,12 @@ fn invalidate_scroll() {
             approx_eq!(f64, rect.y0, 40.);
             approx_eq!(f64, rect.x1, 40.);
             approx_eq!(f64, rect.y1, 50.);
-            self.invalid = false;
         }
     }
 
     let id = WidgetId::next();
     let scroll_id = WidgetId::next();
-    let invalidator = IdentityWrapper::wrap(Invalidator { invalid: false }, id);
+    let invalidator = IdentityWrapper::wrap(Invalidator, id);
     let scroll = Scroll::new(invalidator).with_id(scroll_id);
 
     Harness::create_simple(true, scroll, |harness| {

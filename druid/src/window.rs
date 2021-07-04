@@ -180,6 +180,11 @@ impl<T: Data> Window<T> {
             );
         }
 
+        if self.root.state().needs_window_origin && !self.root.state().needs_layout {
+            let event = LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin);
+            self.lifecycle(queue, &event, data, env, false);
+        }
+
         // Update the disabled state if necessary
         // Always do this before updating the focus-chain
         if self.root.state().tree_disabled_changed() {
@@ -295,7 +300,7 @@ impl<T: Data> Window<T> {
         }
 
         if let Some(cursor) = &widget_state.cursor {
-            self.handle.set_cursor(&cursor);
+            self.handle.set_cursor(cursor);
         } else if matches!(
             event,
             Event::MouseMove(..) | Event::Internal(InternalEvent::MouseLeave)
@@ -379,13 +384,11 @@ impl<T: Data> Window<T> {
         self.invalid.clear();
     }
 
-    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn invalid(&self) -> &Region {
         &self.invalid
     }
 
-    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn invalid_mut(&mut self) -> &mut Region {
         &mut self.invalid
@@ -419,7 +422,7 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
-        for r in invalid.rects().to_owned() {
+        for &r in invalid.rects() {
             piet.clear(
                 Some(r),
                 if self.transparent {
@@ -474,7 +477,6 @@ impl<T: Data> Window<T> {
 
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(not(target_arch = "wasm32"))]
-    #[cfg(test)]
     pub(crate) fn just_layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         self.layout(queue, data, env)
     }

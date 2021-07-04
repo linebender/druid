@@ -14,18 +14,21 @@
 
 //! X11 implementation of features at the application scope.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, VecDeque};
 use std::convert::{TryFrom, TryInto};
 use std::os::unix::io::RawFd;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
-use x11rb::connection::Connection;
+use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::present::ConnectionExt as _;
+use x11rb::protocol::render::{self, ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::ConnectionExt as _;
-use x11rb::protocol::xproto::{self, ConnectionExt, CreateWindowAux, EventMask, WindowClass};
+use x11rb::protocol::xproto::{
+    self, ConnectionExt, CreateWindowAux, EventMask, Timestamp, Visualtype, WindowClass,
+};
 use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
@@ -46,13 +49,22 @@ pub(crate) struct Application {
     /// A display is a collection of screens.
     connection: Rc<XCBConnection>,
     /// An `XCBConnection` is *technically* safe to use from other threads, but there are
-    /// subtleties; see https://github.com/psychon/x11rb/blob/41ab6610f44f5041e112569684fc58cd6d690e57/src/event_loop_integration.rs.
+    /// subtleties; see [x11rb event loop integration notes][1] for more details.
     /// Let's just avoid the issue altogether. As far as public API is concerned, this causes
     /// `druid_shell::WindowHandle` to be `!Send` and `!Sync`.
+    ///
+    /// [1]: https://github.com/psychon/x11rb/blob/41ab6610f44f5041e112569684fc58cd6d690e57/src/event_loop_integration.rs.
     marker: std::marker::PhantomData<*mut XCBConnection>,
 
+    /// The type of visual used by the root window
+    root_visual_type: Visualtype,
+    /// The visual for windows with transparent backgrounds, if supported
+    argb_visual_type: Option<Visualtype>,
+    /// Pending events that need to be handled later
+    pending_events: Rc<RefCell<VecDeque<Event>>>,
+
     /// The X11 resource database used to query dpi.
-    pub(crate) rdb: ResourceDb,
+    pub(crate) rdb: Rc<ResourceDb>,
     pub(crate) cursors: Cursors,
     /// The default screen of the connected display.
     ///
@@ -64,7 +76,7 @@ pub(crate) struct Application {
     /// In practice multiple physical monitor drawing areas are present on a single screen.
     /// This is achieved via various X server extensions (XRandR/Xinerama/TwinView),
     /// with XRandR seeming like the best choice.
-    screen_num: i32, // Needs a container when no longer const
+    screen_num: usize, // Needs a container when no longer const
     /// The X11 window id of this `Application`.
     ///
     /// This is an input-only non-visual X11 window that is created first during initialization,
@@ -83,6 +95,10 @@ pub(crate) struct Application {
     idle_write: RawFd,
     /// The major opcode of the Present extension, if it is supported.
     present_opcode: Option<u8>,
+    /// Support for the render extension in at least version 0.5?
+    render_argb32_pictformat_cursor: Option<Pictformat>,
+    /// Newest timestamp that we received
+    timestamp: Rc<Cell<Timestamp>>,
 }
 
 /// The mutable `Application` state.
@@ -115,9 +131,9 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
-        let rdb = ResourceDb::new_from_default(&conn)?;
+        let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
         let connection = Rc::new(conn);
-        let window_id = Application::create_event_window(&connection, screen_num as i32)?;
+        let window_id = Application::create_event_window(&connection, screen_num)?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashMap::new(),
@@ -138,6 +154,36 @@ impl Application {
             }
         };
 
+        let pictformats = connection.render_query_pict_formats()?;
+        let render_create_cursor_supported = matches!(connection
+            .extension_information(render::X11_EXTENSION_NAME)?
+            .and_then(|_| connection.render_query_version(0, 5).ok())
+            .map(|cookie| cookie.reply())
+            .transpose()?,
+            Some(version) if version.major_version >= 1 || version.minor_version >= 5);
+        let render_argb32_pictformat_cursor = if render_create_cursor_supported {
+            pictformats
+                .reply()?
+                .formats
+                .iter()
+                .find(|format| {
+                    format.type_ == render::PictType::DIRECT
+                        && format.depth == 32
+                        && format.direct.red_shift == 16
+                        && format.direct.red_mask == 0xff
+                        && format.direct.green_shift == 8
+                        && format.direct.green_mask == 0xff
+                        && format.direct.blue_shift == 0
+                        && format.direct.blue_mask == 0xff
+                        && format.direct.alpha_shift == 24
+                        && format.direct.alpha_mask == 0xff
+                })
+                .map(|format| format.id)
+        } else {
+            drop(pictformats);
+            None
+        };
+
         let handle = x11rb::cursor::Handle::new(connection.as_ref(), screen_num, &rdb)?.reply()?;
         let load_cursor = |cursor| {
             handle
@@ -156,17 +202,31 @@ impl Application {
             col_resize: load_cursor("col-resize"),
         };
 
+        let screen = connection
+            .setup()
+            .roots
+            .get(screen_num)
+            .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
+        let root_visual_type = util::get_visual_from_screen(&screen)
+            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
+        let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
+
         Ok(Application {
             connection,
             rdb,
-            screen_num: screen_num as i32,
+            screen_num,
             window_id,
             state,
             idle_read,
             cursors,
             idle_write,
             present_opcode,
+            root_visual_type,
+            argb_visual_type,
+            pending_events: Default::default(),
             marker: std::marker::PhantomData,
+            render_argb32_pictformat_cursor,
+            timestamp: Rc::new(Cell::new(x11rb::CURRENT_TIME)),
         })
     }
 
@@ -217,12 +277,18 @@ impl Application {
         self.present_opcode
     }
 
-    fn create_event_window(conn: &Rc<XCBConnection>, screen_num: i32) -> Result<u32, Error> {
+    /// Return the ARGB32 pictformat of the server, but only if RENDER's CreateCursor is supported
+    #[inline]
+    pub(crate) fn render_argb32_pictformat_cursor(&self) -> Option<Pictformat> {
+        self.render_argb32_pictformat_cursor
+    }
+
+    fn create_event_window(conn: &Rc<XCBConnection>, screen_num: usize) -> Result<u32, Error> {
         let id = conn.generate_id()?;
         let setup = conn.setup();
         let screen = setup
             .roots
-            .get(screen_num as usize)
+            .get(screen_num)
             .ok_or_else(|| anyhow!("invalid screen num: {}", screen_num))?;
 
         // Create the actual window
@@ -282,12 +348,54 @@ impl Application {
     }
 
     #[inline]
-    pub(crate) fn screen_num(&self) -> i32 {
+    pub(crate) fn screen_num(&self) -> usize {
         self.screen_num
+    }
+
+    #[inline]
+    pub(crate) fn argb_visual_type(&self) -> Option<Visualtype> {
+        // Check if a composite manager is running
+        let atom_name = format!("_NET_WM_CM_S{}", self.screen_num);
+        let owner = self
+            .connection
+            .intern_atom(false, atom_name.as_bytes())
+            .ok()
+            .and_then(|cookie| cookie.reply().ok())
+            .map(|reply| reply.atom)
+            .and_then(|atom| self.connection.get_selection_owner(atom).ok())
+            .and_then(|cookie| cookie.reply().ok())
+            .map(|reply| reply.owner);
+
+        if Some(x11rb::NONE) == owner {
+            tracing::debug!("_NET_WM_CM_Sn selection is unowned, not providing ARGB visual");
+            None
+        } else {
+            self.argb_visual_type
+        }
+    }
+
+    #[inline]
+    pub(crate) fn root_visual_type(&self) -> Visualtype {
+        self.root_visual_type
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.
     fn handle_event(&self, ev: &Event) -> Result<bool, Error> {
+        if ev.server_generated() {
+            // Update our latest timestamp
+            let timestamp = match ev {
+                Event::KeyPress(ev) => ev.time,
+                Event::KeyRelease(ev) => ev.time,
+                Event::ButtonPress(ev) => ev.time,
+                Event::ButtonRelease(ev) => ev.time,
+                Event::MotionNotify(ev) => ev.time,
+                Event::EnterNotify(ev) => ev.time,
+                Event::LeaveNotify(ev) => ev.time,
+                Event::PropertyNotify(ev) => ev.time,
+                _ => self.timestamp.get(),
+            };
+            self.timestamp.set(timestamp);
+        }
         match ev {
             // NOTE: When adding handling for any of the following events,
             //       there must be a check against self.window_id
@@ -427,10 +535,15 @@ impl Application {
 
             self.connection.flush()?;
 
+            // Deal with pending events
+            let mut event = self.pending_events.borrow_mut().pop_front();
+
             // Before we poll on the connection's file descriptor, check whether there are any
             // events ready. It could be that XCB has some events in its internal buffers because
             // of something that happened during the idle loop.
-            let mut event = self.connection.poll_for_event()?;
+            if event.is_none() {
+                event = self.connection.poll_for_event()?;
+            }
 
             if event.is_none() {
                 poll_with_timeout(
@@ -520,15 +633,31 @@ impl Application {
     }
 
     pub fn clipboard(&self) -> Clipboard {
-        // TODO(x11/clipboard): implement Application::clipboard
-        tracing::warn!("Application::clipboard is currently unimplemented for X11 platforms.");
-        Clipboard {}
+        Clipboard::new(
+            Rc::clone(&self.connection),
+            self.screen_num,
+            Rc::clone(&self.pending_events),
+            Rc::clone(&self.timestamp),
+        )
     }
 
     pub fn get_locale() -> String {
-        // TODO(x11/locales): implement Application::get_locale
-        tracing::warn!("Application::get_locale is currently unimplemented for X11 platforms. (defaulting to en-US)");
-        "en-US".into()
+        let var_non_empty = |var| match std::env::var(var) {
+            Ok(s) if s.is_empty() => None,
+            Ok(s) => Some(s),
+            Err(_) => None,
+        };
+
+        // from gettext manual
+        // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
+        var_non_empty("LANGUAGE")
+            // the LANGUAGE value is priority list seperated by :
+            // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
+            .and_then(|locale| locale.split(':').next().map(String::from))
+            .or_else(|| var_non_empty("LC_ALL"))
+            .or_else(|| var_non_empty("LC_MESSAGES"))
+            .or_else(|| var_non_empty("LANG"))
+            .unwrap_or_else(|| "en-US".to_string())
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {

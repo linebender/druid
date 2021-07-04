@@ -14,7 +14,6 @@
 
 //! GTK window creation and management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::c_void;
@@ -178,6 +177,9 @@ pub(crate) struct WindowState {
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+
+    request_animation: Cell<bool>,
+    in_draw: Cell<bool>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -254,16 +256,16 @@ impl WindowBuilder {
 
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
-        window.set_app_paintable(true);
         window.set_decorated(self.show_titlebar);
-        let mut can_transparent = false;
+        let mut transparent = false;
         if self.transparent {
             if let Some(screen) = window.get_screen() {
                 let visual = screen.get_rgba_visual();
-                can_transparent = visual.is_some();
+                transparent = visual.is_some();
                 window.set_visual(visual.as_ref());
             }
         }
+        window.set_app_paintable(transparent);
 
         // Get the scale factor based on the GTK reported DPI
         let scale_factor =
@@ -285,7 +287,7 @@ impl WindowBuilder {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
-            is_transparent: Cell::new(self.transparent & can_transparent),
+            is_transparent: Cell::new(transparent),
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
@@ -297,6 +299,8 @@ impl WindowBuilder {
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
+            request_animation: Cell::new(false),
+            in_draw: Cell::new(false),
         });
 
         self.app
@@ -361,6 +365,27 @@ impl WindowBuilder {
                 min_size_px.height.round() as i32,
             );
         }
+
+        win_state
+            .drawing_area
+            .connect_realize(clone!(handle => move |drawing_area| {
+                if let Some(clock) = drawing_area.get_frame_clock() {
+                    clock.connect_before_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(true);
+                        }
+                    }));
+                    clock.connect_after_paint(clone!(handle => move |_clock|{
+                        if let Some(state) = handle.state.upgrade() {
+                            state.in_draw.set(false);
+                            if state.request_animation.get() {
+                                state.request_animation.set(false);
+                                state.drawing_area.queue_draw();
+                            }
+                        }
+                    }));
+                }
+            }));
 
         win_state.drawing_area.connect_draw(clone!(handle => move |widget, context| {
             if let Some(state) = handle.state.upgrade() {
@@ -431,7 +456,7 @@ impl WindowBuilder {
                         // region, because there might be parts of the drawing area that were
                         // invalidated by external forces).
                         let alloc = widget.get_allocation();
-                        context.set_source_surface(&surface, 0.0, 0.0);
+                        context.set_source_surface(surface, 0.0, 0.0);
                         context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
                         context.fill();
                     });
@@ -781,7 +806,11 @@ impl WindowState {
     /// Queues a call to `prepare_paint` and `paint`, but without marking any region for
     /// invalidation.
     fn request_anim_frame(&self) {
-        self.window.queue_draw();
+        if self.in_draw.get() {
+            self.request_animation.set(true);
+        } else {
+            self.drawing_area.queue_draw()
+        }
     }
 
     /// Invalidates a rectangle, given in display points.
@@ -1157,7 +1186,6 @@ impl WindowHandle {
     pub fn set_menu(&self, menu: Menu) {
         if let Some(state) = self.state.upgrade() {
             let window = &state.window;
-
             let accel_group = AccelGroup::new();
             window.add_accel_group(&accel_group);
 
@@ -1169,9 +1197,9 @@ impl WindowHandle {
             let first_child = &vbox.get_children()[0];
             if let Some(old_menubar) = first_child.downcast_ref::<gtk::MenuBar>() {
                 old_menubar.deactivate();
-                vbox.remove(first_child);
+                vbox.remove(old_menubar);
             }
-            let menubar = menu.into_gtk_menubar(&self, &accel_group);
+            let menubar = menu.into_gtk_menubar(self, &accel_group);
             vbox.pack_start(&menubar, false, false, 0);
             menubar.show_all();
         }
@@ -1206,10 +1234,11 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
                 glib::idle_add(move || run_idle(&state));
@@ -1222,6 +1251,7 @@ impl IdleHandle {
     pub fn add_idle_token(&self, token: IdleToken) {
         let mut queue = self.idle_queue.lock().unwrap();
         if let Some(state) = self.state.upgrade() {
+            #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
                 glib::idle_add(move || run_idle(&state));
@@ -1235,11 +1265,11 @@ impl IdleHandle {
 fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
     util::assert_main_thread();
     let result = state.with_handler(|handler| {
-        let queue: Vec<_> = std::mem::replace(&mut state.idle_queue.lock().unwrap(), Vec::new());
+        let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
 
         for item in queue {
             match item {
-                IdleKind::Callback(it) => it.call(handler.as_any()),
+                IdleKind::Callback(it) => it.call(handler),
                 IdleKind::Token(it) => handler.idle(it),
             }
         }
@@ -1372,13 +1402,13 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let is_composing = false;
 
     KeyEvent {
+        state,
         key,
         code,
         location,
         mods,
         repeat,
         is_composing,
-        state,
     }
 }
 

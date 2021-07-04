@@ -14,7 +14,6 @@
 
 //! X11 window creation and window management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
@@ -30,11 +29,15 @@ use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVis
 use tracing::{error, info, warn};
 use x11rb::atom_manager;
 use x11rb::connection::Connection;
+use x11rb::errors::ReplyOrIdError;
+use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
 use x11rb::protocol::present::{CompleteNotifyEvent, ConnectionExt as _, IdleNotifyEvent};
+use x11rb::protocol::render::{ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::{ConnectionExt as _, Region as XRegion};
 use x11rb::protocol::xproto::{
-    self, AtomEnum, ChangeWindowAttributesAux, ConfigureNotifyEvent, ConnectionExt, CreateGCAux,
-    EventMask, Gcontext, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
+    self, AtomEnum, ChangeWindowAttributesAux, ColormapAlloc, ConfigureNotifyEvent,
+    ConfigureWindowAux, ConnectionExt, CreateGCAux, EventMask, Gcontext, ImageFormat,
+    ImageOrder as X11ImageOrder, Pixmap, PropMode, Rectangle, Visualtype, WindowClass,
 };
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
@@ -60,7 +63,7 @@ use crate::{window, ScaledArea};
 use super::application::Application;
 use super::keycodes;
 use super::menu::Menu;
-use super::util::{self, Timer};
+use super::util::Timer;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -97,15 +100,28 @@ impl From<Visualtype> for xcb_visualtype_t {
     }
 }
 
+fn size_hints(resizable: bool, size: Size, min_size: Size) -> WmSizeHints {
+    let mut size_hints = WmSizeHints::new();
+    if resizable {
+        size_hints.min_size = Some((min_size.width as i32, min_size.height as i32));
+    } else {
+        size_hints.min_size = Some((size.width as i32, size.height as i32));
+        size_hints.max_size = Some((size.width as i32, size.height as i32));
+    }
+    size_hints
+}
+
 pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
+    transparent: bool,
+    position: Option<Point>,
     size: Size,
-
-    // TODO: implement min_size for X11
-    #[allow(dead_code)]
     min_size: Size,
+    resizable: bool,
+    level: WindowLevel,
+    state: Option<window::WindowState>,
 }
 
 impl WindowBuilder {
@@ -114,8 +130,13 @@ impl WindowBuilder {
             app,
             handler: None,
             title: String::new(),
+            transparent: false,
+            position: None,
             size: Size::new(500.0, 400.0),
             min_size: Size::new(0.0, 0.0),
+            resizable: true,
+            level: WindowLevel::AppWindow,
+            state: None,
         }
     }
 
@@ -124,36 +145,41 @@ impl WindowBuilder {
     }
 
     pub fn set_size(&mut self, size: Size) {
-        self.size = size;
+        // zero sized window results in server error
+        self.size = if size.width == 0. || size.height == 0. {
+            Size::new(1., 1.)
+        } else {
+            size
+        };
     }
 
     pub fn set_min_size(&mut self, min_size: Size) {
-        warn!("WindowBuilder::set_min_size is implemented, but the setting is currently unused for X11 platforms.");
         self.min_size = min_size;
     }
 
-    pub fn resizable(&mut self, _resizable: bool) {
-        warn!("WindowBuilder::resizable is currently unimplemented for X11 platforms.");
+    pub fn resizable(&mut self, resizable: bool) {
+        self.resizable = resizable;
     }
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
+        // not sure how to do this, maybe _MOTIF_WM_HINTS?
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
     }
 
-    pub fn set_transparent(&mut self, _transparent: bool) {
-        // Ignored
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
     }
 
-    pub fn set_position(&mut self, _position: Point) {
-        warn!("WindowBuilder::set_position is currently unimplemented for X11 platforms.");
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position);
     }
 
-    pub fn set_level(&mut self, _level: window::WindowLevel) {
-        warn!("WindowBuilder::set_level  is currently unimplemented for X11 platforms.");
+    pub fn set_level(&mut self, level: window::WindowLevel) {
+        self.level = level;
     }
 
-    pub fn set_window_state(&self, _state: window::WindowState) {
-        warn!("WindowBuilder::set_window_state is currently unimplemented for X11 platforms.");
+    pub fn set_window_state(&mut self, state: window::WindowState) {
+        self.state = Some(state);
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -245,13 +271,22 @@ impl WindowBuilder {
         let size_px = self.size.to_px(scale);
         let screen = setup
             .roots
-            .get(screen_num as usize)
+            .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
-        let visual_type = util::get_visual_from_screen(&screen)
-            .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
-        let visual_id = visual_type.visual_id;
+        let visual_type = if self.transparent {
+            self.app.argb_visual_type()
+        } else {
+            None
+        };
+        let (transparent, visual_type) = match visual_type {
+            Some(visual) => (true, visual),
+            None => (false, self.app.root_visual_type()),
+        };
+        if transparent != self.transparent {
+            warn!("Windows with transparent backgrounds do not work");
+        }
 
-        let cw_values = xproto::CreateWindowAux::new().event_mask(
+        let mut cw_values = xproto::CreateWindowAux::new().event_mask(
             EventMask::EXPOSURE
                 | EventMask::STRUCTURE_NOTIFY
                 | EventMask::KEY_PRESS
@@ -260,21 +295,36 @@ impl WindowBuilder {
                 | EventMask::BUTTON_RELEASE
                 | EventMask::POINTER_MOTION,
         );
+        if transparent {
+            let colormap = conn.generate_id()?;
+            conn.create_colormap(
+                ColormapAlloc::NONE,
+                colormap,
+                screen.root,
+                visual_type.visual_id,
+            )?;
+            cw_values = cw_values
+                .border_pixel(screen.white_pixel)
+                .colormap(colormap);
+        };
+
+        let pos = self.position.unwrap_or_default().to_px(scale);
 
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
+        let depth = if transparent { 32 } else { screen.root_depth };
         conn.create_window(
             // Window depth
-            x11rb::COPY_FROM_PARENT.try_into().unwrap(),
+            depth,
             // The new window's ID
             id,
             // Parent window of this new window
             // TODO(#468): either `screen.root()` (no parent window) or pass parent here to attach
             screen.root,
             // X-coordinate of the new window
-            0,
+            pos.x as _,
             // Y-coordinate of the new window
-            0,
+            pos.y as _,
             // Width of the new window
             width_px,
             // Height of the new window
@@ -284,12 +334,16 @@ impl WindowBuilder {
             // Window class type
             WindowClass::INPUT_OUTPUT,
             // Visual ID
-            visual_id,
+            visual_type.visual_id,
             // Window properties mask
             &cw_values,
         )?
         .check()
         .context("create window")?;
+
+        if let Some(colormap) = cw_values.colormap {
+            conn.free_colormap(colormap)?;
+        }
 
         // Allocate a graphics context (currently used only for copying pixels when present is
         // unavailable).
@@ -301,12 +355,6 @@ impl WindowBuilder {
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
         let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
-        let state = RefCell::new(WindowState {
-            area: ScaledArea::from_px(size_px, scale),
-            scale,
-            invalid: Region::EMPTY,
-            destroyed: false,
-        });
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
             Err(e) => {
@@ -320,12 +368,7 @@ impl WindowBuilder {
         // other one). Otherwise, we only need one.
         let buf_count = if present_data.is_some() { 2 } else { 1 };
         let buffers = RefCell::new(Buffers::new(
-            conn,
-            id,
-            buf_count,
-            width_px,
-            height_px,
-            screen.root_depth,
+            conn, id, buf_count, width_px, height_px, depth,
         )?);
 
         // Initialize some properties
@@ -342,6 +385,50 @@ impl WindowBuilder {
             .context("set _NET_WM_PID")?;
         }
 
+        let min_size = self.min_size.to_px(scale);
+        log_x11!(size_hints(self.resizable, size_px, min_size)
+            .set_normal_hints(conn.as_ref(), id)
+            .context("set wm normal hints"));
+
+        // TODO: set _NET_WM_STATE
+        let mut hints = WmHints::new();
+        if let Some(state) = self.state {
+            hints.initial_state = Some(match state {
+                window::WindowState::Maximized => WmHintsState::Normal,
+                window::WindowState::Minimized => WmHintsState::Iconic,
+                window::WindowState::Restored => WmHintsState::Normal,
+            });
+        }
+        log_x11!(hints.set(conn.as_ref(), id).context("set wm hints"));
+
+        // set level
+        {
+            let window_type = match self.level {
+                WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
+                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+            };
+
+            let conn = self.app.connection();
+            log_x11!(conn.change_property32(
+                xproto::PropMode::REPLACE,
+                id,
+                atoms._NET_WM_WINDOW_TYPE,
+                AtomEnum::ATOM,
+                &[window_type],
+            ));
+            if matches!(
+                self.level,
+                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+            ) {
+                log_x11!(conn.change_window_attributes(
+                    id,
+                    &ChangeWindowAttributesAux::new().override_redirect(1),
+                ));
+            }
+        }
+
         let window = Rc::new(Window {
             id,
             gc,
@@ -349,7 +436,11 @@ impl WindowBuilder {
             handler,
             cairo_surface,
             atoms,
-            state,
+            area: Cell::new(ScaledArea::from_px(size_px, scale)),
+            scale: Cell::new(scale),
+            min_size,
+            invalid: RefCell::new(Region::EMPTY),
+            destroyed: Cell::new(false),
             timer_queue: Mutex::new(BinaryHeap::new()),
             idle_queue: Arc::new(Mutex::new(Vec::new())),
             idle_pipe: self.app.idle_pipe(),
@@ -357,7 +448,11 @@ impl WindowBuilder {
             buffers,
             active_text_field: Cell::new(None),
         });
+
         window.set_title(&self.title);
+        if let Some(pos) = self.position {
+            window.set_position(pos);
+        }
 
         let handle = WindowHandle::new(id, Rc::downgrade(&window));
         window.connect(handle.clone())?;
@@ -425,7 +520,14 @@ pub(crate) struct Window {
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
     atoms: WindowAtoms,
-    state: RefCell<WindowState>,
+    area: Cell<ScaledArea>,
+    scale: Cell<Scale>,
+    // min size in px
+    min_size: Size,
+    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    destroyed: Cell<bool>,
+    /// The region that was invalidated since the last time we rendered.
+    invalid: RefCell<Region>,
     /// Timers, sorted by "earliest deadline first"
     timer_queue: Mutex<BinaryHeap<Timer>>,
     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
@@ -508,17 +610,12 @@ atom_manager! {
         _NET_WM_PID,
         _NET_WM_NAME,
         UTF8_STRING,
+        _NET_WM_WINDOW_TYPE,
+        _NET_WM_WINDOW_TYPE_NORMAL,
+        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+        _NET_WM_WINDOW_TYPE_TOOLTIP,
+        _NET_WM_WINDOW_TYPE_DIALOG,
     }
-}
-
-/// The mutable state of the window.
-struct WindowState {
-    area: ScaledArea,
-    scale: Scale,
-    /// The region that was invalidated since the last time we rendered.
-    invalid: Region,
-    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
-    destroyed: bool,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -582,7 +679,7 @@ impl Window {
     #[track_caller]
     fn with_handler<T, F: FnOnce(&mut dyn WinHandler) -> T>(&self, f: F) -> Option<T> {
         if self.cairo_surface.try_borrow_mut().is_err()
-            || self.state.try_borrow_mut().is_err()
+            || self.invalid.try_borrow_mut().is_err()
             || self.present_data.try_borrow_mut().is_err()
             || self.buffers.try_borrow_mut().is_err()
         {
@@ -608,8 +705,8 @@ impl Window {
     }
 
     fn connect(&self, handle: WindowHandle) -> Result<(), Error> {
-        let size = self.size()?.size_dp();
-        let scale = self.get_scale()?;
+        let size = self.size().size_dp();
+        let scale = self.scale.get();
         self.with_handler(|h| {
             h.connect(&handle.into());
             h.scale(scale);
@@ -621,29 +718,25 @@ impl Window {
     /// Start the destruction of the window.
     pub fn destroy(&self) {
         if !self.destroyed() {
-            match borrow_mut!(self.state) {
-                Ok(mut state) => state.destroyed = true,
-                Err(e) => error!("Failed to set destroyed flag: {}", e),
-            }
+            self.destroyed.set(true);
             log_x11!(self.app.connection().destroy_window(self.id));
         }
     }
 
     fn destroyed(&self) -> bool {
-        borrow!(self.state).map(|s| s.destroyed).unwrap_or(false)
+        self.destroyed.get()
     }
 
-    fn size(&self) -> Result<ScaledArea, Error> {
-        Ok(borrow!(self.state)?.area)
+    fn size(&self) -> ScaledArea {
+        self.area.get()
     }
 
     // note: size is in px
-    fn set_size(&self, size: Size) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+    fn size_changed(&self, size: Size) -> Result<(), Error> {
+        let scale = self.scale.get();
         let new_size = {
-            let mut state = borrow_mut!(self.state)?;
-            if size != state.area.size_px() {
-                state.area = ScaledArea::from_px(size, scale);
+            if size != self.area.get().size_px() {
+                self.area.set(ScaledArea::from_px(size, scale));
                 true
             } else {
                 false
@@ -697,11 +790,11 @@ impl Window {
         }
 
         self.update_cairo_surface()?;
-        let invalid = std::mem::replace(&mut borrow_mut!(self.state)?.invalid, Region::EMPTY);
+        let invalid = std::mem::replace(&mut *borrow_mut!(self.invalid)?, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
             let cairo_ctx = cairo::Context::new(&surface);
-            let scale = self.get_scale()?;
+            let scale = self.scale.get();
             for rect in invalid.rects() {
                 let rect = rect.to_px(scale);
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
@@ -747,7 +840,7 @@ impl Window {
             .idle_pixmaps
             .last()
             .ok_or_else(|| anyhow!("after rendering, no pixmap to present"))?;
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         if let Some(present) = borrow_mut!(self.present_data)?.as_mut() {
             present.present(self.app.connection(), pixmap, self.id, &invalid, scale)?;
             buffers.idle_pixmaps.pop();
@@ -775,13 +868,53 @@ impl Window {
     }
 
     /// Set whether the window should be resizable
-    fn resizable(&self, _resizable: bool) {
-        warn!("Window::resizeable is currently unimplemented for X11 platforms.");
+    fn resizable(&self, resizable: bool) {
+        let conn = self.app.connection().as_ref();
+        log_x11!(size_hints(resizable, self.size().size_px(), self.min_size)
+            .set_normal_hints(conn, self.id)
+            .context("set normal hints"));
     }
 
     /// Set whether the window should show titlebar
     fn show_titlebar(&self, _show_titlebar: bool) {
         warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+    }
+
+    fn get_position(&self) -> Point {
+        fn _get_position(window: &Window) -> Result<Point, Error> {
+            let conn = window.app.connection();
+            let scale = window.scale.get();
+            let geom = conn.get_geometry(window.id)?.reply()?;
+            let cord = conn
+                .translate_coordinates(window.id, geom.root, 0, 0)?
+                .reply()?;
+            Ok(Point::new(cord.dst_x as _, cord.dst_y as _).to_dp(scale))
+        }
+        let pos = _get_position(self);
+        log_x11!(&pos);
+        pos.unwrap_or_default()
+    }
+
+    fn set_position(&self, pos: Point) {
+        let conn = self.app.connection();
+        let scale = self.scale.get();
+        let pos = pos.to_px(scale).expand();
+        log_x11!(conn.configure_window(
+            self.id,
+            &ConfigureWindowAux::new().x(pos.x as i32).y(pos.y as i32),
+        ));
+    }
+
+    fn set_size(&self, size: Size) {
+        let conn = self.app.connection();
+        let scale = self.scale.get();
+        let size = size.to_px(scale).expand();
+        log_x11!(conn.configure_window(
+            self.id,
+            &ConfigureWindowAux::new()
+                .width(size.width as u32)
+                .height(size.height as u32),
+        ));
     }
 
     /// Bring this window to the front of the window stack and give it focus.
@@ -805,7 +938,7 @@ impl Window {
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
         // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.state)?.invalid.add_rect(rect);
+        borrow_mut!(self.invalid)?.add_rect(rect);
         Ok(())
     }
 
@@ -842,12 +975,9 @@ impl Window {
     }
 
     fn invalidate(&self) {
-        match self.size() {
-            Ok(size) => self
-                .add_invalid_rect(size.size_dp().to_rect())
-                .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err)),
-            Err(err) => error!("Window::invalidate - failed to get size: {}", err),
-        }
+        let rect = self.size().size_dp().to_rect();
+        self.add_invalid_rect(rect)
+            .unwrap_or_else(|err| error!("Window::invalidate - failed to invalidate: {}", err));
 
         self.request_anim_frame();
     }
@@ -899,8 +1029,7 @@ impl Window {
             Cursor::NotAllowed => cursors.not_allowed,
             Cursor::ResizeLeftRight => cursors.col_resize,
             Cursor::ResizeUpDown => cursors.row_resize,
-            // TODO: (x11/custom cursor)
-            Cursor::Custom(_) => None,
+            Cursor::Custom(custom) => Some(custom.0),
         };
         if cursor.is_none() {
             warn!("Unable to load cursor {:?}", cursor);
@@ -918,7 +1047,7 @@ impl Window {
     }
 
     fn get_scale(&self) -> Result<Scale, Error> {
-        Ok(borrow!(self.state)?.scale)
+        Ok(self.scale.get())
     }
 
     pub fn handle_expose(&self, expose: &xproto::ExposeEvent) -> Result<(), Error> {
@@ -926,7 +1055,7 @@ impl Window {
             (expose.x as f64, expose.y as f64),
             (expose.width as f64, expose.height as f64),
         )
-        .to_dp(self.get_scale()?);
+        .to_dp(self.scale.get());
 
         self.add_invalid_rect(rect)?;
         if self.waiting_on_present()? {
@@ -965,7 +1094,7 @@ impl Window {
         button_press: &xproto::ButtonPressEvent,
     ) -> Result<(), Error> {
         let button = mouse_button(button_press.detail);
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let mouse_event = MouseEvent {
             pos: Point::new(button_press.event_x as f64, button_press.event_y as f64).to_dp(scale),
             // The xcb state field doesn't include the newly pressed button, but
@@ -986,7 +1115,7 @@ impl Window {
         &self,
         button_release: &xproto::ButtonReleaseEvent,
     ) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let button = mouse_button(button_release.detail);
         let mouse_event = MouseEvent {
             pos: Point::new(button_release.event_x as f64, button_release.event_y as f64)
@@ -1007,7 +1136,7 @@ impl Window {
     pub fn handle_wheel(&self, event: &xproto::ButtonPressEvent) -> Result<(), Error> {
         let button = event.detail;
         let mods = key_mods(event.state);
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
 
         // We use a delta of 120 per tick to match the behavior of Windows.
         let is_shift = mods.shift();
@@ -1038,7 +1167,7 @@ impl Window {
         &self,
         motion_notify: &xproto::MotionNotifyEvent,
     ) -> Result<(), Error> {
-        let scale = self.get_scale()?;
+        let scale = self.scale.get();
         let mouse_event = MouseEvent {
             pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64)
                 .to_dp(scale),
@@ -1070,7 +1199,7 @@ impl Window {
     }
 
     pub fn handle_configure_notify(&self, event: &ConfigureNotifyEvent) -> Result<(), Error> {
-        self.set_size(Size::new(event.width as f64, event.height as f64))
+        self.size_changed(Size::new(event.width as f64, event.height as f64))
     }
 
     pub fn handle_complete_notify(&self, event: &CompleteNotifyEvent) -> Result<(), Error> {
@@ -1162,7 +1291,7 @@ impl Window {
             for callback in queue {
                 match callback {
                     IdleKind::Callback(f) => {
-                        f.call(handler.as_any());
+                        f.call(handler);
                     }
                     IdleKind::Token(tok) => {
                         handler.idle(tok);
@@ -1439,7 +1568,7 @@ impl IdleHandle {
 
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         self.queue
             .lock()
@@ -1497,13 +1626,21 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_position(&self, _position: Point) {
-        warn!("WindowHandle::set_position is currently unimplemented for X11 platforms.");
+    pub fn set_position(&self, position: Point) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_position(position);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn get_position(&self) -> Point {
-        warn!("WindowHandle::get_position is currently unimplemented for X11 platforms.");
-        Point::new(0.0, 0.0)
+        if let Some(w) = self.window.upgrade() {
+            w.get_position()
+        } else {
+            error!("Window {} has already been dropped", self.id);
+            Point::new(0.0, 0.0)
+        }
     }
 
     pub fn content_insets(&self) -> Insets {
@@ -1512,16 +1649,24 @@ impl WindowHandle {
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level  is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_level unimplemented for X11 platforms.");
     }
 
-    pub fn set_size(&self, _size: Size) {
-        warn!("WindowHandle::set_size is currently unimplemented for X11 platforms.");
+    pub fn set_size(&self, size: Size) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_size(size);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
     }
 
     pub fn get_size(&self) -> Size {
-        warn!("WindowHandle::get_size is currently unimplemented for X11 platforms.");
-        Size::new(0.0, 0.0)
+        if let Some(w) = self.window.upgrade() {
+            w.size().size_dp()
+        } else {
+            error!("Window {} has already been dropped", self.id);
+            Size::ZERO
+        }
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
@@ -1627,9 +1772,30 @@ impl WindowHandle {
         }
     }
 
-    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-        warn!("Custom cursors are not yet supported in the X11 backend");
-        None
+    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        if let Some(w) = self.window.upgrade() {
+            match w.app.render_argb32_pictformat_cursor() {
+                None => {
+                    warn!("Custom cursors are not supported by the X11 server");
+                    None
+                }
+                Some(format) => {
+                    let conn = w.app.connection();
+                    let setup = &conn.setup();
+                    let screen = &setup.roots[w.app.screen_num()];
+                    match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
+                        // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
+                        Ok(cursor) => Some(cursor),
+                        Err(err) => {
+                            error!("Failed to create custom cursor: {:?}", err);
+                            None
+                        }
+                    }
+                }
+            }
+        } else {
+            None
+        }
     }
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
@@ -1684,4 +1850,81 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 
         RawWindowHandle::Xcb(handle)
     }
+}
+
+fn make_cursor(
+    conn: &XCBConnection,
+    byte_order: X11ImageOrder,
+    root_window: u32,
+    argb32_format: Pictformat,
+    desc: &CursorDesc,
+) -> Result<Cursor, ReplyOrIdError> {
+    // BEGIN: Lots of code just to get the image into a RENDER Picture
+
+    fn multiply_alpha(color: u8, alpha: u8) -> u8 {
+        let (color, alpha) = (u16::from(color), u16::from(alpha));
+        let temp = color * alpha + 0x80u16;
+        ((temp + (temp >> 8)) >> 8) as u8
+    }
+
+    // No idea how to sanely get the pixel values, so I'll go with 'insane':
+    // Iterate over all pixels and build an array
+    let pixels = desc
+        .image
+        .pixel_colors()
+        .flat_map(|row| {
+            row.flat_map(|color| {
+                let (r, g, b, a) = color.as_rgba8();
+                // RENDER wants premultiplied alpha
+                let (r, g, b) = (
+                    multiply_alpha(r, a),
+                    multiply_alpha(g, a),
+                    multiply_alpha(b, a),
+                );
+                // piet gives us rgba in this order, the server expects an u32 with argb.
+                let (b0, b1, b2, b3) = match byte_order {
+                    X11ImageOrder::LSB_FIRST => (b, g, r, a),
+                    _ => (a, r, g, b),
+                };
+                // TODO Ownership and flat_map don't go well together :-(
+                vec![b0, b1, b2, b3]
+            })
+        })
+        .collect::<Vec<u8>>();
+    let width = desc.image.width().try_into().expect("Invalid cursor width");
+    let height = desc
+        .image
+        .height()
+        .try_into()
+        .expect("Invalid cursor height");
+
+    let pixmap = conn.generate_id()?;
+    let gc = conn.generate_id()?;
+    let picture = conn.generate_id()?;
+    conn.create_pixmap(32, pixmap, root_window, width, height)?;
+    conn.create_gc(gc, pixmap, &Default::default())?;
+
+    conn.put_image(
+        ImageFormat::Z_PIXMAP,
+        pixmap,
+        gc,
+        width,
+        height,
+        0,
+        0,
+        0,
+        32,
+        &pixels,
+    )?;
+    conn.render_create_picture(picture, pixmap, argb32_format, &Default::default())?;
+
+    conn.free_gc(gc)?;
+    conn.free_pixmap(pixmap)?;
+    // End: Lots of code just to get the image into a RENDER Picture
+
+    let cursor = conn.generate_id()?;
+    conn.render_create_cursor(cursor, picture, desc.hot.x as u16, desc.hot.y as u16)?;
+    conn.render_free_picture(picture)?;
+
+    Ok(Cursor::Custom(CustomCursor(cursor)))
 }

@@ -16,7 +16,6 @@
 
 #![allow(non_snake_case, clippy::cast_lossless)]
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::mem;
 use std::panic::Location;
@@ -480,11 +479,7 @@ impl MyWndProc {
         F: FnOnce(&mut WndState) -> R,
     {
         let ret = if let Ok(mut s) = self.state.try_borrow_mut() {
-            if let Some(state) = &mut *s {
-                Some(f(state))
-            } else {
-                None
-            }
+            (*s).as_mut().map(|state| f(state))
         } else {
             error!("failed to borrow WndState at {}", Location::caller());
             None
@@ -1230,7 +1225,7 @@ impl WndProc for MyWndProc {
                     let queue = self.handle.borrow().take_idle_queue();
                     for callback in queue {
                         match callback {
-                            IdleKind::Callback(it) => it.call(s.handler.as_any()),
+                            IdleKind::Callback(it) => it.call(&mut *s.handler),
                             IdleKind::Token(token) => s.handler.idle(token),
                         }
                     }
@@ -2131,7 +2126,7 @@ impl WindowHandle {
 
     fn take_idle_queue(&self) -> Vec<IdleKind> {
         if let Some(w) = self.state.upgrade() {
-            mem::replace(&mut w.idle_queue.lock().unwrap(), Vec::new())
+            mem::take(&mut w.idle_queue.lock().unwrap())
         } else {
             Vec::new()
         }
@@ -2177,7 +2172,7 @@ impl IdleHandle {
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {

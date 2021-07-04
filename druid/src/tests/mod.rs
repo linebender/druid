@@ -14,9 +14,14 @@
 
 //! Additional unit tests that cross file or module boundaries.
 
-pub(crate) mod harness;
-mod helpers;
+#![allow(unused_imports)]
+
+pub mod harness;
+pub mod helpers;
+
+#[cfg(test)]
 mod invalidation_tests;
+#[cfg(test)]
 mod layout_tests;
 
 use std::cell::Cell;
@@ -31,7 +36,8 @@ use harness::*;
 use helpers::*;
 use kurbo::Vec2;
 
-fn move_mouse(p: impl Into<Point>) -> MouseEvent {
+/// Helper function to construct a "move to this position" mouse event.
+pub fn move_mouse(p: impl Into<Point>) -> MouseEvent {
     let pos = p.into();
     MouseEvent {
         pos,
@@ -45,7 +51,8 @@ fn move_mouse(p: impl Into<Point>) -> MouseEvent {
     }
 }
 
-fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
+/// Helper function to construct a "scroll by n ticks" mouse event.
+pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
     let pos = p.into();
     MouseEvent {
         pos,
@@ -66,6 +73,7 @@ fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
 /// directory will be cleaned up at the end of the PathBufs lifetime. This
 /// uses the `tempfile` crate.
 #[allow(dead_code)]
+#[cfg(test)]
 pub fn temp_dir_for_test() -> std::path::PathBuf {
     let current_exe_path = env::current_exe().unwrap();
     let mut exe_dir = current_exe_path.parent().unwrap();
@@ -84,7 +92,7 @@ pub fn temp_dir_for_test() -> std::path::PathBuf {
 /// test that the first widget to request focus during an event gets it.
 #[test]
 fn propagate_hot() {
-    let (button, pad, root, empty) = widget_id4();
+    let [button, pad, root, empty] = widget_ids();
 
     let root_rec = Recording::default();
     let padding_rec = Recording::default();
@@ -202,7 +210,7 @@ fn take_focus() {
             })
     }
 
-    let (id_1, id_2, _id_3) = widget_id3();
+    let [id_1, id_2, _id_3] = widget_ids();
 
     // we use these so that we can check the widget's internal state
     let left_focus: Rc<Cell<Option<bool>>> = Default::default();
@@ -286,7 +294,7 @@ fn focus_changed() {
     let b_rec = Recording::default();
     let c_rec = Recording::default();
 
-    let (id_a, id_b, id_c) = widget_id3();
+    let [id_a, id_b, id_c] = widget_ids();
 
     // a contains b which contains c
     let c = make_focus_container(vec![]).record(&c_rec).with_id(id_c);
@@ -419,23 +427,23 @@ fn simple_disable() {
         harness.send_initial_events();
         check_states("send_initial_events", [None, None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         check_states("Change 1", [Some(true), None, None, None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         check_states("Change 2", [Some(true), None, Some(true), None]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_3]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_3));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_3));
         check_states("Change 3", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_2));
         check_states("Change 4", [Some(true), None, Some(false), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1, id_2]);
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         check_states("Change 5", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
         //This is intended the widget should not receive an event!
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_1));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_1));
         check_states("Change 6", [Some(true), None, Some(true), Some(true)]);
         assert_eq!(harness.window().focus_chain(), &[id_1]);
     })
@@ -493,25 +501,25 @@ fn resign_focus_on_disable() {
         harness.send_initial_events();
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_2));
+        harness.submit_command(REQUEST_FOCUS.to(id_2));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, Some(id_2));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_2]);
         assert_eq!(harness.window().focus, Some(id_2));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_2));
         assert_eq!(harness.window().focus_chain(), &[]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
         assert_eq!(harness.window().focus, None);
-        harness.submit_command(Command::new(REQUEST_FOCUS, (), id_1));
+        harness.submit_command(REQUEST_FOCUS.to(id_1));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1]);
         assert_eq!(harness.window().focus, Some(id_1));
-        harness.submit_command(Command::new(CHANGE_DISABLED, false, id_2));
+        harness.submit_command(CHANGE_DISABLED.with(false).to(id_2));
         assert_eq!(harness.window().focus_chain(), &[id_0, id_1, id_2]);
         assert_eq!(harness.window().focus, Some(id_1));
-        harness.submit_command(Command::new(CHANGE_DISABLED, true, id_0));
+        harness.submit_command(CHANGE_DISABLED.with(true).to(id_0));
         assert_eq!(harness.window().focus_chain(), &[id_2]);
         assert_eq!(harness.window().focus, None);
     })
@@ -555,7 +563,7 @@ fn disable_tree() {
 
     fn multi_update(states: &[(WidgetId, bool)]) -> Command {
         let payload = states.iter().cloned().collect::<HashMap<_, _>>();
-        Command::new(MULTI_CHANGE_DISABLED, payload, Target::Global)
+        MULTI_CHANGE_DISABLED.with(payload).to(Target::Global)
     }
 
     let disabled_0: Rc<Cell<Option<bool>>> = Default::default();
@@ -799,7 +807,7 @@ fn adding_child_lifecycle() {
 
 #[test]
 fn participate_in_autofocus() {
-    let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
+    let [id_1, id_2, id_3, id_4, id_5, id_6] = widget_ids();
 
     // this widget starts with a single child, and will replace them with a split
     // when we send it a command.
@@ -840,7 +848,7 @@ fn participate_in_autofocus() {
 
 #[test]
 fn child_tracking() {
-    let (id_1, id_2, id_3, id_4) = widget_id4();
+    let [id_1, id_2, id_3, id_4] = widget_ids();
 
     let widget = Split::columns(
         SizedBox::empty().with_id(id_1),
@@ -868,8 +876,7 @@ fn child_tracking() {
 #[test]
 /// Test that all children are registered correctly after a child is replaced.
 fn register_after_adding_child() {
-    let (id_1, id_2, id_3, id_4, id_5, id_6) = widget_id6();
-    let id_7 = WidgetId::next();
+    let [id_1, id_2, id_3, id_4, id_5, id_6, id_7] = widget_ids();
 
     let replacer = ReplaceChild::new(Slider::new().with_id(id_1), move || {
         Split::columns(Slider::new().with_id(id_2), Slider::new().with_id(id_3)).with_id(id_7)

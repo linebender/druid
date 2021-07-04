@@ -39,7 +39,7 @@ pub(crate) struct KeyboardState {
 /// Convert a macOS platform key code (keyCode field of NSEvent).
 ///
 /// The primary source for this mapping is:
-/// https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code/code_values
+/// <https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code/code_values>
 ///
 /// It should also match up with CODE_MAP_MAC bindings in
 /// NativeKeyToDOMCodeName.h.
@@ -315,13 +315,13 @@ impl KeyboardState {
                 }
             };
             let event = KeyEvent {
-                code,
+                state,
                 key,
+                code,
                 location,
                 mods,
-                state,
-                is_composing,
                 repeat,
+                is_composing,
             };
             Some(event)
         }

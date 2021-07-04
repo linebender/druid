@@ -148,7 +148,7 @@ impl Validation {
         self
     }
 
-    /// Returns `true` if this `Validation` indicates success.
+    /// Returns `true` if this `Validation` indicates failure.
     pub fn is_err(&self) -> bool {
         self.result.is_err()
     }

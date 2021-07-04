@@ -14,7 +14,6 @@
 
 //! Web window creation and management.
 
-use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::ffi::OsString;
 use std::rc::{Rc, Weak};
@@ -41,7 +40,7 @@ use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
-use crate::keyboard::{KbKey, KeyState, Modifiers};
+use crate::keyboard::{KeyState, Modifiers};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::text::{simulate_input, Event};
@@ -113,6 +112,7 @@ struct WindowState {
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
+    rendering_soon: Cell<bool>,
 }
 
 // TODO: support custom cursors
@@ -142,7 +142,7 @@ impl WindowState {
         let mut queue = self.idle_queue.lock().expect("process_idle_queue");
         for item in queue.drain(..) {
             match item {
-                IdleKind::Callback(cb) => cb.call(&self.handler),
+                IdleKind::Callback(cb) => cb.call(&mut **self.handler.borrow_mut()),
                 IdleKind::Token(tok) => self.handler.borrow_mut().idle(tok),
             }
         }
@@ -295,13 +295,9 @@ fn setup_keydown_callback(ws: &Rc<WindowState>) {
     register_window_event_listener(ws, "keydown", move |event: web_sys::KeyboardEvent| {
         let modifiers = get_modifiers!(event);
         let kb_event = convert_keyboard_event(&event, modifiers, KeyState::Down);
-        if kb_event.key == KbKey::Backspace {
-            // Prevent the browser from going back a page by default.
-            event.prevent_default();
-        }
         let mut handler = state.handler.borrow_mut();
-        if !handler.key_down(kb_event.clone()) {
-            simulate_input(&mut **handler, state.active_text_input.get(), kb_event);
+        if simulate_input(&mut **handler, state.active_text_input.get(), kb_event) {
+            event.prevent_default();
         }
     });
 }
@@ -444,6 +440,7 @@ impl WindowBuilder {
             invalid: RefCell::new(Region::EMPTY),
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
+            rendering_soon: Cell::new(false),
         });
 
         setup_web_callbacks(&window);
@@ -632,10 +629,14 @@ impl WindowHandle {
     fn render_soon(&self) {
         if let Some(s) = self.0.upgrade() {
             let state = s.clone();
-            s.request_animation_frame(move || {
-                state.render();
-            })
-            .expect("Failed to request animation frame");
+            if !state.rendering_soon.get() {
+                state.rendering_soon.set(true);
+                s.request_animation_frame(move || {
+                    state.rendering_soon.set(false);
+                    state.render();
+                })
+                .expect("Failed to request animation frame");
+            }
         }
     }
 
@@ -686,7 +687,7 @@ impl IdleHandle {
     /// Add an idle handler, which is called (once) when the main thread is idle.
     pub fn add_idle_callback<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.queue.lock().expect("IdleHandle::add_idle queue");
         queue.push(IdleKind::Callback(Box::new(callback)));

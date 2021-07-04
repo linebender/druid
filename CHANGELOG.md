@@ -31,6 +31,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - New `TextBox` widget with IME integration ([#1636] by [@cmyr])
 - `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
 - Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
+- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
 - `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
 - `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
   context-methods to implement disabled ([#1632] by [@xarvic])
@@ -39,10 +40,17 @@ You can find its changes [documented below](#070---2021-01-01).
 - GTK: added support for `content_insets` ([#1722] by [@jneem])
 - `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
 - Text input handles Delete key ([#1746] by [@bjorn])
+- `lens` macro can access nested fields ([#1764] by [@Maan2003])
+- X11 backend now supports custom cursors ([#1801] by [@psychon])
+- X11: Add support for transparent windows ([#1803] by [@psychon])
+- X11: Added support for `get_monitors` ([#1804] by [@psychon])
+- x11: Remove some unnecessary casts ([#1851] by [@psychon])
+- `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
+- x11: Add support for getting clipboard contents ([#1805] by [@psychon])
 
 ### Changed
 
-- Warn on unhandled Commands ([#1533] by [@Maan2003])
+- ~~Warn on unhandled Commands ([#1533] by [@Maan2003])~~ (Reverted in #1813)
 - `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
 - Switch to trace-based logging ([#1562] by [@PoignardAzur])
 - Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
@@ -54,6 +62,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
+- Change the signature of `add_idle_callback` ([#1787] by [@jneem])
 
 ### Deprecated
 
@@ -64,6 +73,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
+- GTK: Replaced call to `std::str::from_utf8_unchecked` with `from_utf8` ([#1820] by [@psychon])
 - Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
 - Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
 - focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
@@ -71,6 +81,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
 - X11 backend now supports scaling([#1751] by [@Maan2003])
 - X11 backend now supports changing cursors ([#1755] by [@Maan2003])
+- X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 
 ### Visual
 
@@ -81,12 +92,16 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
 - Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
 - Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
+- Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
+- Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 
 ### Examples
 
 ### Maintenance
 
 - Updated to x11rb 0.8.0. ([#1519] by [@psychon])
+- Updated fluent-bundle to 0.15.1 and fluent syntax to 0.11.0 ([#1772] by [@r-ml])
+- Updated usvg to 0.14.1 ([#1802] by [@r-ml])
 
 ### Outside News
 
@@ -421,6 +436,7 @@ Last release without a changelog :(
 ## 0.1.1 - 2018-11-02
 ## 0.1.0 - 2018-11-02
 
+[@arthmis]: https://github.com/arthmis
 [@futurepaul]: https://github.com/futurepaul
 [@finnerale]: https://github.com/finnerale
 [@totsteps]: https://github.com/totsteps
@@ -687,6 +703,7 @@ Last release without a changelog :(
 [#1636]: https://github.com/linebender/druid/pull/1636
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
+[#1645]: https://github.com/linebender/druid/pull/1645
 [#1647]: https://github.com/linebender/druid/pull/1647
 [#1654]: https://github.com/linebender/druid/pull/1654
 [#1660]: https://github.com/linebender/druid/pull/1660
@@ -710,6 +727,19 @@ Last release without a changelog :(
 [#1751]: https://github.com/linebender/druid/pull/1751
 [#1754]: https://github.com/linebender/druid/pull/1754
 [#1755]: https://github.com/linebender/druid/pull/1755
+[#1756]: https://github.com/linebender/druid/pull/1756
+[#1761]: https://github.com/linebender/druid/pull/1761
+[#1764]: https://github.com/linebender/druid/pull/1764
+[#1772]: https://github.com/linebender/druid/pull/1772
+[#1787]: https://github.com/linebender/druid/pull/1787
+[#1801]: https://github.com/linebender/druid/pull/1800
+[#1802]: https://github.com/linebender/druid/pull/1802
+[#1803]: https://github.com/linebender/druid/pull/1803
+[#1804]: https://github.com/linebender/druid/pull/1804
+[#1805]: https://github.com/linebender/druid/pull/1805
+[#1820]: https://github.com/linebender/druid/pull/1820
+[#1825]: https://github.com/linebender/druid/pull/1825
+[#1851]: https://github.com/linebender/druid/pull/1851
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

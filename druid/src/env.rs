@@ -54,7 +54,6 @@ pub struct Env(Arc<EnvImpl>);
 #[derive(Clone)]
 struct EnvImpl {
     map: HashMap<ArcStr, Value>,
-    debug_colors: Vec<Color>,
     l10n: Arc<L10nManager>,
 }
 
@@ -368,8 +367,8 @@ impl Env {
     /// Given an id, returns one of 18 distinct colors
     #[doc(hidden)]
     pub fn get_debug_color(&self, id: u64) -> Color {
-        let color_num = id as usize % self.0.debug_colors.len();
-        self.0.debug_colors[color_num].clone()
+        let color_num = id as usize % DEBUG_COLOR.len();
+        DEBUG_COLOR[color_num].clone()
     }
 }
 
@@ -484,7 +483,7 @@ impl Data for EnvImpl {
 
 // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 // They're picked for visual distinction and accessbility (99 percent)
-const DEBUG_COLOR: &[Color] = &[
+static DEBUG_COLOR: &[Color] = &[
     Color::rgb8(230, 25, 75),
     Color::rgb8(60, 180, 75),
     Color::rgb8(255, 225, 25),
@@ -518,7 +517,6 @@ impl Env {
         let inner = EnvImpl {
             l10n: Arc::new(l10n),
             map: HashMap::new(),
-            debug_colors: DEBUG_COLOR.into(),
         };
 
         let env = Env(Arc::new(inner))

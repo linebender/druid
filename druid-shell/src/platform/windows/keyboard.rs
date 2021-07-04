@@ -348,8 +348,9 @@ fn vk_to_key(vk: VkCode) -> Option<KbKey> {
 /// map.
 ///
 /// The virtual key code can have modifiers in the higher order byte when the
-/// argument is a `Character` variant. See:
-/// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
+/// argument is a `Character` variant. See [VkKeyScanW][].
+///
+/// [VkKeyScanW]: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
 pub(crate) fn key_to_vk(key: &KbKey) -> Option<i32> {
     Some(match key {
         KbKey::Character(s) => {
