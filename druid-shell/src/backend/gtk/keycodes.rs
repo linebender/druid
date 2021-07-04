@@ -90,6 +90,7 @@ pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
         F10 => Key::F10,
         F11 => Key::F11,
         F12 => Key::F12,
+        // not available in keyboard-types
         // Tools | F13 => Key::F13,
         // F14 | Launch5 => Key::F14,
         // F15 | Launch6 => Key::F15,

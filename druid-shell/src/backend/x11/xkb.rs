@@ -71,9 +71,9 @@ impl Context {
         Some(Keymap(key_map))
     }
 
-    /// Set the log level using `log` levels.
+    /// Set the log level using `tracing` levels.
     ///
-    /// Becuase `xkb` has a `critical` error, each rust error maps to 1 above (e.g. error ->
+    /// Because `xkb` has a `critical` error, each rust error maps to 1 above (e.g. error ->
     /// critical, warn -> error etc.)
     pub fn set_log_level(&self, level: tracing::Level) {
         use tracing::Level;
@@ -161,7 +161,7 @@ impl State {
         }
     }
 
-    pub fn key_event(&self, scancode: u32, state: KeyState) -> KeyEvent {
+    pub fn key_event(&mut self, scancode: u32, state: KeyState) -> KeyEvent {
         let code = u16::try_from(scancode)
             .map(hardware_keycode_to_code)
             .unwrap_or(Code::Unidentified);
@@ -213,7 +213,7 @@ impl State {
         }
     }
 
-    fn get_logical_key(&self, scancode: u32) -> Key {
+    fn get_logical_key(&mut self, scancode: u32) -> Key {
         let mut key = map_key(self.key_get_one_sym(scancode));
         if matches!(key, Key::Unidentified) {
             if let Some(s) = self.key_get_utf8(scancode) {
@@ -223,14 +223,14 @@ impl State {
         key
     }
 
-    fn key_get_one_sym(&self, scancode: u32) -> u32 {
+    fn key_get_one_sym(&mut self, scancode: u32) -> u32 {
         unsafe { xkb_state_key_get_one_sym(self.state, scancode) }
     }
 
     /// Get the string representation of a key.
     // TODO `keyboard_types` forces us to return a String, but it would be nicer if we could stay
     // on the stack, especially since we expect most results to be pretty small.
-    fn key_get_utf8(&self, scancode: u32) -> Option<String> {
+    fn key_get_utf8(&mut self, scancode: u32) -> Option<String> {
         unsafe {
             // First get the size we will need
             let len = xkb_state_key_get_utf8(self.state, scancode, ptr::null_mut(), 0);
@@ -242,7 +242,7 @@ impl State {
             let mut buf: Vec<u8> = Vec::new();
             buf.resize(len, 0);
             xkb_state_key_get_utf8(self.state, scancode, buf.as_mut_ptr() as *mut c_char, len);
-            debug_assert!(buf[buf.len() - 1] == 0);
+            assert!(buf[buf.len() - 1] == 0);
             buf.pop();
             Some(String::from_utf8(buf).unwrap())
         }
@@ -331,6 +331,7 @@ fn map_key(keysym: u32) -> Key {
         XKB_KEY_F10 => F10,
         XKB_KEY_F11 => F11,
         XKB_KEY_F12 => F12,
+        // not available in keyboard-types
         // XKB_KEY_XF86Tools | XKB_KEY_F13 => F13,
         // XKB_KEY_F14 | XKB_KEY_XF86Launch5 => F14,
         // XKB_KEY_F15 | XKB_KEY_XF86Launch6 => F15,

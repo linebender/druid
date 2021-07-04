@@ -134,15 +134,15 @@ impl Application {
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
-        let ctx = xkb::Context::new();
-        ctx.set_log_level(tracing::Level::DEBUG);
+        let xkb_context = xkb::Context::new();
+        xkb_context.set_log_level(tracing::Level::DEBUG);
         use x11rb::protocol::xkb::ConnectionExt;
-        conn.xkb_use_extension(1, 0)?.reply()?;
-        let device_id = ctx
+        conn.xkb_use_extension(1, 0)?.reply().context("init xkb extension")?;
+        let device_id = xkb_context
             .core_keyboard_device_id(&conn)
             .context("get core keyboard device id")?;
 
-        let keymap = ctx
+        let keymap = xkb_context
             .keymap_from_device(&conn, device_id)
             .context("key map from device")?;
 
@@ -243,7 +243,7 @@ impl Application {
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
             timestamp: Rc::new(Cell::new(x11rb::CURRENT_TIME)),
-            xkb_context: ctx,
+            xkb_context,
         })
     }
 
@@ -432,7 +432,7 @@ impl Application {
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
                 let hw_keycode = ev.detail;
-                let state = borrow_mut!(self.state)?;
+                let mut state = borrow_mut!(self.state)?;
                 let key_event = state
                     .xkb_state
                     .key_event(hw_keycode as _, keyboard_types::KeyState::Down);
@@ -444,7 +444,7 @@ impl Application {
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
                 let hw_keycode = ev.detail;
-                let state = borrow_mut!(self.state)?;
+                let mut state = borrow_mut!(self.state)?;
                 let key_event = state
                     .xkb_state
                     .key_event(hw_keycode as _, keyboard_types::KeyState::Up);
