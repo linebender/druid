@@ -23,6 +23,8 @@ use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
 use crate::{AppDelegate, Data, Env, LocalizedString, Menu, Widget};
 
+use tracing::warn;
+
 use druid_shell::WindowState;
 
 /// A function that modifies the initial environment.
@@ -403,7 +405,7 @@ impl WindowConfig {
             builder.set_transparent(transparent);
         }
 
-        if let Some(level) = self.level {
+        if let Some(level) = self.level.clone() {
             builder.set_level(level)
         }
 
@@ -437,8 +439,8 @@ impl WindowConfig {
             win_handle.set_position(position);
         }
 
-        if let Some(level) = self.level {
-            win_handle.set_level(level)
+        if self.level.is_some() {
+            warn!("Applying a level can only be done on window builders");
         }
 
         if let Some(state) = self.state {

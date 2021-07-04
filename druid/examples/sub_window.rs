@@ -145,7 +145,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .window_size_policy(WindowSizePolicy::Content)
-                                .set_level(WindowLevel::Tooltip)
+                                .set_level(WindowLevel::Tooltip(ctx.window().clone()))
                                 .set_position(
                                     ctx.window().get_position()
                                         + window_pos.to_vec2()

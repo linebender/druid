@@ -479,10 +479,6 @@ impl WindowHandle {
         warn!("WindowHandle::set_position unimplemented for web");
     }
 
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level  is currently unimplemented for web.");
-    }
-
     pub fn get_position(&self) -> Point {
         warn!("WindowHandle::get_position unimplemented for web.");
         Point::new(0.0, 0.0)

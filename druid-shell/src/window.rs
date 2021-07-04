@@ -148,16 +148,16 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,
     /// A window that should stay above app windows - like a tooltip
-    Tooltip,
+    Tooltip(WindowHandle),
     /// A user interface element such as a dropdown menu or combo box
-    DropDown,
+    DropDown(WindowHandle),
     /// A modal dialog
-    Modal,
+    Modal(WindowHandle),
 }
 
 /// Contains the different states a Window can be in.
@@ -170,7 +170,7 @@ pub enum WindowState {
 
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
-pub struct WindowHandle(backend::WindowHandle);
+pub struct WindowHandle(pub(crate) platform::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.
@@ -266,15 +266,6 @@ impl WindowHandle {
     /// [display points]: crate::Scale
     pub fn get_size(&self) -> Size {
         self.0.get_size()
-    }
-
-    /// Sets the [`WindowLevel`](crate::WindowLevel), the z-order in the Window system / compositor
-    ///
-    /// We do not currently have a getter method, mostly because the system's levels aren't a
-    /// perfect one-to-one map to `druid_shell`'s levels. A getter method may be added in the
-    /// future.
-    pub fn set_level(&self, level: WindowLevel) {
-        self.0.set_level(level)
     }
 
     /// Bring this window to the front of the window stack and give it focus.

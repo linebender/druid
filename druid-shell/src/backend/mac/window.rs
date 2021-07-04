@@ -89,9 +89,9 @@ mod levels {
         use WindowLevel::*;
         match window_level {
             AppWindow => NSNormalWindowLevel,
-            Tooltip => NSFloatingWindowLevel,
-            DropDown => NSFloatingWindowLevel,
-            Modal => NSModalPanelWindowLevel,
+            Tooltip(_) => NSFloatingWindowLevel,
+            DropDown(_) => NSFloatingWindowLevel,
+            Modal(_) => NSModalPanelWindowLevel,
         }
     }
 }
@@ -102,6 +102,15 @@ pub(crate) struct WindowHandle {
     /// a view. Also, this is better for hosted applications such as VST.
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
+    parent: Option<Box<crate::WindowHandle>>,
+}
+
+impl std::fmt::Debug for WindowHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowHandle{\n")?;
+        f.write_str("}")?;
+        Ok(())
+    }
 }
 
 impl Default for WindowHandle {
@@ -109,6 +118,7 @@ impl Default for WindowHandle {
         WindowHandle {
             nsview: unsafe { WeakPtr::new(nil) },
             idle_queue: Default::default(),
+            parent: None,
         }
     }
 }
@@ -283,6 +293,7 @@ impl WindowBuilder {
             let mut handle = WindowHandle {
                 nsview: view_state.nsview.clone(),
                 idle_queue,
+                parent: None,
             };
 
             if let Some(window_state) = self.window_state {
@@ -290,7 +301,13 @@ impl WindowBuilder {
             }
 
             if let Some(level) = self.level {
-                handle.set_level(level)
+                match &level {
+                    WindowLevel::Tooltip(parent) => handle.parent = Some(Box::new(parent.clone())),
+                    WindowLevel::DropDown(parent) => handle.parent = Some(Box::new(parent.clone())),
+                    WindowLevel::Modal(parent) => handle.parent = Some(Box::new(parent.clone())),
+                    _ => {}
+                }
+                handle.set_level(level);
             }
 
             // set_window_state above could have invalidated the frame size
@@ -1198,7 +1215,12 @@ impl WindowHandle {
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
     // Need to translate mac y coords, as they start from bottom left
-    pub fn set_position(&self, position: Point) {
+    pub fn set_position(&self, mut position: Point) {
+        if let Some(parent_state) = &self.parent {
+            let pos = (*parent_state).get_position();
+            position -= (pos.x, pos.y)
+        }
+
         self.defer(DeferredOp::SetPosition(position))
     }
 
@@ -1245,7 +1267,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_level(&self, level: WindowLevel) {
+    fn set_level(&self, level: WindowLevel) {
         unsafe {
             let level = levels::as_raw_window_level(level);
             let window: id = msg_send![*self.nsview.load(), window];

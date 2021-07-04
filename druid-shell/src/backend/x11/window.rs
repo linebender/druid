@@ -1624,10 +1624,6 @@ impl WindowHandle {
         Insets::ZERO
     }
 
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 backend.");
-    }
-
     pub fn set_size(&self, size: Size) {
         if let Some(w) = self.window.upgrade() {
             w.set_size(size);
