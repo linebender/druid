@@ -66,6 +66,8 @@ pub(crate) struct Application {
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
     pub(crate) cursors: Cursors,
+    /// The clipboard implementation
+    clipboard: Clipboard,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -211,6 +213,15 @@ impl Application {
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
 
+        let timestamp = Rc::new(Cell::new(x11rb::CURRENT_TIME));
+        let pending_events = Default::default();
+        let clipboard = Clipboard::new(
+            Rc::clone(&connection),
+            screen_num,
+            Rc::clone(&pending_events),
+            Rc::clone(&timestamp),
+        );
+
         Ok(Application {
             connection,
             rdb,
@@ -219,6 +230,7 @@ impl Application {
             state,
             idle_read,
             cursors,
+            clipboard,
             idle_write,
             present_opcode,
             root_visual_type,
@@ -226,7 +238,7 @@ impl Application {
             pending_events: Default::default(),
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
-            timestamp: Rc::new(Cell::new(x11rb::CURRENT_TIME)),
+            timestamp,
         })
     }
 
@@ -633,12 +645,7 @@ impl Application {
     }
 
     pub fn clipboard(&self) -> Clipboard {
-        Clipboard::new(
-            Rc::clone(&self.connection),
-            self.screen_num,
-            Rc::clone(&self.pending_events),
-            Rc::clone(&self.timestamp),
-        )
+        self.clipboard.clone()
     }
 
     pub fn get_locale() -> String {

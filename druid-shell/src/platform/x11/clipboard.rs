@@ -42,21 +42,59 @@ const STRING_TARGETS: [&str; 5] = [
 ];
 
 #[derive(Debug, Clone)]
-pub struct Clipboard {
-    connection: Rc<XCBConnection>,
-    screen_num: usize,
-    event_queue: Rc<RefCell<VecDeque<Event>>>,
-    timestamp: Rc<Cell<Timestamp>>,
-}
+pub struct Clipboard(Rc<RefCell<ClipboardState>>);
 
-impl Clipboard {
+impl Clipboard{
     pub(crate) fn new(
         connection: Rc<XCBConnection>,
         screen_num: usize,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
     ) -> Self {
-        Clipboard {
+        Self(Rc::new(RefCell::new(ClipboardState::new(connection, screen_num, event_queue, timestamp))))
+    }
+
+    pub fn put_string(&mut self, s: impl AsRef<str>) {
+        self.0.borrow_mut().put_string(s.as_ref())
+    }
+
+    pub fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+        self.0.borrow_mut().put_formats(formats)
+    }
+
+    pub fn get_string(&self) -> Option<String> {
+        self.0.borrow().get_string()
+    }
+
+    pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+        self.0.borrow().preferred_format(formats)
+    }
+
+    pub fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+        self.0.borrow().get_format(format)
+    }
+
+    pub fn available_type_names(&self) -> Vec<String> {
+        self.0.borrow().available_type_names()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ClipboardState {
+    connection: Rc<XCBConnection>,
+    screen_num: usize,
+    event_queue: Rc<RefCell<VecDeque<Event>>>,
+    timestamp: Rc<Cell<Timestamp>>,
+}
+
+impl ClipboardState {
+    fn new(
+        connection: Rc<XCBConnection>,
+        screen_num: usize,
+        event_queue: Rc<RefCell<VecDeque<Event>>>,
+        timestamp: Rc<Cell<Timestamp>>,
+    ) -> Self {
+        Self {
             connection,
             screen_num,
             event_queue,
@@ -64,24 +102,24 @@ impl Clipboard {
         }
     }
 
-    pub fn put_string(&mut self, _s: impl AsRef<str>) {
+    fn put_string(&mut self, _s: impl AsRef<str>) {
         // TODO(x11/clipboard): implement Clipboard::put_string
         warn!("Clipboard::put_string is currently unimplemented for X11 platforms.");
     }
 
-    pub fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
+    fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
         // TODO(x11/clipboard): implement Clipboard::put_formats
         warn!("Clipboard::put_formats is currently unimplemented for X11 platforms.");
     }
 
-    pub fn get_string(&self) -> Option<String> {
+    fn get_string(&self) -> Option<String> {
         STRING_TARGETS.iter().find_map(|target| {
             self.get_format(target)
                 .and_then(|data| String::from_utf8(data).ok())
         })
     }
 
-    pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+    fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
         let available = self.available_type_names();
         formats
             .iter()
@@ -89,12 +127,12 @@ impl Clipboard {
             .copied()
     }
 
-    pub fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+    fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
         self.do_transfer(format, |prop| prop.value)
     }
 
     #[allow(clippy::needless_collect)]
-    pub fn available_type_names(&self) -> Vec<String> {
+    fn available_type_names(&self) -> Vec<String> {
         let requests = self
             .do_transfer("TARGETS", |prop| {
                 prop.value32()
