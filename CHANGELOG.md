@@ -44,6 +44,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports custom cursors ([#1801] by [@psychon])
 - X11: Add support for transparent windows ([#1803] by [@psychon])
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
+- x11: Remove some unnecessary casts ([#1851] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
 - x11: Add support for getting clipboard contents ([#1805] by [@psychon])
 
@@ -738,6 +739,7 @@ Last release without a changelog :(
 [#1805]: https://github.com/linebender/druid/pull/1805
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
+[#1851]: https://github.com/linebender/druid/pull/1851
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

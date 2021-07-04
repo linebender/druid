@@ -271,7 +271,7 @@ impl WindowBuilder {
         let size_px = self.size.to_px(scale);
         let screen = setup
             .roots
-            .get(screen_num as usize)
+            .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
         let visual_type = if self.transparent {
             self.app.argb_visual_type()
@@ -1782,7 +1782,7 @@ impl WindowHandle {
                 Some(format) => {
                     let conn = w.app.connection();
                     let setup = &conn.setup();
-                    let screen = &setup.roots[w.app.screen_num() as usize];
+                    let screen = &setup.roots[w.app.screen_num()];
                     match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
                         // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
                         Ok(cursor) => Some(cursor),
