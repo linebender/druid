@@ -24,3 +24,15 @@ pub trait LinuxApplicationExt {
     /// This is useful for middle mouse paste.
     fn primary_clipboard(&self) -> Clipboard;
 }
+
+#[cfg(test)]
+#[allow(unused_imports)]
+mod test {
+    use crate::Application;
+
+    use super::*;
+    use static_assertions as sa;
+    // TODO(shell/x11): implement LinuxApplicationExt
+    #[cfg(not(feature = "x11"))]
+    sa::assert_impl_all!(Application: LinuxApplicationExt);
+}
