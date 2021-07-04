@@ -25,7 +25,7 @@ use crate::hotkey::HotKey;
 /// Currently, a menu and its items cannot be changed once created. If you need
 /// to change anything about a menu (for instance, disabling or selecting items)
 /// you need to create a new menu with the desired properties.
-pub struct Menu(backend::Menu);
+pub struct Menu(pub(crate) backend::Menu);
 
 impl Menu {
     /// Create a new empty window or application menu.

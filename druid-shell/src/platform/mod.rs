@@ -16,3 +16,6 @@
 
 #[cfg(any(doc, target_os = "linux"))]
 pub mod linux;
+
+#[cfg(any(doc, target_os = "macos"))]
+pub mod mac;
