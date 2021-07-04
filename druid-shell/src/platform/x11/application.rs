@@ -511,7 +511,7 @@ impl Application {
             }
             Event::SelectionClear(ev) => {
                 self.clipboard
-                    .handle_clear(ev)
+                    .handle_clear(*ev)
                     .context("SELECTION_CLEAR event handling")?;
             }
             Event::SelectionRequest(ev) => {
@@ -521,7 +521,7 @@ impl Application {
             }
             Event::PropertyNotify(ev) => {
                 self.clipboard
-                    .handle_property_notify(ev)
+                    .handle_property_notify(*ev)
                     .context("PROPERTY_NOTIFY event handling")?;
             }
             Event::Error(e) => {

@@ -71,7 +71,7 @@ impl Clipboard {
         )?))))
     }
 
-    pub(crate) fn handle_clear(&self, event: &SelectionClearEvent) -> Result<(), ConnectionError> {
+    pub(crate) fn handle_clear(&self, event: SelectionClearEvent) -> Result<(), ConnectionError> {
         self.0.borrow_mut().handle_clear(event)
     }
 
@@ -84,7 +84,7 @@ impl Clipboard {
 
     pub(crate) fn handle_property_notify(
         &self,
-        event: &PropertyNotifyEvent,
+        event: PropertyNotifyEvent,
     ) -> Result<(), ReplyOrIdError> {
         self.0.borrow_mut().handle_property_notify(event)
     }
@@ -352,7 +352,7 @@ impl ClipboardState {
         }
     }
 
-    fn handle_clear(&mut self, event: &SelectionClearEvent) -> Result<(), ConnectionError> {
+    fn handle_clear(&mut self, event: SelectionClearEvent) -> Result<(), ConnectionError> {
         let window = self.contents.as_ref().map(|c| c.owner_window);
         if Some(event.owner) == window {
             // We lost ownership of the selection, clean up
@@ -451,9 +451,9 @@ impl ClipboardState {
 
     fn handle_property_notify(
         &mut self,
-        event: &PropertyNotifyEvent,
+        event: PropertyNotifyEvent,
     ) -> Result<(), ReplyOrIdError> {
-        fn matches(transfer: &IncrementalTransfer, event: &PropertyNotifyEvent) -> bool {
+        fn matches(transfer: &IncrementalTransfer, event: PropertyNotifyEvent) -> bool {
             transfer.requestor == event.window && transfer.property == event.atom
         }
 
