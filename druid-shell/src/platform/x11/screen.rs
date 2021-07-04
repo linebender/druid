@@ -37,7 +37,7 @@ where
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     let result = if let Some(app) = crate::Application::try_global() {
         let app = app.platform_app;
-        get_monitors_impl(app.connection().as_ref(), app.screen_num() as usize)
+        get_monitors_impl(app.connection().as_ref(), app.screen_num())
     } else {
         let (conn, screen_num) = match x11rb::connect(None) {
             Ok(res) => res,

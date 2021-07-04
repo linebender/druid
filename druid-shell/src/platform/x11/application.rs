@@ -205,7 +205,7 @@ impl Application {
         let screen = connection
             .setup()
             .roots
-            .get(screen_num as usize)
+            .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
         let root_visual_type = util::get_visual_from_screen(&screen)
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
@@ -348,8 +348,8 @@ impl Application {
     }
 
     #[inline]
-    pub(crate) fn screen_num(&self) -> i32 {
-        self.screen_num as _
+    pub(crate) fn screen_num(&self) -> usize {
+        self.screen_num
     }
 
     #[inline]
