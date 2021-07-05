@@ -524,6 +524,11 @@ impl<T> EditSession<T> {
         self.alignment = alignment;
     }
 
+    /// The text alignment.
+    pub fn text_alignment(&self) -> TextAlignment {
+        self.alignment
+    }
+
     /// Returns any invalidation action that should be passed to the platform.
     ///
     /// The user of this component *must* check this after calling `update`.
