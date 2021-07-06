@@ -14,8 +14,6 @@
 
 //! A minimal wrapper around Xkb for our use.
 
-#![allow(non_upper_case_globals)]
-
 use super::keycodes;
 use super::xkbcommon_sys::*;
 use crate::{

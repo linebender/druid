@@ -1,3 +1,5 @@
+#![allow(non_upper_case_globals)]
+
 use keyboard_types::Key;
 
 use super::xkbcommon_sys::*;
