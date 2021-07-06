@@ -18,9 +18,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::backend::application as backend;
 use crate::clipboard::Clipboard;
 use crate::error::Error;
-use crate::platform::application as platform;
 use crate::util;
 
 /// A top-level handler that is not associated with any window.
@@ -47,7 +47,7 @@ pub trait AppHandler {
 /// This can be thought of as a reference and it can be safely cloned.
 #[derive(Clone)]
 pub struct Application {
-    pub(crate) platform_app: platform::Application,
+    pub(crate) backend_app: backend::Application,
     state: Rc<RefCell<State>>,
 }
 
@@ -79,12 +79,9 @@ impl Application {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .map_err(|_| Error::ApplicationAlreadyExists)?;
         util::claim_main_thread();
-        let platform_app = platform::Application::new()?;
+        let backend_app = backend::Application::new()?;
         let state = Rc::new(RefCell::new(State { running: false }));
-        let app = Application {
-            platform_app,
-            state,
-        };
+        let app = Application { backend_app, state };
         GLOBAL_APP.with(|global_app| {
             *global_app.borrow_mut() = Some(app.clone());
         });
@@ -150,7 +147,7 @@ impl Application {
         }
 
         // Run the platform application
-        self.platform_app.run(handler);
+        self.backend_app.run(handler);
 
         // This application is no longer active, so clear the global reference
         GLOBAL_APP.with(|global_app| {
@@ -170,20 +167,20 @@ impl Application {
     ///
     /// [`run`]: #method.run
     pub fn quit(&self) {
-        self.platform_app.quit()
+        self.backend_app.quit()
     }
 
     // TODO: do these three go in some kind of PlatformExt trait?
     /// Hide the application this window belongs to. (cmd+H)
     pub fn hide(&self) {
         #[cfg(target_os = "macos")]
-        self.platform_app.hide()
+        self.backend_app.hide()
     }
 
     /// Hide all other applications. (cmd+opt+H)
     pub fn hide_others(&self) {
         #[cfg(target_os = "macos")]
-        self.platform_app.hide_others()
+        self.backend_app.hide_others()
     }
 
     /// Sets the global application menu, on platforms where there is one.
@@ -192,12 +189,12 @@ impl Application {
     #[allow(unused_variables)]
     pub fn set_menu(&self, menu: crate::Menu) {
         #[cfg(target_os = "macos")]
-        self.platform_app.set_menu(menu.into_inner());
+        self.backend_app.set_menu(menu.into_inner());
     }
 
     /// Returns a handle to the system clipboard.
     pub fn clipboard(&self) -> Clipboard {
-        self.platform_app.clipboard().into()
+        self.backend_app.clipboard().into()
     }
 
     /// Returns the current locale string.
@@ -206,6 +203,6 @@ impl Application {
     ///
     /// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
     pub fn get_locale() -> String {
-        platform::Application::get_locale()
+        backend::Application::get_locale()
     }
 }
