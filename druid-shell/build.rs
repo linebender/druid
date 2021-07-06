@@ -1,11 +1,15 @@
-#[cfg(not(all(target_os = "linux", feature = "x11")))]
+#[cfg(not(feature = "x11"))]
 fn main() {}
 
-#[cfg(all(target_os = "linux", feature = "x11"))]
+#[cfg(feature = "x11")]
 fn main() {
     use pkg_config::probe_library;
     use std::env;
     use std::path::PathBuf;
+
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux" {
+        return;
+    }
 
     probe_library("xkbcommon").unwrap();
     probe_library("xkbcommon-x11").unwrap();
