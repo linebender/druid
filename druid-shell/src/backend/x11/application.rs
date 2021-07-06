@@ -137,7 +137,9 @@ impl Application {
         let xkb_context = xkb::Context::new();
         xkb_context.set_log_level(tracing::Level::DEBUG);
         use x11rb::protocol::xkb::ConnectionExt;
-        conn.xkb_use_extension(1, 0)?.reply().context("init xkb extension")?;
+        conn.xkb_use_extension(1, 0)?
+            .reply()
+            .context("init xkb extension")?;
         let device_id = xkb_context
             .core_keyboard_device_id(&conn)
             .context("get core keyboard device id")?;
