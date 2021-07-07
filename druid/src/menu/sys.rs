@@ -182,6 +182,7 @@ pub mod mac {
 
         /// The default Application menu.
         pub fn default<T: Data>() -> Menu<T> {
+            #[allow(deprecated)]
             Menu::new(LocalizedString::new("macos-menu-application-menu"))
                 .entry(about())
                 .separator()
