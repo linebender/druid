@@ -441,17 +441,9 @@ impl Event {
 impl LifeCycle {
     /// Whether this event should be sent to widgets which are currently not visible and not
     /// accessible.
-    /// Therefore the hidden tabs in a tabs widget are `hidden` whereas the hidden
-    /// widgets in a scroll are not, since you can bring them into view by scrolling.
     ///
-    /// This distinction between scroll and tabs is due to one of the main effects of
-    /// this method: determine which widgets are allowed to receive focus. As a rule
-    /// of thumb a widget count as `hidden` if it makes no sense for it to receive focus
-    /// via pressing TAB.
-    ///
-    /// If a widget changes which children are hidden it must call [`children_changed`].
-    ///
-    /// See also [`Event::should_propagate_to_hidden`]
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
     ///
     /// [`children_changed`]: crate::EventCtx::children_changed
     /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
@@ -470,17 +462,12 @@ impl LifeCycle {
 impl InternalLifeCycle {
     /// Whether this event should be sent to widgets which are currently not visible and not
     /// accessible.
-    /// Therefore the hidden tabs in a tabs widget are `hidden` whereas the hidden
-    /// widgets in a scroll are not, since you can bring them into view by scrolling.
     ///
-    /// This distinction between scroll and tabs is due to one of the main effects of
-    /// this method: determine which widgets are allowed to receive focus. As a rule
-    /// of thumb a widget count as `hidden` if it makes no sense for it to receive focus
-    /// via pressing TAB.
-    ///
-    /// If a widget changes which children are hidden it must call [`children_changed`].
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
     ///
     /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             InternalLifeCycle::RouteWidgetAdded
