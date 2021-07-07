@@ -82,6 +82,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports scaling([#1751] by [@Maan2003])
 - X11 backend now supports changing cursors ([#1755] by [@Maan2003])
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
+- `Either` was still propagating events to hidden widgets ([#1860] by [@lisael])
 
 ### Visual
 
