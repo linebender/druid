@@ -741,11 +741,11 @@ impl LifeCycleCtx<'_, '_> {
 
     /// Register this widget to be eligile to accept focus automatically.
     ///
-    /// This should only be called in response to a [`LifeCycle::WidgetAdded`] event.
+    /// This should only be called in response to a [`LifeCycle::BuildFocusChain`] event.
     ///
     /// See [`EventCtx::is_focused`] for more information about focus.
     ///
-    /// [`LifeCycle::WidgetAdded`]: enum.Lifecycle.html#variant.WidgetAdded
+    /// [`LifeCycle::BuildFocusChain`]: enum.Lifecycle.html#variant.BuildFocusChain
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
