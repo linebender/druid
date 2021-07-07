@@ -387,7 +387,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
 
     /// Indicate that your children have changed.
     ///
-    /// Widgets must call this method after adding a new child.
+    /// Widgets must call this method after adding a new child, removing a child or changing which
+    /// children are hidden (see [`should_propagate_to_hidden`]).
+    ///
+    /// [`should_propagate_to_hidden`]: crate::Event::should_propagate_to_hidden
     pub fn children_changed(&mut self) {
         trace!("children_changed");
         self.widget_state.children_changed = true;
