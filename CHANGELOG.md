@@ -46,7 +46,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
 - x11: Remove some unnecessary casts ([#1851] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
-- x11: Add support for getting clipboard contents ([#1805] by [@psychon])
+- x11: Add support for getting and setting clipboard contents ([#1805] and [#1851] by [@psychon])
 - Linux extension: primary_clipboard ([#1843] by [@Maan2003])
 
 ### Changed
