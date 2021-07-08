@@ -479,7 +479,7 @@ impl ClipboardState {
 #[derive(Debug)]
 struct ClipboardContents {
     owner_window: Window,
-    data: Vec<(Atom, String, Rc<Vec<u8>>)>,
+    data: Vec<(Atom, String, Rc<[u8]>)>,
 }
 
 impl ClipboardContents {
@@ -504,7 +504,7 @@ impl ClipboardContents {
                     (
                         reply.atom,
                         format.identifier.to_string(),
-                        Rc::new(format.data.clone()),
+                        format.data[..].into(),
                     )
                 })
             })
@@ -540,7 +540,7 @@ struct IncrementalTransfer {
     target: Atom,
     property: Atom,
     time: Timestamp,
-    data: Rc<Vec<u8>>,
+    data: Rc<[u8]>,
     data_offset: usize,
 }
 
@@ -548,7 +548,7 @@ impl IncrementalTransfer {
     fn new(
         conn: &XCBConnection,
         event: &SelectionRequestEvent,
-        data: Rc<Vec<u8>>,
+        data: Rc<[u8]>,
         incr: Atom,
     ) -> Result<Self, ConnectionError> {
         // We need PropertyChange events on the window
