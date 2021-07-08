@@ -17,7 +17,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::platform::error as platform;
+use crate::backend::error as backend;
 
 /// Shell errors.
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ pub enum Error {
     /// The window has already been destroyed.
     WindowDropped,
     /// Platform specific error.
-    Platform(platform::Error),
+    Platform(backend::Error),
     /// Other miscellaneous error.
     Other(Arc<anyhow::Error>),
 }
@@ -53,8 +53,8 @@ impl From<anyhow::Error> for Error {
     }
 }
 
-impl From<platform::Error> for Error {
-    fn from(src: platform::Error) -> Error {
+impl From<backend::Error> for Error {
+    fn from(src: backend::Error) -> Error {
         Error::Platform(src)
     }
 }

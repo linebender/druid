@@ -183,10 +183,18 @@ pub mod sys {
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 
-    /// Hide the application. (mac only?)
+    /// Hide the application. (mac only)
+    #[cfg_attr(
+        not(target_os = "macos"),
+        deprecated = "HIDE_APPLICATION is only supported on macOS"
+    )]
     pub const HIDE_APPLICATION: Selector = Selector::new("druid-builtin.menu-hide-application");
 
-    /// Hide all other applications. (mac only?)
+    /// Hide all other applications. (mac only)
+    #[cfg_attr(
+        not(target_os = "macos"),
+        deprecated = "HIDE_OTHERS is only supported on macOS"
+    )]
     pub const HIDE_OTHERS: Selector = Selector::new("druid-builtin.menu-hide-others");
 
     /// The selector for a command to create a new window.

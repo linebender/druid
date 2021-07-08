@@ -32,7 +32,7 @@ use winapi::Interface;
 
 use piet_common::d2d::D2DFactory;
 
-use crate::platform::windows::DxgiSurfaceRenderTarget;
+use crate::backend::windows::DxgiSurfaceRenderTarget;
 use crate::scale::Scale;
 
 use super::error::Error;

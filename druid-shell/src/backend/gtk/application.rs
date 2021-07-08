@@ -78,10 +78,20 @@ impl Application {
     }
 
     pub fn clipboard(&self) -> Clipboard {
-        Clipboard
+        Clipboard {
+            selection: gdk::SELECTION_CLIPBOARD,
+        }
     }
 
     pub fn get_locale() -> String {
         glib::get_language_names()[0].as_str().into()
+    }
+}
+
+impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        crate::Clipboard(Clipboard {
+            selection: gdk::SELECTION_PRIMARY,
+        })
     }
 }
