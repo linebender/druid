@@ -18,6 +18,7 @@ use std::any::Any;
 use std::time::Duration;
 
 use crate::application::Application;
+use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
@@ -25,7 +26,6 @@ use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, CursorDesc, MouseEvent};
-use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
@@ -83,10 +83,10 @@ impl TextFieldToken {
     }
 }
 
-//NOTE: this has a From<platform::Handle> impl for construction
+//NOTE: this has a From<backend::Handle> impl for construction
 /// A handle that can enqueue tasks on the window loop.
 #[derive(Clone)]
-pub struct IdleHandle(platform::IdleHandle);
+pub struct IdleHandle(backend::IdleHandle);
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
@@ -170,7 +170,7 @@ pub enum WindowState {
 
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
-pub struct WindowHandle(platform::WindowHandle);
+pub struct WindowHandle(backend::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.
@@ -429,14 +429,14 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 }
 
 /// A builder type for creating new windows.
-pub struct WindowBuilder(platform::WindowBuilder);
+pub struct WindowBuilder(backend::WindowBuilder);
 
 impl WindowBuilder {
     /// Create a new `WindowBuilder`.
     ///
     /// Takes the [`Application`](crate::Application) that this window is for.
     pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder(platform::WindowBuilder::new(app.platform_app))
+        WindowBuilder(backend::WindowBuilder::new(app.backend_app))
     }
 
     /// Set the [`WinHandler`] for this window.
@@ -697,8 +697,8 @@ pub trait WinHandler {
     fn as_any(&mut self) -> &mut dyn Any;
 }
 
-impl From<platform::WindowHandle> for WindowHandle {
-    fn from(src: platform::WindowHandle) -> WindowHandle {
+impl From<backend::WindowHandle> for WindowHandle {
+    fn from(src: backend::WindowHandle) -> WindowHandle {
         WindowHandle(src)
     }
 }

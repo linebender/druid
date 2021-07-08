@@ -27,7 +27,7 @@ use winapi::um::winbase::{
 
 use super::util::FromWide;
 
-/// Windows platform error.
+/// Windows backend error.
 #[derive(Debug, Clone)]
 pub enum Error {
     /// Windows error code.

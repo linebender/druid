@@ -182,6 +182,7 @@ pub mod mac {
 
         /// The default Application menu.
         pub fn default<T: Data>() -> Menu<T> {
+            #[allow(deprecated)]
             Menu::new(LocalizedString::new("macos-menu-application-menu"))
                 .entry(about())
                 .separator()
@@ -209,14 +210,24 @@ pub mod mac {
         }
 
         /// The 'Hide' builtin menu item.
+        #[cfg_attr(
+            not(target_os = "macos"),
+            deprecated = "hide does nothing on platforms other than macOS"
+        )]
         pub fn hide<T: Data>() -> MenuItem<T> {
+            #[allow(deprecated)]
             MenuItem::new(LocalizedString::new("macos-menu-hide-app"))
                 .command(commands::HIDE_APPLICATION)
                 .hotkey(SysMods::Cmd, "h")
         }
 
         /// The 'Hide Others' builtin menu item.
+        #[cfg_attr(
+            not(target_os = "macos"),
+            deprecated = "hide_others does nothing on platforms other than macOS"
+        )]
         pub fn hide_others<T: Data>() -> MenuItem<T> {
+            #[allow(deprecated)]
             MenuItem::new(LocalizedString::new("macos-menu-hide-others"))
                 .command(commands::HIDE_OTHERS)
                 .hotkey(SysMods::AltCmd, "h")

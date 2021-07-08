@@ -14,9 +14,9 @@
 
 //! Common types for representing mouse events and state
 
+use crate::backend;
 use crate::kurbo::{Point, Vec2};
 use crate::piet::ImageBuf;
-use crate::platform;
 use crate::Modifiers;
 
 /// Information about the mouse event.
@@ -264,7 +264,7 @@ pub enum Cursor {
     ResizeUpDown,
     // The platform cursor should be small. Any image data that it uses should be shared (i.e.
     // behind an `Arc` or using a platform API that does the sharing).
-    Custom(platform::window::CustomCursor),
+    Custom(backend::window::CustomCursor),
 }
 
 /// A platform-independent description of a custom cursor.

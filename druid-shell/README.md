@@ -8,13 +8,13 @@ by [druid], a UI toolkit.
 
 The code in `druid-shell` can be divided into roughly two categories: the
 platform agnostic code and types, which are exposed directly, and the
-platform-specific implementations of these types, which live in per-platform
-directories in `src/platform`. The platform-specific code for the current
-platform is reexported as `druid-shell::platform`.
+platform-specific implementations of these types, which live in per-backend
+directories in `src/backend`. The backend-specific code for the current
+backend is reexported as `druid-shell::backend`.
 
-`druid-shell` does not generally expose platform types directly. Instead, we
+`druid-shell` does not generally expose backend types directly. Instead, we
 expose wrapper structs that define the common interface, and then call
-corresponding methods on the concrete type for the current platform.
+corresponding methods on the concrete type for the current backend.
 
 ## Unsafe
 

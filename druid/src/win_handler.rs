@@ -474,6 +474,8 @@ impl<T: Data> Inner<T> {
 
         #[cfg(target_os = "macos")]
         {
+            use druid_shell::platform::mac::MacApplicationExt;
+
             let windows = &mut self.windows;
             let window = self.menu_window.and_then(|w| windows.get_mut(w));
             if let Some(window) = window {
@@ -652,7 +654,9 @@ impl<T: Data> AppState<T> {
         match cmd.target() {
             // these are handled the same no matter where they come from
             _ if cmd.is(sys_cmd::QUIT_APP) => self.quit(),
+            #[cfg(target_os = "macos")]
             _ if cmd.is(sys_cmd::HIDE_APPLICATION) => self.hide_app(),
+            #[cfg(target_os = "macos")]
             _ if cmd.is(sys_cmd::HIDE_OTHERS) => self.hide_others(),
             _ if cmd.is(sys_cmd::NEW_WINDOW) => {
                 if let Err(e) = self.new_window(cmd) {
@@ -835,14 +839,16 @@ impl<T: Data> AppState<T> {
         self.inner.borrow().app.quit()
     }
 
+    #[cfg(target_os = "macos")]
     fn hide_app(&self) {
-        #[cfg(target_os = "macos")]
+        use druid_shell::platform::mac::MacApplicationExt;
         self.inner.borrow().app.hide()
     }
 
+    #[cfg(target_os = "macos")]
     fn hide_others(&mut self) {
-        #[cfg(target_os = "macos")]
-        self.inner.borrow().app.hide_others()
+        use druid_shell::platform::mac::MacApplicationExt;
+        self.inner.borrow().app.hide_others();
     }
 
     pub(crate) fn build_native_window(

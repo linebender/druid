@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! GTK platform errors.
+//! GTK backend errors.
 
 use std::fmt;
 
 use glib::{BoolError, Error as GLibError};
 
-/// GTK platform errors.
+/// GTK backend errors.
 #[derive(Debug, Clone)]
 pub enum Error {
     /// Generic GTK error.
