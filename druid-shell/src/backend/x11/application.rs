@@ -74,6 +74,18 @@ use super::window::Window;
 // UTF8_STRING
 //
 // The type of _NET_WM_NAME
+//
+// CLIPBOARD
+//
+// The name of the clipboard selection; used for implementing copy&paste
+//
+// TARGETS
+//
+// A target for getting the selection contents that answers with a list of supported targets
+//
+// INCR
+//
+// Type used for incremental selection transfers
 x11rb::atom_manager! {
     pub(crate) AppAtoms: AppAtomsCookie {
         WM_PROTOCOLS,
@@ -86,6 +98,9 @@ x11rb::atom_manager! {
         _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
         _NET_WM_WINDOW_TYPE_TOOLTIP,
         _NET_WM_WINDOW_TYPE_DIALOG,
+        CLIPBOARD,
+        TARGETS,
+        INCR,
     }
 }
 
@@ -113,7 +128,7 @@ pub(crate) struct Application {
     /// Pending events that need to be handled later
     pending_events: Rc<RefCell<VecDeque<Event>>>,
     /// The atoms that we need
-    atoms: AppAtoms,
+    atoms: Rc<AppAtoms>,
 
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
@@ -256,9 +271,11 @@ impl Application {
             col_resize: load_cursor("col-resize"),
         };
 
-        let atoms = AppAtoms::new(&*connection)?
-            .reply()
-            .context("get X11 atoms")?;
+        let atoms = Rc::new(
+            AppAtoms::new(&*connection)?
+                .reply()
+                .context("get X11 atoms")?,
+        );
 
         let screen = connection
             .setup()
@@ -274,9 +291,10 @@ impl Application {
         let clipboard = Clipboard::new(
             Rc::clone(&connection),
             screen_num,
+            Rc::clone(&atoms),
             Rc::clone(&pending_events),
             Rc::clone(&timestamp),
-        )?;
+        );
 
         Ok(Application {
             connection,
@@ -450,7 +468,7 @@ impl Application {
 
     #[inline]
     pub(crate) fn atoms(&self) -> &AppAtoms {
-        &self.atoms
+        &*self.atoms
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.
