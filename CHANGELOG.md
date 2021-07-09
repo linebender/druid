@@ -84,6 +84,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports scaling([#1751] by [@Maan2003])
 - X11 backend now supports changing cursors ([#1755] by [@Maan2003])
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
+- `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
 
 ### Visual
 
@@ -493,6 +494,7 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
+[@lisael]: https://github.com/lisael
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -744,6 +746,7 @@ Last release without a changelog :(
 [#1825]: https://github.com/linebender/druid/pull/1825
 [#1843]: https://github.com/linebender/druid/pull/1843
 [#1851]: https://github.com/linebender/druid/pull/1851
+[#1860]: https://github.com/linebender/druid/pull/1860
 [#1861]: https://github.com/linebender/druid/pull/1861
 [#1863]: https://github.com/linebender/druid/pull/1863
 

@@ -374,7 +374,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         if let LifeCycle::WidgetAdded = event {
             self.ensure_tabs(data);
             ctx.children_changed();
-            ctx.request_layout();
         }
 
         for (_, tab) in self.tabs.iter_mut() {
@@ -397,7 +396,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         if data.policy.tabs_changed(&old_data.inner, &data.inner) {
             self.ensure_tabs(data);
             ctx.children_changed();
-            ctx.request_layout();
         } else if old_data.selected != data.selected {
             ctx.request_paint();
         }
@@ -611,7 +609,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         if let LifeCycle::WidgetAdded = event {
             self.make_tabs(data);
             ctx.children_changed();
-            ctx.request_layout();
         }
 
         if event.should_propagate_to_hidden() {
@@ -638,7 +635,6 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
     ) {
         let init = if data.policy.tabs_changed(&old_data.inner, &data.inner) {
             ctx.children_changed();
-            ctx.request_layout();
             Some(self.make_tabs(data))
         } else {
             None
@@ -648,7 +644,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
             self.transition_state = self
                 .transition
                 .tab_changed(old_data.selected, data.selected);
-            ctx.request_layout();
+            ctx.children_changed();
 
             if self.transition_state.is_some() {
                 ctx.request_anim_frame();
