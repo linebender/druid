@@ -46,7 +46,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
 - x11: Remove some unnecessary casts ([#1851] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
-- x11: Add support for getting clipboard contents ([#1805] by [@psychon])
+- x11: Add support for getting and setting clipboard contents ([#1805] and [#1851] by [@psychon])
+- Linux extension: primary_clipboard ([#1843] by [@Maan2003])
 
 ### Changed
 
@@ -63,6 +64,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
+- Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 
 ### Deprecated
 
@@ -95,6 +97,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 - Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
+- Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
 
 ### Examples
 
@@ -741,8 +744,11 @@ Last release without a changelog :(
 [#1805]: https://github.com/linebender/druid/pull/1805
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
+[#1843]: https://github.com/linebender/druid/pull/1843
 [#1851]: https://github.com/linebender/druid/pull/1851
 [#1860]: https://github.com/linebender/druid/pull/1860
+[#1861]: https://github.com/linebender/druid/pull/1861
+[#1863]: https://github.com/linebender/druid/pull/1863
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
