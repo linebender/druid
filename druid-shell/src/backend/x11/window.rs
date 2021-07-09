@@ -27,7 +27,6 @@ use crate::scale::Scalable;
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use tracing::{error, info, warn};
-use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::errors::ReplyOrIdError;
 use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
@@ -190,28 +189,6 @@ impl WindowBuilder {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
 
-    /// Registers and returns all the atoms that the window will need.
-    fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
-        let conn = self.app.connection();
-        let atoms = WindowAtoms::new(conn.as_ref())?
-            .reply()
-            .context("get X11 atoms")?;
-
-        // Replace the window's WM_PROTOCOLS with the following.
-        let protocols = [atoms.WM_DELETE_WINDOW];
-        conn.change_property32(
-            PropMode::REPLACE,
-            window_id,
-            atoms.WM_PROTOCOLS,
-            AtomEnum::ATOM,
-            &protocols,
-        )?
-        .check()
-        .context("set WM_PROTOCOLS")?;
-
-        Ok(atoms)
-    }
-
     fn create_cairo_surface(
         &self,
         window_id: u32,
@@ -353,7 +330,6 @@ impl WindowBuilder {
             .context("create graphics context")?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
-        let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -372,6 +348,7 @@ impl WindowBuilder {
         )?);
 
         // Initialize some properties
+        let atoms = self.app.atoms();
         let pid = nix::unistd::Pid::this().as_raw();
         if let Ok(pid) = u32::try_from(pid) {
             conn.change_property32(
@@ -384,6 +361,18 @@ impl WindowBuilder {
             .check()
             .context("set _NET_WM_PID")?;
         }
+
+        // Replace the window's WM_PROTOCOLS with the following.
+        let protocols = [atoms.WM_DELETE_WINDOW];
+        conn.change_property32(
+            PropMode::REPLACE,
+            id,
+            atoms.WM_PROTOCOLS,
+            AtomEnum::ATOM,
+            &protocols,
+        )?
+        .check()
+        .context("set WM_PROTOCOLS")?;
 
         let min_size = self.min_size.to_px(scale);
         log_x11!(size_hints(self.resizable, size_px, min_size)
@@ -435,7 +424,6 @@ impl WindowBuilder {
             app: self.app.clone(),
             handler,
             cairo_surface,
-            atoms,
             area: Cell::new(ScaledArea::from_px(size_px, scale)),
             scale: Cell::new(scale),
             min_size,
@@ -519,7 +507,6 @@ pub(crate) struct Window {
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
-    atoms: WindowAtoms,
     area: Cell<ScaledArea>,
     scale: Cell<Scale>,
     // min size in px
@@ -566,56 +553,6 @@ pub(crate) struct Window {
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
     active_text_field: Cell<Option<TextFieldToken>>,
-}
-
-// This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
-// convenience methods to intern and query those atoms). We use the following atoms:
-//
-// WM_PROTOCOLS
-//
-// List of atoms that identify the communications protocols between
-// the client and window manager in which the client is willing to participate.
-//
-// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
-//
-// WM_DELETE_WINDOW
-//
-// Including this atom in the WM_PROTOCOLS property on each window makes sure that
-// if the window manager respects WM_DELETE_WINDOW it will send us the event.
-//
-// The WM_DELETE_WINDOW event is sent when there is a request to close the window.
-// Registering for but ignoring this event means that the window will remain open.
-//
-// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-//
-// _NET_WM_PID
-//
-// A property containing the PID of the process that created the window.
-//
-// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
-//
-// _NET_WM_NAME
-//
-// A version of WM_NAME supporting UTF8 text.
-//
-// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
-//
-// UTF8_STRING
-//
-// The type of _NET_WM_NAME
-atom_manager! {
-    WindowAtoms: WindowAtomsCookie {
-        WM_PROTOCOLS,
-        WM_DELETE_WINDOW,
-        _NET_WM_PID,
-        _NET_WM_NAME,
-        UTF8_STRING,
-        _NET_WM_WINDOW_TYPE,
-        _NET_WM_WINDOW_TYPE_NORMAL,
-        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-        _NET_WM_WINDOW_TYPE_TOOLTIP,
-        _NET_WM_WINDOW_TYPE_DIALOG,
-    }
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -995,6 +932,8 @@ impl Window {
             return;
         }
 
+        let atoms = self.app.atoms();
+
         // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
         // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
         // as long as _NET_WM_NAME is also set (which uses UTF8).
@@ -1008,8 +947,8 @@ impl Window {
         log_x11!(self.app.connection().change_property8(
             xproto::PropMode::REPLACE,
             self.id,
-            self.atoms._NET_WM_NAME,
-            self.atoms.UTF8_STRING,
+            atoms._NET_WM_NAME,
+            atoms.UTF8_STRING,
             title.as_bytes(),
         ));
     }
@@ -1185,9 +1124,10 @@ impl Window {
     pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
+        let atoms = self.app.atoms();
+        if client_message.type_ == atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
-            if protocol == self.atoms.WM_DELETE_WINDOW {
+            if protocol == atoms.WM_DELETE_WINDOW {
                 self.with_handler(|h| h.request_close());
             }
         }
