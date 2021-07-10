@@ -16,7 +16,7 @@
 
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
-use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
+use druid::widget::{Button, CrossAxisAlignment, Either, Flex, Label, List, Scroll};
 use druid::{
     AppLauncher, Color, Data, Lens, LocalizedString, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
@@ -24,9 +24,40 @@ use druid::{
 #[derive(Clone, Data, Lens)]
 struct AppData {
     left: Vector<u32>,
-    right: Vector<u32>,
-    l_index: usize,
-    r_index: usize,
+    right: Vector<usize>,
+    // The selected list item on the right list, if any
+    r_selected: Option<usize>,
+    // Indexes for generating new items (we can't use the vector length because some items might
+    // have been deleted).
+    l_next: usize,
+    r_next: usize,
+}
+
+impl AppData {
+    /// Delete the item in the right list with the given id.
+    ///
+    /// Also unselect it if it is selected.
+    fn del_right(&mut self, id: usize) {
+        self.right.retain(|v| *v != id);
+        if self.r_selected == Some(id) {
+            self.r_selected = None;
+        }
+    }
+
+    /// Toggle the selected list element.
+    ///
+    /// This shouldn't be called with an id that doesn't exist, but if it is nothing bad will
+    /// happen.
+    fn toggle_select(&mut self, id: usize) {
+        if self.right.contains(&id) {
+            self.r_selected = if self.is_selected(id) { None } else { Some(id) };
+        }
+    }
+
+    /// whether the given list item id is currently selected.
+    fn is_selected(&self, id: usize) -> bool {
+        self.r_selected == Some(id)
+    }
 }
 
 pub fn main() {
@@ -34,12 +65,15 @@ pub fn main() {
         .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
     let left = vector![1, 2];
+    let l_next = left.len() + 1;
     let right = vector![1, 2, 3];
+    let r_next = right.len() + 1;
     let data = AppData {
-        l_index: left.len(),
-        r_index: right.len(),
         left,
         right,
+        r_selected: None,
+        l_next,
+        r_next,
     };
     AppLauncher::with_window(main_window)
         .log_to_console()
@@ -55,12 +89,12 @@ fn ui_builder() -> impl Widget<AppData> {
         Button::new("Add")
             .on_click(|_, data: &mut AppData, _| {
                 // Add child to left list
-                data.l_index += 1;
-                data.left.push_back(data.l_index as u32);
+                data.left.push_back(data.l_next as u32);
+                data.l_next += 1;
 
                 // Add child to right list
-                data.r_index += 1;
-                data.right.push_back(data.r_index as u32);
+                data.right.push_back(data.r_next);
+                data.r_next += 1;
             })
             .fix_height(30.0)
             .expand_width(),
@@ -85,22 +119,28 @@ fn ui_builder() -> impl Widget<AppData> {
 
     // Build a list with shared data
     lists.add_flex_child(
-        Scroll::new(
-            List::new(|| {
+        Scroll::new(List::new(|| {
+            fn label(text_color: Color) -> impl Widget<(AppData, usize)> {
                 Flex::row()
                     .with_child(
-                        Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
+                        Label::new(|(_, item): &(AppData, usize), _env: &_| {
                             format!("List item #{}", item)
                         })
-                        .align_vertical(UnitPoint::LEFT),
+                        .with_text_color(text_color)
+                        .align_vertical(UnitPoint::LEFT)
+                        .on_click(
+                            |_ctx, (shared, item): &mut (AppData, usize), _env| {
+                                shared.toggle_select(*item);
+                            },
+                        ),
                     )
                     .with_flex_spacer(1.0)
                     .with_child(
                         Button::new("Delete")
-                            .on_click(|_ctx, (shared, item): &mut (Vector<u32>, u32), _env| {
-                                // We have access to both child's data and shared data.
+                            .on_click(|_ctx, (shared, item): &mut (AppData, usize), _env| {
+                                // We have access to both the list item's data and the app data.
                                 // Remove element from right list.
-                                shared.retain(|v| v != item);
+                                shared.del_right(*item);
                             })
                             .fix_size(80.0, 20.0)
                             .align_vertical(UnitPoint::CENTER),
@@ -108,16 +148,20 @@ fn ui_builder() -> impl Widget<AppData> {
                     .padding(10.0)
                     .background(Color::rgb(0.5, 0.0, 0.5))
                     .fix_height(50.0)
-            })
-            .with_spacing(10.),
-        )
+            }
+            Either::new(
+                |(shared, id), _| shared.is_selected(*id),
+                label(Color::WHITE),
+                label(Color::BLACK),
+            )
+        }))
         .vertical()
         .lens(lens::Identity.map(
             // Expose shared data with children data
-            |d: &AppData| (d.right.clone(), d.right.clone()),
-            |d: &mut AppData, x: (Vector<u32>, Vector<u32>)| {
+            |d: &AppData| (d.clone(), d.right.clone()),
+            |d: &mut AppData, (new_d, _): (AppData, Vector<usize>)| {
                 // If shared data was changed reflect the changes in our AppData
-                d.right = x.0
+                *d = new_d;
             },
         )),
         1.0,
