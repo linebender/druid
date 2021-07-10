@@ -362,6 +362,42 @@ impl WindowBuilder {
             .context("set _NET_WM_PID")?;
         }
 
+        if let Some(name) = std::env::args_os().next() {
+            // ICCCM § 4.1.2.5:
+            // The WM_CLASS property (of type STRING without control characters) contains two
+            // consecutive null-terminated strings. These specify the Instance and Class names.
+            //
+            // The code below just imitates what happens on the gtk backend:
+            // - instance: The program's name
+            // - class: The program's name with first letter in upper case
+
+            // Get the name of the running binary
+            let path: &std::path::Path = name.as_ref();
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+
+            // Build the contents of WM_CLASS
+            let mut wm_class = Vec::with_capacity(2 * (name.len() + 1));
+            wm_class.extend(name.as_bytes());
+            wm_class.push(0);
+            if let Some(&first) = wm_class.get(0) {
+                wm_class.push(first.to_ascii_uppercase());
+                wm_class.extend(&name.as_bytes()[1..]);
+            }
+            wm_class.push(0);
+            conn.change_property8(
+                PropMode::REPLACE,
+                id,
+                AtomEnum::WM_CLASS,
+                AtomEnum::STRING,
+                &wm_class,
+            )?;
+        } else {
+            // GTK (actually glib) goes fishing in /proc (platform_get_argv0()). We pass.
+        }
+
         // Replace the window's WM_PROTOCOLS with the following.
         let protocols = [atoms.WM_DELETE_WINDOW];
         conn.change_property32(

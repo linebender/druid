@@ -49,6 +49,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - x11: Add support for getting and setting clipboard contents ([#1805], [#1851], and [#1866] by [@psychon])
 - Linux extension: primary_clipboard ([#1843] by [@Maan2003])
 - x11: Implement primary_clipboard ([#1867] by [@psychon])
+- x11: Set WM_CLASS property ([#1868] by [@psychon])
 
 ### Changed
 
@@ -754,6 +755,7 @@ Last release without a changelog :(
 [#1865]: https://github.com/linebender/druid/pull/1865
 [#1866]: https://github.com/linebender/druid/pull/1866
 [#1867]: https://github.com/linebender/druid/pull/1867
+[#1868]: https://github.com/linebender/druid/pull/1868
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
