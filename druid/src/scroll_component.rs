@@ -748,7 +748,7 @@ mod tests {
     }
 
     fn test_env() -> Env {
-        Env::default()
+        Env::empty()
             .adding(theme::SCROLLBAR_WIDTH, TEST_SCROLLBAR_WIDTH)
             .adding(theme::SCROLLBAR_PAD, TEST_SCROLLBAR_PAD)
             .adding(theme::SCROLLBAR_MIN_SIZE, TEST_SCROLLBAR_MIN_SIZE)

@@ -242,7 +242,7 @@ impl<T: Data> AppLauncher<T> {
         let mut env = self
             .l10n_resources
             .map(|it| Env::with_i10n(it.0, &it.1))
-            .unwrap_or_default();
+            .unwrap_or_else(Env::with_default_i10n);
 
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);

@@ -186,5 +186,5 @@ pub(crate) fn add_to_env(env: Env) -> Env {
 
 #[deprecated(since = "0.7.0", note = "use Env::default() instead")]
 pub fn init() -> Env {
-    Env::default()
+    Env::with_default_i10n()
 }
