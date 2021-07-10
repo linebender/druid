@@ -14,7 +14,8 @@
 
 //! Common types for representing mouse events and state
 
-use crate::backend;
+use std::any::Any;
+
 use crate::kurbo::{Point, Vec2};
 use crate::piet::ImageBuf;
 use crate::Modifiers;
@@ -245,10 +246,15 @@ impl std::fmt::Debug for MouseButtons {
     }
 }
 
+pub trait CursorBackend {
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+}
+
 //NOTE: this currently only contains cursors that are included by default on
 //both Windows and macOS. We may want to provide polyfills for various additional cursors.
 /// Mouse cursors.
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Cursor {
     /// The default arrow cursor.
     Arrow,
@@ -264,7 +270,61 @@ pub enum Cursor {
     ResizeUpDown,
     // The platform cursor should be small. Any image data that it uses should be shared (i.e.
     // behind an `Arc` or using a platform API that does the sharing).
-    Custom(backend::window::CustomCursor),
+    Custom(Box<dyn CursorBackend>),
+}
+
+impl Clone for Box<dyn CursorBackend> {
+    fn clone(&self) -> Self {
+        match self.name().as_str() {
+            "x11" => Box::new(
+                self.as_any()
+                    .downcast_ref::<crate::backend::x11::window::CustomCursor>()
+                    .unwrap()
+                    .clone(),
+            ),
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
+
+impl PartialEq for Box<dyn CursorBackend> {
+    fn eq(&self, other: &Self) -> bool {
+        match self.name().as_str() {
+            "x11" => match other.name().as_str() {
+                "x11" => PartialEq::eq(
+                    self.as_any()
+                        .downcast_ref::<crate::backend::x11::window::CustomCursor>()
+                        .unwrap(),
+                    other
+                        .as_any()
+                        .downcast_ref::<crate::backend::x11::window::CustomCursor>()
+                        .unwrap(),
+                ),
+                x => panic!("uncomparable: x11 with {}", x),
+            },
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
+
+impl PartialEq for Cursor {
+    fn eq(&self, other: &Self) -> bool {
+        #[allow(deprecated)]
+        match self {
+            Cursor::Arrow => matches!(other, Cursor::Arrow),
+            Cursor::IBeam => matches!(other, Cursor::IBeam),
+            Cursor::Pointer => matches!(other, Cursor::Pointer),
+            Cursor::Crosshair => matches!(other, Cursor::Crosshair),
+            Cursor::OpenHand => matches!(other, Cursor::OpenHand),
+            Cursor::NotAllowed => matches!(other, Cursor::NotAllowed),
+            Cursor::ResizeLeftRight => matches!(other, Cursor::ResizeLeftRight,),
+            Cursor::ResizeUpDown => matches!(other, Cursor::ResizeUpDown),
+            Cursor::Custom(a) => match other {
+                Cursor::Custom(b) => PartialEq::eq(a, b),
+                _ => false,
+            },
+        }
+    }
 }
 
 /// A platform-independent description of a custom cursor.

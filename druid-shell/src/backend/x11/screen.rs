@@ -19,6 +19,8 @@ use x11rb::errors::ReplyOrIdError;
 use x11rb::protocol::randr::{self, ConnectionExt as _, Crtc};
 use x11rb::protocol::xproto::{Screen, Timestamp};
 
+use crate::backend::x11::application::Application;
+
 use crate::kurbo::Rect;
 use crate::screen::Monitor;
 
@@ -36,23 +38,29 @@ where
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     let result = if let Some(app) = crate::Application::try_global() {
-        let app = app.backend_app;
-        get_monitors_impl(app.connection().as_ref(), app.screen_num())
+        if let Some(backend) = app.backend_app.as_any().downcast_ref::<Application>() {
+            get_monitors_impl(backend.connection().as_ref(), backend.screen_num())
+        } else {
+            get_monitors_slow()
+        }
     } else {
-        let (conn, screen_num) = match x11rb::connect(None) {
-            Ok(res) => res,
-            Err(err) => {
-                tracing::error!("Error in Screen::get_monitors(): {:?}", err);
-                return Vec::new();
-            }
-        };
-        get_monitors_impl(&conn, screen_num)
+        get_monitors_slow()
     };
     match result {
         Ok(monitors) => monitors,
         Err(err) => {
             tracing::error!("Error in Screen::get_monitors(): {:?}", err);
             Vec::new()
+        }
+    }
+}
+
+fn get_monitors_slow() -> Result<Vec<Monitor>, ReplyOrIdError> {
+    match x11rb::connect(None) {
+        Ok((conn, screen_num)) => get_monitors_impl(&conn, screen_num),
+        Err(err) => {
+            tracing::error!("Error in Screen::get_monitors(): {:?}", err);
+            Ok(Vec::new())
         }
     }
 }

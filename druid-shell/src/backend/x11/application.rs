@@ -14,6 +14,7 @@
 
 //! X11 implementation of features at the application scope.
 
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
 use std::convert::{TryFrom, TryInto};
@@ -33,11 +34,11 @@ use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
 use x11rb::xcb_ffi::XCBConnection;
 
-use crate::application::AppHandler;
-
 use super::clipboard::Clipboard;
 use super::util;
 use super::window::Window;
+use crate::application::AppHandler;
+use crate::application::ApplicationBackend;
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
 // convenience methods to intern and query those atoms). We use the following atoms:
@@ -106,6 +107,32 @@ x11rb::atom_manager! {
         PRIMARY,
         TARGETS,
         INCR,
+    }
+}
+
+impl ApplicationBackend for Application {
+    fn run(&self, handler: Option<Box<dyn AppHandler>>) {
+        self.run(handler)
+    }
+    fn quit(&self) {
+        self.quit()
+    }
+
+    fn clipboard(&self) -> crate::clipboard::Clipboard {
+        self.clipboard().into()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
+    }
+
+    #[cfg(feature = "primary-clipboard")]
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        self.primary_clipboard().into()
     }
 }
 
@@ -197,6 +224,10 @@ pub(crate) struct Cursors {
 }
 
 impl Application {
+    pub fn is_available() -> bool {
+        XCBConnection::connect(None).is_ok()
+    }
+
     pub fn new() -> Result<Application, Error> {
         // If we want to support OpenGL, we will need to open a connection with Xlib support (see
         // https://xcb.freedesktop.org/opengl/ for background).  There is some sample code for this
@@ -332,6 +363,38 @@ impl Application {
             render_argb32_pictformat_cursor,
             timestamp,
         })
+    }
+    fn run(&self, _handler: Option<Box<dyn AppHandler>>) {
+        if let Err(e) = self.run_inner() {
+            tracing::error!("{}", e);
+        }
+    }
+    fn quit(&self) {
+        if let Ok(mut state) = self.state.try_borrow_mut() {
+            if !state.quitting {
+                state.quitting = true;
+                if state.windows.is_empty() {
+                    // There are no windows left, so we can immediately finalize the quit.
+                    self.finalize_quit();
+                } else {
+                    // We need to queue up the destruction of all our windows.
+                    // Failure to do so will lead to resource leaks.
+                    for window in state.windows.values() {
+                        window.destroy();
+                    }
+                }
+            }
+        } else {
+            tracing::error!("Application state already borrowed");
+        }
+    }
+
+    fn clipboard(&self) -> Clipboard {
+        self.clipboard.clone()
+    }
+
+    fn primary_clipboard(&self) -> Clipboard {
+        self.primary.clone()
     }
 
     // Check if the Present extension is supported, returning its opcode if it is.
@@ -641,7 +704,7 @@ impl Application {
         Ok(false)
     }
 
-    fn run_inner(self) -> Result<(), Error> {
+    fn run_inner(&self) -> Result<(), Error> {
         // Try to figure out the refresh rate of the current screen. We run the idle loop at that
         // rate. The rate-limiting of the idle loop has two purposes:
         //  - When the present extension is disabled, we paint in the idle loop. By limiting the
@@ -729,32 +792,6 @@ impl Application {
         }
     }
 
-    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        if let Err(e) = self.run_inner() {
-            tracing::error!("{}", e);
-        }
-    }
-
-    pub fn quit(&self) {
-        if let Ok(mut state) = self.state.try_borrow_mut() {
-            if !state.quitting {
-                state.quitting = true;
-                if state.windows.is_empty() {
-                    // There are no windows left, so we can immediately finalize the quit.
-                    self.finalize_quit();
-                } else {
-                    // We need to queue up the destruction of all our windows.
-                    // Failure to do so will lead to resource leaks.
-                    for window in state.windows.values() {
-                        window.destroy();
-                    }
-                }
-            }
-        } else {
-            tracing::error!("Application state already borrowed");
-        }
-    }
-
     fn finalize_quit(&self) {
         log_x11!(self.connection.destroy_window(self.window_id));
         if let Err(e) = nix::unistd::close(self.idle_read) {
@@ -763,10 +800,6 @@ impl Application {
         if let Err(e) = nix::unistd::close(self.idle_write) {
             tracing::error!("Error closing idle_write: {}", e);
         }
-    }
-
-    pub fn clipboard(&self) -> Clipboard {
-        self.clipboard.clone()
     }
 
     pub fn get_locale() -> String {
@@ -793,9 +826,13 @@ impl Application {
     }
 }
 
-impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+impl crate::platform::linux::LinuxApplicationExt for Application {
     fn primary_clipboard(&self) -> crate::Clipboard {
-        self.backend_app.primary.clone().into()
+        if let Some(backend) = self.as_any().downcast_ref::<Application>() {
+            backend.primary.clone().into()
+        } else {
+            panic!("unimplemented")
+        }
     }
 }
 

@@ -14,6 +14,7 @@
 
 //! X11 window creation and window management.
 
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::BinaryHeap;
 use std::convert::{TryFrom, TryInto};
@@ -44,18 +45,20 @@ use x11rb::xcb_ffi::XCBConnection;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
-use crate::common_util::IdleCallback;
+use crate::application::ApplicationBackend;
+use crate::common_util::{Hack2, IdleCallback};
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyEvent, KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorBackend, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
 use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+    FileDialogToken, IdleToken, IdleWindowHandleBackend, TextFieldToken, TimerToken, WinHandler,
+    WindowBuilderBackend, WindowHandleBackend, WindowLevel,
 };
 use crate::{window, ScaledArea};
 
@@ -110,6 +113,61 @@ fn size_hints(resizable: bool, size: Size, min_size: Size) -> WmSizeHints {
     size_hints
 }
 
+impl WindowBuilderBackend for WindowBuilder {
+    fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.set_handler(handler)
+    }
+
+    fn set_size(&mut self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn set_min_size(&mut self, min_size: Size) {
+        self.set_min_size(min_size)
+    }
+
+    fn resizable(&mut self, resizable: bool) {
+        self.resizable(resizable)
+    }
+    fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_transparent(&mut self, transparent: bool) {
+        self.set_transparent(transparent)
+    }
+    fn set_position(&mut self, position: Point) {
+        self.set_position(position)
+    }
+    fn set_level(&mut self, level: window::WindowLevel) {
+        self.set_level(level)
+    }
+    fn set_title(&mut self, title: String) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&mut self, menu: crate::menu::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu(*menu);
+        } else {
+            panic!("Use of x11 window with {} menu", menu.0.name())
+        }
+    }
+    fn set_window_state(&mut self, state: window::WindowState) {
+        self.set_window_state(state)
+    }
+    fn build(self: Box<Self>) -> Result<crate::WindowHandle, Error> {
+        self.build()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
 pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
@@ -124,26 +182,33 @@ pub(crate) struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder {
-            app,
-            handler: None,
-            title: String::new(),
-            transparent: false,
-            position: None,
-            size: Size::new(500.0, 400.0),
-            min_size: Size::new(0.0, 0.0),
-            resizable: true,
-            level: WindowLevel::AppWindow,
-            state: None,
+    pub fn new(backend: Rc<dyn ApplicationBackend>) -> WindowBuilder {
+        if let Some(backend) = backend.as_any().downcast_ref::<Application>() {
+            WindowBuilder {
+                app: backend.clone(),
+                handler: None,
+                title: String::new(),
+                transparent: false,
+                position: None,
+                size: Size::new(500.0, 400.0),
+                min_size: Size::new(0.0, 0.0),
+                resizable: true,
+                level: WindowLevel::AppWindow,
+                state: None,
+            }
+        } else {
+            panic!(
+                "Tried to create an X11 window with a {} application",
+                backend.name()
+            )
         }
     }
 
-    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+    fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
         self.handler = Some(handler);
     }
 
-    pub fn set_size(&mut self, size: Size) {
+    fn set_size(&mut self, size: Size) {
         // zero sized window results in server error
         self.size = if size.width == 0. || size.height == 0. {
             Size::new(1., 1.)
@@ -152,74 +217,39 @@ impl WindowBuilder {
         };
     }
 
-    pub fn set_min_size(&mut self, min_size: Size) {
+    fn set_min_size(&mut self, min_size: Size) {
         self.min_size = min_size;
     }
 
-    pub fn resizable(&mut self, resizable: bool) {
+    fn resizable(&mut self, resizable: bool) {
         self.resizable = resizable;
     }
-
-    pub fn show_titlebar(&mut self, _show_titlebar: bool) {
+    fn show_titlebar(&mut self, _show_titlebar: bool) {
         // not sure how to do this, maybe _MOTIF_WM_HINTS?
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 backend.");
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
+    fn set_transparent(&mut self, transparent: bool) {
         self.transparent = transparent;
     }
-
-    pub fn set_position(&mut self, position: Point) {
+    fn set_position(&mut self, position: Point) {
         self.position = Some(position);
     }
-
-    pub fn set_level(&mut self, level: window::WindowLevel) {
+    fn set_level(&mut self, level: window::WindowLevel) {
         self.level = level;
     }
-
-    pub fn set_window_state(&mut self, state: window::WindowState) {
-        self.state = Some(state);
+    fn set_title(&mut self, title: String) {
+        self.title = title;
     }
 
-    pub fn set_title<S: Into<String>>(&mut self, title: S) {
-        self.title = title.into();
-    }
-
-    pub fn set_menu(&mut self, _menu: Menu) {
+    fn set_menu(&mut self, _menu: Menu) {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
     }
-
-    fn create_cairo_surface(
-        &self,
-        window_id: u32,
-        visual_type: &Visualtype,
-    ) -> Result<XCBSurface, Error> {
-        let conn = self.app.connection();
-        let cairo_xcb_connection = unsafe {
-            CairoXCBConnection::from_raw_none(
-                conn.get_raw_xcb_connection() as *mut cairo_sys::xcb_connection_t
-            )
-        };
-        let cairo_drawable = XCBDrawable(window_id);
-        let mut xcb_visual = xcb_visualtype_t::from(*visual_type);
-        let cairo_visual_type = unsafe {
-            XCBVisualType::from_raw_none(
-                &mut xcb_visual as *mut xcb_visualtype_t as *mut cairo_sys::xcb_visualtype_t,
-            )
-        };
-        let cairo_surface = XCBSurface::create(
-            &cairo_xcb_connection,
-            &cairo_drawable,
-            &cairo_visual_type,
-            self.size.width as i32,
-            self.size.height as i32,
-        )
-        .map_err(|status| anyhow!("Failed to create cairo surface: {}", status))?;
-        Ok(cairo_surface)
+    fn set_window_state(&mut self, state: window::WindowState) {
+        self.state = Some(state);
     }
-
     // TODO(x11/menus): make menus if requested
-    pub fn build(self) -> Result<WindowHandle, Error> {
+    fn build(self: Box<Self>) -> Result<crate::WindowHandle, Error> {
         let conn = self.app.connection();
         let screen_num = self.app.screen_num();
         let id = conn.generate_id()?;
@@ -483,7 +513,36 @@ impl WindowBuilder {
 
         self.app.add_window(id, window)?;
 
-        Ok(handle)
+        Ok(handle.into())
+    }
+
+    fn create_cairo_surface(
+        &self,
+        window_id: u32,
+        visual_type: &Visualtype,
+    ) -> Result<XCBSurface, Error> {
+        let conn = self.app.connection();
+        let cairo_xcb_connection = unsafe {
+            CairoXCBConnection::from_raw_none(
+                conn.get_raw_xcb_connection() as *mut cairo_sys::xcb_connection_t
+            )
+        };
+        let cairo_drawable = XCBDrawable(window_id);
+        let mut xcb_visual = xcb_visualtype_t::from(*visual_type);
+        let cairo_visual_type = unsafe {
+            XCBVisualType::from_raw_none(
+                &mut xcb_visual as *mut xcb_visualtype_t as *mut cairo_sys::xcb_visualtype_t,
+            )
+        };
+        let cairo_surface = XCBSurface::create(
+            &cairo_xcb_connection,
+            &cairo_drawable,
+            &cairo_visual_type,
+            self.size.width as i32,
+            self.size.height as i32,
+        )
+        .map_err(|status| anyhow!("Failed to create cairo surface: {}", status))?;
+        Ok(cairo_surface)
     }
 
     fn initialize_present_data(&self, window_id: u32) -> Result<PresentData, Error> {
@@ -645,7 +704,16 @@ struct PresentData {
     last_ust: Option<u64>,
 }
 
-#[derive(Clone, PartialEq)]
+impl CursorBackend for CustomCursor {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
 pub struct CustomCursor(xproto::Cursor);
 
 impl Window {
@@ -1004,7 +1072,14 @@ impl Window {
             Cursor::NotAllowed => cursors.not_allowed,
             Cursor::ResizeLeftRight => cursors.col_resize,
             Cursor::ResizeUpDown => cursors.row_resize,
-            Cursor::Custom(custom) => Some(custom.0),
+            Cursor::Custom(custom) => {
+                if let Some(custom) = custom.as_any().downcast_ref::<CustomCursor>() {
+                    Some(custom.0)
+                } else {
+                    tracing::warn!("Tried to use {} cursor in x11 backend", custom.name());
+                    None
+                }
+            }
         };
         if cursor.is_none() {
             warn!("Unable to load cursor {:?}", cursor);
@@ -1506,6 +1581,23 @@ fn key_mods(mods: u16) -> Modifiers {
     ret
 }
 
+impl IdleWindowHandleBackend for IdleHandle {
+    fn add_idle_callback(&self, callback: Box<dyn FnOnce(&mut dyn WinHandler) + Send>) {
+        self.add_idle_callback(callback)
+    }
+
+    fn add_idle_token(&self, token: IdleToken) {
+        self.add_idle_token(token)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
 /// A handle that can get used to schedule an idle handler. Note that
 /// this handle can be cloned and sent between threads.
 #[derive(Clone)]
@@ -1537,25 +1629,164 @@ impl IdleHandle {
         }
     }
 
+    fn add_idle_callback(&self, callback: Box<dyn FnOnce(&mut dyn WinHandler) + Send>) {
+        self.queue
+            .lock()
+            .unwrap()
+            .push(IdleKind::Callback(Box::new(Hack2 {
+                fun: Box::new(callback),
+            })));
+        self.wake();
+    }
+
+    fn add_idle_token(&self, token: IdleToken) {
+        self.queue.lock().unwrap().push(IdleKind::Token(token));
+        self.wake();
+    }
+
     pub(crate) fn schedule_redraw(&self) {
         self.queue.lock().unwrap().push(IdleKind::Redraw);
         self.wake();
     }
+}
 
-    pub fn add_idle_callback<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
-    {
-        self.queue
-            .lock()
-            .unwrap()
-            .push(IdleKind::Callback(Box::new(callback)));
-        self.wake();
+impl WindowHandleBackend for WindowHandle {
+    fn show(&self) {
+        self.show()
     }
 
-    pub fn add_idle_token(&self, token: IdleToken) {
-        self.queue.lock().unwrap().push(IdleKind::Token(token));
-        self.wake();
+    fn close(&self) {
+        self.close()
+    }
+
+    fn resizable(&self, resizable: bool) {
+        self.resizable(resizable)
+    }
+
+    fn set_window_state(&mut self, state: window::WindowState) {
+        self.set_window_state(state)
+    }
+
+    fn get_window_state(&self) -> window::WindowState {
+        self.get_window_state()
+    }
+
+    fn handle_titlebar(&self, val: bool) {
+        self.handle_titlebar(val)
+    }
+    fn show_titlebar(&self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_position(&self, position: Point) {
+        self.set_position(position)
+    }
+
+    fn get_position(&self) -> Point {
+        self.get_position()
+    }
+
+    fn content_insets(&self) -> Insets {
+        self.content_insets()
+    }
+
+    fn set_size(&self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn get_size(&self) -> Size {
+        self.get_size()
+    }
+
+    fn set_level(&self, level: WindowLevel) {
+        self.set_level(level)
+    }
+
+    fn bring_to_front_and_focus(&self) {
+        self.bring_to_front_and_focus()
+    }
+    fn request_anim_frame(&self) {
+        self.request_anim_frame()
+    }
+
+    fn invalidate(&self) {
+        self.invalidate()
+    }
+
+    fn invalidate_rect(&self, rect: Rect) {
+        self.invalidate_rect(rect)
+    }
+
+    fn set_title(&self, title: &str) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&self, menu: crate::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu(*menu);
+        } else {
+            panic!("Use of x11 window with {} menu", menu.0.name())
+        }
+    }
+    fn text(&self) -> PietText {
+        self.text()
+    }
+
+    fn add_text_field(&self) -> TextFieldToken {
+        self.add_text_field()
+    }
+
+    fn remove_text_field(&self, token: TextFieldToken) {
+        self.remove_text_field(token)
+    }
+
+    fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.set_focused_text_field(active_field)
+    }
+    fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.update_text_field(token, update)
+    }
+
+    fn request_timer(&self, deadline: Instant) -> TimerToken {
+        self.request_timer(deadline)
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        self.set_cursor(cursor)
+    }
+
+    fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        self.make_cursor(desc)
+    }
+
+    fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_file(options)
+    }
+
+    fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.save_as(options)
+    }
+    fn show_context_menu(&self, menu: crate::menu::Menu, pos: Point) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.show_context_menu(*menu, pos)
+        } else {
+            panic!("Use of x11 window with {} menu", menu.0.name())
+        }
+    }
+
+    fn get_idle_handle(&self) -> Option<crate::window::IdleHandle> {
+        self.get_idle_handle().map(Into::into)
+    }
+    fn get_scale(&self) -> Result<Scale, ShellError> {
+        self.get_scale()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
     }
 }
 
@@ -1569,8 +1800,7 @@ impl WindowHandle {
     fn new(id: u32, window: Weak<Window>) -> WindowHandle {
         WindowHandle { id, window }
     }
-
-    pub fn show(&self) {
+    fn show(&self) {
         if let Some(w) = self.window.upgrade() {
             w.show();
         } else {
@@ -1578,7 +1808,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn close(&self) {
+    fn close(&self) {
         if let Some(w) = self.window.upgrade() {
             w.close();
         } else {
@@ -1586,7 +1816,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn resizable(&self, resizable: bool) {
+    fn resizable(&self, resizable: bool) {
         if let Some(w) = self.window.upgrade() {
             w.resizable(resizable);
         } else {
@@ -1594,7 +1824,19 @@ impl WindowHandle {
         }
     }
 
-    pub fn show_titlebar(&self, show_titlebar: bool) {
+    fn set_window_state(&mut self, _state: window::WindowState) {
+        warn!("WindowHandle::set_window_state is currently unimplemented for X11 backend.");
+    }
+
+    fn get_window_state(&self) -> window::WindowState {
+        warn!("WindowHandle::get_window_state is currently unimplemented for X11 backend.");
+        window::WindowState::Restored
+    }
+
+    fn handle_titlebar(&self, _val: bool) {
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 backend.");
+    }
+    fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(w) = self.window.upgrade() {
             w.show_titlebar(show_titlebar);
         } else {
@@ -1602,7 +1844,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_position(&self, position: Point) {
+    fn set_position(&self, position: Point) {
         if let Some(w) = self.window.upgrade() {
             w.set_position(position);
         } else {
@@ -1610,7 +1852,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn get_position(&self) -> Point {
+    fn get_position(&self) -> Point {
         if let Some(w) = self.window.upgrade() {
             w.get_position()
         } else {
@@ -1619,16 +1861,12 @@ impl WindowHandle {
         }
     }
 
-    pub fn content_insets(&self) -> Insets {
+    fn content_insets(&self) -> Insets {
         warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
     }
 
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 backend.");
-    }
-
-    pub fn set_size(&self, size: Size) {
+    fn set_size(&self, size: Size) {
         if let Some(w) = self.window.upgrade() {
             w.set_size(size);
         } else {
@@ -1636,7 +1874,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn get_size(&self) -> Size {
+    fn get_size(&self) -> Size {
         if let Some(w) = self.window.upgrade() {
             w.size().size_dp()
         } else {
@@ -1645,28 +1883,18 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_window_state(&self, _state: window::WindowState) {
-        warn!("WindowHandle::set_window_state is currently unimplemented for X11 backend.");
+    fn set_level(&self, _level: WindowLevel) {
+        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
-    pub fn get_window_state(&self) -> window::WindowState {
-        warn!("WindowHandle::get_window_state is currently unimplemented for X11 backend.");
-        window::WindowState::Restored
-    }
-
-    pub fn handle_titlebar(&self, _val: bool) {
-        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 backend.");
-    }
-
-    pub fn bring_to_front_and_focus(&self) {
+    fn bring_to_front_and_focus(&self) {
         if let Some(w) = self.window.upgrade() {
             w.bring_to_front_and_focus();
         } else {
             error!("Window {} has already been dropped", self.id);
         }
     }
-
-    pub fn request_anim_frame(&self) {
+    fn request_anim_frame(&self) {
         if let Some(w) = self.window.upgrade() {
             w.request_anim_frame();
         } else {
@@ -1674,7 +1902,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn invalidate(&self) {
+    fn invalidate(&self) {
         if let Some(w) = self.window.upgrade() {
             w.invalidate();
         } else {
@@ -1682,7 +1910,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn invalidate_rect(&self, rect: Rect) {
+    fn invalidate_rect(&self, rect: Rect) {
         if let Some(w) = self.window.upgrade() {
             w.invalidate_rect(rect);
         } else {
@@ -1690,7 +1918,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_title(&self, title: &str) {
+    fn set_title(&self, title: &str) {
         if let Some(w) = self.window.upgrade() {
             w.set_title(title);
         } else {
@@ -1698,23 +1926,22 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_menu(&self, menu: Menu) {
+    fn set_menu(&self, menu: Menu) {
         if let Some(w) = self.window.upgrade() {
             w.set_menu(menu);
         } else {
             error!("Window {} has already been dropped", self.id);
         }
     }
-
-    pub fn text(&self) -> PietText {
+    fn text(&self) -> PietText {
         PietText::new()
     }
 
-    pub fn add_text_field(&self) -> TextFieldToken {
+    fn add_text_field(&self) -> TextFieldToken {
         TextFieldToken::next()
     }
 
-    pub fn remove_text_field(&self, token: TextFieldToken) {
+    fn remove_text_field(&self, token: TextFieldToken) {
         if let Some(window) = self.window.upgrade() {
             if window.active_text_field.get() == Some(token) {
                 window.active_text_field.set(None)
@@ -1722,17 +1949,16 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+    fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
         if let Some(window) = self.window.upgrade() {
             window.active_text_field.set(active_field);
         }
     }
-
-    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+    fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 
-    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
+    fn request_timer(&self, deadline: Instant) -> TimerToken {
         if let Some(w) = self.window.upgrade() {
             let timer = Timer::new(deadline);
             w.timer_queue.lock().unwrap().push(timer);
@@ -1742,13 +1968,13 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_cursor(&mut self, cursor: &Cursor) {
+    fn set_cursor(&mut self, cursor: &Cursor) {
         if let Some(w) = self.window.upgrade() {
             w.set_cursor(cursor);
         }
     }
 
-    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+    fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
         if let Some(w) = self.window.upgrade() {
             match w.app.render_argb32_pictformat_cursor() {
                 None => {
@@ -1774,31 +2000,29 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+    fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file
         warn!("WindowHandle::open_file is currently unimplemented for X11 backend.");
         None
     }
 
-    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+    fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as
         warn!("WindowHandle::save_as is currently unimplemented for X11 backend.");
         None
     }
-
-    pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
+    fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
         warn!("WindowHandle::show_context_menu is currently unimplemented for X11 backend.");
     }
 
-    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+    fn get_idle_handle(&self) -> Option<IdleHandle> {
         self.window.upgrade().map(|w| IdleHandle {
             queue: Arc::clone(&w.idle_queue),
             pipe: w.idle_pipe,
         })
     }
-
-    pub fn get_scale(&self) -> Result<Scale, ShellError> {
+    fn get_scale(&self) -> Result<Scale, ShellError> {
         if let Some(w) = self.window.upgrade() {
             Ok(w.get_scale()?)
         } else {
@@ -1902,5 +2126,5 @@ fn make_cursor(
     conn.render_create_cursor(cursor, picture, desc.hot.x as u16, desc.hot.y as u16)?;
     conn.render_free_picture(picture)?;
 
-    Ok(Cursor::Custom(CustomCursor(cursor)))
+    Ok(Cursor::Custom(Box::new(CustomCursor(cursor))))
 }

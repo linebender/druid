@@ -15,10 +15,11 @@
 //! Platform independent window types.
 
 use std::any::Any;
+use std::rc::Rc;
 use std::time::Duration;
 
 use crate::application::Application;
-use crate::backend::window as backend;
+use crate::backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
@@ -83,10 +84,18 @@ impl TextFieldToken {
     }
 }
 
+pub(crate) trait IdleWindowHandleBackend {
+    fn add_idle_callback(&self, callback: Box<dyn FnOnce(&mut dyn WinHandler) + Send>);
+    fn add_idle_token(&self, token: IdleToken);
+
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+}
+
 //NOTE: this has a From<backend::Handle> impl for construction
 /// A handle that can enqueue tasks on the window loop.
 #[derive(Clone)]
-pub struct IdleHandle(backend::IdleHandle);
+pub struct IdleHandle(Rc<dyn IdleWindowHandleBackend>);
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
@@ -99,7 +108,7 @@ impl IdleHandle {
     where
         F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
-        self.0.add_idle_callback(callback)
+        self.0.add_idle_callback(Box::new(callback))
     }
 
     /// Request a callback from the runloop. Your `WinHander::idle` method will
@@ -168,9 +177,77 @@ pub enum WindowState {
     Restored,
 }
 
+pub(crate) trait WindowHandleBackend {
+    fn show(&self);
+    fn close(&self);
+    fn resizable(&self, resizable: bool);
+    fn set_window_state(&mut self, _state: crate::window::WindowState);
+    fn get_window_state(&self) -> crate::window::WindowState;
+    fn handle_titlebar(&self, _val: bool);
+    fn show_titlebar(&self, show_titlebar: bool);
+    fn set_position(&self, position: Point);
+    fn get_position(&self) -> Point;
+    fn content_insets(&self) -> Insets;
+    fn set_size(&self, size: Size);
+    fn get_size(&self) -> Size;
+    fn set_level(&self, _level: WindowLevel);
+    fn bring_to_front_and_focus(&self);
+    fn request_anim_frame(&self);
+    fn invalidate(&self);
+    fn invalidate_rect(&self, rect: Rect);
+    fn set_title(&self, title: &str);
+    fn set_menu(&self, menu: Menu);
+    fn text(&self) -> PietText;
+    fn add_text_field(&self) -> TextFieldToken;
+    fn remove_text_field(&self, token: TextFieldToken);
+    fn set_focused_text_field(&self, active_field: Option<TextFieldToken>);
+    fn update_text_field(&self, _token: TextFieldToken, _update: Event);
+    fn request_timer(&self, deadline: instant::Instant) -> TimerToken;
+    fn set_cursor(&mut self, cursor: &Cursor);
+    fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor>;
+    fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken>;
+    fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken>;
+    fn show_context_menu(&self, _menu: Menu, _pos: Point);
+    fn get_idle_handle(&self) -> Option<IdleHandle>;
+    fn get_scale(&self) -> Result<Scale, Error>;
+
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+    //TODO a function returning backend::Backend? nice for exhaustive matching
+}
+
 /// A handle to a platform window object.
-#[derive(Clone, Default)]
-pub struct WindowHandle(backend::WindowHandle);
+// TODO: default, Clone?
+// #[derive(Clone)]
+pub struct WindowHandle(Box<dyn WindowHandleBackend>);
+
+impl Default for WindowHandle {
+    fn default() -> Self {
+        WindowHandle(crate::backend::default_winhandler())
+    }
+}
+
+impl Clone for WindowHandle {
+    fn clone(&self) -> Self {
+        match self.0.name().as_str() {
+            "x11" => WindowHandle(Box::new(
+                self.0
+                    .as_any()
+                    .downcast_ref::<backend::x11::window::WindowHandle>()
+                    .unwrap()
+                    .clone(),
+            )),
+            "gtk" => WindowHandle(Box::new(
+                self.0
+                    .as_any()
+                    .downcast_ref::<backend::gtk::window::WindowHandle>()
+                    .unwrap()
+                    .clone(),
+            )),
+            x => panic!("cloning unsuported backend: {}", x),
+        }
+    }
+}
 
 impl WindowHandle {
     /// Make this window visible.
@@ -311,7 +388,7 @@ impl WindowHandle {
 
     /// Set the top-level menu for this window.
     pub fn set_menu(&self, menu: Menu) {
-        self.0.set_menu(menu.into_inner())
+        self.0.set_menu(menu)
     }
 
     /// Get access to a type that can perform text layout.
@@ -403,12 +480,12 @@ impl WindowHandle {
     ///
     /// `pos` is in the coordinate space of the window.
     pub fn show_context_menu(&self, menu: Menu, pos: Point) {
-        self.0.show_context_menu(menu.into_inner(), pos)
+        self.0.show_context_menu(menu, pos)
     }
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        self.0.get_idle_handle().map(IdleHandle)
+        self.0.get_idle_handle()
     }
 
     /// Get the DPI scale of the window.
@@ -428,15 +505,33 @@ unsafe impl HasRawWindowHandle for WindowHandle {
     }
 }
 
+pub(crate) trait WindowBuilderBackend {
+    fn set_handler(&mut self, handler: Box<dyn WinHandler>);
+    fn set_size(&mut self, size: Size);
+    fn set_min_size(&mut self, min_size: Size);
+    fn resizable(&mut self, resizable: bool);
+    fn show_titlebar(&mut self, _show_titlebar: bool);
+    fn set_transparent(&mut self, transparent: bool);
+    fn set_position(&mut self, position: Point);
+    fn set_level(&mut self, level: crate::window::WindowLevel);
+    fn set_title(&mut self, title: String);
+    fn set_menu(&mut self, _menu: crate::menu::Menu);
+    fn set_window_state(&mut self, state: crate::window::WindowState);
+    fn build(self: Box<Self>) -> Result<WindowHandle, anyhow::Error>;
+
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+}
+
 /// A builder type for creating new windows.
-pub struct WindowBuilder(backend::WindowBuilder);
+pub struct WindowBuilder(Box<dyn WindowBuilderBackend>);
 
 impl WindowBuilder {
     /// Create a new `WindowBuilder`.
     ///
     /// Takes the [`Application`](crate::Application) that this window is for.
     pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder(backend::WindowBuilder::new(app.backend_app))
+        WindowBuilder(backend::new_windowbuilder(app))
     }
 
     /// Set the [`WinHandler`] for this window.
@@ -502,12 +597,12 @@ impl WindowBuilder {
 
     /// Set the window's initial title.
     pub fn set_title(&mut self, title: impl Into<String>) {
-        self.0.set_title(title)
+        self.0.set_title(title.into())
     }
 
     /// Set the window's menu.
     pub fn set_menu(&mut self, menu: Menu) {
-        self.0.set_menu(menu.into_inner())
+        self.0.set_menu(menu)
     }
 
     /// Sets the initial state of the window.
@@ -519,7 +614,7 @@ impl WindowBuilder {
     ///
     /// If this fails, your application should exit.
     pub fn build(self) -> Result<WindowHandle, Error> {
-        self.0.build().map(WindowHandle).map_err(Into::into)
+        self.0.build().map_err(Into::into)
     }
 }
 
@@ -697,9 +792,28 @@ pub trait WinHandler {
     fn as_any(&mut self) -> &mut dyn Any;
 }
 
-impl From<backend::WindowHandle> for WindowHandle {
-    fn from(src: backend::WindowHandle) -> WindowHandle {
-        WindowHandle(src)
+#[cfg(feature = "gtk")]
+impl From<crate::backend::gtk::window::WindowHandle> for WindowHandle {
+    fn from(src: crate::backend::gtk::window::WindowHandle) -> WindowHandle {
+        WindowHandle(Box::new(src))
+    }
+}
+#[cfg(feature = "x11")]
+impl From<crate::backend::x11::window::WindowHandle> for WindowHandle {
+    fn from(src: crate::backend::x11::window::WindowHandle) -> WindowHandle {
+        WindowHandle(Box::new(src))
+    }
+}
+#[cfg(feature = "gtk")]
+impl From<crate::backend::gtk::window::IdleHandle> for IdleHandle {
+    fn from(src: crate::backend::gtk::window::IdleHandle) -> IdleHandle {
+        IdleHandle(Rc::new(src))
+    }
+}
+#[cfg(feature = "x11")]
+impl From<crate::backend::x11::window::IdleHandle> for IdleHandle {
+    fn from(src: crate::backend::x11::window::IdleHandle) -> IdleHandle {
+        IdleHandle(Rc::new(src))
     }
 }
 

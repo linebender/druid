@@ -13,9 +13,43 @@
 // limitations under the License.
 
 //! X11 menus implementation.
+use std::any::Any;
 
 use crate::hotkey::HotKey;
+use crate::menu::MenuBackend;
 
+impl MenuBackend for Menu {
+    fn add_dropdown(&mut self, menu: crate::menu::Menu, text: &str, enabled: bool) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.add_dropdown(*menu, text, enabled)
+        }
+    }
+
+    fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        key: Option<&HotKey>,
+        enabled: bool,
+        selected: bool,
+    ) {
+        self.add_item(id, text, key, enabled, selected)
+    }
+
+    fn add_separator(&mut self) {
+        self.add_separator()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
+
+#[derive(Copy, Clone)]
 pub struct Menu;
 
 impl Menu {
@@ -31,12 +65,12 @@ impl Menu {
         Menu {}
     }
 
-    pub fn add_dropdown(&mut self, mut _menu: Menu, _text: &str, _enabled: bool) {
+    fn add_dropdown(&mut self, mut _menu: Menu, _text: &str, _enabled: bool) {
         // TODO(x11/menus): implement Menu::add_dropdown (currently a no-op)
         tracing::warn!("Menu::add_dropdown is currently unimplemented for X11 backend.");
     }
 
-    pub fn add_item(
+    fn add_item(
         &mut self,
         _id: u32,
         _text: &str,
@@ -48,7 +82,7 @@ impl Menu {
         tracing::warn!("Menu::add_item is currently unimplemented for X11 backend.");
     }
 
-    pub fn add_separator(&mut self) {
+    fn add_separator(&mut self) {
         // TODO(x11/menus): implement Menu::add_separator (currently a no-op)
         tracing::warn!("Menu::add_separator is currently unimplemented for X11 backend.");
     }

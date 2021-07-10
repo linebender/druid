@@ -14,10 +14,12 @@
 
 //! Interactions with the system pasteboard on GTK+.
 
+use std::any::Any;
+
 use gdk::Atom;
 use gtk::{TargetEntry, TargetFlags};
 
-use crate::clipboard::{ClipboardFormat, FormatId};
+use crate::clipboard::{ClipboardBackend, ClipboardFormat, FormatId};
 
 const CLIPBOARD_TARGETS: [&str; 5] = [
     "UTF8_STRING",
@@ -26,6 +28,35 @@ const CLIPBOARD_TARGETS: [&str; 5] = [
     "text/plain;charset=utf-8",
     "text/plain",
 ];
+
+impl ClipboardBackend for Clipboard {
+    fn put_string(&mut self, s: &str) {
+        self.put_string(s)
+    }
+    fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+        self.put_formats(formats)
+    }
+    fn get_string(&self) -> Option<String> {
+        self.get_string()
+    }
+    fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+        self.preferred_format(formats)
+    }
+    fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+        self.get_format(format)
+    }
+    fn available_type_names(&self) -> Vec<String> {
+        self.available_type_names()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
 
 /// The system clipboard.
 #[derive(Clone)]

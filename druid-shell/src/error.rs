@@ -14,10 +14,15 @@
 
 //! Errors at the application shell level.
 
+use std::any::Any;
 use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::backend::error as backend;
+pub trait ErrorBackend {
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+}
 
 /// Shell errors.
 #[derive(Debug, Clone)]
@@ -27,9 +32,52 @@ pub enum Error {
     /// The window has already been destroyed.
     WindowDropped,
     /// Platform specific error.
-    Platform(backend::Error),
+    Platform(Box<dyn ErrorBackend>),
     /// Other miscellaneous error.
     Other(Arc<anyhow::Error>),
+}
+
+impl Debug for dyn ErrorBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.name().as_str() {
+            "x11" => std::fmt::Debug::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::x11::error::Error>()
+                    .unwrap(),
+                f,
+            ),
+
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
+
+impl Clone for Box<dyn ErrorBackend> {
+    fn clone(&self) -> Self {
+        match self.name().as_str() {
+            "x11" => Box::new(
+                self.as_any()
+                    .downcast_ref::<crate::backend::x11::error::Error>()
+                    .unwrap()
+                    .clone(),
+            ),
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
+impl fmt::Display for dyn ErrorBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.name().as_str() {
+            "x11" => std::fmt::Display::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::x11::error::Error>()
+                    .unwrap(),
+                f,
+            ),
+
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
 }
 
 impl fmt::Display for Error {
@@ -53,8 +101,15 @@ impl From<anyhow::Error> for Error {
     }
 }
 
-impl From<backend::Error> for Error {
-    fn from(src: backend::Error) -> Error {
-        Error::Platform(src)
+#[cfg(feature = "gtk")]
+impl From<crate::backend::gtk::error::Error> for Error {
+    fn from(src: crate::backend::gtk::error::Error) -> Error {
+        Error::Platform(Box::new(src))
+    }
+}
+#[cfg(feature = "x11")]
+impl From<crate::backend::x11::error::Error> for Error {
+    fn from(src: crate::backend::x11::error::Error) -> Error {
+        Error::Platform(Box::new(src))
     }
 }

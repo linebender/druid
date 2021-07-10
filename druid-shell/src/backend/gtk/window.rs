@@ -14,6 +14,7 @@
 
 //! GTK window creation and management.
 
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::c_void;
@@ -35,6 +36,7 @@ use tracing::{error, warn};
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
+use crate::application::ApplicationBackend;
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
@@ -42,13 +44,14 @@ use crate::common_util::{ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorBackend, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::ImageFormat;
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
 use crate::window::{
-    self, FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
+    self, FileDialogToken, IdleToken, IdleWindowHandleBackend, TextFieldToken, TimerToken,
+    WinHandler, WindowBuilderBackend, WindowHandleBackend, WindowLevel,
 };
 
 use super::application::Application;
@@ -92,6 +95,146 @@ macro_rules! clone {
     );
 }
 
+impl WindowHandleBackend for WindowHandle {
+    fn show(&self) {
+        self.show()
+    }
+
+    fn close(&self) {
+        self.close()
+    }
+
+    fn resizable(&self, resizable: bool) {
+        self.resizable(resizable)
+    }
+
+    fn set_window_state(&mut self, state: window::WindowState) {
+        self.set_window_state(state)
+    }
+
+    fn get_window_state(&self) -> window::WindowState {
+        self.get_window_state()
+    }
+
+    fn handle_titlebar(&self, val: bool) {
+        self.handle_titlebar(val)
+    }
+    fn show_titlebar(&self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_position(&self, position: Point) {
+        self.set_position(position)
+    }
+
+    fn get_position(&self) -> Point {
+        self.get_position()
+    }
+
+    fn content_insets(&self) -> Insets {
+        self.content_insets()
+    }
+
+    fn set_size(&self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn get_size(&self) -> Size {
+        self.get_size()
+    }
+
+    fn set_level(&self, level: WindowLevel) {
+        self.set_level(level)
+    }
+
+    fn bring_to_front_and_focus(&self) {
+        self.bring_to_front_and_focus()
+    }
+    fn request_anim_frame(&self) {
+        self.request_anim_frame()
+    }
+
+    fn invalidate(&self) {
+        self.invalidate()
+    }
+
+    fn invalidate_rect(&self, rect: Rect) {
+        self.invalidate_rect(rect)
+    }
+
+    fn set_title(&self, title: &str) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&self, menu: crate::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu(menu.clone());
+        } else {
+            panic!("Use of gtk window with {} menu", menu.0.name())
+        }
+    }
+    fn text(&self) -> PietText {
+        self.text()
+    }
+
+    fn add_text_field(&self) -> TextFieldToken {
+        self.add_text_field()
+    }
+
+    fn remove_text_field(&self, token: TextFieldToken) {
+        self.remove_text_field(token)
+    }
+
+    fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.set_focused_text_field(active_field)
+    }
+    fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.update_text_field(token, update)
+    }
+
+    fn request_timer(&self, deadline: Instant) -> TimerToken {
+        self.request_timer(deadline)
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        self.set_cursor(cursor)
+    }
+
+    fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        self.make_cursor(desc)
+    }
+
+    fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_file(options)
+    }
+
+    fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.save_as(options)
+    }
+    fn show_context_menu(&self, menu: crate::menu::Menu, pos: Point) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.show_context_menu(menu.clone(), pos)
+        } else {
+            panic!("Use of x11 window with {} menu", menu.0.name())
+        }
+    }
+
+    fn get_idle_handle(&self) -> Option<crate::window::IdleHandle> {
+        self.get_idle_handle().map(Into::into)
+    }
+    fn get_scale(&self) -> Result<Scale, ShellError> {
+        self.get_scale()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
@@ -116,6 +259,62 @@ enum DeferredOp {
     ContextMenu(Menu, WindowHandle),
 }
 
+impl WindowBuilderBackend for WindowBuilder {
+    fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.set_handler(handler)
+    }
+
+    fn set_size(&mut self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn set_min_size(&mut self, min_size: Size) {
+        self.set_min_size(min_size)
+    }
+
+    fn resizable(&mut self, resizable: bool) {
+        self.resizable(resizable)
+    }
+    fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_transparent(&mut self, transparent: bool) {
+        self.set_transparent(transparent)
+    }
+    fn set_position(&mut self, position: Point) {
+        self.set_position(position)
+    }
+    fn set_level(&mut self, level: window::WindowLevel) {
+        self.set_level(level)
+    }
+    fn set_title(&mut self, title: String) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&mut self, menu: crate::menu::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu((*menu).clone());
+        } else {
+            panic!("Use of x11 window with {} menu", menu.0.name())
+        }
+    }
+    fn set_window_state(&mut self, state: window::WindowState) {
+        self.set_window_state(state)
+    }
+    fn build(self: Box<Self>) -> Result<crate::WindowHandle, anyhow::Error> {
+        self.build().map(Into::<crate::WindowHandle>::into)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
+
 /// Builder abstraction for creating new windows
 pub(crate) struct WindowBuilder {
     app: Application,
@@ -130,6 +329,24 @@ pub(crate) struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     transparent: bool,
+}
+
+impl IdleWindowHandleBackend for IdleHandle {
+    fn add_idle_callback(&self, callback: Box<dyn FnOnce(&mut dyn WinHandler) + Send>) {
+        self.add_idle_callback(callback)
+    }
+
+    fn add_idle_token(&self, token: IdleToken) {
+        self.add_idle_token(token)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
 }
 
 #[derive(Clone)]
@@ -182,24 +399,40 @@ pub(crate) struct WindowState {
     in_draw: Cell<bool>,
 }
 
+impl CursorBackend for CustomCursor {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub struct CustomCursor(gdk::Cursor);
 
 impl WindowBuilder {
-    pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder {
-            app,
-            handler: None,
-            title: String::new(),
-            menu: None,
-            size: Size::new(500.0, 400.0),
-            position: None,
-            level: None,
-            state: None,
-            min_size: None,
-            resizable: true,
-            show_titlebar: true,
-            transparent: false,
+    pub fn new(backend: std::rc::Rc<dyn ApplicationBackend>) -> WindowBuilder {
+        if let Some(backend) = backend.as_any().downcast_ref::<Application>() {
+            WindowBuilder {
+                app: backend.clone(),
+                handler: None,
+                title: String::new(),
+                menu: None,
+                size: Size::new(500.0, 400.0),
+                position: None,
+                level: None,
+                state: None,
+                min_size: None,
+                resizable: true,
+                show_titlebar: true,
+                transparent: false,
+            }
+        } else {
+            panic!(
+                "Tried to create an X11 window with a {} application",
+                backend.name()
+            )
         }
     }
 
@@ -247,7 +480,7 @@ impl WindowBuilder {
         self.menu = Some(menu);
     }
 
-    pub fn build(self) -> Result<WindowHandle, ShellError> {
+    pub fn build(self: Box<Self>) -> Result<WindowHandle, anyhow::Error> {
         let handler = self
             .handler
             .expect("Tried to build a window without setting the handler");
@@ -1136,7 +1369,7 @@ impl WindowHandle {
                     desc.hot.x.round() as i32,
                     desc.hot.y.round() as i32,
                 );
-                Some(Cursor::Custom(CustomCursor(c)))
+                Some(Cursor::Custom(Box::new(CustomCursor(c))))
             } else {
                 None
             }
@@ -1288,7 +1521,12 @@ fn run_idle(state: &Arc<WindowState>) -> glib::source::Continue {
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &gdk::Window) -> Option<gdk::Cursor> {
     if let Cursor::Custom(custom) = cursor {
-        Some(custom.0.clone())
+        if let Some(custom) = custom.as_any().downcast_ref::<CustomCursor>() {
+            Some(custom.0.clone())
+        } else {
+            tracing::warn!("Tried to use a {} cursor on the GTK backend", custom.name());
+            None
+        }
     } else {
         gdk::Cursor::from_name(
             &gdk_window.get_display(),

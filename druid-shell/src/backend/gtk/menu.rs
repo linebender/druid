@@ -14,6 +14,8 @@
 
 //! GTK implementation of menus.
 
+use std::any::Any;
+
 use gdk::ModifierType;
 use gtk::{
     AccelGroup, GtkMenuExt, GtkMenuItemExt, Menu as GtkMenu, MenuBar as GtkMenuBar,
@@ -25,13 +27,45 @@ use super::window::WindowHandle;
 use crate::common_util::strip_access_key;
 use crate::hotkey::{HotKey, RawMods};
 use crate::keyboard::{KbKey, Modifiers};
+use crate::menu::MenuBackend;
 
-#[derive(Default, Debug)]
+impl MenuBackend for Menu {
+    fn add_dropdown(&mut self, menu: crate::menu::Menu, text: &str, enabled: bool) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.add_dropdown(menu.clone(), text, enabled)
+        }
+    }
+
+    fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        key: Option<&HotKey>,
+        enabled: bool,
+        selected: bool,
+    ) {
+        self.add_item(id, text, key, enabled, selected)
+    }
+
+    fn add_separator(&mut self) {
+        self.add_separator()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
+
+#[derive(Default, Debug, Clone)]
 pub struct Menu {
     items: Vec<MenuItem>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum MenuItem {
     Entry {
         name: String,

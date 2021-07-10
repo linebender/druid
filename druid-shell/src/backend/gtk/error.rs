@@ -14,9 +14,20 @@
 
 //! GTK backend errors.
 
-use std::fmt;
+use std::{any::Any, fmt};
 
 use glib::{BoolError, Error as GLibError};
+
+use crate::error::ErrorBackend;
+
+impl ErrorBackend for Error {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
 
 /// GTK backend errors.
 #[derive(Debug, Clone)]
