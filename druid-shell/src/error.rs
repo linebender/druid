@@ -40,13 +40,20 @@ pub enum Error {
 impl Debug for dyn ErrorBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => std::fmt::Debug::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
                     .unwrap(),
                 f,
             ),
-
+            #[cfg(feature = "gtk")]
+            "gtk" => std::fmt::Debug::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::gtk::error::Error>()
+                    .unwrap(),
+                f,
+            ),
             x => panic!("cloning unsuported clipboard: {}", x),
         }
     }
@@ -55,9 +62,17 @@ impl Debug for dyn ErrorBackend {
 impl Clone for Box<dyn ErrorBackend> {
     fn clone(&self) -> Self {
         match self.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
+                    .unwrap()
+                    .clone(),
+            ),
+            #[cfg(feature = "gtk")]
+            "gtk" => Box::new(
+                self.as_any()
+                    .downcast_ref::<crate::backend::gtk::error::Error>()
                     .unwrap()
                     .clone(),
             ),
@@ -68,9 +83,17 @@ impl Clone for Box<dyn ErrorBackend> {
 impl fmt::Display for dyn ErrorBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => std::fmt::Display::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
+                    .unwrap(),
+                f,
+            ),
+            #[cfg(feature = "gtk")]
+            "gtk" => std::fmt::Display::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::gtk::error::Error>()
                     .unwrap(),
                 f,
             ),

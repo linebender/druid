@@ -24,12 +24,13 @@
 // #[cfg(target_os = "macos")]
 // pub(crate) mod shared;
 
-#[cfg(all(feature = "x11", target_os = "linux"))]
+#[cfg(any(feature = "x11", feature = "gtk"))]
 pub(crate) mod shared;
-#[cfg(all(feature = "x11", target_os = "linux"))]
+
+#[cfg(feature = "x11")]
 pub(crate) mod x11;
 
-#[cfg(all(feature = "gtk"))]
+#[cfg(feature = "gtk")]
 pub(crate) mod gtk;
 
 // #[cfg(all(not(feature = "x11"), target_os = "linux"))]

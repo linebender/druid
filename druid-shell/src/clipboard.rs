@@ -143,10 +143,19 @@ pub struct Clipboard(pub(crate) Box<dyn ClipboardBackend>);
 impl Debug for Clipboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.0.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => std::fmt::Debug::fmt(
                 self.0
                     .as_any()
                     .downcast_ref::<crate::backend::x11::clipboard::Clipboard>()
+                    .unwrap(),
+                f,
+            ),
+            #[cfg(feature = "gtk")]
+            "gtk" => std::fmt::Debug::fmt(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::gtk::clipboard::Clipboard>()
                     .unwrap(),
                 f,
             ),
@@ -159,10 +168,19 @@ impl Debug for Clipboard {
 impl Clone for Clipboard {
     fn clone(&self) -> Self {
         match self.0.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => Clipboard(Box::new(
                 self.0
                     .as_any()
                     .downcast_ref::<crate::backend::x11::clipboard::Clipboard>()
+                    .unwrap()
+                    .clone(),
+            )),
+            #[cfg(feature = "gtk")]
+            "gtk" => Clipboard(Box::new(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::gtk::clipboard::Clipboard>()
                     .unwrap()
                     .clone(),
             )),

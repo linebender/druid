@@ -276,9 +276,17 @@ pub enum Cursor {
 impl Clone for Box<dyn CursorBackend> {
     fn clone(&self) -> Self {
         match self.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::window::CustomCursor>()
+                    .unwrap()
+                    .clone(),
+            ),
+            #[cfg(feature = "gtk")]
+            "gtk" => Box::new(
+                self.as_any()
+                    .downcast_ref::<crate::backend::gtk::window::CustomCursor>()
                     .unwrap()
                     .clone(),
             ),
@@ -290,6 +298,7 @@ impl Clone for Box<dyn CursorBackend> {
 impl PartialEq for Box<dyn CursorBackend> {
     fn eq(&self, other: &Self) -> bool {
         match self.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => match other.name().as_str() {
                 "x11" => PartialEq::eq(
                     self.as_any()
@@ -301,6 +310,19 @@ impl PartialEq for Box<dyn CursorBackend> {
                         .unwrap(),
                 ),
                 x => panic!("uncomparable: x11 with {}", x),
+            },
+            #[cfg(feature = "gtk")]
+            "gtk" => match other.name().as_str() {
+                "gtk" => PartialEq::eq(
+                    self.as_any()
+                        .downcast_ref::<crate::backend::gtk::window::CustomCursor>()
+                        .unwrap(),
+                    other
+                        .as_any()
+                        .downcast_ref::<crate::backend::gtk::window::CustomCursor>()
+                        .unwrap(),
+                ),
+                x => panic!("uncomparable: gtk with {}", x),
             },
             x => panic!("cloning unsuported clipboard: {}", x),
         }

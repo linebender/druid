@@ -230,6 +230,7 @@ impl Default for WindowHandle {
 impl Clone for WindowHandle {
     fn clone(&self) -> Self {
         match self.0.name().as_str() {
+            #[cfg(feature = "x11")]
             "x11" => WindowHandle(Box::new(
                 self.0
                     .as_any()
@@ -237,6 +238,7 @@ impl Clone for WindowHandle {
                     .unwrap()
                     .clone(),
             )),
+            #[cfg(feature = "gtk")]
             "gtk" => WindowHandle(Box::new(
                 self.0
                     .as_any()
