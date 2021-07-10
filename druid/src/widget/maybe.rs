@@ -14,6 +14,8 @@
 
 //! A widget for optional data, with different `Some` and `None` children.
 
+use crate::debug_state::DebugState;
+
 use druid::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     UpdateCtx, Widget, WidgetExt, WidgetPod,
@@ -140,6 +142,19 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
             Some(d) => self.widget.with_some(|w| w.paint(ctx, d, env)),
             None => self.widget.with_none(|w| w.paint(ctx, &(), env)),
         };
+    }
+
+    fn debug_state(&self, data: &Option<T>) -> DebugState {
+        let child_state = match (&self.widget, data.as_ref()) {
+            (MaybeWidget::Some(widget_pod), Some(d)) => vec![widget_pod.widget().debug_state(d)],
+            (MaybeWidget::None(widget_pod), None) => vec![widget_pod.widget().debug_state(&())],
+            _ => vec![],
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: child_state,
+            ..Default::default()
+        }
     }
 }
 

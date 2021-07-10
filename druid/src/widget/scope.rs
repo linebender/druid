@@ -307,6 +307,9 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.paint_raw(ctx, state, env));
     }
+
+    // TODO
+    // fn debug_state(&self, data: &SP::In) -> DebugState;
 }
 
 impl<SP: ScopePolicy, W: Widget<SP::State>> WidgetWrapper for Scope<SP, W> {

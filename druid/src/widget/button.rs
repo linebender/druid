@@ -14,6 +14,7 @@
 
 //! A button widget.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Click, ControllerHost, Label, LabelText};
 use crate::{theme, Affine, Data, Insets, LinearGradient, UnitPoint};
@@ -216,5 +217,13 @@ impl<T: Data> Widget<T> for Button<T> {
             ctx.transform(Affine::translate(label_offset));
             self.label.paint(ctx, data, env);
         });
+    }
+
+    fn debug_state(&self, _data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: self.label.text().to_string(),
+            ..Default::default()
+        }
     }
 }

@@ -990,6 +990,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(widget)
                     }
                 }
+                InternalLifeCycle::DebugRequestDebugState { widget, state_cell } => {
+                    if *widget == self.id() {
+                        if let Some(data) = &self.old_data {
+                            state_cell.set(self.inner.debug_state(data));
+                        }
+                        false
+                    } else {
+                        // Recurse when the target widget could be our descendant.
+                        // The bloom filter we're checking can return false positives.
+                        self.state.children.may_contain(&widget)
+                    }
+                }
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true

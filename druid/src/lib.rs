@@ -156,6 +156,7 @@ mod command;
 mod contexts;
 mod core;
 mod data;
+pub mod debug_state;
 mod dialog;
 pub mod env;
 mod event;
@@ -188,7 +189,7 @@ pub use shell::{
     WindowHandle, WindowLevel, WindowState,
 };
 
-pub use crate::core::WidgetPod;
+pub use crate::core::{WidgetPod, WidgetState};
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
@@ -209,7 +210,7 @@ pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) use event::{StateCell, StateCheckFn};
+pub(crate) use event::{DebugStateCell, StateCell, StateCheckFn};
 
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
 pub use piet::{FontFamily, FontStyle, FontWeight, TextAlignment};

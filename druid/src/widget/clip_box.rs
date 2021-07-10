@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
@@ -376,6 +377,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
             visible += offset;
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
         });
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

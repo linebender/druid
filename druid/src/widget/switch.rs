@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{Circle, Shape};
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::widget::prelude::*;
@@ -333,5 +334,13 @@ impl Widget<bool> for Switch {
 
         // paint on/off label
         self.paint_labels(ctx, env, switch_width);
+    }
+
+    fn debug_state(&self, data: &bool) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
+        }
     }
 }

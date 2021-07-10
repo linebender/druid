@@ -14,6 +14,7 @@
 
 //! A progress bar widget.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
 use tracing::instrument;
@@ -117,5 +118,13 @@ impl Widget<f64> for ProgressBar {
             (env.get(theme::PRIMARY_LIGHT), env.get(theme::PRIMARY_DARK)),
         );
         ctx.fill(rounded_rect, &bar_gradient);
+    }
+
+    fn debug_state(&self, data: &f64) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
+        }
     }
 }

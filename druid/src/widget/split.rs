@@ -14,6 +14,7 @@
 
 //! A widget which splits an area in two, with a settable ratio, and optional draggable resizing.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Line;
 use crate::widget::flex::Axis;
 use crate::widget::prelude::*;
@@ -500,5 +501,16 @@ impl<T: Data> Widget<T> for Split<T> {
         }
         self.child1.paint(ctx, data, env);
         self.child2.paint(ctx, data, env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![
+                self.child1.widget().debug_state(data),
+                self.child2.widget().debug_state(data),
+            ],
+            ..Default::default()
+        }
     }
 }

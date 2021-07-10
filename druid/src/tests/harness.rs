@@ -23,6 +23,8 @@ use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
 use crate::*;
 
+use crate::debug_state::DebugState;
+
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 
 /// A type that tries very hard to provide a comforting and safe environment
@@ -208,6 +210,32 @@ impl<T: Data> Harness<'_, T> {
         cell.take()
     }
 
+    /// Retrieve a copy of the root widget's `DebugState` (and by recursion, all others)
+    pub fn get_root_debug_state(&self) -> DebugState {
+        self.inner.root_debug_state()
+    }
+
+    /// Retrieve a copy of this widget's `DebugState`, or die trying.
+    pub fn get_debug_state(&mut self, widget_id: WidgetId) -> DebugState {
+        match self.try_get_debug_state(widget_id) {
+            Some(thing) => thing,
+            None => panic!("get_debug_state failed for widget {:?}", widget_id),
+        }
+    }
+
+    /// Attempt to retrieve a copy of this widget's `DebugState`.
+    pub fn try_get_debug_state(&mut self, widget_id: WidgetId) -> Option<DebugState> {
+        let cell = DebugStateCell::default();
+        let state_cell = cell.clone();
+        self.lifecycle(LifeCycle::Internal(
+            InternalLifeCycle::DebugRequestDebugState {
+                widget: widget_id,
+                state_cell,
+            },
+        ));
+        cell.take()
+    }
+
     /// Inspect the `WidgetState` of each widget in the tree.
     ///
     /// The provided closure will be called on each widget.
@@ -285,6 +313,10 @@ impl<T: Data> Harness<'_, T> {
         self.inner
             .paint_region(&mut self.piet, &self.window_size.to_rect().into());
     }
+
+    pub fn root_debug_state(&self) -> DebugState {
+        self.inner.root_debug_state()
+    }
 }
 
 impl<T: Data> Inner<T> {
@@ -311,6 +343,10 @@ impl<T: Data> Inner<T> {
     fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
         self.window
             .do_paint(piet, invalid, &mut self.cmds, &self.data, &self.env);
+    }
+
+    pub fn root_debug_state(&self) -> DebugState {
+        self.window.root_debug_state(&self.data)
     }
 }
 

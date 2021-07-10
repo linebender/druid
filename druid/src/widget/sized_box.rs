@@ -14,6 +14,7 @@
 
 //! A widget with predefined size.
 
+use crate::debug_state::DebugState;
 use std::f64::INFINITY;
 use tracing::{instrument, trace, warn};
 
@@ -189,6 +190,19 @@ impl<T: Data> Widget<T> for SizedBox<T> {
 
     fn id(&self) -> Option<WidgetId> {
         self.inner.as_ref().and_then(|inner| inner.id())
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let children = if let Some(child) = &self.inner {
+            vec![child.debug_state(data)]
+        } else {
+            vec![]
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children,
+            ..Default::default()
+        }
     }
 }
 

@@ -14,6 +14,7 @@
 
 //! A slider widget.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{Circle, Shape};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
@@ -230,5 +231,13 @@ impl Widget<f64> for Slider {
 
         //Actually paint the knob
         ctx.fill(knob_circle, &knob_gradient);
+    }
+
+    fn debug_state(&self, data: &f64) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
+        }
     }
 }

@@ -17,6 +17,7 @@ use std::mem;
 use std::str::FromStr;
 use tracing::instrument;
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::Data;
 
@@ -86,5 +87,13 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
 
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
+    }
+
+    fn debug_state(&self, _data: &Option<T>) -> DebugState {
+        DebugState {
+            display_name: "Parse".to_string(),
+            main_value: self.state.clone(),
+            ..Default::default()
+        }
     }
 }

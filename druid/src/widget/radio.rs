@@ -14,6 +14,7 @@
 
 //! A radio button widget.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Circle;
 use crate::widget::prelude::*;
 use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText};
@@ -161,5 +162,18 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Paint the text label
         self.child_label.draw_at(ctx, (size + x_padding, 0.0));
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let value_text = if *data == self.variant {
+            format!("[X] {}", self.child_label.text())
+        } else {
+            self.child_label.text().to_string()
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: value_text,
+            ..Default::default()
+        }
     }
 }

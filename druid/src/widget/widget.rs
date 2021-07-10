@@ -16,6 +16,7 @@ use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
+use crate::debug_state::DebugState;
 
 /// A unique identifier for a single [`Widget`].
 ///
@@ -197,6 +198,30 @@ pub trait Widget<T> {
     fn type_name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
+
+    #[doc(hidden)]
+    /// Get the (abridged) type name of the widget for debugging purposes.
+    /// You should not override this method.
+    fn short_type_name(&self) -> &'static str {
+        let name = self.type_name();
+        name.split('<')
+            .next()
+            .unwrap_or(name)
+            .split("::")
+            .last()
+            .unwrap_or(name)
+    }
+
+    #[doc(hidden)]
+    /// From the current data, get a best-effort description of the state of
+    /// this widget and its children for debugging purposes.
+    fn debug_state(&self, data: &T) -> DebugState {
+        #![allow(unused_variables)]
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            ..Default::default()
+        }
+    }
 }
 
 impl WidgetId {
@@ -261,5 +286,9 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn type_name(&self) -> &'static str {
         self.deref().type_name()
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        self.deref().debug_state(data)
     }
 }

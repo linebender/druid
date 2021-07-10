@@ -27,6 +27,7 @@ use crate::shell::{text::InputHandler, Counter, Cursor, Region, TextFieldToken, 
 use crate::app::{PendingWindow, WindowSizePolicy};
 use crate::contexts::ContextState;
 use crate::core::{CommandQueue, FocusChange, WidgetState};
+use crate::debug_state::DebugState;
 use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
 use crate::util::ExtendDrain;
@@ -521,6 +522,11 @@ impl<T: Data> Window<T> {
         if self.wants_animation_frame() {
             self.handle.request_anim_frame();
         }
+    }
+
+    /// Get a best-effort representation of the entire widget tree for debug purposes.
+    pub fn root_debug_state(&self, data: &T) -> DebugState {
+        self.root.widget().debug_state(data)
     }
 
     pub(crate) fn update_title(&mut self, data: &T, env: &Env) {

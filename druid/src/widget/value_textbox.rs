@@ -17,6 +17,7 @@
 use tracing::instrument;
 
 use super::TextBox;
+use crate::debug_state::DebugState;
 use crate::text::{Formatter, Selection, TextComponent, ValidationError};
 use crate::widget::prelude::*;
 use crate::{Data, Selector};
@@ -413,5 +414,13 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
     #[instrument(name = "ValueTextBox", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
         self.inner.paint(ctx, &self.buffer, env);
+    }
+
+    fn debug_state(&self, _data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: self.buffer.clone(),
+            ..Default::default()
+        }
     }
 }
