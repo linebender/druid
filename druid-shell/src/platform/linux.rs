@@ -32,7 +32,5 @@ mod test {
 
     use super::*;
     use static_assertions as sa;
-    // TODO(shell/x11): implement LinuxApplicationExt
-    #[cfg(not(feature = "x11"))]
     sa::assert_impl_all!(Application: LinuxApplicationExt);
 }

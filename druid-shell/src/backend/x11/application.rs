@@ -79,6 +79,10 @@ use super::window::Window;
 //
 // The name of the clipboard selection; used for implementing copy&paste
 //
+// PRIMARY
+//
+// The name of the primary selection; used for implementing "paste the currently selected text"
+//
 // TARGETS
 //
 // A target for getting the selection contents that answers with a list of supported targets
@@ -99,6 +103,7 @@ x11rb::atom_manager! {
         _NET_WM_WINDOW_TYPE_TOOLTIP,
         _NET_WM_WINDOW_TYPE_DIALOG,
         CLIPBOARD,
+        PRIMARY,
         TARGETS,
         INCR,
     }
@@ -135,6 +140,8 @@ pub(crate) struct Application {
     pub(crate) cursors: Cursors,
     /// The clipboard implementation
     clipboard: Clipboard,
+    /// The clipboard implementation for the primary selection
+    primary: Clipboard,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -292,6 +299,15 @@ impl Application {
             Rc::clone(&connection),
             screen_num,
             Rc::clone(&atoms),
+            atoms.CLIPBOARD,
+            Rc::clone(&pending_events),
+            Rc::clone(&timestamp),
+        );
+        let primary = Clipboard::new(
+            Rc::clone(&connection),
+            screen_num,
+            Rc::clone(&atoms),
+            atoms.PRIMARY,
             Rc::clone(&pending_events),
             Rc::clone(&timestamp),
         );
@@ -305,6 +321,7 @@ impl Application {
             idle_read,
             cursors,
             clipboard,
+            primary,
             idle_write,
             present_opcode,
             root_visual_type,
@@ -592,17 +609,26 @@ impl Application {
             Event::SelectionClear(ev) => {
                 self.clipboard
                     .handle_clear(*ev)
-                    .context("SELECTION_CLEAR event handling")?;
+                    .context("SELECTION_CLEAR event handling for clipboard")?;
+                self.primary
+                    .handle_clear(*ev)
+                    .context("SELECTION_CLEAR event handling for primary")?;
             }
             Event::SelectionRequest(ev) => {
                 self.clipboard
                     .handle_request(ev)
-                    .context("SELECTION_REQUEST event handling")?;
+                    .context("SELECTION_REQUEST event handling for clipboard")?;
+                self.primary
+                    .handle_request(ev)
+                    .context("SELECTION_REQUEST event handling for primary")?;
             }
             Event::PropertyNotify(ev) => {
                 self.clipboard
                     .handle_property_notify(*ev)
-                    .context("PROPERTY_NOTIFY event handling")?;
+                    .context("PROPERTY_NOTIFY event handling for clipboard")?;
+                self.primary
+                    .handle_property_notify(*ev)
+                    .context("PROPERTY_NOTIFY event handling for primary")?;
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
@@ -764,6 +790,12 @@ impl Application {
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
         self.idle_write
+    }
+}
+
+impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        self.backend_app.primary.clone().into()
     }
 }
 
