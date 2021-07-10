@@ -55,6 +55,7 @@ impl Clipboard {
         connection: Rc<XCBConnection>,
         screen_num: usize,
         atoms: Rc<AppAtoms>,
+        selection_name: Atom,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
     ) -> Self {
@@ -62,6 +63,7 @@ impl Clipboard {
             connection,
             screen_num,
             atoms,
+            selection_name,
             event_queue,
             timestamp,
         ))))
@@ -122,6 +124,7 @@ struct ClipboardState {
     connection: Rc<XCBConnection>,
     screen_num: usize,
     atoms: Rc<AppAtoms>,
+    selection_name: Atom,
     event_queue: Rc<RefCell<VecDeque<Event>>>,
     timestamp: Rc<Cell<Timestamp>>,
     contents: Option<ClipboardContents>,
@@ -133,6 +136,7 @@ impl ClipboardState {
         connection: Rc<XCBConnection>,
         screen_num: usize,
         atoms: Rc<AppAtoms>,
+        selection_name: Atom,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
     ) -> Self {
@@ -140,6 +144,7 @@ impl ClipboardState {
             connection,
             screen_num,
             atoms,
+            selection_name,
             event_queue,
             timestamp,
             contents: None,
@@ -153,16 +158,16 @@ impl ClipboardState {
         // Create a window for selection ownership and save the necessary state
         let contents = ClipboardContents::new(conn, self.screen_num, formats)?;
 
-        // Become CLIPBOARD selection owner
+        // Become selection owner of our selection
         conn.set_selection_owner(
             contents.owner_window,
-            self.atoms.CLIPBOARD,
+            self.selection_name,
             self.timestamp.get(),
         )?;
 
         // Check if we really are the selection owner; this might e.g. fail if our timestamp is too
         // old and some other program became the selection owner with a newer timestamp
-        let owner = conn.get_selection_owner(self.atoms.CLIPBOARD)?.reply()?;
+        let owner = conn.get_selection_owner(self.selection_name)?.reply()?;
         if owner.owner == contents.owner_window {
             // We are the new selection owner! Remember our contents for later.
             debug!("put_formats(): became selection owner");
@@ -269,7 +274,7 @@ impl ClipboardState {
 
         conn.convert_selection(
             window.window,
-            self.atoms.CLIPBOARD,
+            self.selection_name,
             format_atom,
             TRANSFER_ATOM,
             self.timestamp.get(),
@@ -351,6 +356,11 @@ impl ClipboardState {
     }
 
     fn handle_clear(&mut self, event: SelectionClearEvent) -> Result<(), ConnectionError> {
+        if event.selection != self.selection_name {
+            // This event is meant for another Clipboard instance
+            return Ok(());
+        }
+
         let window = self.contents.as_ref().map(|c| c.owner_window);
         if Some(event.owner) == window {
             // We lost ownership of the selection, clean up
@@ -362,6 +372,11 @@ impl ClipboardState {
     }
 
     fn handle_request(&mut self, event: &SelectionRequestEvent) -> Result<(), ReplyOrIdError> {
+        if event.selection != self.selection_name {
+            // This request is meant for another Clipboard instance
+            return Ok(());
+        }
+
         let conn = &*self.connection;
         let contents = match &self.contents {
             Some(contents) if contents.owner_window == event.owner => contents,
