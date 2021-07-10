@@ -28,6 +28,9 @@ x11 = ["druid-shell/x11"]
 crochet = []
 serde = ["im/serde"]
 
+# Implement HasRawWindowHandle for WindowHandle
+raw-win-handle = ["druid-shell/raw-win-handle"]
+
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
 png = ["druid-shell/image_png"]
