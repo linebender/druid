@@ -314,7 +314,7 @@ impl<T: Data> Window<T> {
         ) {
             // Because our initial size can be zero, the window system won't ask us to paint.
             // So layout ourselves and hopefully we resize
-            self.layout(queue, data, env);
+            self.layout(true, queue, data, env);
         }
 
         self.post_event_processing(&mut widget_state, queue, data, env, false);
@@ -418,8 +418,12 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        if self.root.state().needs_layout {
-            self.layout(queue, data, env);
+        let root_state = self.root.state();
+        if root_state.needs_layout
+            | root_state.needs_local_layout
+            | root_state.child_needs_local_layout
+        {
+            self.layout(false, queue, data, env);
         }
 
         for &r in invalid.rects() {
@@ -435,7 +439,7 @@ impl<T: Data> Window<T> {
         self.paint(piet, invalid, queue, data, env);
     }
 
-    fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
+    fn layout(&mut self, needs_layout: bool, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state =
             ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
@@ -443,6 +447,7 @@ impl<T: Data> Window<T> {
             state: &mut state,
             widget_state: &mut widget_state,
             mouse_pos: self.last_mouse_pos,
+            needs_layout,
         };
         let bc = match self.size_policy {
             WindowSizePolicy::User => BoxConstraints::tight(self.size),
@@ -478,7 +483,7 @@ impl<T: Data> Window<T> {
     /// only expose `layout` for testing; normally it is called as part of `do_paint`
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn just_layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
-        self.layout(queue, data, env)
+        self.layout(true, queue, data, env)
     }
 
     fn paint(

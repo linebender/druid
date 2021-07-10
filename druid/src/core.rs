@@ -127,6 +127,10 @@ pub struct WidgetState {
 
     pub(crate) needs_layout: bool,
 
+    pub(crate) child_needs_local_layout: bool,
+
+    pub(crate) needs_local_layout: bool,
+
     /// Because of some scrolling or something, `parent_window_origin` needs to be updated.
     pub(crate) needs_window_origin: bool,
 
@@ -564,7 +568,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return Size::ZERO;
         }
 
+        let needs_layout =
+            ctx.needs_layout | self.state.needs_layout | self.state.needs_local_layout;
+
+        if !needs_layout && !self.state.child_needs_local_layout {
+            return self.state.size;
+        }
+
         self.state.needs_layout = false;
+        self.state.needs_local_layout = false;
+        self.state.child_needs_local_layout = false;
         self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
@@ -577,6 +590,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             widget_state: &mut self.state,
             state: ctx.state,
             mouse_pos: child_mouse_pos,
+            needs_layout,
         };
 
         let new_size = self.inner.layout(&mut child_ctx, bc, data, env);
@@ -1217,6 +1231,8 @@ impl WidgetState {
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
+            needs_local_layout: false,
+            child_needs_local_layout: false,
             needs_window_origin: false,
             is_active: false,
             has_active: false,
@@ -1279,6 +1295,8 @@ impl WidgetState {
         child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
+        self.child_needs_local_layout |= child_state.needs_local_layout;
+        self.child_needs_local_layout |= child_state.child_needs_local_layout;
         self.needs_window_origin |= child_state.needs_window_origin;
         self.request_anim |= child_state.request_anim;
         self.children_disabled_changed |= child_state.children_disabled_changed;
