@@ -46,7 +46,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
 - x11: Remove some unnecessary casts ([#1851] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
-- x11: Add support for getting and setting clipboard contents ([#1805] and [#1851] by [@psychon])
+- x11: Add support for getting and setting clipboard contents ([#1805], [#1851], and [#1866] by [@psychon])
 - Linux extension: primary_clipboard ([#1843] by [@Maan2003])
 
 ### Changed
@@ -751,6 +751,7 @@ Last release without a changelog :(
 [#1861]: https://github.com/linebender/druid/pull/1861
 [#1863]: https://github.com/linebender/druid/pull/1863
 [#1865]: https://github.com/linebender/druid/pull/1865
+[#1866]: https://github.com/linebender/druid/pull/1866
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

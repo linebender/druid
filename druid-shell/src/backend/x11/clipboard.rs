@@ -18,6 +18,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::convert::TryFrom;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::errors::{ConnectionError, ReplyError, ReplyOrIdError};
@@ -258,6 +259,8 @@ impl ClipboardState {
     {
         debug!("Getting clipboard contents in format {}", format);
 
+        let deadline = Instant::now() + Duration::from_secs(5);
+
         let conn = &*self.connection;
         let format_atom = conn.intern_atom(false, format.as_bytes())?.reply()?.atom;
 
@@ -275,7 +278,7 @@ impl ClipboardState {
         // Now wait for the selection notify event
         conn.flush()?;
         let notify = loop {
-            match conn.wait_for_event()? {
+            match wait_for_event_with_deadline(conn, deadline)? {
                 Event::SelectionNotify(notify) if notify.requestor == window.window => {
                     break notify
                 }
@@ -321,7 +324,7 @@ impl ClipboardState {
         conn.flush()?;
         let mut value = Vec::new();
         loop {
-            match conn.wait_for_event()? {
+            match wait_for_event_with_deadline(conn, deadline)? {
                 Event::PropertyNotify(notify)
                     if (notify.window, notify.state) == (window.window, Property::NEW_VALUE) =>
                 {
@@ -642,4 +645,54 @@ fn reject_transfer(
     };
     conn.send_event(false, event.requestor, EventMask::NO_EVENT, &event)?;
     Ok(())
+}
+
+/// Wait for an X11 event or return a timeout error if the given deadline is in the past.
+fn wait_for_event_with_deadline(
+    conn: &XCBConnection,
+    deadline: Instant,
+) -> Result<Event, ConnectionError> {
+    use nix::poll::{poll, PollFd, PollFlags};
+    use std::os::raw::c_int;
+    use std::os::unix::io::AsRawFd;
+
+    loop {
+        // Is there already an event?
+        if let Some(event) = conn.poll_for_event()? {
+            return Ok(event);
+        }
+
+        // Are we past the deadline?
+        let now = Instant::now();
+        if deadline <= now {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Timeout while waiting for selection owner to reply",
+            )
+            .into());
+        }
+
+        // Use poll() to wait for the socket to become readable.
+        let mut poll_fds = [PollFd::new(conn.as_raw_fd(), PollFlags::POLLIN)];
+        let poll_timeout = c_int::try_from(deadline.duration_since(now).as_millis())
+            .unwrap_or(c_int::max_value() - 1)
+            // The above rounds down, but we don't want to wake up to early, so add one
+            .saturating_add(1);
+
+        // Wait for the socket to be readable via poll() and try again
+        match poll(&mut poll_fds, poll_timeout) {
+            Ok(_) => {}
+            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            Err(e) => return Err(nix_error_to_io(e).into()),
+        }
+    }
+}
+
+fn nix_error_to_io(e: nix::Error) -> std::io::Error {
+    use std::io::{Error, ErrorKind};
+    match e {
+        nix::Error::Sys(errno) => errno.into(),
+        nix::Error::InvalidPath | nix::Error::InvalidUtf8 => Error::new(ErrorKind::InvalidInput, e),
+        nix::Error::UnsupportedOperation => std::io::Error::new(ErrorKind::Other, e),
+    }
 }
