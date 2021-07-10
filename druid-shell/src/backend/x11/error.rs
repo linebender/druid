@@ -14,8 +14,20 @@
 
 //! Errors at the application shell level.
 
+use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
+
+use crate::error::ErrorBackend;
+
+impl ErrorBackend for Error {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Error {

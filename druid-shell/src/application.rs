@@ -14,11 +14,11 @@
 
 //! The top-level application type.
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::backend::application as backend;
 use crate::clipboard::Clipboard;
 use crate::error::Error;
 use crate::util;
@@ -42,12 +42,24 @@ pub trait AppHandler {
     fn command(&mut self, id: u32) {}
 }
 
+pub(crate) trait ApplicationBackend {
+    fn run(&self, _handler: Option<Box<dyn AppHandler>>);
+    fn quit(&self);
+    fn clipboard(&self) -> Clipboard;
+
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+
+    #[cfg(feature = "primary-clipboard")]
+    fn primary_clipboard(&self) -> crate::Clipboard;
+}
+
 /// The top level application object.
 ///
 /// This can be thought of as a reference and it can be safely cloned.
 #[derive(Clone)]
 pub struct Application {
-    pub(crate) backend_app: backend::Application,
+    pub(crate) backend_app: Rc<dyn ApplicationBackend>,
     state: Rc<RefCell<State>>,
 }
 
@@ -79,7 +91,7 @@ impl Application {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .map_err(|_| Error::ApplicationAlreadyExists)?;
         util::claim_main_thread();
-        let backend_app = backend::Application::new()?;
+        let backend_app = crate::backend::application()?;
         let state = Rc::new(RefCell::new(State { running: false }));
         let app = Application { backend_app, state };
         GLOBAL_APP.with(|global_app| {
@@ -181,6 +193,6 @@ impl Application {
     ///
     /// [Unicode language identifier]: https://unicode.org/reports/tr35/#Unicode_language_identifier
     pub fn get_locale() -> String {
-        backend::Application::get_locale()
+        crate::backend::get_locale()
     }
 }

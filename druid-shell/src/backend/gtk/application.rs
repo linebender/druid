@@ -14,11 +14,13 @@
 
 //! GTK implementation of features at the application scope.
 
+use std::any::Any;
+
 use gio::prelude::ApplicationExtManual;
 use gio::{ApplicationExt, ApplicationFlags, Cancellable};
 use gtk::{Application as GtkApplication, GtkApplicationExt};
 
-use crate::application::AppHandler;
+use crate::application::{AppHandler, ApplicationBackend};
 
 use super::clipboard::Clipboard;
 use super::error::Error;
@@ -28,7 +30,36 @@ pub(crate) struct Application {
     gtk_app: GtkApplication,
 }
 
+impl ApplicationBackend for Application {
+    fn run(&self, handler: Option<Box<dyn AppHandler>>) {
+        self.run(handler)
+    }
+    fn quit(&self) {
+        self.quit()
+    }
+
+    fn clipboard(&self) -> crate::clipboard::Clipboard {
+        self.clipboard().into()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+
+    #[cfg(feature = "primary-clipboard")]
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        self.primary_clipboard()
+    }
+}
 impl Application {
+    pub(crate) fn is_available() -> bool {
+        true
+    }
+
     pub fn new() -> Result<Application, Error> {
         // TODO: we should give control over the application ID to the user
         let gtk_app = match GtkApplication::new(
@@ -55,14 +86,13 @@ impl Application {
         Ok(Application { gtk_app })
     }
 
+    pub fn run(&self, _handler: Option<Box<dyn AppHandler>>) {
+        // TODO: should we pass the command line arguments?
+        self.gtk_app.run(&[]);
+    }
     #[inline]
     pub fn gtk_app(&self) -> &GtkApplication {
         &self.gtk_app
-    }
-
-    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        // TODO: should we pass the command line arguments?
-        self.gtk_app.run(&[]);
     }
 
     pub fn quit(&self) {
@@ -88,10 +118,10 @@ impl Application {
     }
 }
 
-impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+impl crate::platform::linux::LinuxApplicationExt for Application {
     fn primary_clipboard(&self) -> crate::Clipboard {
-        crate::Clipboard(Clipboard {
+        crate::Clipboard(Box::new(Clipboard {
             selection: gdk::SELECTION_PRIMARY,
-        })
+        }))
     }
 }

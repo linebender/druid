@@ -84,7 +84,7 @@ impl Screen {
     ///
     /// [`monitors`]: struct.Monitor.html
     pub fn get_monitors() -> Vec<Monitor> {
-        backend::screen::get_monitors()
+        backend::get_monitors()
     }
 
     /// Returns the bounding rectangle of the total virtual screen space in pixels.

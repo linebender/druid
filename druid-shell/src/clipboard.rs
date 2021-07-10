@@ -13,7 +13,19 @@
 // limitations under the License.
 
 //! Interacting with the system pasteboard/clipboard.
-pub use crate::backend::clipboard as backend;
+use std::{any::Any, fmt::Debug};
+
+pub(crate) trait ClipboardBackend {
+    fn put_string(&mut self, s: &str);
+    fn put_formats(&mut self, formats: &[ClipboardFormat]);
+    fn get_string(&self) -> Option<String>;
+    fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId>;
+    fn get_format(&self, format: FormatId) -> Option<Vec<u8>>;
+    fn available_type_names(&self) -> Vec<String>;
+
+    fn as_any(&self) -> &dyn Any;
+    fn name(&self) -> String;
+}
 
 /// A handle to the system clipboard.
 ///
@@ -125,13 +137,62 @@ pub use crate::backend::clipboard as backend;
 /// [`Universal Type Identifier`]: https://escapetech.eu/manuals/qdrop/uti.html
 /// [MIME types]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 /// [`ClipboardFormat`]: struct.ClipboardFormat.html
-#[derive(Debug, Clone)]
-pub struct Clipboard(pub(crate) backend::Clipboard);
+pub struct Clipboard(pub(crate) Box<dyn ClipboardBackend>);
+
+// These implementations could be macros or smth. Maybe a function that can be called like `fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;`
+impl Debug for Clipboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0.name().as_str() {
+            #[cfg(feature = "x11")]
+            "x11" => std::fmt::Debug::fmt(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::x11::clipboard::Clipboard>()
+                    .unwrap(),
+                f,
+            ),
+            #[cfg(feature = "gtk")]
+            "gtk" => std::fmt::Debug::fmt(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::gtk::clipboard::Clipboard>()
+                    .unwrap(),
+                f,
+            ),
+
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
+
+impl Clone for Clipboard {
+    fn clone(&self) -> Self {
+        match self.0.name().as_str() {
+            #[cfg(feature = "x11")]
+            "x11" => Clipboard(Box::new(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::x11::clipboard::Clipboard>()
+                    .unwrap()
+                    .clone(),
+            )),
+            #[cfg(feature = "gtk")]
+            "gtk" => Clipboard(Box::new(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::gtk::clipboard::Clipboard>()
+                    .unwrap()
+                    .clone(),
+            )),
+            x => panic!("cloning unsuported clipboard: {}", x),
+        }
+    }
+}
 
 impl Clipboard {
     /// Put a string onto the system clipboard.
     pub fn put_string(&mut self, s: impl AsRef<str>) {
-        self.0.put_string(s);
+        self.0.put_string(s.as_ref());
     }
 
     /// Put multi-format data on the system clipboard.
@@ -208,9 +269,16 @@ impl From<&str> for ClipboardFormat {
     }
 }
 
-impl From<backend::Clipboard> for Clipboard {
-    fn from(src: backend::Clipboard) -> Clipboard {
-        Clipboard(src)
+#[cfg(feature = "gtk")]
+impl From<crate::backend::gtk::clipboard::Clipboard> for Clipboard {
+    fn from(src: crate::backend::gtk::clipboard::Clipboard) -> Clipboard {
+        Clipboard(Box::new(src))
+    }
+}
+#[cfg(feature = "x11")]
+impl From<crate::backend::x11::clipboard::Clipboard> for Clipboard {
+    fn from(src: crate::backend::x11::clipboard::Clipboard) -> Clipboard {
+        Clipboard(Box::new(src))
     }
 }
 

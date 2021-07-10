@@ -14,6 +14,7 @@
 
 //! Interactions with the system pasteboard on X11.
 
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::convert::TryFrom;
@@ -33,7 +34,7 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 use super::application::AppAtoms;
-use crate::clipboard::{ClipboardFormat, FormatId};
+use crate::clipboard::{ClipboardBackend, ClipboardFormat, FormatId};
 use tracing::{debug, error, warn};
 
 // We can pick an arbitrary atom that is used for the transfer. This is our pick.
@@ -46,6 +47,35 @@ const STRING_TARGETS: [&str; 5] = [
     "text/plain;charset=utf-8",
     "text/plain",
 ];
+
+impl ClipboardBackend for Clipboard {
+    fn put_string(&mut self, s: &str) {
+        self.put_string(s)
+    }
+    fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+        self.put_formats(formats)
+    }
+    fn get_string(&self) -> Option<String> {
+        self.get_string()
+    }
+    fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+        self.preferred_format(formats)
+    }
+    fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+        self.get_format(format)
+    }
+    fn available_type_names(&self) -> Vec<String> {
+        self.available_type_names()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "x11".into()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Clipboard(Rc<RefCell<ClipboardState>>);

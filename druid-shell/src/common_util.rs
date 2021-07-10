@@ -51,13 +51,23 @@ pub fn strip_access_key(raw_menu_text: &str) -> String {
 }
 
 /// A trait for implementing the boxed callback hack.
-pub(crate) trait IdleCallback: Send {
+pub(crate) trait IdleCallback {
     fn call(self: Box<Self>, a: &mut dyn WinHandler);
 }
 
-impl<F: FnOnce(&mut dyn WinHandler) + Send> IdleCallback for F {
+impl<F: FnOnce(&mut dyn WinHandler)> IdleCallback for F {
     fn call(self: Box<F>, a: &mut dyn WinHandler) {
         (*self)(a)
+    }
+}
+
+pub(crate) struct Hack2 {
+    pub(crate) fun: Box<dyn FnOnce(&mut dyn WinHandler)>,
+}
+
+impl IdleCallback for Hack2 {
+    fn call(self: Box<Hack2>, a: &mut dyn WinHandler) {
+        (self.fun)(a)
     }
 }
 
