@@ -65,6 +65,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
+- x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 
 ### Deprecated
 
@@ -749,6 +750,7 @@ Last release without a changelog :(
 [#1860]: https://github.com/linebender/druid/pull/1860
 [#1861]: https://github.com/linebender/druid/pull/1861
 [#1863]: https://github.com/linebender/druid/pull/1863
+[#1865]: https://github.com/linebender/druid/pull/1865
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

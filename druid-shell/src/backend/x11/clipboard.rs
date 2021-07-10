@@ -31,6 +31,7 @@ use x11rb::protocol::Event;
 use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
+use super::application::AppAtoms;
 use crate::clipboard::{ClipboardFormat, FormatId};
 use tracing::{debug, error, warn};
 
@@ -45,14 +46,6 @@ const STRING_TARGETS: [&str; 5] = [
     "text/plain",
 ];
 
-x11rb::atom_manager! {
-    ClipboardAtoms: ClipboardAtomsCookie {
-        CLIPBOARD,
-        TARGETS,
-        INCR,
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Clipboard(Rc<RefCell<ClipboardState>>);
 
@@ -60,15 +53,17 @@ impl Clipboard {
     pub(crate) fn new(
         connection: Rc<XCBConnection>,
         screen_num: usize,
+        atoms: Rc<AppAtoms>,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
-    ) -> Result<Self, ReplyOrIdError> {
-        Ok(Self(Rc::new(RefCell::new(ClipboardState::new(
+    ) -> Self {
+        Self(Rc::new(RefCell::new(ClipboardState::new(
             connection,
             screen_num,
+            atoms,
             event_queue,
             timestamp,
-        )?))))
+        ))))
     }
 
     pub(crate) fn handle_clear(&self, event: SelectionClearEvent) -> Result<(), ConnectionError> {
@@ -125,7 +120,7 @@ impl Clipboard {
 struct ClipboardState {
     connection: Rc<XCBConnection>,
     screen_num: usize,
-    atoms: ClipboardAtoms,
+    atoms: Rc<AppAtoms>,
     event_queue: Rc<RefCell<VecDeque<Event>>>,
     timestamp: Rc<Cell<Timestamp>>,
     contents: Option<ClipboardContents>,
@@ -136,11 +131,11 @@ impl ClipboardState {
     fn new(
         connection: Rc<XCBConnection>,
         screen_num: usize,
+        atoms: Rc<AppAtoms>,
         event_queue: Rc<RefCell<VecDeque<Event>>>,
         timestamp: Rc<Cell<Timestamp>>,
-    ) -> Result<Self, ReplyOrIdError> {
-        let atoms = ClipboardAtoms::new(&*connection)?.reply()?;
-        Ok(Self {
+    ) -> Self {
+        Self {
             connection,
             screen_num,
             atoms,
@@ -148,7 +143,7 @@ impl ClipboardState {
             timestamp,
             contents: None,
             incremental: Vec::new(),
-        })
+        }
     }
 
     fn put_formats(&mut self, formats: &[ClipboardFormat]) -> Result<(), ReplyOrIdError> {
