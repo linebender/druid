@@ -39,6 +39,71 @@ use super::clipboard::Clipboard;
 use super::util;
 use super::window::Window;
 
+// This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
+// convenience methods to intern and query those atoms). We use the following atoms:
+//
+// WM_PROTOCOLS
+//
+// List of atoms that identify the communications protocols between
+// the client and window manager in which the client is willing to participate.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
+//
+// WM_DELETE_WINDOW
+//
+// Including this atom in the WM_PROTOCOLS property on each window makes sure that
+// if the window manager respects WM_DELETE_WINDOW it will send us the event.
+//
+// The WM_DELETE_WINDOW event is sent when there is a request to close the window.
+// Registering for but ignoring this event means that the window will remain open.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+//
+// _NET_WM_PID
+//
+// A property containing the PID of the process that created the window.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
+//
+// _NET_WM_NAME
+//
+// A version of WM_NAME supporting UTF8 text.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
+//
+// UTF8_STRING
+//
+// The type of _NET_WM_NAME
+//
+// CLIPBOARD
+//
+// The name of the clipboard selection; used for implementing copy&paste
+//
+// TARGETS
+//
+// A target for getting the selection contents that answers with a list of supported targets
+//
+// INCR
+//
+// Type used for incremental selection transfers
+x11rb::atom_manager! {
+    pub(crate) AppAtoms: AppAtomsCookie {
+        WM_PROTOCOLS,
+        WM_DELETE_WINDOW,
+        _NET_WM_PID,
+        _NET_WM_NAME,
+        UTF8_STRING,
+        _NET_WM_WINDOW_TYPE,
+        _NET_WM_WINDOW_TYPE_NORMAL,
+        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+        _NET_WM_WINDOW_TYPE_TOOLTIP,
+        _NET_WM_WINDOW_TYPE_DIALOG,
+        CLIPBOARD,
+        TARGETS,
+        INCR,
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Application {
     /// The connection to the X server.
@@ -62,6 +127,8 @@ pub(crate) struct Application {
     argb_visual_type: Option<Visualtype>,
     /// Pending events that need to be handled later
     pending_events: Rc<RefCell<VecDeque<Event>>>,
+    /// The atoms that we need
+    atoms: Rc<AppAtoms>,
 
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
@@ -204,6 +271,12 @@ impl Application {
             col_resize: load_cursor("col-resize"),
         };
 
+        let atoms = Rc::new(
+            AppAtoms::new(&*connection)?
+                .reply()
+                .context("get X11 atoms")?,
+        );
+
         let screen = connection
             .setup()
             .roots
@@ -218,9 +291,10 @@ impl Application {
         let clipboard = Clipboard::new(
             Rc::clone(&connection),
             screen_num,
+            Rc::clone(&atoms),
             Rc::clone(&pending_events),
             Rc::clone(&timestamp),
-        )?;
+        );
 
         Ok(Application {
             connection,
@@ -235,6 +309,7 @@ impl Application {
             present_opcode,
             root_visual_type,
             argb_visual_type,
+            atoms,
             pending_events: Default::default(),
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
@@ -389,6 +464,11 @@ impl Application {
     #[inline]
     pub(crate) fn root_visual_type(&self) -> Visualtype {
         self.root_visual_type
+    }
+
+    #[inline]
+    pub(crate) fn atoms(&self) -> &AppAtoms {
+        &*self.atoms
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.
