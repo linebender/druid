@@ -586,11 +586,21 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         if !data.is_empty() {
             self.inner.paint(ctx, data, env);
         } else {
+            let text_width = self.placeholder.layout_metrics().size.width;
+            let extra_width = (size.width - text_width - textbox_insets.x_value()).max(0.);
+            let alignment = self.text().borrow().text_alignment();
+            // alignment is only used for single-line text boxes
+            let x_offset = if self.multiline {
+                0.0
+            } else {
+                x_offset_for_extra_width(alignment, extra_width)
+            };
+
             // clip when we draw the placeholder, since it isn't in a clipbox
             ctx.with_save(|ctx| {
                 ctx.clip(clip_rect);
                 self.placeholder
-                    .draw(ctx, (textbox_insets.x0, textbox_insets.y0));
+                    .draw(ctx, (textbox_insets.x0 + x_offset, textbox_insets.y0));
             })
         }
 
@@ -630,5 +640,13 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 impl<T: TextStorage + EditableText> Default for TextBox<T> {
     fn default() -> Self {
         TextBox::new()
+    }
+}
+
+fn x_offset_for_extra_width(alignment: TextAlignment, extra_width: f64) -> f64 {
+    match alignment {
+        TextAlignment::Start | TextAlignment::Justified => 0.0,
+        TextAlignment::End => extra_width,
+        TextAlignment::Center => extra_width / 2.0,
     }
 }
