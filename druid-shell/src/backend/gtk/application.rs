@@ -84,7 +84,11 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        glib::get_language_names()[0].as_str().into()
+        let mut locale: String = glib::get_language_names()[0].as_str().into();
+        if let Some(idx) = locale.chars().position(|c| c == '.') {
+            locale.truncate(idx);
+        }
+        locale
     }
 }
 
