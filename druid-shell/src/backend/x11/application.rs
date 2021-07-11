@@ -22,7 +22,6 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
-use tracing::debug;
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::render::{self, ConnectionExt as _, Pictformat};
