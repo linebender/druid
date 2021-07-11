@@ -22,6 +22,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Error};
+use tracing::debug;
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::render::{self, ConnectionExt as _, Pictformat};
@@ -786,6 +787,8 @@ impl Application {
             .or_else(|| var_non_empty("LC_MESSAGES"))
             .or_else(|| var_non_empty("LANG"))
             .unwrap_or_else(|| "en-US".to_string());
+
+        // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
         if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
             locale.truncate(idx);
         }
