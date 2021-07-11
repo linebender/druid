@@ -85,7 +85,7 @@ impl Application {
 
     pub fn get_locale() -> String {
         let mut locale: String = glib::get_language_names()[0].as_str().into();
-        if let Some(idx) = locale.chars().position(|c| c == '.') {
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
             locale.truncate(idx);
         }
         locale

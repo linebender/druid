@@ -786,7 +786,7 @@ impl Application {
             .or_else(|| var_non_empty("LC_MESSAGES"))
             .or_else(|| var_non_empty("LANG"))
             .unwrap_or_else(|| "en-US".to_string());
-        if let Some(idx) = locale.chars().position(|c| c == '.') {
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
             locale.truncate(idx);
         }
         locale
