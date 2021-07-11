@@ -84,7 +84,12 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        glib::get_language_names()[0].as_str().into()
+        let mut locale: String = glib::get_language_names()[0].as_str().into();
+        // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
+            locale.truncate(idx);
+        }
+        locale
     }
 }
 

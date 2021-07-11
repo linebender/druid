@@ -111,7 +111,8 @@ impl Application {
             let locale: id = msg_send![nslocale_class, currentLocale];
             let ident: id = msg_send![locale, localeIdentifier];
             let mut locale = util::from_nsstring(ident);
-            if let Some(idx) = locale.chars().position(|c| c == '@') {
+            // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
+            if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
                 locale.truncate(idx);
             }
             locale
