@@ -36,6 +36,7 @@ tga = ["piet-common/tga"]
 farbfeld = ["piet-common/farbfeld"]
 dxt = ["piet-common/dxt"]
 hdr = ["piet-common/hdr"]
+serde = ["kurbo/serde"]
 
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
