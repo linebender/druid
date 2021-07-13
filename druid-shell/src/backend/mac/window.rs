@@ -560,10 +560,6 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
 
-        // Setting the view as opaque prevents invalidation artifacts during partial
-        // drawing combined with animations.
-        view.setOpaque_(YES);
-
         // The rect of the tracking area doesn't matter, because
         // we use the InVisibleRect option where the OS syncs the size automatically.
         let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
