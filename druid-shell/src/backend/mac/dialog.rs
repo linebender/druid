@@ -61,7 +61,7 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
         if options.select_directories {
             let () = msg_send![panel, setCanChooseDirectories: YES];
             // Disable the selection of files in directory selection mode,
-            // because other platforms like Windows have no support for it,
+            // because other backends like Windows have no support for it,
             // and expecting it to work will lead to buggy cross-platform behavior.
             let () = msg_send![panel, setCanChooseFiles: NO];
             // File filters are used by macOS to determine which paths are packages.

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Keyboard logic that is shared by more than one platform.
+//! Keyboard logic that is shared by more than one backend.
 
 #[allow(unused)]
 use keyboard_types::{Code, Location};

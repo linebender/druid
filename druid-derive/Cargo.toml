@@ -20,6 +20,6 @@ quote = "1.0.7"
 proc-macro2 = "1.0.19"
 
 [dev-dependencies]
-druid = { version = "0.7.0", path = "../druid" }
+druid = { version = "0.7.0", path = "../druid", default-features = false, features = ["x11"] }
 
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
