@@ -61,6 +61,7 @@ mod scale;
 mod screen;
 mod window;
 
+mod dnd;
 pub mod platform;
 pub mod text;
 
@@ -68,6 +69,7 @@ pub use application::{AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};
+pub use dnd::{DragData, DragDropAction, DropContext, DropEvent};
 pub use error::Error;
 pub use hotkey::{HotKey, RawMods, SysMods};
 pub use keyboard::{Code, IntoKey, KbKey, KeyEvent, KeyState, Location, Modifiers};
