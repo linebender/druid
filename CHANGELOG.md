@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
 - Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
@@ -497,6 +498,7 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
+[@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -748,6 +750,7 @@ Last release without a changelog :(
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
 [#1843]: https://github.com/linebender/druid/pull/1843
+[#1850]: https://github.com/linebender/druid/pull/1850
 [#1851]: https://github.com/linebender/druid/pull/1851
 [#1860]: https://github.com/linebender/druid/pull/1860
 [#1861]: https://github.com/linebender/druid/pull/1861
