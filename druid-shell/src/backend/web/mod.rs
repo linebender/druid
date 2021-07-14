@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Logic that is shared by more than one platform.
+//! Web-based backend support
 
-cfg_if::cfg_if! {
-    if #[cfg(any(target_os = "macos", target_os = "linux"))] {
-        mod keyboard;
-        pub use keyboard::*;
-    }
-}
+pub mod application;
+pub mod clipboard;
+pub mod error;
+pub mod keycodes;
+pub mod menu;
+pub mod screen;
+pub mod window;

@@ -47,6 +47,7 @@ pub use piet_common as piet;
 mod util;
 
 mod application;
+mod backend;
 mod clipboard;
 mod common_util;
 mod dialog;
@@ -55,12 +56,12 @@ mod hotkey;
 mod keyboard;
 mod menu;
 mod mouse;
-mod platform;
 mod region;
 mod scale;
 mod screen;
 mod window;
 
+pub mod platform;
 pub mod text;
 
 pub use application::{AppHandler, Application};

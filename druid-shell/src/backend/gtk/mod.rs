@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS platform errors.
+//! GTK-based backend support
 
-//TODO: add a platform error for macOS, based on NSError
-
-#[derive(Debug, Clone)]
-pub struct Error;
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "NSError")
-    }
-}
-
-impl std::error::Error for Error {}
+pub mod application;
+pub mod clipboard;
+pub mod dialog;
+pub mod error;
+pub mod keycodes;
+pub mod menu;
+pub mod screen;
+pub mod util;
+pub mod window;

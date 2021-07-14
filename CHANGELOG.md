@@ -45,8 +45,12 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports custom cursors ([#1801] by [@psychon])
 - X11: Add support for transparent windows ([#1803] by [@psychon])
 - X11: Added support for `get_monitors` ([#1804] by [@psychon])
+- x11: Remove some unnecessary casts ([#1851] by [@psychon])
 - `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
-- x11: Add support for getting clipboard contents ([#1805] by [@psychon])
+- x11: Add support for getting and setting clipboard contents ([#1805], [#1851], and [#1866] by [@psychon])
+- Linux extension: primary_clipboard ([#1843] by [@Maan2003])
+- x11: Implement primary_clipboard ([#1867] by [@psychon])
+- x11: Set WM_CLASS property ([#1868] by [@psychon])
 
 ### Changed
 
@@ -63,6 +67,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Window size and positioning code is now in display points ([#1713] by [@jneem])
 - Update look and feel of controls when disabled ([#1717] by [@xarvic])
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
+- Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
+- x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 
 ### Deprecated
 
@@ -82,6 +88,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports scaling([#1751] by [@Maan2003])
 - X11 backend now supports changing cursors ([#1755] by [@Maan2003])
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
+- `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
 
 ### Visual
 
@@ -94,6 +101,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
 - Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
+- Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
 
 ### Examples
 
@@ -491,6 +499,7 @@ Last release without a changelog :(
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
 [@DrGabble]: https://github.com/DrGabble
+[@lisael]: https://github.com/lisael
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -740,7 +749,16 @@ Last release without a changelog :(
 [#1805]: https://github.com/linebender/druid/pull/1805
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
+[#1843]: https://github.com/linebender/druid/pull/1843
 [#1850]: https://github.com/linebender/druid/pull/1850
+[#1851]: https://github.com/linebender/druid/pull/1851
+[#1860]: https://github.com/linebender/druid/pull/1860
+[#1861]: https://github.com/linebender/druid/pull/1861
+[#1863]: https://github.com/linebender/druid/pull/1863
+[#1865]: https://github.com/linebender/druid/pull/1865
+[#1866]: https://github.com/linebender/druid/pull/1866
+[#1867]: https://github.com/linebender/druid/pull/1867
+[#1868]: https://github.com/linebender/druid/pull/1868
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

@@ -27,7 +27,6 @@ use crate::scale::Scalable;
 use anyhow::{anyhow, Context, Error};
 use cairo::{XCBConnection as CairoXCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
 use tracing::{error, info, warn};
-use x11rb::atom_manager;
 use x11rb::connection::Connection;
 use x11rb::errors::ReplyOrIdError;
 use x11rb::properties::{WmHints, WmHintsState, WmSizeHints};
@@ -163,7 +162,7 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         // not sure how to do this, maybe _MOTIF_WM_HINTS?
-        warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 backend.");
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
@@ -188,28 +187,6 @@ impl WindowBuilder {
 
     pub fn set_menu(&mut self, _menu: Menu) {
         // TODO(x11/menus): implement WindowBuilder::set_menu (currently a no-op)
-    }
-
-    /// Registers and returns all the atoms that the window will need.
-    fn atoms(&self, window_id: u32) -> Result<WindowAtoms, Error> {
-        let conn = self.app.connection();
-        let atoms = WindowAtoms::new(conn.as_ref())?
-            .reply()
-            .context("get X11 atoms")?;
-
-        // Replace the window's WM_PROTOCOLS with the following.
-        let protocols = [atoms.WM_DELETE_WINDOW];
-        conn.change_property32(
-            PropMode::REPLACE,
-            window_id,
-            atoms.WM_PROTOCOLS,
-            AtomEnum::ATOM,
-            &protocols,
-        )?
-        .check()
-        .context("set WM_PROTOCOLS")?;
-
-        Ok(atoms)
     }
 
     fn create_cairo_surface(
@@ -271,7 +248,7 @@ impl WindowBuilder {
         let size_px = self.size.to_px(scale);
         let screen = setup
             .roots
-            .get(screen_num as usize)
+            .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
         let visual_type = if self.transparent {
             self.app.argb_visual_type()
@@ -353,7 +330,6 @@ impl WindowBuilder {
             .context("create graphics context")?;
 
         // TODO(x11/errors): Should do proper cleanup (window destruction etc) in case of error
-        let atoms = self.atoms(id)?;
         let cairo_surface = RefCell::new(self.create_cairo_surface(id, &visual_type)?);
         let present_data = match self.initialize_present_data(id) {
             Ok(p) => Some(p),
@@ -372,6 +348,7 @@ impl WindowBuilder {
         )?);
 
         // Initialize some properties
+        let atoms = self.app.atoms();
         let pid = nix::unistd::Pid::this().as_raw();
         if let Ok(pid) = u32::try_from(pid) {
             conn.change_property32(
@@ -384,6 +361,54 @@ impl WindowBuilder {
             .check()
             .context("set _NET_WM_PID")?;
         }
+
+        if let Some(name) = std::env::args_os().next() {
+            // ICCCM § 4.1.2.5:
+            // The WM_CLASS property (of type STRING without control characters) contains two
+            // consecutive null-terminated strings. These specify the Instance and Class names.
+            //
+            // The code below just imitates what happens on the gtk backend:
+            // - instance: The program's name
+            // - class: The program's name with first letter in upper case
+
+            // Get the name of the running binary
+            let path: &std::path::Path = name.as_ref();
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+
+            // Build the contents of WM_CLASS
+            let mut wm_class = Vec::with_capacity(2 * (name.len() + 1));
+            wm_class.extend(name.as_bytes());
+            wm_class.push(0);
+            if let Some(&first) = wm_class.get(0) {
+                wm_class.push(first.to_ascii_uppercase());
+                wm_class.extend(&name.as_bytes()[1..]);
+            }
+            wm_class.push(0);
+            conn.change_property8(
+                PropMode::REPLACE,
+                id,
+                AtomEnum::WM_CLASS,
+                AtomEnum::STRING,
+                &wm_class,
+            )?;
+        } else {
+            // GTK (actually glib) goes fishing in /proc (platform_get_argv0()). We pass.
+        }
+
+        // Replace the window's WM_PROTOCOLS with the following.
+        let protocols = [atoms.WM_DELETE_WINDOW];
+        conn.change_property32(
+            PropMode::REPLACE,
+            id,
+            atoms.WM_PROTOCOLS,
+            AtomEnum::ATOM,
+            &protocols,
+        )?
+        .check()
+        .context("set WM_PROTOCOLS")?;
 
         let min_size = self.min_size.to_px(scale);
         log_x11!(size_hints(self.resizable, size_px, min_size)
@@ -435,7 +460,6 @@ impl WindowBuilder {
             app: self.app.clone(),
             handler,
             cairo_surface,
-            atoms,
             area: Cell::new(ScaledArea::from_px(size_px, scale)),
             scale: Cell::new(scale),
             min_size,
@@ -519,7 +543,6 @@ pub(crate) struct Window {
     app: Application,
     handler: RefCell<Box<dyn WinHandler>>,
     cairo_surface: RefCell<XCBSurface>,
-    atoms: WindowAtoms,
     area: Cell<ScaledArea>,
     scale: Cell<Scale>,
     // min size in px
@@ -566,56 +589,6 @@ pub(crate) struct Window {
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
     active_text_field: Cell<Option<TextFieldToken>>,
-}
-
-// This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
-// convenience methods to intern and query those atoms). We use the following atoms:
-//
-// WM_PROTOCOLS
-//
-// List of atoms that identify the communications protocols between
-// the client and window manager in which the client is willing to participate.
-//
-// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
-//
-// WM_DELETE_WINDOW
-//
-// Including this atom in the WM_PROTOCOLS property on each window makes sure that
-// if the window manager respects WM_DELETE_WINDOW it will send us the event.
-//
-// The WM_DELETE_WINDOW event is sent when there is a request to close the window.
-// Registering for but ignoring this event means that the window will remain open.
-//
-// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-//
-// _NET_WM_PID
-//
-// A property containing the PID of the process that created the window.
-//
-// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
-//
-// _NET_WM_NAME
-//
-// A version of WM_NAME supporting UTF8 text.
-//
-// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
-//
-// UTF8_STRING
-//
-// The type of _NET_WM_NAME
-atom_manager! {
-    WindowAtoms: WindowAtomsCookie {
-        WM_PROTOCOLS,
-        WM_DELETE_WINDOW,
-        _NET_WM_PID,
-        _NET_WM_NAME,
-        UTF8_STRING,
-        _NET_WM_WINDOW_TYPE,
-        _NET_WM_WINDOW_TYPE_NORMAL,
-        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-        _NET_WM_WINDOW_TYPE_TOOLTIP,
-        _NET_WM_WINDOW_TYPE_DIALOG,
-    }
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -877,7 +850,7 @@ impl Window {
 
     /// Set whether the window should show titlebar
     fn show_titlebar(&self, _show_titlebar: bool) {
-        warn!("Window::show_titlebar is currently unimplemented for X11 platforms.");
+        warn!("Window::show_titlebar is currently unimplemented for X11 backend.");
     }
 
     fn get_position(&self) -> Point {
@@ -995,6 +968,8 @@ impl Window {
             return;
         }
 
+        let atoms = self.app.atoms();
+
         // This is technically incorrect. STRING encoding is *not* UTF8. However, I am not sure
         // what it really is. WM_LOCALE_NAME might be involved. Hopefully, nothing cares about this
         // as long as _NET_WM_NAME is also set (which uses UTF8).
@@ -1008,8 +983,8 @@ impl Window {
         log_x11!(self.app.connection().change_property8(
             xproto::PropMode::REPLACE,
             self.id,
-            self.atoms._NET_WM_NAME,
-            self.atoms.UTF8_STRING,
+            atoms._NET_WM_NAME,
+            atoms.UTF8_STRING,
             title.as_bytes(),
         ));
     }
@@ -1185,9 +1160,10 @@ impl Window {
     pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {
         // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#id2745388
         // https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
-        if client_message.type_ == self.atoms.WM_PROTOCOLS && client_message.format == 32 {
+        let atoms = self.app.atoms();
+        if client_message.type_ == atoms.WM_PROTOCOLS && client_message.format == 32 {
             let protocol = client_message.data.as_data32()[0];
-            if protocol == self.atoms.WM_DELETE_WINDOW {
+            if protocol == atoms.WM_DELETE_WINDOW {
                 self.with_handler(|h| h.request_close());
             }
         }
@@ -1644,12 +1620,12 @@ impl WindowHandle {
     }
 
     pub fn content_insets(&self) -> Insets {
-        warn!("WindowHandle::content_insets unimplemented for X11 platforms.");
+        warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
     }
 
     pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
     pub fn set_size(&self, size: Size) {
@@ -1670,16 +1646,16 @@ impl WindowHandle {
     }
 
     pub fn set_window_state(&self, _state: window::WindowState) {
-        warn!("WindowHandle::set_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::set_window_state is currently unimplemented for X11 backend.");
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        warn!("WindowHandle::get_window_state is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::get_window_state is currently unimplemented for X11 backend.");
         window::WindowState::Restored
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::handle_titlebar is currently unimplemented for X11 backend.");
     }
 
     pub fn bring_to_front_and_focus(&self) {
@@ -1782,7 +1758,7 @@ impl WindowHandle {
                 Some(format) => {
                     let conn = w.app.connection();
                     let setup = &conn.setup();
-                    let screen = &setup.roots[w.app.screen_num() as usize];
+                    let screen = &setup.roots[w.app.screen_num()];
                     match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
                         // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
                         Ok(cursor) => Some(cursor),
@@ -1800,19 +1776,19 @@ impl WindowHandle {
 
     pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::open_file
-        warn!("WindowHandle::open_file is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::open_file is currently unimplemented for X11 backend.");
         None
     }
 
     pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
         // TODO(x11/file_dialogs): implement WindowHandle::save_as
-        warn!("WindowHandle::save_as is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::save_as is currently unimplemented for X11 backend.");
         None
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
         // TODO(x11/menus): implement WindowHandle::show_context_menu
-        warn!("WindowHandle::show_context_menu is currently unimplemented for X11 platforms.");
+        warn!("WindowHandle::show_context_menu is currently unimplemented for X11 backend.");
     }
 
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {

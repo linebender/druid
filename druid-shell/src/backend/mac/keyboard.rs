@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Conversion of platform keyboard event into cross-platform event.
+//! Conversion of backend keyboard event into cross-platform event.
 
 use cocoa::appkit::{NSEvent, NSEventModifierFlags, NSEventType};
 use cocoa::base::id;
