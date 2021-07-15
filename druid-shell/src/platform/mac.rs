@@ -17,7 +17,7 @@
 /// macOS specific extensions to [`Application`]
 ///
 /// [`Application`]: crate::Application
-pub trait MacApplicationExt {
+pub trait ApplicationExt {
     /// Hide the application this window belongs to. (cmd+H)
     fn hide(&self);
 
@@ -36,5 +36,5 @@ mod test {
 
     use super::*;
     use static_assertions as sa;
-    sa::assert_impl_all!(Application: MacApplicationExt);
+    sa::assert_impl_all!(Application: ApplicationExt);
 }

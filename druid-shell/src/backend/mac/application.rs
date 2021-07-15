@@ -119,7 +119,7 @@ impl Application {
     }
 }
 
-impl crate::platform::mac::MacApplicationExt for crate::Application {
+impl crate::platform::mac::ApplicationExt for crate::Application {
     fn hide(&self) {
         unsafe {
             let () = msg_send![self.backend_app.ns_app, hide: nil];

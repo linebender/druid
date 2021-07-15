@@ -793,7 +793,7 @@ impl Application {
     }
 }
 
-impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+impl crate::platform::linux::ApplicationExt for crate::Application {
     fn primary_clipboard(&self) -> crate::Clipboard {
         self.backend_app.primary.clone().into()
     }
