@@ -112,7 +112,7 @@ impl Application {
             let ident: id = msg_send![locale, localeIdentifier];
             let mut locale = util::from_nsstring(ident);
             // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
-            if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
+            if let Some(idx) = locale.chars().position(|c| c == '@') {
                 locale.truncate(idx);
             }
             locale
