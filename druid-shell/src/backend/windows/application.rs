@@ -196,15 +196,18 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        unsafe {
-            let mut buf: [u16; LOCALE_NAME_MAX_LENGTH] = std::mem::zeroed();
-            let len_with_null = GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize;
-            let locale = if len_with_null > 1 {
-                buf.get(..len_with_null - 1).and_then(FromWide::from_wide)
-            } else {
-                None
-            };
-            locale.unwrap_or_else(|| "en-US".into())
-        }
+        let mut buf = [0u16; LOCALE_NAME_MAX_LENGTH];
+        let len_with_null = unsafe {
+            GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize
+        };
+        let locale = if len_with_null > 0 {
+            buf.get(..len_with_null - 1).and_then(FromWide::from_wide)
+        } else {
+            None
+        };
+        locale.unwrap_or_else(|| {
+            tracing::warn!("Failed to get user locale");
+            "en-US".into()
+        })
     }
 }
