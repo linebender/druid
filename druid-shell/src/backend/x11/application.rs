@@ -770,21 +770,32 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        let var_non_empty = |var| match std::env::var(var) {
-            Ok(s) if s.is_empty() => None,
-            Ok(s) => Some(s),
-            Err(_) => None,
-        };
+        fn locale_env_var(var: &str) -> Option<String> {
+            match std::env::var(var) {
+                Ok(s) if s.is_empty() => {
+                    tracing::debug!("locale: ignoring empty env var {}", var);
+                    None
+                }
+                Ok(s) => {
+                    tracing::debug!("locale: env var {} found: {:?}", var, &s);
+                    Some(s)
+                }
+                Err(_) => {
+                    tracing::debug!("locale: env var {} not found", var);
+                    None
+                }
+            }
+        }
 
         // from gettext manual
         // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
-        var_non_empty("LANGUAGE")
+        locale_env_var("LANGUAGE")
             // the LANGUAGE value is priority list seperated by :
             // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
             .and_then(|locale| locale.split(':').next().map(String::from))
-            .or_else(|| var_non_empty("LC_ALL"))
-            .or_else(|| var_non_empty("LC_MESSAGES"))
-            .or_else(|| var_non_empty("LANG"))
+            .or_else(|| locale_env_var("LC_ALL"))
+            .or_else(|| locale_env_var("LC_MESSAGES"))
+            .or_else(|| locale_env_var("LANG"))
             .unwrap_or_else(|| "en-US".to_string())
     }
 
