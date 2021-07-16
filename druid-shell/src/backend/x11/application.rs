@@ -800,7 +800,7 @@ impl Application {
             .or_else(|| locale_env_var("LC_ALL"))
             .or_else(|| locale_env_var("LC_MESSAGES"))
             .or_else(|| locale_env_var("LANG"))
-            .unwrap_or_else(|| "en-US".to_string())
+            .unwrap_or_else(|| "en-US".to_string());
 
         // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
         if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
