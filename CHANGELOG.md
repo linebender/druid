@@ -69,6 +69,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Change the signature of `add_idle_callback` ([#1787] by [@jneem])
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 - x11: Only query atoms once instead of per window ([#1865] by [@psychon])
+- remove prefix from platform extension traits ([#1873] by [@Maan2003])
 
 ### Deprecated
 
@@ -760,6 +761,7 @@ Last release without a changelog :(
 [#1866]: https://github.com/linebender/druid/pull/1866
 [#1867]: https://github.com/linebender/druid/pull/1867
 [#1868]: https://github.com/linebender/druid/pull/1868
+[#1873]: https://github.com/linebender/druid/pull/1873
 [#1876]: https://github.com/linebender/druid/pull/1876
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master

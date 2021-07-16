@@ -474,7 +474,7 @@ impl<T: Data> Inner<T> {
 
         #[cfg(target_os = "macos")]
         {
-            use druid_shell::platform::mac::MacApplicationExt;
+            use druid_shell::platform::mac::ApplicationExt as _;
 
             let windows = &mut self.windows;
             let window = self.menu_window.and_then(|w| windows.get_mut(w));
@@ -841,13 +841,13 @@ impl<T: Data> AppState<T> {
 
     #[cfg(target_os = "macos")]
     fn hide_app(&self) {
-        use druid_shell::platform::mac::MacApplicationExt;
+        use druid_shell::platform::mac::ApplicationExt as _;
         self.inner.borrow().app.hide()
     }
 
     #[cfg(target_os = "macos")]
     fn hide_others(&mut self) {
-        use druid_shell::platform::mac::MacApplicationExt;
+        use druid_shell::platform::mac::ApplicationExt as _;
         self.inner.borrow().app.hide_others();
     }
 
