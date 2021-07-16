@@ -197,9 +197,8 @@ impl Application {
 
     pub fn get_locale() -> String {
         let mut buf = [0u16; LOCALE_NAME_MAX_LENGTH];
-        let len_with_null = unsafe {
-            GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize
-        };
+        let len_with_null =
+            unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize };
         let locale = if len_with_null > 0 {
             buf.get(..len_with_null - 1).and_then(FromWide::from_wide)
         } else {
