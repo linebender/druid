@@ -780,8 +780,12 @@ impl Application {
                     tracing::debug!("locale: env var {} found: {:?}", var, &s);
                     Some(s)
                 }
-                Err(_) => {
+                Err(std::env::VarError::NotPresent) => {
                     tracing::debug!("locale: env var {} not found", var);
+                    None
+                }
+                Err(std::env::VarError::NotUnicode(_)) => {
+                    tracing::debug!("locale: ignoring invalid unicode env var {}", var);
                     None
                 }
             }
