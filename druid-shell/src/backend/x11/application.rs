@@ -778,14 +778,20 @@ impl Application {
 
         // from gettext manual
         // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
-        var_non_empty("LANGUAGE")
+        let mut locale = var_non_empty("LANGUAGE")
             // the LANGUAGE value is priority list seperated by :
             // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
             .and_then(|locale| locale.split(':').next().map(String::from))
             .or_else(|| var_non_empty("LC_ALL"))
             .or_else(|| var_non_empty("LC_MESSAGES"))
             .or_else(|| var_non_empty("LANG"))
-            .unwrap_or_else(|| "en-US".to_string())
+            .unwrap_or_else(|| "en-US".to_string());
+
+        // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
+            locale.truncate(idx);
+        }
+        locale
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
