@@ -12,10 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platorm specific extensions.
+//! Linux specific extensions.
+use crate::Clipboard;
 
-#[cfg(any(doc, target_os = "linux"))]
-pub mod linux;
+/// Linux specific extensions to [`Application`]
+///
+/// [`Application`]: crate::Application
+pub trait ApplicationExt {
+    /// Returns a handle to the primary system clipboard.
+    ///
+    /// This is useful for middle mouse paste.
+    fn primary_clipboard(&self) -> Clipboard;
+}
 
-#[cfg(any(doc, target_os = "macos"))]
-pub mod mac;
+#[cfg(test)]
+#[allow(unused_imports)]
+mod test {
+    use crate::Application;
+
+    use super::*;
+    use static_assertions as sa;
+    sa::assert_impl_all!(Application: ApplicationExt);
+}

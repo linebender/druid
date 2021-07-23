@@ -1,4 +1,4 @@
-// Copyright 2021 The Druid Authors.
+// Copyright 2020 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platorm specific extensions.
+//! Logic that is shared by more than one backend.
 
-#[cfg(any(doc, target_os = "linux"))]
-pub mod linux;
-
-#[cfg(any(doc, target_os = "macos"))]
-pub mod mac;
+cfg_if::cfg_if! {
+    if #[cfg(any(target_os = "macos", target_os = "linux"))] {
+        mod keyboard;
+        pub use keyboard::*;
+    }
+}

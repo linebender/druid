@@ -1,4 +1,4 @@
-// Copyright 2021 The Druid Authors.
+// Copyright 2019 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platorm specific extensions.
+//! macOS backend errors.
 
-#[cfg(any(doc, target_os = "linux"))]
-pub mod linux;
+//TODO: add a backend error for macOS, based on NSError
 
-#[cfg(any(doc, target_os = "macos"))]
-pub mod mac;
+#[derive(Debug, Clone)]
+pub struct Error;
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "NSError")
+    }
+}
+
+impl std::error::Error for Error {}
