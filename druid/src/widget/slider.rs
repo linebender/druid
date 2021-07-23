@@ -17,7 +17,7 @@
 use crate::kurbo::{Circle, Shape};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
-use tracing::{instrument, trace};
+use tracing::{instrument, trace, warn};
 
 const TRACK_THICKNESS: f64 = 4.0;
 const BORDER_WIDTH: f64 = 2.0;
@@ -76,6 +76,31 @@ impl Slider {
         };
         self
     }
+
+    fn check_step(&mut self) {
+        if let Some(stepping) = self.step {
+            // round down max such that max - min is a multiple of step
+            // say max - min = stepping * n + k
+
+            let n = (self.max - self.min) / stepping;
+
+            // check if n is choose enough to an integer
+
+            // f64::EPSILON doesn't work :/
+            if (n.round() - n).abs() > 10e-10 {
+                let old_max = self.max;
+
+                // floor so that max < old_max, and value remains = min..old_max
+                let n = n.floor();
+
+                self.max = self.min + stepping * n;
+                warn!(
+                    "`max`({}) - `min`({}) should be a multiple of `step`({}), changing max to {}",
+                    old_max, self.min, stepping, self.max
+                );
+            }
+        }
+    }
 }
 
 impl Slider {
@@ -88,14 +113,21 @@ impl Slider {
         let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0);
-        let mut value = self.min + scalar * (self.max - self.min);
         if let Some(stepping) = self.step {
-            // Determine the number of steps and fit the slider position to a discrete step
-            let steps = (self.max / stepping).round();
-            let step = (value * steps / self.max).round();
-            value = step / steps * self.max;
+            // self.max - self.min is always a multiple of stepping
+            // enforced by `check_step`
+
+            // 0..=steps are the possible steps at which value can be
+            let steps = ((self.max - self.min) / stepping).round();
+
+            // scale the scalar from 0 to steps and round it
+            let curr_step = (scalar * steps).round();
+
+            // now, value is of form `min + n * stepping`
+            self.min + curr_step * stepping
+        } else {
+            self.min + scalar * (self.max - self.min)
         }
-        value
     }
 
     fn normalize(&self, data: f64) -> f64 {
@@ -152,8 +184,14 @@ impl Widget<f64> for Slider {
 
     #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
-        if let LifeCycle::DisabledChanged(_) = event {
-            ctx.request_paint();
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.check_step();
+            }
+            LifeCycle::DisabledChanged(_) => {
+                ctx.request_paint();
+            }
+            _ => (),
         }
     }
 
