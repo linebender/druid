@@ -165,7 +165,7 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
     panel
 }
 
-// AppKit has a build-in file format accessory view. However, this is only
+// AppKit has a built-in file format accessory view. However, this is only
 // displayed for `NSDocument` based apps. We have to construct our own `NSView`
 // hierachy to implement something similar.
 unsafe fn allowed_types_accessory_view(allowed_types: &[crate::FileSpec]) -> id {
