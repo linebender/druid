@@ -26,7 +26,9 @@ pub struct FileInfo {
     /// On macOS, this is already rewritten to use the extension that the user selected
     /// with the `file format` property.
     pub(crate) path: PathBuf,
-    /// The selected file format. If there're multiple different formats available
+    /// The selected file format. 
+    ///
+    /// If there're multiple different formats available
     /// this allows understanding the kind of format that the user expects the file
     /// to be written in. Examples could be Blender 2.4 vs Blender 2.6 vs Blender 2.8.
     /// The `path` above will already contain the appropriate extension chosen in the
