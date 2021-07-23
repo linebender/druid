@@ -35,8 +35,6 @@ impl Menu {
         Menu
     }
 
-    pub fn set_title<T: AsRef<str>>(&self, _title: T) {}
-
     pub fn add_dropdown(&mut self, _menu: Menu, _text: &str, _enabled: bool) {
         tracing::warn!("unimplemented");
     }

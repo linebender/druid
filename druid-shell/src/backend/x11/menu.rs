@@ -31,8 +31,6 @@ impl Menu {
         Menu {}
     }
 
-    pub fn set_title<T: AsRef<str>>(&self, _title: T) {}
-
     pub fn add_dropdown(&mut self, mut _menu: Menu, _text: &str, _enabled: bool) {
         // TODO(x11/menus): implement Menu::add_dropdown (currently a no-op)
         tracing::warn!("Menu::add_dropdown is currently unimplemented for X11 backend.");

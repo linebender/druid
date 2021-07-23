@@ -71,13 +71,6 @@ impl Menu {
         Menu::new()
     }
 
-    pub fn set_title<T: AsRef<str>>(&self, title: T) {
-        unsafe {
-            let title = NSString::alloc(nil).init_str(title.as_ref()).autorelease();
-            let _: () = msg_send![self.menu, setTitle: title];
-        }
-    }
-
     pub fn add_dropdown(&mut self, menu: Menu, text: &str, enabled: bool) {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil).autorelease();

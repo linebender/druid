@@ -41,12 +41,6 @@ impl Menu {
         Menu(backend::Menu::new_for_popup())
     }
 
-    /// Set the title of the menu.
-    /// This affects only macOS apps where it sets the `title` property
-    pub fn set_title<T: AsRef<str>>(&self, title: T) {
-        self.0.set_title(title)
-    }
-
     /// Consume this `Menu`, returning the platform menu object.
     pub(crate) fn into_inner(self) -> backend::Menu {
         self.0
