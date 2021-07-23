@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct FileInfo {
     /// The path to the selected file.
+    ///
     /// On macOS, this is already rewritten to use the extension that the user selected
     /// with the `file format` property.
     pub(crate) path: PathBuf,
