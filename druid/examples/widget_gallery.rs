@@ -152,10 +152,15 @@ fn ui_builder() -> impl Widget<AppData> {
             ))
             .with_child(label_widget(
                 Flex::column()
-                    .with_child(Slider::new().lens(AppData::progressbar))
+                    .with_child(
+                        Slider::new()
+                            .with_range(0.05, 0.95)
+                            .with_step(0.10)
+                            .lens(AppData::progressbar),
+                    )
                     .with_spacer(4.0)
                     .with_child(Label::new(|data: &AppData, _: &_| {
-                        format!("{:3.0}%", data.progressbar * 100.0)
+                        format!("{:3.2}%", data.progressbar * 100.)
                     })),
                 "Slider",
             ))
