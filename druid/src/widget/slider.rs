@@ -64,7 +64,7 @@ impl Slider {
     /// The default step size is `0.0` (smooth).
     pub fn with_step(mut self, step: f64) -> Self {
         if step < 0.0 {
-            tracing::warn!("bad stepping (must be positive): {}", step);
+            warn!("bad stepping (must be positive): {}", step);
             return self;
         }
         self.step = if step > 0.0 {
@@ -77,26 +77,17 @@ impl Slider {
         self
     }
 
-    fn check_step(&mut self) {
+    fn check_step(&self) {
         if let Some(stepping) = self.step {
-            // round down max such that max - min is a multiple of step
-            // say max - min = stepping * n + k
-
             let n = (self.max - self.min) / stepping;
 
             // check if n is choose enough to an integer
 
             // f64::EPSILON doesn't work :/
             if (n.round() - n).abs() > 10e-10 {
-                let old_max = self.max;
-
-                // floor so that max < old_max, and value remains = min..old_max
-                let n = n.floor();
-
-                self.max = self.min + stepping * n;
                 warn!(
-                    "`max`({}) - `min`({}) should be a multiple of `step`({}), changing max to {}",
-                    old_max, self.min, stepping, self.max
+                    "max ({}) - min ({}) should be a multiple of step ({})",
+                    self.max, self.min, stepping
                 );
             }
         }
@@ -114,17 +105,14 @@ impl Slider {
             .max(0.0)
             .min(1.0);
         if let Some(stepping) = self.step {
-            // self.max - self.min is always a multiple of stepping
-            // enforced by `check_step`
-
             // 0..=steps are the possible steps at which value can be
-            let steps = ((self.max - self.min) / stepping).round();
+            let steps = ((self.max - self.min) / stepping).ceil();
 
             // scale the scalar from 0 to steps and round it
             let curr_step = (scalar * steps).round();
 
-            // now, value is of form `min + n * stepping`
-            self.min + curr_step * stepping
+            // now, value is of form `min + n * stepping + rem`
+            (self.min + curr_step * stepping).min(self.max)
         } else {
             self.min + scalar * (self.max - self.min)
         }
