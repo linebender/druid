@@ -76,18 +76,6 @@ impl Slider {
         };
         self
     }
-
-    fn check_step(&self) {
-        if let Some(step) = self.step {
-            let max_step_value = (100.0 / step).round() * step;
-            if max_step_value < self.max {
-                warn!(
-                    "max ({}) - min ({}) should be a multiple of step ({})",
-                    self.max, self.min, step
-                );
-            }
-        }
-    }
 }
 
 impl Slider {
@@ -178,9 +166,6 @@ impl Widget<f64> for Slider {
     #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
         match event {
-            LifeCycle::WidgetAdded => {
-                self.check_step();
-            }
             LifeCycle::DisabledChanged(_) => {
                 ctx.request_paint();
             }
