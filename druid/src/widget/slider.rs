@@ -31,6 +31,7 @@ const KNOB_STROKE_WIDTH: f64 = 2.0;
 pub struct Slider {
     min: f64,
     max: f64,
+    step: Option<f64>,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
@@ -42,6 +43,7 @@ impl Slider {
         Slider {
             min: 0.,
             max: 1.,
+            step: None,
             knob_pos: Default::default(),
             knob_hovered: Default::default(),
             x_offset: Default::default(),
@@ -56,6 +58,24 @@ impl Slider {
         self.max = max;
         self
     }
+
+    /// Builder-style method to set the stepping.
+    ///
+    /// The default step size is `0.0` (smooth).
+    pub fn with_step(mut self, step: f64) -> Self {
+        if step < 0.0 {
+            tracing::warn!("bad stepping (must be positive): {}", step);
+            return self;
+        }
+        self.step = if step > 0.0 {
+            Some(step)
+        } else {
+            // A stepping value of 0.0 would yield an infinite amount of steps.
+            // Enforce no stepping instead.
+            None
+        };
+        self
+    }
 }
 
 impl Slider {
@@ -68,7 +88,14 @@ impl Slider {
         let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0);
-        self.min + scalar * (self.max - self.min)
+        let mut value = self.min + scalar * (self.max - self.min);
+        if let Some(stepping) = self.step {
+            // Determine the number of steps and fit the slider position to a discrete step
+            let steps = (self.max / stepping).round();
+            let step = (value * steps / self.max).round();
+            value = step / steps * self.max;
+        }
+        value
     }
 
     fn normalize(&self, data: f64) -> f64 {
