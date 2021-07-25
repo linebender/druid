@@ -15,13 +15,13 @@
 //! Windows implementation of features at the application scope.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::mem;
 use std::ptr;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use winapi::shared::minwindef::{FALSE, HINSTANCE};
+use winapi::shared::minwindef::{BOOL, FALSE, HINSTANCE};
 use winapi::shared::ntdef::LPCWSTR;
 use winapi::shared::windef::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, HCURSOR, HWND};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
@@ -30,9 +30,9 @@ use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
 use winapi::um::winnls::GetUserDefaultLocaleName;
 use winapi::um::winnt::LOCALE_NAME_MAX_LENGTH;
 use winapi::um::winuser::{
-    DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PeekMessageW, PostMessageW,
-    PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
-    IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
+    DispatchMessageW, EnableWindow, GetAncestor, GetMessageW, LoadIconW, PeekMessageW,
+    PostMessageW, PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage,
+    GA_ROOT, IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
 use piet_common::D2DLoadedFonts;
@@ -53,7 +53,17 @@ pub(crate) struct Application {
 
 struct State {
     quitting: bool,
-    windows: HashSet<HWND>,
+    windows: HashMap<HWND, WindowState>,
+}
+
+struct WindowState {
+    disable_count: usize,
+}
+
+impl WindowState {
+    fn new() -> Self {
+        Self { disable_count: 0 }
+    }
 }
 
 /// Used to ensure the window class is registered only once per process.
@@ -64,7 +74,7 @@ impl Application {
         Application::init()?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
-            windows: HashSet::new(),
+            windows: HashMap::new(),
         }));
         let fonts = D2DLoadedFonts::default();
         Ok(Application { state, fonts })
@@ -114,11 +124,44 @@ impl Application {
     }
 
     pub fn add_window(&self, hwnd: HWND) -> bool {
-        self.state.borrow_mut().windows.insert(hwnd)
+        self.state
+            .borrow_mut()
+            .windows
+            .insert(hwnd, WindowState::new())
+            .is_some()
     }
 
     pub fn remove_window(&self, hwnd: HWND) -> bool {
-        self.state.borrow_mut().windows.remove(&hwnd)
+        self.state.borrow_mut().windows.remove(&hwnd).is_some()
+    }
+
+    pub fn current_windows(&self) -> Vec<HWND> {
+        self.state.borrow().windows.keys().copied().collect()
+    }
+
+    pub fn disable_window(&self, hwnd: HWND) {
+        if let Some(win_state) = self.state.borrow_mut().windows.get_mut(&hwnd) {
+            if win_state.disable_count == 0 {
+                unsafe { EnableWindow(hwnd, false as BOOL) };
+            }
+            win_state.disable_count += 1;
+        } else {
+            tracing::warn!("Tried to disable an unknown window")
+        }
+    }
+
+    pub fn enable_window(&self, hwnd: HWND) {
+        if let Some(win_state) = self.state.borrow_mut().windows.get_mut(&hwnd) {
+            if win_state.disable_count == 0 {
+                tracing::warn!("Tried to enable an enabled window");
+                return;
+            } else if win_state.disable_count == 1 {
+                unsafe { EnableWindow(hwnd, true as BOOL) };
+            }
+            win_state.disable_count -= 1;
+        } else {
+            tracing::warn!("Tried to enable an unknown window")
+        }
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
@@ -172,7 +215,7 @@ impl Application {
                     // We want to queue up the destruction of all our windows.
                     // Failure to do so will lead to resource leaks
                     // and an eventual error code exit for the process.
-                    for hwnd in &state.windows {
+                    for hwnd in state.windows.keys() {
                         if PostMessageW(*hwnd, DS_REQUEST_DESTROY, 0, 0) == FALSE {
                             tracing::warn!(
                                 "PostMessageW DS_REQUEST_DESTROY failed: {}",

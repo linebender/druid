@@ -226,6 +226,7 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
+    parents: Option<Vec<HWND>>,
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -235,7 +236,7 @@ trait WndProc {
     fn cleanup(&self, hwnd: HWND);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-        -> Option<LRESULT>;
+                   -> Option<LRESULT>;
 }
 
 // State and logic for the winapi window procedure entry point. Note that this level
@@ -460,8 +461,8 @@ impl WndState {
 
 impl MyWndProc {
     fn with_window_state<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(Rc<WindowState>) -> R,
+        where
+            F: FnOnce(Rc<WindowState>) -> R,
     {
         f(self
             .handle
@@ -475,8 +476,8 @@ impl MyWndProc {
 
     #[track_caller]
     fn with_wnd_state<F, R>(&self, f: F) -> Option<R>
-    where
-        F: FnOnce(&mut WndState) -> R,
+        where
+            F: FnOnce(&mut WndState) -> R,
     {
         let ret = if let Ok(mut s) = self.state.try_borrow_mut() {
             (*s).as_mut().map(|state| f(state))
@@ -688,7 +689,6 @@ impl WndProc for MyWndProc {
         wparam: WPARAM,
         lparam: LPARAM,
     ) -> Option<LRESULT> {
-        //println!("wndproc msg: {}", msg);
         match msg {
             WM_CREATE => {
                 // Only supported on Windows 10, Could remove this as the 8.1 version below also works on 10..
@@ -950,7 +950,7 @@ impl WndProc for MyWndProc {
                         error!("ResizeBuffers failed: 0x{:x}", res);
                     }
                 })
-                .map(|_| 0)
+                    .map(|_| 0)
             },
             WM_COMMAND => {
                 self.with_wnd_state(|s| s.handler.command(LOWORD(wparam as u32) as u32));
@@ -962,7 +962,7 @@ impl WndProc for MyWndProc {
                 unsafe {
                     let handled = self.with_wnd_state(|s| {
                         if let Some(event) =
-                            s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
+                        s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
                         {
                             // If the window doesn't have a menu, then we need to suppress ALT/F10.
                             // Otherwise we will stop getting mouse events for no gain.
@@ -1186,6 +1186,13 @@ impl WndProc for MyWndProc {
                 .with_wnd_state(|s| s.handler.request_close())
                 .map(|_| 0),
             DS_REQUEST_DESTROY => {
+                if let Some(state) = self.handle.borrow().state.upgrade() {
+                    if let Some(parents) = &state.parents {
+                        for parent in parents {
+                            self.app.enable_window(*parent)
+                        }
+                    }
+                }
                 unsafe {
                     DestroyWindow(hwnd);
                 }
@@ -1307,11 +1314,14 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
+            WindowLevel::AppWindow | WindowLevel::Tooltip | WindowLevel::Modal => {
+                self.level = Some(level)
+            }
             _ => {
                 warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows backend.", level);
             }
-        }
+        };
+        self.level = Some(level)
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1356,6 +1366,7 @@ impl WindowBuilder {
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
+            let mut parents = None;
             if let Some(level) = self.level {
                 match level {
                     WindowLevel::AppWindow => (),
@@ -1369,8 +1380,9 @@ impl WindowBuilder {
                         dwExStyle = 0;
                     }
                     WindowLevel::Modal => {
-                        dwStyle = WS_OVERLAPPED;
-                        dwExStyle = WS_EX_TOPMOST;
+                        dwStyle = WS_POPUPWINDOW | WS_CAPTION;
+                        dwExStyle = 0;
+                        parents = Some(self.app.current_windows());
                     }
                 }
             }
@@ -1390,6 +1402,7 @@ impl WindowBuilder {
                 is_transparent: Cell::new(self.transparent),
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
+                parents: parents.clone(),
                 is_focusable: focusable,
             };
             let win = Rc::new(window);
@@ -1430,6 +1443,17 @@ impl WindowBuilder {
                 _ => (),
             };
 
+            let win_parent = if let Some(parents) = &parents {
+                let foreground_window = GetForegroundWindow();
+                if parents.contains(&foreground_window) {
+                    foreground_window
+                } else {
+                    0 as HWND
+                }
+            } else {
+                0 as HWND
+            };
+
             let hwnd = create_window(
                 dwExStyle,
                 class_name.as_ptr(),
@@ -1439,7 +1463,7 @@ impl WindowBuilder {
                 pos_y,
                 width,
                 height,
-                0 as HWND,
+                win_parent,
                 hmenu,
                 0 as HINSTANCE,
                 win,
@@ -1466,6 +1490,12 @@ impl WindowBuilder {
                             Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                         );
                     };
+                }
+            }
+
+            if let Some(parents) = parents {
+                for parent in parents.iter() {
+                    self.app.disable_window(*parent)
                 }
             }
 
@@ -1702,7 +1732,7 @@ unsafe fn create_window(
 impl Cursor {
     fn get_hcursor(&self) -> HCURSOR {
         #[allow(deprecated)]
-        let name = match self {
+            let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
             Cursor::Pointer => IDC_HAND,
@@ -2171,8 +2201,8 @@ impl IdleHandle {
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle_callback<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
+        where
+            F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
