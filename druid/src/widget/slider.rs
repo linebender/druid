@@ -90,10 +90,7 @@ impl Slider {
             .min(1.0);
         let mut value = self.min + scalar * (self.max - self.min);
         if let Some(step) = self.step {
-            let make_discrete = |value: f64, step: f64, min: f64, max: f64| {
-                (((value - min) / step).round() * step + min).min(max)
-            };
-            let max_step_value = make_discrete(self.max, step, self.min, self.max);
+            let max_step_value = ((self.max - self.min) / step).floor() * step + self.min;
             if value > max_step_value {
                 // edge case: make sure max is reachable
                 let left_dist = value - max_step_value;
@@ -105,7 +102,7 @@ impl Slider {
                 };
             } else {
                 // snap to discrete intervals
-                value = make_discrete(value, step, self.min, self.max);
+                value = (((value - self.min) / step).round() * step + self.min).min(self.max);
             }
         }
         value
