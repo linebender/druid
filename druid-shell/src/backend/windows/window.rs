@@ -236,7 +236,7 @@ trait WndProc {
     fn cleanup(&self, hwnd: HWND);
 
     fn window_proc(&self, hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM)
-                   -> Option<LRESULT>;
+        -> Option<LRESULT>;
 }
 
 // State and logic for the winapi window procedure entry point. Note that this level
@@ -461,8 +461,8 @@ impl WndState {
 
 impl MyWndProc {
     fn with_window_state<F, R>(&self, f: F) -> R
-        where
-            F: FnOnce(Rc<WindowState>) -> R,
+    where
+        F: FnOnce(Rc<WindowState>) -> R,
     {
         f(self
             .handle
@@ -476,8 +476,8 @@ impl MyWndProc {
 
     #[track_caller]
     fn with_wnd_state<F, R>(&self, f: F) -> Option<R>
-        where
-            F: FnOnce(&mut WndState) -> R,
+    where
+        F: FnOnce(&mut WndState) -> R,
     {
         let ret = if let Ok(mut s) = self.state.try_borrow_mut() {
             (*s).as_mut().map(|state| f(state))
@@ -950,7 +950,7 @@ impl WndProc for MyWndProc {
                         error!("ResizeBuffers failed: 0x{:x}", res);
                     }
                 })
-                    .map(|_| 0)
+                .map(|_| 0)
             },
             WM_COMMAND => {
                 self.with_wnd_state(|s| s.handler.command(LOWORD(wparam as u32) as u32));
@@ -962,7 +962,7 @@ impl WndProc for MyWndProc {
                 unsafe {
                     let handled = self.with_wnd_state(|s| {
                         if let Some(event) =
-                        s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
+                            s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
                         {
                             // If the window doesn't have a menu, then we need to suppress ALT/F10.
                             // Otherwise we will stop getting mouse events for no gain.
@@ -1732,7 +1732,7 @@ unsafe fn create_window(
 impl Cursor {
     fn get_hcursor(&self) -> HCURSOR {
         #[allow(deprecated)]
-            let name = match self {
+        let name = match self {
             Cursor::Arrow => IDC_ARROW,
             Cursor::IBeam => IDC_IBEAM,
             Cursor::Pointer => IDC_HAND,
@@ -2201,8 +2201,8 @@ impl IdleHandle {
     /// is empty. The idle handler will be run from the window's wndproc,
     /// which means it won't be scheduled if the window is closed.
     pub fn add_idle_callback<F>(&self, callback: F)
-        where
-            F: FnOnce(&mut dyn WinHandler) + Send + 'static,
+    where
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         let mut queue = self.queue.lock().unwrap();
         if queue.is_empty() {
