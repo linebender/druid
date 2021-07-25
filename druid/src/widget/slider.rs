@@ -78,16 +78,12 @@ impl Slider {
     }
 
     fn check_step(&self) {
-        if let Some(stepping) = self.step {
-            let n = (self.max - self.min) / stepping;
-
-            // check if n is choose enough to an integer
-
-            // f64::EPSILON doesn't work :/
-            if (n.round() - n).abs() > 10e-10 {
+        if let Some(step) = self.step {
+            let max_step_value = (100.0 / step).round() * step;
+            if max_step_value < self.max {
                 warn!(
                     "max ({}) - min ({}) should be a multiple of step ({})",
-                    self.max, self.min, stepping
+                    self.max, self.min, step
                 );
             }
         }
@@ -104,18 +100,27 @@ impl Slider {
         let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0);
-        if let Some(stepping) = self.step {
-            // 0..=steps are the possible steps at which value can be
-            let steps = ((self.max - self.min) / stepping).ceil();
-
-            // scale the scalar from 0 to steps and round it
-            let curr_step = (scalar * steps).round();
-
-            // now, value is of form `min + n * stepping + rem`
-            (self.min + curr_step * stepping).min(self.max)
-        } else {
-            self.min + scalar * (self.max - self.min)
+        let mut value = self.min + scalar * (self.max - self.min);
+        if let Some(step) = self.step {
+            let make_discrete = |value: f64, step: f64, min: f64, max: f64| {
+                (((value - min) / step).round() * step + min).min(max)
+            };
+            let max_step_value = make_discrete(self.max, step, self.min, self.max);
+            if value > max_step_value {
+                // edge case: make sure max is reachable
+                let left_dist = value - max_step_value;
+                let right_dist = self.max - value;
+                value = if left_dist < right_dist {
+                    max_step_value
+                } else {
+                    self.max
+                };
+            } else {
+                // snap to discrete intervals
+                value = make_discrete(value, step, self.min, self.max);
+            }
         }
+        value
     }
 
     fn normalize(&self, data: f64) -> f64 {
