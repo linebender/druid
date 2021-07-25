@@ -17,7 +17,7 @@
 use crate::kurbo::{Circle, Shape};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
-use tracing::{instrument, trace};
+use tracing::{instrument, trace, warn};
 
 const TRACK_THICKNESS: f64 = 4.0;
 const BORDER_WIDTH: f64 = 2.0;
@@ -55,6 +55,17 @@ impl Slider {
         self.min = min;
         self.max = max;
         self
+    }
+
+    /// check self.min <= self.max, if not swaps the values.
+    fn check_range(&mut self) {
+        if self.max < self.min {
+            warn!(
+                "min({}) should be less than max({}), swaping the values",
+                self.min, self.max
+            );
+            std::mem::swap(&mut self.max, &mut self.min);
+        }
     }
 }
 
@@ -125,8 +136,11 @@ impl Widget<f64> for Slider {
 
     #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
-        if let LifeCycle::DisabledChanged(_) = event {
-            ctx.request_paint();
+        match event {
+            // checked in LifeCycle::WidgetAdded because logging may not be setup in with_range
+            LifeCycle::WidgetAdded => self.check_range(),
+            LifeCycle::DisabledChanged(_) => ctx.request_paint(),
+            _ => (),
         }
     }
 
