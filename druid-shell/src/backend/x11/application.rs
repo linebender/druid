@@ -39,6 +39,76 @@ use super::clipboard::Clipboard;
 use super::window::Window;
 use super::{util, xkb};
 
+// This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
+// convenience methods to intern and query those atoms). We use the following atoms:
+//
+// WM_PROTOCOLS
+//
+// List of atoms that identify the communications protocols between
+// the client and window manager in which the client is willing to participate.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_protocols_property
+//
+// WM_DELETE_WINDOW
+//
+// Including this atom in the WM_PROTOCOLS property on each window makes sure that
+// if the window manager respects WM_DELETE_WINDOW it will send us the event.
+//
+// The WM_DELETE_WINDOW event is sent when there is a request to close the window.
+// Registering for but ignoring this event means that the window will remain open.
+//
+// https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#window_deletion
+//
+// _NET_WM_PID
+//
+// A property containing the PID of the process that created the window.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407915360
+//
+// _NET_WM_NAME
+//
+// A version of WM_NAME supporting UTF8 text.
+//
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45805407982336
+//
+// UTF8_STRING
+//
+// The type of _NET_WM_NAME
+//
+// CLIPBOARD
+//
+// The name of the clipboard selection; used for implementing copy&paste
+//
+// PRIMARY
+//
+// The name of the primary selection; used for implementing "paste the currently selected text"
+//
+// TARGETS
+//
+// A target for getting the selection contents that answers with a list of supported targets
+//
+// INCR
+//
+// Type used for incremental selection transfers
+x11rb::atom_manager! {
+    pub(crate) AppAtoms: AppAtomsCookie {
+        WM_PROTOCOLS,
+        WM_DELETE_WINDOW,
+        _NET_WM_PID,
+        _NET_WM_NAME,
+        UTF8_STRING,
+        _NET_WM_WINDOW_TYPE,
+        _NET_WM_WINDOW_TYPE_NORMAL,
+        _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+        _NET_WM_WINDOW_TYPE_TOOLTIP,
+        _NET_WM_WINDOW_TYPE_DIALOG,
+        CLIPBOARD,
+        PRIMARY,
+        TARGETS,
+        INCR,
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Application {
     /// The connection to the X server.
@@ -62,10 +132,16 @@ pub(crate) struct Application {
     argb_visual_type: Option<Visualtype>,
     /// Pending events that need to be handled later
     pending_events: Rc<RefCell<VecDeque<Event>>>,
+    /// The atoms that we need
+    atoms: Rc<AppAtoms>,
 
     /// The X11 resource database used to query dpi.
     pub(crate) rdb: Rc<ResourceDb>,
     pub(crate) cursors: Cursors,
+    /// The clipboard implementation
+    clipboard: Clipboard,
+    /// The clipboard implementation for the primary selection
+    primary: Clipboard,
     /// The default screen of the connected display.
     ///
     /// The connected display may also have additional screens.
@@ -220,6 +296,12 @@ impl Application {
             col_resize: load_cursor("col-resize"),
         };
 
+        let atoms = Rc::new(
+            AppAtoms::new(&*connection)?
+                .reply()
+                .context("get X11 atoms")?,
+        );
+
         let screen = connection
             .setup()
             .roots
@@ -229,6 +311,25 @@ impl Application {
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
         let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
 
+        let timestamp = Rc::new(Cell::new(x11rb::CURRENT_TIME));
+        let pending_events = Default::default();
+        let clipboard = Clipboard::new(
+            Rc::clone(&connection),
+            screen_num,
+            Rc::clone(&atoms),
+            atoms.CLIPBOARD,
+            Rc::clone(&pending_events),
+            Rc::clone(&timestamp),
+        );
+        let primary = Clipboard::new(
+            Rc::clone(&connection),
+            screen_num,
+            Rc::clone(&atoms),
+            atoms.PRIMARY,
+            Rc::clone(&pending_events),
+            Rc::clone(&timestamp),
+        );
+
         Ok(Application {
             connection,
             rdb,
@@ -237,14 +338,17 @@ impl Application {
             state,
             idle_read,
             cursors,
+            clipboard,
+            primary,
             idle_write,
             present_opcode,
             root_visual_type,
             argb_visual_type,
+            atoms,
             pending_events: Default::default(),
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
-            timestamp: Rc::new(Cell::new(x11rb::CURRENT_TIME)),
+            timestamp,
             xkb_context,
         })
     }
@@ -398,6 +502,11 @@ impl Application {
         self.root_visual_type
     }
 
+    #[inline]
+    pub(crate) fn atoms(&self) -> &AppAtoms {
+        &*self.atoms
+    }
+
     /// Returns `Ok(true)` if we want to exit the main loop.
     fn handle_event(&self, ev: &Event) -> Result<bool, Error> {
         if ev.server_generated() {
@@ -533,6 +642,30 @@ impl Application {
                     .context("IDLE_NOTIFY - failed to get window")?;
                 w.handle_idle_notify(ev)
                     .context("IDLE_NOTIFY - failed to handle")?;
+            }
+            Event::SelectionClear(ev) => {
+                self.clipboard
+                    .handle_clear(*ev)
+                    .context("SELECTION_CLEAR event handling for clipboard")?;
+                self.primary
+                    .handle_clear(*ev)
+                    .context("SELECTION_CLEAR event handling for primary")?;
+            }
+            Event::SelectionRequest(ev) => {
+                self.clipboard
+                    .handle_request(ev)
+                    .context("SELECTION_REQUEST event handling for clipboard")?;
+                self.primary
+                    .handle_request(ev)
+                    .context("SELECTION_REQUEST event handling for primary")?;
+            }
+            Event::PropertyNotify(ev) => {
+                self.clipboard
+                    .handle_property_notify(*ev)
+                    .context("PROPERTY_NOTIFY event handling for clipboard")?;
+                self.primary
+                    .handle_property_notify(*ev)
+                    .context("PROPERTY_NOTIFY event handling for primary")?;
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
@@ -670,35 +803,57 @@ impl Application {
     }
 
     pub fn clipboard(&self) -> Clipboard {
-        Clipboard::new(
-            Rc::clone(&self.connection),
-            self.screen_num,
-            Rc::clone(&self.pending_events),
-            Rc::clone(&self.timestamp),
-        )
+        self.clipboard.clone()
     }
 
     pub fn get_locale() -> String {
-        let var_non_empty = |var| match std::env::var(var) {
-            Ok(s) if s.is_empty() => None,
-            Ok(s) => Some(s),
-            Err(_) => None,
-        };
+        fn locale_env_var(var: &str) -> Option<String> {
+            match std::env::var(var) {
+                Ok(s) if s.is_empty() => {
+                    tracing::debug!("locale: ignoring empty env var {}", var);
+                    None
+                }
+                Ok(s) => {
+                    tracing::debug!("locale: env var {} found: {:?}", var, &s);
+                    Some(s)
+                }
+                Err(std::env::VarError::NotPresent) => {
+                    tracing::debug!("locale: env var {} not found", var);
+                    None
+                }
+                Err(std::env::VarError::NotUnicode(_)) => {
+                    tracing::debug!("locale: ignoring invalid unicode env var {}", var);
+                    None
+                }
+            }
+        }
 
         // from gettext manual
         // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
-        var_non_empty("LANGUAGE")
+        let mut locale = locale_env_var("LANGUAGE")
             // the LANGUAGE value is priority list seperated by :
             // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
             .and_then(|locale| locale.split(':').next().map(String::from))
-            .or_else(|| var_non_empty("LC_ALL"))
-            .or_else(|| var_non_empty("LC_MESSAGES"))
-            .or_else(|| var_non_empty("LANG"))
-            .unwrap_or_else(|| "en-US".to_string())
+            .or_else(|| locale_env_var("LC_ALL"))
+            .or_else(|| locale_env_var("LC_MESSAGES"))
+            .or_else(|| locale_env_var("LANG"))
+            .unwrap_or_else(|| "en-US".to_string());
+
+        // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
+            locale.truncate(idx);
+        }
+        locale
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
         self.idle_write
+    }
+}
+
+impl crate::platform::linux::ApplicationExt for crate::Application {
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        self.backend_app.primary.clone().into()
     }
 }
 

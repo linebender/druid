@@ -27,6 +27,8 @@ use winapi::shared::windef::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, HCURSOR
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
+use winapi::um::winnls::GetUserDefaultLocaleName;
+use winapi::um::winnt::LOCALE_NAME_MAX_LENGTH;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PeekMessageW, PostMessageW,
     PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
@@ -40,7 +42,7 @@ use crate::application::AppHandler;
 use super::accels;
 use super::clipboard::Clipboard;
 use super::error::Error;
-use super::util::{self, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
+use super::util::{self, FromWide, ToWide, CLASS_NAME, OPTIONAL_FUNCTIONS};
 use super::window::{self, DS_REQUEST_DESTROY};
 
 #[derive(Clone)]
@@ -194,7 +196,17 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        //TODO ahem
-        "en-US".into()
+        let mut buf = [0u16; LOCALE_NAME_MAX_LENGTH];
+        let len_with_null =
+            unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize };
+        let locale = if len_with_null > 0 {
+            buf.get(..len_with_null - 1).and_then(FromWide::from_wide)
+        } else {
+            None
+        };
+        locale.unwrap_or_else(|| {
+            tracing::warn!("Failed to get user locale");
+            "en-US".into()
+        })
     }
 }

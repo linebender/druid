@@ -43,6 +43,10 @@ pub use image;
 pub use kurbo;
 pub use piet_common as piet;
 
+// Reexport the version of `raw_window_handle` we are using.
+#[cfg(feature = "raw-win-handle")]
+pub use raw_window_handle;
+
 #[macro_use]
 mod util;
 
@@ -61,6 +65,7 @@ mod scale;
 mod screen;
 mod window;
 
+pub mod platform;
 pub mod text;
 
 pub use application::{AppHandler, Application};

@@ -157,7 +157,7 @@ mod contexts;
 mod core;
 mod data;
 mod dialog;
-mod env;
+pub mod env;
 mod event;
 mod ext_event;
 mod localization;
@@ -187,6 +187,9 @@ pub use shell::{
     MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
     WindowHandle, WindowLevel, WindowState,
 };
+
+#[cfg(feature = "raw-win-handle")]
+pub use crate::shell::raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 pub use crate::core::WidgetPod;
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};

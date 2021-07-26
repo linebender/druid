@@ -32,7 +32,6 @@ use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
 use super::error::Error;
-use super::menu::Menu;
 use super::util;
 
 static APP_HANDLER_IVAR: &str = "druidAppHandler";
@@ -102,28 +101,6 @@ impl Application {
         }
     }
 
-    /// Hide the application this window belongs to. (cmd+H)
-    pub fn hide(&self) {
-        unsafe {
-            let () = msg_send![self.ns_app, hide: nil];
-        }
-    }
-
-    /// Hide all other applications. (cmd+opt+H)
-    pub fn hide_others(&self) {
-        unsafe {
-            let workspace = class!(NSWorkspace);
-            let shared: id = msg_send![workspace, sharedWorkspace];
-            let () = msg_send![shared, hideOtherApplications];
-        }
-    }
-
-    pub fn set_menu(&self, menu: Menu) {
-        unsafe {
-            NSApp().setMainMenu_(menu.menu);
-        }
-    }
-
     pub fn clipboard(&self) -> Clipboard {
         Clipboard
     }
@@ -134,10 +111,33 @@ impl Application {
             let locale: id = msg_send![nslocale_class, currentLocale];
             let ident: id = msg_send![locale, localeIdentifier];
             let mut locale = util::from_nsstring(ident);
+            // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
             if let Some(idx) = locale.chars().position(|c| c == '@') {
                 locale.truncate(idx);
             }
             locale
+        }
+    }
+}
+
+impl crate::platform::mac::ApplicationExt for crate::Application {
+    fn hide(&self) {
+        unsafe {
+            let () = msg_send![self.backend_app.ns_app, hide: nil];
+        }
+    }
+
+    fn hide_others(&self) {
+        unsafe {
+            let workspace = class!(NSWorkspace);
+            let shared: id = msg_send![workspace, sharedWorkspace];
+            let () = msg_send![shared, hideOtherApplications];
+        }
+    }
+
+    fn set_menu(&self, menu: crate::Menu) {
+        unsafe {
+            NSApp().setMainMenu_(menu.0.menu);
         }
     }
 }

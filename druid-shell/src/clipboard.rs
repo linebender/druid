@@ -126,7 +126,7 @@ pub use crate::backend::clipboard as backend;
 /// [MIME types]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 /// [`ClipboardFormat`]: struct.ClipboardFormat.html
 #[derive(Debug, Clone)]
-pub struct Clipboard(backend::Clipboard);
+pub struct Clipboard(pub(crate) backend::Clipboard);
 
 impl Clipboard {
     /// Put a string onto the system clipboard.
