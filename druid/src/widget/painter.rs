@@ -110,13 +110,11 @@ impl<T: Data> BackgroundBrush<T> {
     /// Request paint if the BackgroundBrush changed.
     pub fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         match self {
-            Self::ColorKey(key) => {
-                if ctx.env_key_changed(key) {
-                    ctx.request_paint();
-                }
+            Self::ColorKey(key) if ctx.env_key_changed(key) => {
+                ctx.request_paint();
             }
             Self::Painter(p) => p.update(ctx, old_data, data, env),
-            _ => {}
+            _ => (),
         }
     }
 
