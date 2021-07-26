@@ -52,6 +52,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - x11: Implement primary_clipboard ([#1867] by [@psychon])
 - x11: Set WM_CLASS property ([#1868] by [@psychon])
 - Expose `RawWindowHandle` for `WindowHandle` under the `raw-win-handle` feature ([#1828] by [@djeedai])
+- `Slider` widget now warns if max < min and swaps the values ([#1882] by [@Maan2003])
 
 ### Changed
 
@@ -765,6 +766,7 @@ Last release without a changelog :(
 [#1868]: https://github.com/linebender/druid/pull/1868
 [#1873]: https://github.com/linebender/druid/pull/1873
 [#1876]: https://github.com/linebender/druid/pull/1876
+[#1882]: https://github.com/linebender/druid/pull/1882
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
