@@ -26,6 +26,7 @@ const BASE_DATA_ATTR_PATH: &str = "data";
 const BASE_LENS_ATTR_PATH: &str = "lens";
 const IGNORE_ATTR_PATH: &str = "ignore";
 const DATA_SAME_FN_ATTR_PATH: &str = "same_fn";
+const DATA_EQ_ATTR_PATH: &str = "eq";
 const LENS_NAME_OVERRIDE_ATTR_PATH: &str = "name";
 
 /// The fields for a struct or an enum variant.
@@ -72,6 +73,7 @@ pub struct DataAttrs {
     /// `true` if this field should be ignored.
     pub ignore: bool,
     pub same_fn: Option<ExprPath>,
+    pub eq: bool,
 }
 
 #[derive(Debug)]
@@ -135,6 +137,7 @@ impl Field<DataAttrs> {
         let ty = field.ty.clone();
 
         let mut ignore = false;
+        let mut eq = false;
         let mut same_fn = None;
 
         for attr in field.attrs.iter() {
@@ -169,6 +172,17 @@ impl Field<DataAttrs> {
                                     let path = parse_lit_into_expr_path(&meta.lit)?;
                                     same_fn = Some(path);
                                 }
+                                NestedMeta::Meta(Meta::Path(path))
+                                    if path.is_ident(DATA_EQ_ATTR_PATH) =>
+                                {
+                                    if eq {
+                                        return Err(Error::new(
+                                            nested.span(),
+                                            "Duplicate attribute",
+                                        ));
+                                    }
+                                    eq = true;
+                                }
                                 other => return Err(Error::new(other.span(), "Unknown attribute")),
                             }
                         }
@@ -185,15 +199,22 @@ impl Field<DataAttrs> {
         Ok(Field {
             ident,
             ty,
-            attrs: DataAttrs { ignore, same_fn },
+            attrs: DataAttrs {
+                ignore,
+                same_fn,
+                eq,
+            },
         })
     }
 
     /// The tokens to be used as the function for 'same'.
     pub fn same_fn_path_tokens(&self) -> TokenStream {
-        match self.attrs.same_fn {
-            Some(ref f) => quote!(#f),
-            None => {
+        match &self.attrs {
+            DataAttrs { eq: true, .. } => quote!(::core::cmp::PartialEq::eq),
+            DataAttrs {
+                same_fn: Some(f), ..
+            } => quote!(#f),
+            _ => {
                 let span = Span::call_site();
                 quote_spanned!(span=> druid::Data::same)
             }
