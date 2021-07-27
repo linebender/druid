@@ -156,9 +156,9 @@ impl<T: Data> Widget<T> for Container<T> {
         skip(self, ctx, old_data, data, env)
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if let Some(BackgroundBrush::Painter(p)) = self.background.as_mut() {
+        if let Some(brush) = self.background.as_mut() {
             trace_span!("update background").in_scope(|| {
-                p.update(ctx, old_data, data, env);
+                brush.update(ctx, old_data, data, env);
             });
         }
         self.inner.update(ctx, data, env);
