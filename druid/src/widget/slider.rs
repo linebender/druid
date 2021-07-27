@@ -31,6 +31,7 @@ const KNOB_STROKE_WIDTH: f64 = 2.0;
 pub struct Slider {
     min: f64,
     max: f64,
+    step: Option<f64>,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
@@ -42,6 +43,7 @@ impl Slider {
         Slider {
             min: 0.,
             max: 1.,
+            step: None,
             knob_pos: Default::default(),
             knob_hovered: Default::default(),
             x_offset: Default::default(),
@@ -54,6 +56,24 @@ impl Slider {
     pub fn with_range(mut self, min: f64, max: f64) -> Self {
         self.min = min;
         self.max = max;
+        self
+    }
+
+    /// Builder-style method to set the stepping.
+    ///
+    /// The default step size is `0.0` (smooth).
+    pub fn with_step(mut self, step: f64) -> Self {
+        if step < 0.0 {
+            warn!("bad stepping (must be positive): {}", step);
+            return self;
+        }
+        self.step = if step > 0.0 {
+            Some(step)
+        } else {
+            // A stepping value of 0.0 would yield an infinite amount of steps.
+            // Enforce no stepping instead.
+            None
+        };
         self
     }
 
@@ -79,7 +99,24 @@ impl Slider {
         let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0);
-        self.min + scalar * (self.max - self.min)
+        let mut value = self.min + scalar * (self.max - self.min);
+        if let Some(step) = self.step {
+            let max_step_value = ((self.max - self.min) / step).floor() * step + self.min;
+            if value > max_step_value {
+                // edge case: make sure max is reachable
+                let left_dist = value - max_step_value;
+                let right_dist = self.max - value;
+                value = if left_dist < right_dist {
+                    max_step_value
+                } else {
+                    self.max
+                };
+            } else {
+                // snap to discrete intervals
+                value = (((value - self.min) / step).round() * step + self.min).min(self.max);
+            }
+        }
+        value
     }
 
     fn normalize(&self, data: f64) -> f64 {
