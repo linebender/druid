@@ -54,6 +54,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Expose `RawWindowHandle` for `WindowHandle` under the `raw-win-handle` feature ([#1828] by [@djeedai])
 - `Slider` widget now warns if max < min and swaps the values ([#1882] by [@Maan2003])
 - Widget/Slider: Add stepping functionality ([#1875] by [@raymanfx])
+- Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
 
 ### Changed
 
@@ -771,6 +772,7 @@ Last release without a changelog :(
 [#1873]: https://github.com/linebender/druid/pull/1873
 [#1876]: https://github.com/linebender/druid/pull/1876
 [#1882]: https://github.com/linebender/druid/pull/1882
+[#1884]: https://github.com/linebender/druid/pull/1884
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
 
