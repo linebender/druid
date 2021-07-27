@@ -21,7 +21,7 @@ struct TodoItem {
     due_date: Option<Arc<DateTime>>,
     // You can specify a custom comparison fn
     // (anything with the signature (&T, &T) -> bool).
-    #[data(same_fn = "PartialEq::eq")]
+    #[data(eq)]
     added_date: DateTime,
     title: String,
     note: Option<String>,
