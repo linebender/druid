@@ -174,7 +174,7 @@ pub struct Flex<T> {
 /// [`Flex`]: struct.Flex.html
 /// [`with_flex_child`]: struct.Flex.html#method.with_flex_child
 /// [`add_flex_child`]: struct.Flex.html#method.add_flex_child
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct FlexParams {
     flex: f64,
     alignment: Option<CrossAxisAlignment>,
