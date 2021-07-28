@@ -78,6 +78,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Removed
 
+- Remove Default impl for `FlexParams` ([#1885] by [@Maan2003])
+
 ### Fixed
 
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
@@ -768,6 +770,7 @@ Last release without a changelog :(
 [#1873]: https://github.com/linebender/druid/pull/1873
 [#1876]: https://github.com/linebender/druid/pull/1876
 [#1882]: https://github.com/linebender/druid/pull/1882
+[#1885]: https://github.com/linebender/druid/pull/1885
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
