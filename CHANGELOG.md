@@ -105,7 +105,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 - Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
-- Update docs of `RawLabel`: doesnot require `ArcStr`([#1886] by [@Maan2003])
+- Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 
 ### Examples
 
