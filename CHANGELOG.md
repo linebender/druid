@@ -108,6 +108,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 - Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
+- Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 
 ### Examples
 
@@ -771,6 +772,7 @@ Last release without a changelog :(
 [#1876]: https://github.com/linebender/druid/pull/1876
 [#1882]: https://github.com/linebender/druid/pull/1882
 [#1885]: https://github.com/linebender/druid/pull/1885
+[#1886]: https://github.com/linebender/druid/pull/1886
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
