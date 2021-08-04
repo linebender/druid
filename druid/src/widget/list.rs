@@ -362,6 +362,10 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         if self.update_child_count(data, env) {
             ctx.children_changed();
         }
+
+        if ctx.env_key_changed(&self.spacing) {
+            ctx.request_layout();
+        }
     }
 
     #[instrument(name = "List", level = "trace", skip(self, ctx, bc, data, env))]
