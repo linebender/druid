@@ -161,6 +161,17 @@ impl<T: Data> Widget<T> for Container<T> {
                 brush.update(ctx, old_data, data, env);
             });
         }
+        if let Some(border) = &self.border {
+            if ctx.env_key_changed(&border.width) {
+                ctx.request_layout();
+            }
+            if ctx.env_key_changed(&border.color) {
+                ctx.request_paint();
+            }
+        }
+        if ctx.env_key_changed(&self.corner_radius) {
+            ctx.request_paint();
+        }
         self.child.update(ctx, data, env);
     }
 
