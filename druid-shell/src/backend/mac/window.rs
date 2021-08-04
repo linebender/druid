@@ -493,7 +493,7 @@ lazy_static! {
         );
 
         let protocol = Protocol::get("NSTextInputClient").unwrap();
-        decl.add_protocol(&protocol);
+        decl.add_protocol(protocol);
 
         ViewClass(decl.register())
     };

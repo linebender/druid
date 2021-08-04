@@ -139,7 +139,7 @@ where
             cb(&mut ret, i);
 
             if !item.1.same(&ret) {
-                self[&item.0] = ret;
+                self[item.0] = ret;
             }
         }
     }
