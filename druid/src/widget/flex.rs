@@ -641,8 +641,16 @@ impl<T: Data> Widget<T> for Flex<T> {
 
     #[instrument(name = "Flex", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        for child in self.children.iter_mut().filter_map(|x| x.widget_mut()) {
-            child.update(ctx, data, env);
+        for child in self.children.iter_mut() {
+            match child {
+                Child::Fixed { widget, .. } | Child::Flex { widget, .. } => {
+                    widget.update(ctx, data, env)
+                }
+                Child::FixedSpacer(key_or_val, _) if ctx.env_key_changed(key_or_val) => {
+                    ctx.request_layout()
+                }
+                _ => {}
+            }
         }
     }
 
