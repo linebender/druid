@@ -166,8 +166,8 @@ pub fn movement<T: EditableText + TextStorage>(
 /// [UAX#29]: http://www.unicode.org/reports/tr29/
 pub(crate) fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
     text.split_word_bound_indices()
-        .find(|(ix, word)| *ix <= pos && pos < *ix + word.len())
         .map(|(ix, word)| ix..(ix + word.len()))
+        .find(|range| range.contains(&pos))
         .unwrap_or(pos..pos)
 }
 
