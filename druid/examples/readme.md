@@ -235,7 +235,7 @@ Please note that the image is exported with some kind of interpolation. So even 
 cargo run --example scroll_colors
 ```
 
-This is a showcase is scrolling through an image gradient square. The square is devided into smaller squares each with a unique color. There are other ways to to this like one big widget with an image for example.
+This is a showcase is scrolling through an image gradient square. The square is divided into smaller squares each with a unique color. There are other ways to to this like one big widget with an image for example.
 
 ## Styled Text
 ```
