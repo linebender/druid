@@ -68,12 +68,12 @@ pub struct Field<Attrs> {
     pub attrs: Attrs,
 }
 
-#[derive(Debug)]
-pub struct DataAttrs {
-    /// `true` if this field should be ignored.
-    pub ignore: bool,
-    pub same_fn: Option<ExprPath>,
-    pub eq: bool,
+#[derive(Debug, PartialEq)]
+pub enum DataAttr {
+    Empty,
+    Ignore,
+    SameFn(ExprPath),
+    Eq,
 }
 
 #[derive(Debug)]
@@ -83,7 +83,7 @@ pub struct LensAttrs {
     pub lens_name_override: Option<Ident>,
 }
 
-impl Fields<DataAttrs> {
+impl Fields<DataAttr> {
     pub fn parse_ast(fields: &syn::Fields) -> Result<Self, Error> {
         let kind = match fields {
             syn::Fields::Named(_) => FieldKind::Named,
@@ -93,7 +93,7 @@ impl Fields<DataAttrs> {
         let fields = fields
             .iter()
             .enumerate()
-            .map(|(i, field)| Field::<DataAttrs>::parse_ast(field, i))
+            .map(|(i, field)| Field::<DataAttr>::parse_ast(field, i))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Fields { kind, fields })
@@ -127,7 +127,7 @@ impl<Attrs> Fields<Attrs> {
     }
 }
 
-impl Field<DataAttrs> {
+impl Field<DataAttr> {
     pub fn parse_ast(field: &syn::Field, index: usize) -> Result<Self, Error> {
         let ident = match field.ident.as_ref() {
             Some(ident) => FieldIdent::Named(ident.to_string().trim_start_matches("r#").to_owned()),
@@ -136,10 +136,7 @@ impl Field<DataAttrs> {
 
         let ty = field.ty.clone();
 
-        let mut ignore = false;
-        let mut eq = false;
-        let mut same_fn = None;
-
+        let mut data_attr = DataAttr::Empty;
         for attr in field.attrs.iter() {
             if attr.path.is_ident(BASE_DRUID_DEPRECATED_ATTR_PATH) {
                 panic!(
@@ -149,39 +146,27 @@ impl Field<DataAttrs> {
             } else if attr.path.is_ident(BASE_DATA_ATTR_PATH) {
                 match attr.parse_meta()? {
                     Meta::List(meta) => {
-                        for nested in meta.nested.iter() {
+                        assert!(
+                            meta.nested.len() <= 1,
+                            "only single data attribute is allowed"
+                        );
+                        if let Some(nested) = meta.nested.first() {
                             match nested {
                                 NestedMeta::Meta(Meta::Path(path))
                                     if path.is_ident(IGNORE_ATTR_PATH) =>
                                 {
-                                    if ignore {
-                                        return Err(Error::new(
-                                            nested.span(),
-                                            "Duplicate attribute",
-                                        ));
-                                    }
-                                    ignore = true;
+                                    data_attr = DataAttr::Ignore;
                                 }
                                 NestedMeta::Meta(Meta::NameValue(meta))
                                     if meta.path.is_ident(DATA_SAME_FN_ATTR_PATH) =>
                                 {
-                                    if same_fn.is_some() {
-                                        return Err(Error::new(meta.span(), "Duplicate attribute"));
-                                    }
-
                                     let path = parse_lit_into_expr_path(&meta.lit)?;
-                                    same_fn = Some(path);
+                                    data_attr = DataAttr::SameFn(path);
                                 }
                                 NestedMeta::Meta(Meta::Path(path))
                                     if path.is_ident(DATA_EQ_ATTR_PATH) =>
                                 {
-                                    if eq {
-                                        return Err(Error::new(
-                                            nested.span(),
-                                            "Duplicate attribute",
-                                        ));
-                                    }
-                                    eq = true;
+                                    data_attr = DataAttr::Eq;
                                 }
                                 other => return Err(Error::new(other.span(), "Unknown attribute")),
                             }
@@ -199,22 +184,18 @@ impl Field<DataAttrs> {
         Ok(Field {
             ident,
             ty,
-            attrs: DataAttrs {
-                ignore,
-                same_fn,
-                eq,
-            },
+            attrs: data_attr,
         })
     }
 
     /// The tokens to be used as the function for 'same'.
     pub fn same_fn_path_tokens(&self) -> TokenStream {
         match &self.attrs {
-            DataAttrs { eq: true, .. } => quote!(::core::cmp::PartialEq::eq),
-            DataAttrs {
-                same_fn: Some(f), ..
-            } => quote!(#f),
-            _ => {
+            DataAttr::SameFn(f) => quote!(#f),
+            DataAttr::Eq => quote!(::core::cmp::PartialEq::eq),
+            // this should not be called for DataAttr::Ignore
+            DataAttr::Ignore => quote!(compiler_error!),
+            DataAttr::Empty => {
                 let span = Span::call_site();
                 quote_spanned!(span=> druid::Data::same)
             }
