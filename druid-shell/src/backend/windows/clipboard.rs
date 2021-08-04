@@ -49,8 +49,8 @@ impl Clipboard {
             EmptyClipboard();
 
             for format in formats {
-                let handle = make_handle(&format);
-                let format_id = match get_format_id(&format.identifier) {
+                let handle = make_handle(format);
+                let format_id = match get_format_id(format.identifier) {
                     Some(id) => id,
                     None => {
                         tracing::warn!(
@@ -116,10 +116,10 @@ impl Clipboard {
         }
 
         with_clipboard(|| {
-            let format_id = match get_format_id(&format) {
+            let format_id = match get_format_id(format) {
                 Some(id) => id,
                 None => {
-                    tracing::warn!("failed to register clipboard format {}", &format);
+                    tracing::warn!("failed to register clipboard format {}", format);
                     return None;
                 }
             };
@@ -273,7 +273,7 @@ fn get_format_name(format: UINT) -> String {
         if result > 0 {
             let len = result as usize;
             let lpstr = std::slice::from_raw_parts(buffer.as_ptr() as *const u8, len);
-            String::from_utf8_lossy(&lpstr).into_owned()
+            String::from_utf8_lossy(lpstr).into_owned()
         } else {
             let err = GetLastError();
             if err == 87 {

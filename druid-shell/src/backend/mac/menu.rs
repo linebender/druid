@@ -36,7 +36,7 @@ fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, sele
             .initWithTitle_action_keyEquivalent_(
                 make_nsstring(&stripped_text),
                 sel!(handleMenuItem:),
-                make_nsstring(&key_equivalent),
+                make_nsstring(key_equivalent),
             )
             .autorelease();
 
