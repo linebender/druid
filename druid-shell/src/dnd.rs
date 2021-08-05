@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
 use crate::backend::dnd as backend;
-use crate::{Counter, FormatId, Modifiers};
+use crate::{Counter, FormatId};
 
-use kurbo::Point;
 use piet_common::ImageBuf;
 
 #[derive(Debug)]
@@ -14,12 +13,6 @@ pub enum DragDropAction {
 
 #[derive(Debug)]
 pub struct DragData(backend::DragData);
-
-#[derive(Debug, Clone)]
-pub struct DropEvent {
-    pub modifiers: Modifiers,
-    pub position: Point,
-}
 
 #[derive(Clone)]
 pub struct DropContext(pub(crate) backend::DragDropContext);

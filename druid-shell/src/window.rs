@@ -21,7 +21,6 @@ use crate::application::Application;
 use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
-use crate::dnd::DropEvent;
 use crate::dnd::{DragDropToken, DropContext};
 use crate::error::Error;
 use crate::keyboard::KeyEvent;
@@ -690,7 +689,7 @@ pub trait WinHandler {
     fn drop_enter(&mut self) {}
 
     #[allow(unused_variables)]
-    fn drop_moved(&mut self, event: &DropEvent) {}
+    fn drop_moved(&mut self, event: &MouseEvent) {}
 
     /// Called when a drop leaves the window.
     fn drop_leave(&mut self) {}
