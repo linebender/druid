@@ -9,6 +9,7 @@ use piet_common::ImageBuf;
 pub enum DragDropAction {
     Copy,
     Move,
+    Link,
 }
 
 #[derive(Debug)]
