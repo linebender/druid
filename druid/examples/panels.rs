@@ -14,6 +14,9 @@
 
 //! This example shows how to construct a basic layout.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::Circle;
 use druid::widget::{Flex, Label, Painter};
 use druid::{

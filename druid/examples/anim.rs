@@ -21,6 +21,9 @@
 //! rest of the app. If this is something the rest of your widgets should know
 //! about, you could put it in the `data`.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::f64::consts::PI;
 
 use druid::kurbo::{Circle, Line};

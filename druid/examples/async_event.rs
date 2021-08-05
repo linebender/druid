@@ -18,6 +18,9 @@
 //! takes a long time but don't want to block the main thread
 //! (waiting on an http request, some cpu intensive work etc.)
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use instant::Instant;
 use std::thread;
 use std::time::Duration;

@@ -16,6 +16,9 @@
 //! propperties. You can change the parameters in the GUI to see how
 //! everything behaves.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::InterpolationMode;
 use druid::text::ParseFormatter;
 use druid::widget::{prelude::*, FillStrat, Image};
