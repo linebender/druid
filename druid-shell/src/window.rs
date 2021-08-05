@@ -22,7 +22,7 @@ use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::dnd::DropEvent;
-use crate::dnd::{DragDropId, DropContext};
+use crate::dnd::{DragDropToken, DropContext};
 use crate::error::Error;
 use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
@@ -427,7 +427,7 @@ impl WindowHandle {
         self.0.drop_context().map(DropContext)
     }
 
-    pub fn drag_start(&self, data: DragData, position: Point) -> DragDropId {
+    pub fn drag_start(&self, data: DragData, position: Point) -> DragDropToken {
         self.0.drag_start(data, position)
     }
 }
@@ -702,7 +702,7 @@ pub trait WinHandler {
     ///
     /// action is None if drag got canceled
     #[allow(unused_variables)]
-    fn drag_end(&mut self, id: DragDropId, action: Option<DragDropAction>);
+    fn drag_end(&mut self, id: DragDropToken, action: Option<DragDropAction>);
 
     /// Called when the shell requests to close the window, for example because the user clicked
     /// the little "X" in the titlebar.

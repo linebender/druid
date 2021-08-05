@@ -26,13 +26,13 @@ pub struct DropContext(pub(crate) backend::DragDropContext);
 
 /// A unique identifier for a drag drop session.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct DragDropId(u64);
+pub struct DragDropToken(u64);
 
-impl DragDropId {
+impl DragDropToken {
     /// Create a new, unique DragDropId
-    pub(crate) fn next() -> DragDropId {
+    pub(crate) fn next() -> DragDropToken {
         static COUNTER: Counter = Counter::new();
-        DragDropId(COUNTER.next())
+        DragDropToken(COUNTER.next())
     }
 }
 
@@ -90,7 +90,7 @@ impl DropContext {
         self.0.preferred_format(formats)
     }
 
-    pub fn id(&self) -> DragDropId {
-        self.0.id()
+    pub fn token(&self) -> DragDropToken {
+        self.0.token()
     }
 }
