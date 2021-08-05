@@ -66,8 +66,8 @@ impl DragData {
 }
 
 impl DropContext {
-    pub fn deny(&self) {
-        self.0.deny()
+    pub fn cancel(&self) {
+        self.0.cancel()
     }
 
     pub fn action(&self) -> DragDropAction {
