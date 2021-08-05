@@ -19,6 +19,9 @@
 //! open so we have to work around that. When we receive the
 //! `WindowConnected` command we initiate the cursor.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::{
     AppLauncher, Color, Cursor, CursorDesc, Data, Env, ImageBuf, Lens, LocalizedString, WidgetExt,
     WindowDesc,

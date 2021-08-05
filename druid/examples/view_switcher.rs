@@ -14,6 +14,9 @@
 
 //! This example demonstrates the `ViewSwitcher` widget
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Button, Flex, Label, Split, TextBox, ViewSwitcher};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 

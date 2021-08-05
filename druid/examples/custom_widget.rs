@@ -15,6 +15,9 @@
 //! An example of a custom drawing widget.
 //! We draw an image, some text, a shape, and a curve.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::BezPath;
 use druid::piet::{FontFamily, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 use druid::widget::prelude::*;

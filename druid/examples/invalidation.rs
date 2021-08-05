@@ -15,6 +15,9 @@
 //! Demonstrates how to debug invalidation regions, and also shows the
 //! invalidation behavior of several build-in widgets.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::Vector;
 use druid::kurbo::{self, Shape};
 use druid::widget::prelude::*;

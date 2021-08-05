@@ -14,6 +14,9 @@
 
 //! This example demonstrates the `Split` widget
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::Color;
 use druid::widget::{Align, Container, Label, Padding, Split};
 use druid::{AppLauncher, LocalizedString, Widget, WindowDesc};

@@ -16,6 +16,9 @@
 //! the other thread some data and then we also pass some data back
 //! to the main thread using commands.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::{thread, time};
 
 use druid::widget::prelude::*;

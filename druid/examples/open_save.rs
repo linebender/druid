@@ -14,6 +14,9 @@
 
 //! Usage of file open and saving.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,

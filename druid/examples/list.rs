@@ -14,6 +14,9 @@
 
 //! Demos basic list widget and list manipulations.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};

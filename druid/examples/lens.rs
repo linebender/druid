@@ -14,6 +14,9 @@
 
 //! This example shows basic usage of Lens
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::Slider;
 use druid::widget::{CrossAxisAlignment, Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
