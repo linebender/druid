@@ -287,6 +287,16 @@ impl L10nManager {
     //TODO: handle locale change
 }
 
+impl std::fmt::Debug for L10nManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("L10nManager")
+            .field("resources", &self.resources)
+            .field("res_mgr.locales", &self.res_mgr.locales)
+            .field("current_locale", &self.current_locale)
+            .finish()
+    }
+}
+
 impl<T> LocalizedString<T> {
     /// Create a new `LocalizedString` with the given key.
     pub const fn new(key: &'static str) -> Self {
