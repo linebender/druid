@@ -690,7 +690,7 @@ pub trait WinHandler {
     fn drop_enter(&mut self) {}
 
     #[allow(unused_variables)]
-    fn drop_motion(&mut self, event: &DropEvent) {}
+    fn drop_moved(&mut self, event: &DropEvent) {}
 
     /// Called when a drop leaves the window.
     fn drop_leave(&mut self) {}
