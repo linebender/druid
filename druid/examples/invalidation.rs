@@ -57,7 +57,7 @@ struct CircleView;
 #[derive(Clone, Data)]
 struct Circle {
     pos: Point,
-    #[data(same_fn = "PartialEq::eq")]
+    #[data(eq)]
     time: Instant,
 }
 
