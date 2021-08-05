@@ -17,15 +17,22 @@ struct TodoList {
 /// A single todo item.
 struct TodoItem {
     category: Category,
+    title: String,
+    note: Option<String>,
+    completed: bool,
+
     // `Data` is implemented for any `Arc`.
     due_date: Option<Arc<DateTime>>,
+
     // You can specify a custom comparison fn
     // (anything with the signature (&T, &T) -> bool).
     #[data(same_fn = "PartialEq::eq")]
     added_date: DateTime,
-    title: String,
-    note: Option<String>,
-    completed: bool,
+
+    // You can specify that a field should
+    // be skipped when computing same-ness
+    #[data(ignore)]
+    debug_timestamp: usize,
 }
 
 #[derive(Clone, Data, PartialEq)]
