@@ -51,7 +51,7 @@ use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct EnvImpl {
     map: HashMap<ArcStr, Value>,
     l10n: Option<Arc<L10nManager>>,
@@ -371,6 +371,15 @@ impl Env {
     pub fn get_debug_color(&self, id: u64) -> Color {
         let color_num = id as usize % DEBUG_COLOR.len();
         DEBUG_COLOR[color_num].clone()
+    }
+}
+
+impl std::fmt::Debug for Env {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Env")
+            .field("l10n", &self.0.l10n)
+            .field("map", &self.0.map)
+            .finish()
     }
 }
 
