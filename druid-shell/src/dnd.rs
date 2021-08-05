@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::backend::dnd as backend;
 use crate::{Counter, FormatId};
+use bitflags::bitflags;
 
 use piet_common::ImageBuf;
 
@@ -10,6 +11,14 @@ pub enum DragDropAction {
     Copy,
     Move,
     Link,
+}
+
+bitflags! {
+    struct DragDropActions: u32 {
+        const COPY = 1 << 0;
+        const MOVE = 1 << 1;
+        const LINK = 1 << 2;
+    }
 }
 
 #[derive(Debug)]
@@ -31,23 +40,13 @@ impl DragDropToken {
 }
 
 impl DragData {
-    pub fn new() -> Self {
-        DragData(backend::DragData::new())
+    pub fn new(actions: DragDropActions) -> Self {
+        DragData(backend::DragData::new(actions))
     }
 
     /// Add a data format
     pub fn add(&mut self, format: FormatId, data: Vec<u8>) {
         self.0.add(format, data)
-    }
-
-    /// default: true
-    pub fn copyable(&mut self, allowed: bool) {
-        self.0.copyable(allowed)
-    }
-
-    /// default: false
-    pub fn movable(&mut self, allowed: bool) {
-        self.0.movable(allowed)
     }
 
     pub fn cursor_image(&mut self, image: ImageBuf) {
@@ -64,8 +63,8 @@ impl DropContext {
         self.0.cancel()
     }
 
-    pub fn action(&self) -> DragDropAction {
-        self.0.action()
+    pub fn allowed_actions(&self) -> DragDropActions {
+        self.0.allowed_actions()
     }
 
     pub fn set_action(&self, action: DragDropAction) {
