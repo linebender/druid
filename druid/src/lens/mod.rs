@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Support for lenses, a way of focusing on subfields of data.
+//! Implementations of [`Lens`], a way of focusing on subfields of data.
 //!
 //! Lenses are useful whenever a widget only needs access to a subfield of a larger struct or
 //! generally access to part of a larger value.
 //!
-//! For example: If one wants to embed a [`TextBox`] in a widget with a `Data` type
-//! that is not `String`, they need to specify how to access a `String` from within the `Data`.
+//! For example: If one wants to embed a [`TextBox`](crate::widget::TextBox) in a widget with
+//! a `Data` type that is not `String`, they need to specify how to access a `String` from
+//! within the `Data`.
 //!
-//! [`TextBox`]: ../widget/struct.TextBox.html
 //! ```
 //! use druid::{Data, Lens, Widget, WidgetExt, widget::{TextBox, Flex}};
 //!
@@ -45,6 +45,9 @@
 //!     Flex::column().with_child(searchbar)
 //! }
 //! ```
+//!
+//! Most of the time, if you want to create your own lenses, you need to use
+//! [`#[derive(Lens)]`](druid_derive::Lens).
 
 #[allow(clippy::module_inception)]
 #[macro_use]
