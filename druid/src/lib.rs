@@ -95,9 +95,12 @@
 //!
 //! * `im` - Efficient immutable data structures using the [`im` crate],
 //!          which is made available via the [`im` module].
+//! * `serde` - Serialization for the im data structures and kurbo types (eg `Vec2`, `Rect`).
 //! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
 //! * `image` - Bitmap image support using the [`image` crate].
-//! * `x11` - Work-in-progress X11 Linux backend instead of GTK.
+//! * `gtk` - GTK backend. Enabled by default.
+//! * `x11` - Work-in-progress X11 Linux backend instead of GTK. (Note: on Linux, if
+//!           the `gtk` feature is disabled, then this feature must be enabled)
 //!
 //! Features can be added with `cargo`. For example, in your `Cargo.toml`:
 //! ```no_compile
