@@ -25,8 +25,9 @@ use crate::Data;
 /// the lens itself is zero-sized. Another case is accessing an array
 /// element, in which case the lens contains the array index.
 ///
-/// Many `Lens` implementations will be derived by macro, but custom
-/// implementations are practical as well.
+/// The most common way to create `Lens` implementations is to
+/// use [`#[derive(Lens)]`](druid_derive::Lens) to access a struct's
+/// fields, but custom implementations are practical as well.
 ///
 /// The name "lens" is inspired by the [Haskell lens] package, which
 /// has generally similar goals. It's likely we'll develop more
