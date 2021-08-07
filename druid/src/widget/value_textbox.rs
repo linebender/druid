@@ -42,7 +42,7 @@ const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete
 /// the [`ValidationDelegate`] trait, which receives a callback during editing;
 /// this can be used to report errors further back up the tree.
 pub struct ValueTextBox<T> {
-    inner: TextBox<String>,
+    child: TextBox<String>,
     formatter: Box<dyn Formatter<T>>,
     callback: Option<Box<dyn ValidationDelegate>>,
     is_editing: bool,
@@ -103,12 +103,12 @@ impl<T: Data> ValueTextBox<T> {
     ///
     /// [`TextBox`]: crate::widget::TextBox
     /// [`Formatter`]: crate::text::format::Formatter
-    pub fn new(mut inner: TextBox<String>, formatter: impl Formatter<T> + 'static) -> Self {
-        inner.text_mut().borrow_mut().send_notification_on_return = true;
-        inner.text_mut().borrow_mut().send_notification_on_cancel = true;
-        inner.handles_tab_notifications = false;
+    pub fn new(mut child: TextBox<String>, formatter: impl Formatter<T> + 'static) -> Self {
+        child.text_mut().borrow_mut().send_notification_on_return = true;
+        child.text_mut().borrow_mut().send_notification_on_cancel = true;
+        child.handles_tab_notifications = false;
         ValueTextBox {
-            inner,
+            child,
             formatter: Box::new(formatter),
             callback: None,
             is_editing: false,
@@ -159,9 +159,9 @@ impl<T: Data> ValueTextBox<T> {
                 true
             }
             Err(err) => {
-                if self.inner.text().can_write() {
+                if self.child.text().can_write() {
                     if let Some(inval) = self
-                        .inner
+                        .child
                         .text_mut()
                         .borrow_mut()
                         .set_selection(Selection::new(0, self.buffer.len()))
@@ -213,8 +213,8 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
 
         if self.is_editing {
             // if we reject an edit we want to reset the selection
-            let pre_sel = if self.inner.text().can_read() {
-                Some(self.inner.text().borrow().selection())
+            let pre_sel = if self.child.text().can_read() {
+                Some(self.child.text().borrow().selection())
             } else {
                 None
             };
@@ -256,7 +256,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                     return;
                 }
                 event => {
-                    self.inner.event(ctx, event, &mut self.buffer, env);
+                    self.child.event(ctx, event, &mut self.buffer, env);
                 }
             }
             // if an edit occured, validate it with the formatter
@@ -264,7 +264,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             if !matches!(event, Event::Notification(_)) && self.buffer != self.old_buffer {
                 let mut validation = self
                     .formatter
-                    .validate_partial_input(&self.buffer, &self.inner.text().borrow().selection());
+                    .validate_partial_input(&self.buffer, &self.child.text().borrow().selection());
 
                 if self.validate_while_editing {
                     let new_buf = match (validation.text_change.take(), validation.is_err()) {
@@ -321,7 +321,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             if let Event::MouseDown(_) = event {
                 self.begin(ctx, data);
             }
-            self.inner.event(ctx, event, &mut self.buffer, env);
+            self.child.event(ctx, event, &mut self.buffer, env);
         }
     }
 
@@ -344,7 +344,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             }
             _ => (),
         }
-        self.inner.lifecycle(ctx, event, &self.buffer, env);
+        self.child.lifecycle(ctx, event, &self.buffer, env);
     }
 
     #[instrument(
@@ -354,8 +354,8 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old: &T, data: &T, env: &Env) {
         if let Some(sel) = self.force_selection.take() {
-            if self.inner.text().can_write() {
-                if let Some(change) = self.inner.text_mut().borrow_mut().set_selection(sel) {
+            if self.child.text().can_write() {
+                if let Some(change) = self.child.text_mut().borrow_mut().set_selection(sel) {
                     ctx.invalidate_text_input(change);
                 }
             }
@@ -367,7 +367,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             .unwrap_or(false);
         if self.is_editing {
             if changed_by_us {
-                self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
+                self.child.update(ctx, &self.old_buffer, &self.buffer, env);
                 self.old_buffer = self.buffer.clone();
             } else {
                 // textbox is not well equipped to deal with the fact that, in
@@ -392,11 +392,11 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             }
 
             if !self.old_buffer.same(&self.buffer) {
-                // inner widget handles calling request_layout, as needed
-                self.inner.update(ctx, &self.old_buffer, &self.buffer, env);
+                // child widget handles calling request_layout, as needed
+                self.child.update(ctx, &self.old_buffer, &self.buffer, env);
                 self.old_buffer = self.buffer.clone();
             } else if ctx.env_changed() {
-                self.inner.update(ctx, &self.buffer, &self.buffer, env);
+                self.child.update(ctx, &self.buffer, &self.buffer, env);
             }
         }
     }
@@ -407,11 +407,11 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
         skip(self, ctx, bc, _data, env)
     )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
-        self.inner.layout(ctx, bc, &self.buffer, env)
+        self.child.layout(ctx, bc, &self.buffer, env)
     }
 
     #[instrument(name = "ValueTextBox", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        self.inner.paint(ctx, &self.buffer, env);
+        self.child.paint(ctx, &self.buffer, env);
     }
 }
