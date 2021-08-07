@@ -14,6 +14,9 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Container, Flex, Scroll, SizedBox};
 use druid::{AppLauncher, Color, LocalizedString, Widget, WindowDesc};
 

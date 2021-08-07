@@ -17,9 +17,7 @@ use crate::commands::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::lens::Unit;
 use crate::widget::prelude::*;
 use crate::win_handler::AppState;
-use crate::{
-    Command, Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId,
-};
+use crate::{Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
 use druid_shell::Error;
 use std::any::Any;
 use std::ops::Deref;
@@ -126,11 +124,11 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                 let old = self.data.clone(); // Could avoid this by keeping two bit of data or if we could ask widget pod?
                 self.child.event(ctx, event, &mut self.data, &self.env);
                 if !old.same(&self.data) {
-                    ctx.submit_command(Command::new(
-                        SUB_WINDOW_HOST_TO_PARENT,
-                        Box::new(self.data.clone()),
-                        self.parent_id,
-                    ))
+                    ctx.submit_command(
+                        SUB_WINDOW_HOST_TO_PARENT
+                            .with(Box::new(self.data.clone()))
+                            .to(self.parent_id),
+                    )
                 }
             }
         }

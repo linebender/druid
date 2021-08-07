@@ -106,6 +106,12 @@
 //! features = ["im", "svg", "image"]
 //! ```
 //!
+//! # Note for Windows apps
+//!
+//! By default, Windows will open a console with your application's window. If you don't want
+//! the console to be shown, use `#![windows_subsystem = "windows"]` at the beginning of your
+//! crate.
+//!
 //! [`Widget`]: trait.Widget.html
 //! [`Data`]: trait.Data.html
 //! [`Lens`]: trait.Lens.html
@@ -157,7 +163,7 @@ mod contexts;
 mod core;
 mod data;
 mod dialog;
-mod env;
+pub mod env;
 mod event;
 mod ext_event;
 mod localization;
@@ -166,8 +172,7 @@ mod mouse;
 pub mod scroll_component;
 mod sub_window;
 #[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
-mod tests;
+pub mod tests;
 pub mod text;
 pub mod theme;
 pub mod widget;
@@ -188,6 +193,9 @@ pub use shell::{
     MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
     WindowHandle, WindowLevel, WindowState,
 };
+
+#[cfg(feature = "raw-win-handle")]
+pub use crate::shell::raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 pub use crate::core::WidgetPod;
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};
@@ -210,7 +218,6 @@ pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
 #[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
 pub(crate) use event::{StateCell, StateCheckFn};
 
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]

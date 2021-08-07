@@ -16,6 +16,9 @@
 //! This is a very simple example, it uses a bool to determine
 //! which widget gets shown.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Checkbox, Either, Flex, Label, Slider};
 use druid::{AppLauncher, Data, Lens, WidgetExt, WindowDesc};

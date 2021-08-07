@@ -96,7 +96,7 @@ struct Inner<T> {
     root_menu: Option<MenuManager<T>>,
     /// The id of the most-recently-focused window that has a menu. On macOS, this
     /// is the window that's currently in charge of the app menu.
-    #[allow(unused_variables)]
+    #[allow(unused)]
     menu_window: Option<WindowId>,
     pub(crate) env: Env,
     pub(crate) data: T,
@@ -221,11 +221,9 @@ impl<T: Data> Inner<T> {
             app_data_type: TypeId::of::<T>(),
             ext_event_host,
         };
-        if let Some(delegate) = delegate.as_deref_mut() {
-            Some(f(delegate, data, env, &mut ctx))
-        } else {
-            None
-        }
+        delegate
+            .as_deref_mut()
+            .map(|delegate| f(delegate, data, env, &mut ctx))
     }
 
     fn delegate_event(&mut self, id: WindowId, event: Event) -> Option<Event> {
@@ -476,6 +474,8 @@ impl<T: Data> Inner<T> {
 
         #[cfg(target_os = "macos")]
         {
+            use druid_shell::platform::mac::ApplicationExt as _;
+
             let windows = &mut self.windows;
             let window = self.menu_window.and_then(|w| windows.get_mut(w));
             if let Some(window) = window {
@@ -654,7 +654,9 @@ impl<T: Data> AppState<T> {
         match cmd.target() {
             // these are handled the same no matter where they come from
             _ if cmd.is(sys_cmd::QUIT_APP) => self.quit(),
+            #[cfg(target_os = "macos")]
             _ if cmd.is(sys_cmd::HIDE_APPLICATION) => self.hide_app(),
+            #[cfg(target_os = "macos")]
             _ if cmd.is(sys_cmd::HIDE_OTHERS) => self.hide_others(),
             _ if cmd.is(sys_cmd::NEW_WINDOW) => {
                 if let Err(e) = self.new_window(cmd) {
@@ -686,11 +688,11 @@ impl<T: Data> AppState<T> {
             _ if cmd.is(sys_cmd::SHOW_WINDOW) => {
                 tracing::warn!("SHOW_WINDOW command must target a window.")
             }
+            _ if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => {
+                tracing::warn!("SHOW_OPEN_PANEL command must target a window.")
+            }
             _ => {
-                let handled = self.inner.borrow_mut().dispatch_cmd(cmd.clone());
-                if !handled.is_handled() && cmd.must_be_used() {
-                    tracing::warn!("{:?} was not handled.", cmd);
-                }
+                self.inner.borrow_mut().dispatch_cmd(cmd);
             }
         }
     }
@@ -837,14 +839,16 @@ impl<T: Data> AppState<T> {
         self.inner.borrow().app.quit()
     }
 
+    #[cfg(target_os = "macos")]
     fn hide_app(&self) {
-        #[cfg(target_os = "macos")]
+        use druid_shell::platform::mac::ApplicationExt as _;
         self.inner.borrow().app.hide()
     }
 
+    #[cfg(target_os = "macos")]
     fn hide_others(&mut self) {
-        #[cfg(target_os = "macos")]
-        self.inner.borrow().app.hide_others()
+        use druid_shell::platform::mac::ApplicationExt as _;
+        self.inner.borrow().app.hide_others();
     }
 
     pub(crate) fn build_native_window(

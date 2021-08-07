@@ -15,6 +15,9 @@
 //! This is a very small example of how to setup a druid application.
 //! It does the almost bare minimum while still being useful.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc};

@@ -524,6 +524,11 @@ impl<T> EditSession<T> {
         self.alignment = alignment;
     }
 
+    /// The text alignment.
+    pub fn text_alignment(&self) -> TextAlignment {
+        self.alignment
+    }
+
     /// Returns any invalidation action that should be passed to the platform.
     ///
     /// The user of this component *must* check this after calling `update`.
@@ -719,7 +724,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn do_mouse_down(&mut self, point: Point, mods: Modifiers, count: u8) {
-        let point = point + Vec2::new(self.alignment_offset, 0.0);
+        let point = point - Vec2::new(self.alignment_offset, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
             self.selection.active = pos;
@@ -735,7 +740,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
     }
 
     fn do_drag(&mut self, point: Point) {
-        let point = point + Vec2::new(self.alignment_offset, 0.0);
+        let point = point - Vec2::new(self.alignment_offset, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
         let text = match self.layout.text() {
@@ -832,7 +837,7 @@ impl<T: TextStorage + EditableText> EditSession<T> {
 impl<T: TextStorage> EditSessionHandle<T> {
     fn new(inner: Arc<RefCell<EditSession<T>>>) -> Self {
         let text = inner.borrow().layout.text().cloned().unwrap();
-        EditSessionHandle { inner, text }
+        EditSessionHandle { text, inner }
     }
 }
 

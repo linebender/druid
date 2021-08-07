@@ -14,6 +14,9 @@
 
 //! An example of live markdown preview
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use pulldown_cmark::{Event as ParseEvent, Parser, Tag};
 
 use druid::text::{AttributesAdder, RichText, RichTextBuilder};
@@ -34,7 +37,7 @@ const TEXT: &str = "*Hello* ***world***! This is a `TextBox` where you can \
 		    If you're curious about Druid, a good place to ask questions \
 		    and discuss development work is our [Zulip chat instance], \
 		    in the #druid-help and #druid channels, respectively.\n\n\n\
-		    
+
 		    [Zulip chat instance]: https://xi.zulipchat.com";
 
 const SPACER_SIZE: f64 = 8.0;

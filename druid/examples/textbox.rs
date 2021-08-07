@@ -17,6 +17,9 @@
 //! I would like to make this a bit fancier (like the flex demo) but for now
 //! lets keep it simple.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::sync::Arc;
 
 use druid::widget::{Flex, Label, TextBox};

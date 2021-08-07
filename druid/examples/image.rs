@@ -16,6 +16,9 @@
 //! propperties. You can change the parameters in the GUI to see how
 //! everything behaves.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::InterpolationMode;
 use druid::text::ParseFormatter;
 use druid::widget::{prelude::*, FillStrat, Image};
@@ -62,7 +65,7 @@ impl Rebuilder {
     }
 
     fn rebuild_inner(&mut self, data: &AppState) {
-        self.inner = build_widget(&data);
+        self.inner = build_widget(data);
     }
 }
 
@@ -79,7 +82,7 @@ impl Widget<AppState> for Rebuilder {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppState, data: &AppState, _env: &Env) {
-        if !old_data.same(&data) {
+        if !old_data.same(data) {
             self.rebuild_inner(data);
             ctx.children_changed();
         }

@@ -283,18 +283,20 @@ where
 /// This is a convenience macro for constructing `Field` lenses for fields or indexable elements.
 ///
 /// ```
-/// struct Foo { x: u32 }
+/// struct Foo { x: Bar }
+/// struct Bar { y: [i32; 10] }
 /// let lens = druid::lens!(Foo, x);
 /// let lens = druid::lens!((u32, bool), 1);
 /// let lens = druid::lens!([u8], [4]);
+/// let lens = druid::lens!(Foo, x.y[5]);
 /// ```
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
         $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
     };
-    ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
+    ($ty:ty, $($field:tt)*) => {
+        $crate::lens::Field::new::<$ty, _>(move |x| &x.$($field)*, move |x| &mut x.$($field)*)
     };
 }
 

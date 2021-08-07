@@ -51,11 +51,10 @@ use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct EnvImpl {
     map: HashMap<ArcStr, Value>,
-    debug_colors: Vec<Color>,
-    l10n: Arc<L10nManager>,
+    l10n: Option<Arc<L10nManager>>,
 }
 
 /// A typed [`Env`] key.
@@ -229,7 +228,7 @@ impl Env {
     ///
     /// ```no_run
     /// # use druid::Env;
-    /// # let env = Env::default();
+    /// # let env = Env::empty();
     /// # let widget_id = 0;
     /// # let my_rect = druid::Rect::ZERO;
     /// if env.get(Env::DEBUG_WIDGET) {
@@ -373,16 +372,27 @@ impl Env {
     /// Returns a reference to the [`L10nManager`], which handles localization
     /// resources.
     ///
+    /// This always exists on the base `Env` configured by druid.
+    ///
     /// [`L10nManager`]: struct.L10nManager.html
-    pub(crate) fn localization_manager(&self) -> &L10nManager {
-        &self.0.l10n
+    pub(crate) fn localization_manager(&self) -> Option<&L10nManager> {
+        self.0.l10n.as_deref()
     }
 
     /// Given an id, returns one of 18 distinct colors
     #[doc(hidden)]
     pub fn get_debug_color(&self, id: u64) -> Color {
-        let color_num = id as usize % self.0.debug_colors.len();
-        self.0.debug_colors[color_num].clone()
+        let color_num = id as usize % DEBUG_COLOR.len();
+        DEBUG_COLOR[color_num].clone()
+    }
+}
+
+impl std::fmt::Debug for Env {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Env")
+            .field("l10n", &self.0.l10n)
+            .field("map", &self.0.map)
+            .finish()
     }
 
     /// Replaces and adds to current `Env`'s values with values form the provided `Env`.
@@ -512,7 +522,7 @@ impl Data for EnvImpl {
 
 // Colors are from https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 // They're picked for visual distinction and accessbility (99 percent)
-const DEBUG_COLOR: &[Color] = &[
+static DEBUG_COLOR: &[Color] = &[
     Color::rgb8(230, 25, 75),
     Color::rgb8(60, 180, 75),
     Color::rgb8(255, 225, 25),
@@ -533,20 +543,27 @@ const DEBUG_COLOR: &[Color] = &[
     Color::rgb8(0, 0, 0),
 ];
 
-impl Default for Env {
-    fn default() -> Self {
+impl Env {
+    /// Returns an empty `Env`.
+    ///
+    /// This is useful for creating a set of overrides.
+    pub fn empty() -> Self {
+        Env(Arc::new(EnvImpl {
+            l10n: None,
+            map: HashMap::new(),
+        }))
+    }
+
+    pub(crate) fn with_default_i10n() -> Self {
         Env::with_i10n(vec!["builtin.ftl".into()], "./resources/i18n/")
     }
-}
 
-impl Env {
     pub(crate) fn with_i10n(resources: Vec<String>, base_dir: &str) -> Self {
         let l10n = L10nManager::new(resources, base_dir);
 
         let inner = EnvImpl {
-            l10n: Arc::new(l10n),
+            l10n: Some(Arc::new(l10n)),
             map: HashMap::new(),
-            debug_colors: DEBUG_COLOR.into(),
         };
 
         let env = Env(Arc::new(inner))
@@ -677,7 +694,7 @@ mod tests {
     #[test]
     fn string_key_or_value() {
         const MY_KEY: Key<ArcStr> = Key::new("org.linebender.test.my-string-key");
-        let env = Env::default().adding(MY_KEY, "Owned");
+        let env = Env::empty().adding(MY_KEY, "Owned");
         assert_eq!(env.get(MY_KEY).as_ref(), "Owned");
 
         let key: KeyOrValue<ArcStr> = MY_KEY.into();

@@ -39,6 +39,31 @@ impl<T: Data, U: Data> ViewSwitcher<T, U> {
     ///
     /// The `child_builder` closure creates a new child widget based on
     /// the value passed to it.
+    ///
+    /// # Examples
+    /// ```
+    /// use druid::{
+    ///     widget::{Label, ViewSwitcher},
+    ///     Data, Widget,
+    /// };
+    ///
+    /// #[derive(Clone, PartialEq, Data)]
+    /// enum Foo {
+    ///     A,
+    ///     B,
+    ///     C,
+    /// }
+    ///
+    /// fn ui() -> impl Widget<Foo> {
+    ///     ViewSwitcher::new(
+    ///         |data: &Foo, _env| data.clone(),
+    ///         |selector, _data, _env| match selector {
+    ///             Foo::A => Box::new(Label::new("A")),
+    ///             _ => Box::new(Label::new("Not A")),
+    ///         },
+    ///     )
+    /// }
+    /// ```
     pub fn new(
         child_picker: impl Fn(&T, &Env) -> U + 'static,
         child_builder: impl Fn(&U, &T, &Env) -> Box<dyn Widget<T>> + 'static,

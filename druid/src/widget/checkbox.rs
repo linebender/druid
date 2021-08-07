@@ -92,7 +92,7 @@ impl Widget<bool> for Checkbox {
         bc.debug_check("Checkbox");
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
         let check_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let label_size = self.child_label.layout(ctx, &bc, data, env);
+        let label_size = self.child_label.layout(ctx, bc, data, env);
 
         let desired_size = Size::new(
             check_size + x_padding + label_size.width,

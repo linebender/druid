@@ -75,7 +75,7 @@ impl<T: Data> Widget<T> for Either<T> {
         let current = (self.closure)(data, env);
         if current != self.current {
             self.current = current;
-            ctx.request_layout();
+            ctx.children_changed();
         }
         self.current_widget().update(ctx, data, env)
     }

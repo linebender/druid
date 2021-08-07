@@ -333,18 +333,19 @@ pub enum InternalLifeCycle {
     RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,
-    /// Testing only: request the `WidgetState` of a specific widget.
+    /// For testing: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
     /// somewhere in the tree is as expected. In that case you can dispatch
     /// this event, specifying the widget in question, and that widget will
     /// set its state in the provided `Cell`, if it exists.
-    #[cfg(test)]
     DebugRequestState {
+        /// the widget whose state is requested
         widget: WidgetId,
+        /// a cell used to store the a widget's state
         state_cell: StateCell,
     },
-    #[cfg(test)]
+    /// For testing: apply the given function on every widget.
     DebugInspectState(StateCheckFn),
 }
 
@@ -396,8 +397,23 @@ impl Event {
         }
     }
 
-    /// Whether this event should be sent to widgets which are currently not visible
-    /// (for example the hidden tabs in a tabs widget).
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// For example: the hidden tabs in a tabs widget are `hidden` whereas the non-visible
+    /// widgets in a scroll are not, since you can bring them into view by scrolling.
+    ///
+    /// This distinction between scroll and tabs is due to one of the main purposes of
+    /// this method: determining which widgets are allowed to receive focus. As a rule
+    /// of thumb a widget counts as `hidden` if it makes no sense for it to receive focus
+    /// when the user presses thee 'tab' key.
+    ///
+    /// If a widget changes which children are hidden it must call [`children_changed`].
+    ///
+    /// See also [`LifeCycle::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`LifeCycle::should_propagate_to_hidden`]: LifeCycle::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             Event::WindowConnected
@@ -423,8 +439,14 @@ impl Event {
 }
 
 impl LifeCycle {
-    /// Whether this event should be sent to widgets which are currently not visible
-    /// (for example the hidden tabs in a tabs widget).
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             LifeCycle::Internal(internal) => internal.should_propagate_to_hidden(),
@@ -438,25 +460,28 @@ impl LifeCycle {
 }
 
 impl InternalLifeCycle {
-    /// Whether this event should be sent to widgets which are currently not visible
-    /// (for example the hidden tabs in a tabs widget).
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             InternalLifeCycle::RouteWidgetAdded
             | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
             InternalLifeCycle::ParentWindowOrigin => false,
-            #[cfg(test)]
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
         }
     }
 }
 
-#[cfg(test)]
 pub(crate) use state_cell::{StateCell, StateCheckFn};
 
-#[cfg(test)]
 mod state_cell {
     use crate::core::WidgetState;
     use crate::WidgetId;
@@ -503,7 +528,7 @@ mod state_cell {
 
         pub(crate) fn call(&self, state: &WidgetState) {
             let mut panic_reporter = WidgetDrop(true, state.id);
-            (self.0)(&state);
+            (self.0)(state);
             panic_reporter.0 = false;
         }
     }

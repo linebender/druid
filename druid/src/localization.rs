@@ -107,7 +107,7 @@ impl BundleStack {
     fn format_pattern(
         &self,
         id: &str,
-        pattern: &FluentPattern,
+        pattern: &FluentPattern<&str>,
         args: Option<&FluentArgs>,
         errors: &mut Vec<FluentError>,
     ) -> String {
@@ -154,9 +154,9 @@ impl ResourceManager {
         debug!("resolved: {}", PrintLocales(resolved_locales.as_slice()));
         let mut stack = Vec::new();
         for locale in &resolved_locales {
-            let mut bundle = FluentBundle::new(&resolved_locales);
+            let mut bundle = FluentBundle::new(resolved_locales.clone());
             for res_id in resource_ids {
-                let res = self.get_resource(&res_id, &locale.to_string());
+                let res = self.get_resource(res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
             }
             stack.push(bundle);
@@ -192,16 +192,13 @@ impl L10nManager {
             let mut locales = vec![];
 
             let res_dir = fs::read_dir(base_dir)?;
-            for entry in res_dir {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        if let Some(name) = path.file_name() {
-                            if let Some(name) = name.to_str() {
-                                let langid: LanguageIdentifier =
-                                    name.parse().expect("Parsing failed.");
-                                locales.push(langid);
-                            }
+            for entry in res_dir.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name() {
+                        if let Some(name) = name.to_str() {
+                            let langid: LanguageIdentifier = name.parse().expect("Parsing failed.");
+                            locales.push(langid);
                         }
                     }
                 }
@@ -234,8 +231,8 @@ impl L10nManager {
 
         L10nManager {
             res_mgr,
-            current_bundle,
             resources,
+            current_bundle,
             current_locale,
         }
     }
@@ -257,7 +254,7 @@ impl L10nManager {
         let value = match self
             .current_bundle
             .get_message(key)
-            .and_then(|msg| msg.value)
+            .and_then(|msg| msg.value())
         {
             Some(v) => v,
             None => return None,
@@ -288,6 +285,16 @@ impl L10nManager {
         }
     }
     //TODO: handle locale change
+}
+
+impl std::fmt::Debug for L10nManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("L10nManager")
+            .field("resources", &self.resources)
+            .field("res_mgr.locales", &self.res_mgr.locales)
+            .field("current_locale", &self.current_locale)
+            .finish()
+    }
 }
 
 impl<T> LocalizedString<T> {
@@ -341,16 +348,19 @@ impl<T> LocalizedString<T> {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
-        if self.args.is_some()
-            || self.resolved_lang.as_ref() != Some(&env.localization_manager().current_locale)
-        {
+        let manager = match env.localization_manager() {
+            Some(manager) => manager,
+            None => return false,
+        };
+
+        if self.args.is_some() || self.resolved_lang.as_ref() != Some(&manager.current_locale) {
             let args: Option<FluentArgs> = self
                 .args
                 .as_ref()
                 .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(data, env))).collect());
 
-            self.resolved_lang = Some(env.localization_manager().current_locale.clone());
-            let next = env.localization_manager().localize(self.key, args.as_ref());
+            self.resolved_lang = Some(manager.current_locale.clone());
+            let next = manager.localize(self.key, args.as_ref());
             let result = next != self.resolved;
             self.resolved = next;
             result

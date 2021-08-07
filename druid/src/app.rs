@@ -203,9 +203,10 @@ impl<T: Data> AppLauncher<T> {
         #[cfg(target_arch = "wasm32")]
         {
             console_error_panic_hook::set_once();
-            // tracing_wasm doesn't let us filter by level, but chrome/firefox devtools can
-            // already do that anyway
-            tracing_wasm::set_as_global_default();
+            let config = tracing_wasm::WASMLayerConfigBuilder::new()
+                .set_max_level(tracing::Level::DEBUG)
+                .build();
+            tracing_wasm::set_as_global_default_with_config(config)
         }
         self
     }
@@ -241,7 +242,7 @@ impl<T: Data> AppLauncher<T> {
         let mut env = self
             .l10n_resources
             .map(|it| Env::with_i10n(it.0, &it.1))
-            .unwrap_or_default();
+            .unwrap_or_else(Env::with_default_i10n);
 
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
