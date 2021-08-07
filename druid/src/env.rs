@@ -385,15 +385,6 @@ impl Env {
         let color_num = id as usize % DEBUG_COLOR.len();
         DEBUG_COLOR[color_num].clone()
     }
-}
-
-impl std::fmt::Debug for Env {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.debug_struct("Env")
-            .field("l10n", &self.0.l10n)
-            .field("map", &self.0.map)
-            .finish()
-    }
 
     /// Replaces and adds to current `Env`'s values with values form the provided `Env`.
     pub(crate) fn with_overrides(&self, changes: &Env) -> Env {
@@ -408,6 +399,15 @@ impl std::fmt::Debug for Env {
         new_env.0 = Arc::new(internal_env);
 
         new_env
+    }
+}
+
+impl std::fmt::Debug for Env {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Env")
+            .field("l10n", &self.0.l10n)
+            .field("map", &self.0.map)
+            .finish()
     }
 }
 
