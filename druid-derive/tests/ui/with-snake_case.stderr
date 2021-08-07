@@ -1,0 +1,5 @@
+error: Lens implementations can only be derived from CamelCase types
+ --> $DIR/with-snake_case.rs:6:8
+  |
+6 | struct my_thing {
+  |        ^^^^^^^^
