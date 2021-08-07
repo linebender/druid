@@ -239,19 +239,6 @@ impl Env {
     /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
     pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
-    /// Creates a new empty Env with localization information.
-    pub fn new() -> Self {
-        let l10n = L10nManager::new(vec!["builtin.ftl".into()], "./resources/i18n/");
-
-        let inner = EnvImpl {
-            l10n: Arc::new(l10n),
-            map: HashMap::new(),
-            debug_colors: DEBUG_COLOR.into(),
-        };
-
-        Env(Arc::new(inner))
-    }
-
     /// Gets a value from the environment, expecting it to be present.
     ///
     /// Note that the return value is a reference for "expensive" types such
