@@ -24,7 +24,7 @@ use tracing::{instrument, warn};
 /// If not given a child, The box will try to size itself  as large or small as possible
 /// to preserve the aspect ratio.
 pub struct AspectRatioBox<T> {
-    inner: Box<dyn Widget<T>>,
+    child: Box<dyn Widget<T>>,
     ratio: f64,
 }
 
@@ -34,9 +34,9 @@ impl<T> AspectRatioBox<T> {
     /// The aspect ratio is defined as width / height.
     ///
     /// If aspect ratio <= 0.0, the ratio will be set to 1.0
-    pub fn new(inner: impl Widget<T> + 'static, ratio: f64) -> Self {
+    pub fn new(child: impl Widget<T> + 'static, ratio: f64) -> Self {
         Self {
-            inner: Box::new(inner),
+            child: Box::new(child),
             ratio: clamp_ratio(ratio),
         }
     }
@@ -107,7 +107,7 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         skip(self, ctx, event, data, env)
     )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.inner.event(ctx, event, data, env);
+        self.child.event(ctx, event, data, env);
     }
 
     #[instrument(
@@ -116,7 +116,7 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         skip(self, ctx, event, data, env)
     )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     #[instrument(
@@ -125,7 +125,7 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         skip(self, ctx, old_data, data, env)
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.inner.update(ctx, old_data, data, env);
+        self.child.update(ctx, old_data, data, env);
     }
 
     #[instrument(
@@ -139,26 +139,26 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         if bc.max() == bc.min() {
             warn!("Box constraints are tight. Aspect ratio box will not be able to preserve aspect ratio.");
 
-            return self.inner.layout(ctx, bc, data, env);
+            return self.child.layout(ctx, bc, data, env);
         }
 
         if bc.max().width == f64::INFINITY && bc.max().height == f64::INFINITY {
             warn!("Box constraints are INFINITE. Aspect ratio box won't be able to choose a size because the constraints given by the parent widget are INFINITE.");
 
-            return self.inner.layout(ctx, bc, data, env);
+            return self.child.layout(ctx, bc, data, env);
         }
 
         let bc = self.generate_constraints(bc);
 
-        self.inner.layout(ctx, &bc, data, env)
+        self.child.layout(ctx, &bc, data, env)
     }
 
     #[instrument(name = "AspectRatioBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(ctx, data, env);
+        self.child.paint(ctx, data, env);
     }
 
     fn id(&self) -> Option<WidgetId> {
-        self.inner.id()
+        self.child.id()
     }
 }

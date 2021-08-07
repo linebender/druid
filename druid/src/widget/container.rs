@@ -30,17 +30,17 @@ pub struct Container<T> {
     border: Option<BorderStyle>,
     corner_radius: KeyOrValue<f64>,
 
-    inner: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
 impl<T: Data> Container<T> {
     /// Create Container with a child
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
+    pub fn new(child: impl Widget<T> + 'static) -> Self {
         Self {
             background: None,
             border: None,
             corner_radius: 0.0.into(),
-            inner: WidgetPod::new(inner).boxed(),
+            child: WidgetPod::new(child).boxed(),
         }
     }
 
@@ -142,12 +142,12 @@ impl<T: Data> Container<T> {
 impl<T: Data> Widget<T> for Container<T> {
     #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.inner.event(ctx, event, data, env);
+        self.child.event(ctx, event, data, env);
     }
 
     #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     #[instrument(
@@ -161,7 +161,7 @@ impl<T: Data> Widget<T> for Container<T> {
                 brush.update(ctx, old_data, data, env);
             });
         }
-        self.inner.update(ctx, data, env);
+        self.child.update(ctx, data, env);
     }
 
     #[instrument(name = "Container", level = "trace", skip(self, ctx, bc, data, env))]
@@ -174,16 +174,16 @@ impl<T: Data> Widget<T> for Container<T> {
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
-        let size = self.inner.layout(ctx, &child_bc, data, env);
+        let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
-        self.inner.set_origin(ctx, data, env, origin);
+        self.child.set_origin(ctx, data, env, origin);
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,
             size.height + 2.0 * border_width,
         );
 
-        let my_insets = self.inner.compute_parent_paint_insets(my_size);
+        let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
         trace!("Computed layout: size={}, insets={:?}", my_size, my_insets);
         my_size
@@ -214,6 +214,6 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        self.inner.paint(ctx, data, env);
+        self.child.paint(ctx, data, env);
     }
 }
