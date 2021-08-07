@@ -17,7 +17,7 @@ use crate::commands::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::lens::Unit;
 use crate::widget::prelude::*;
 use crate::win_handler::AppState;
-use crate::{Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
+use crate::{Data, Point, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
 use druid_shell::Error;
 use std::any::Any;
 use std::ops::Deref;
@@ -161,12 +161,8 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
     )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &(), _env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, &self.data, &self.env);
-        self.child.set_layout_rect(
-            ctx,
-            &self.data,
-            &self.env,
-            Rect::from_origin_size(Point::ORIGIN, size),
-        );
+        self.child
+            .set_origin(ctx, &self.data, &self.env, Point::ORIGIN);
         size
     }
 
