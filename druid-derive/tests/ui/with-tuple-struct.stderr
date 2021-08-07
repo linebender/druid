@@ -1,0 +1,5 @@
+error: Lens implementations can only be derived from structs with named fields
+ --> $DIR/with-tuple-struct.rs:4:1
+  |
+4 | struct Foobar(i32, i64);
+  | ^^^^^^

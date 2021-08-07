@@ -1,0 +1,5 @@
+error: Lens implementations cannot be derived from unions
+ --> $DIR/with-union.rs:4:1
+  |
+4 | union Foobar {
+  | ^^^^^
