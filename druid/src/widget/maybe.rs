@@ -15,8 +15,8 @@
 //! A widget for optional data, with different `Some` and `None` children.
 
 use druid::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
-    UpdateCtx, Widget, WidgetExt, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    Point, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
 };
 
 use druid::widget::SizedBox;
@@ -123,12 +123,12 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
         match data.as_ref() {
             Some(d) => self.widget.with_some(|w| {
                 let size = w.layout(ctx, bc, d, env);
-                w.set_layout_rect(ctx, d, env, size.to_rect());
+                w.set_origin(ctx, d, env, Point::ORIGIN);
                 size
             }),
             None => self.widget.with_none(|w| {
                 let size = w.layout(ctx, bc, &(), env);
-                w.set_layout_rect(ctx, &(), env, size.to_rect());
+                w.set_origin(ctx, &(), env, Point::ORIGIN);
                 size
             }),
         }
