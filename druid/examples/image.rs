@@ -25,7 +25,7 @@ use druid::widget::{prelude::*, FillStrat, Image};
 use druid::widget::{
     Checkbox, CrossAxisAlignment, Flex, Label, RadioGroup, SizedBox, TextBox, WidgetExt,
 };
-use druid::{AppLauncher, Color, Data, ImageBuf, Lens, LensExt, WindowDesc};
+use druid::{AppLauncher, Color, Data, ImageBuf, Lens, WindowDesc};
 
 static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
     ("Contain", FillStrat::Contain),
@@ -160,7 +160,7 @@ fn make_width() -> impl Widget<AppState> {
             Flex::row().with_child(
                 TextBox::new()
                     .with_formatter(ParseFormatter::new())
-                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
+                    .lens(AppState::width)
                     .fix_width(60.0),
             ),
         )
@@ -174,7 +174,7 @@ fn make_height() -> impl Widget<AppState> {
             Flex::row().with_child(
                 TextBox::new()
                     .with_formatter(ParseFormatter::new())
-                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
+                    .lens(AppState::height)
                     .fix_width(60.0),
             ),
         )
