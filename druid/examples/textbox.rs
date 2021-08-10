@@ -34,7 +34,7 @@ const EXPLAINER: &str = "\
     This example demonstrates some of the possible configurations \
     of the TextBox widget.\n\
     The top textbox allows a single line of input, with horizontal scrolling \
-    but no scrollbars. The bottom textbox allows mutliple lines of text, wrapping \
+    but no scrollbars. The bottom textbox allows multiple lines of text, wrapping \
     words to fit the width, and allowing vertical scrolling when it runs out \
     of room to grow vertically.";
 
