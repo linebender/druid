@@ -15,7 +15,7 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 default = ["default-backend"]
-gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf", "gtk-rs", "cairo-sys-rs"]
+gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf", "gtk-rs", "cairo-sys-rs", "cairo-rs"]
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
 default-backend = []
 # Implement HasRawWindowHandle for WindowHandle
@@ -58,6 +58,7 @@ keyboard-types = { version = "0.5.0", default_features = false }
 image = { version = "0.23.12", optional = true, default_features = false }
 raw-window-handle = { version = "0.3.3", optional = true, default_features = false }
 
+cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"], optional = true }
 cairo-sys-rs = { version = "0.10.0", default_features = false, optional = true }
 gio = { version = "0.9.1", optional = true }
 gdk = { version = "0.13.2", optional = true }
@@ -96,7 +97,6 @@ bitflags = "1.2.1"
 
 [target.'cfg(target_os="linux")'.dependencies]
 # TODO(x11/dependencies): only use feature "xcb" if using X11
-cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"] }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.67"
