@@ -119,6 +119,7 @@ impl Application {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl crate::platform::linux::LinuxApplicationExt for Application {
     fn primary_clipboard(&self) -> crate::Clipboard {
         crate::Clipboard(Box::new(Clipboard {

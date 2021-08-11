@@ -19,12 +19,18 @@
 // #[cfg(target_os = "windows")]
 // pub(crate) mod windows;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
 pub(crate) mod mac;
-#[cfg(target_os = "macos")]
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
 pub(crate) mod shared;
 
-#[cfg(any(feature = "x11", feature = "gtk"))]
+#[cfg(any(feature = "x11", feature = "gtk",))]
 pub(crate) mod shared;
 
 #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
