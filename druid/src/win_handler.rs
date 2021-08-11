@@ -472,7 +472,7 @@ impl<T: Data> Inner<T> {
             window.update_menu(&self.data, &self.env);
         }
 
-        #[cfg(target_os = "macos")]
+        #[cfg(any(feature = "mac", all(target_os = "macos", feature = "default")))]
         {
             use druid_shell::platform::mac::MacApplicationExt;
 

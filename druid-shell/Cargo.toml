@@ -15,8 +15,7 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 default = ["default-backend"]
-gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf", "gtk-rs", "cairo-sys-rs", "cairo-rs"]
-#gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf", "gtk-rs", "cairo-sys-rs", "cairo-rs", "piet-common/cairo"]
+gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf", "gtk-rs", "cairo-sys-rs", "cairo-rs", "piet-common/cairo"]
 x11 = ["x11rb", "nix", "cairo-sys-rs"]
 default-backend = []
 # Implement HasRawWindowHandle for WindowHandle
@@ -43,7 +42,6 @@ primary-clipboard = []
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-#piet-common = { git = "https://github.com/JAicewizard/piet", rev="better_selecting" }
 piet-common = { git = "https://github.com/JAicewizard/piet", rev = "0d843b9" }
 
 kurbo = "0.8.1"
@@ -110,7 +108,6 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-#piet-common = { git = "https://github.com/JAicewizard/piet", features = ["png"], rev="better_selecting" }
 piet-common = { git = "https://github.com/JAicewizard/piet.git", rev = "0d843b9", features = ["png"] }
 static_assertions = "1.1.0"
 test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
