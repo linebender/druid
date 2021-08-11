@@ -230,7 +230,7 @@ impl Default for WindowHandle {
 impl Clone for WindowHandle {
     fn clone(&self) -> Self {
         match self.0.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => WindowHandle(Box::new(
                 self.0
                     .as_any()
@@ -238,7 +238,7 @@ impl Clone for WindowHandle {
                     .unwrap()
                     .clone(),
             )),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => WindowHandle(Box::new(
                 self.0
                     .as_any()
@@ -794,27 +794,45 @@ pub trait WinHandler {
     fn as_any(&mut self) -> &mut dyn Any;
 }
 
-#[cfg(feature = "gtk")]
+#[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::gtk::window::WindowHandle> for WindowHandle {
     fn from(src: crate::backend::gtk::window::WindowHandle) -> WindowHandle {
         WindowHandle(Box::new(src))
     }
 }
-#[cfg(feature = "x11")]
+#[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::x11::window::WindowHandle> for WindowHandle {
     fn from(src: crate::backend::x11::window::WindowHandle) -> WindowHandle {
         WindowHandle(Box::new(src))
     }
 }
-#[cfg(feature = "gtk")]
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
+impl From<crate::backend::mac::window::WindowHandle> for WindowHandle {
+    fn from(src: crate::backend::mac::window::WindowHandle) -> WindowHandle {
+        WindowHandle(Box::new(src))
+    }
+}
+#[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::gtk::window::IdleHandle> for IdleHandle {
     fn from(src: crate::backend::gtk::window::IdleHandle) -> IdleHandle {
         IdleHandle(Rc::new(src))
     }
 }
-#[cfg(feature = "x11")]
+#[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::x11::window::IdleHandle> for IdleHandle {
     fn from(src: crate::backend::x11::window::IdleHandle) -> IdleHandle {
+        IdleHandle(Rc::new(src))
+    }
+}
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
+impl From<crate::backend::mac::window::IdleHandle> for IdleHandle {
+    fn from(src: crate::backend::mac::window::IdleHandle) -> IdleHandle {
         IdleHandle(Rc::new(src))
     }
 }

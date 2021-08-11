@@ -25,7 +25,6 @@ pub struct FileInfo {
 }
 
 /// Type of file dialog.
-#[cfg(feature = "gtk")]
 #[derive(Clone, Copy, PartialEq)]
 pub enum FileDialogType {
     /// File open dialog.

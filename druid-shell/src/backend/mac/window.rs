@@ -16,6 +16,7 @@
 
 #![allow(non_snake_case)]
 
+use std::any::Any;
 use std::ffi::c_void;
 use std::mem;
 use std::sync::{Arc, Mutex, Weak};
@@ -48,21 +49,23 @@ use crate::piet::{Piet, PietText, RenderContext};
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
 };
-use super::application::Application;
 use super::dialog;
 use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
 use super::text_input::NSRange;
 use super::util::{assert_main_thread, make_nsstring};
+use crate::application::ApplicationBackend;
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
+use crate::error::Error as ShellError;
 use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 use crate::window::{
-    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel, WindowState,
+    FileDialogToken, IdleToken, IdleWindowHandleBackend, TextFieldToken, TimerToken, WinHandler,
+    WindowBuilderBackend, WindowHandleBackend, WindowLevel, WindowState,
 };
 use crate::Error;
 
@@ -113,6 +116,146 @@ impl Default for WindowHandle {
     }
 }
 
+impl WindowHandleBackend for WindowHandle {
+    fn show(&self) {
+        self.show()
+    }
+
+    fn close(&self) {
+        self.close()
+    }
+
+    fn resizable(&self, resizable: bool) {
+        self.resizable(resizable)
+    }
+
+    fn set_window_state(&mut self, state: WindowState) {
+        self.set_window_state(state)
+    }
+
+    fn get_window_state(&self) -> WindowState {
+        self.get_window_state()
+    }
+
+    fn handle_titlebar(&self, val: bool) {
+        self.handle_titlebar(val)
+    }
+    fn show_titlebar(&self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_position(&self, position: Point) {
+        self.set_position(position)
+    }
+
+    fn get_position(&self) -> Point {
+        self.get_position()
+    }
+
+    fn content_insets(&self) -> Insets {
+        self.content_insets()
+    }
+
+    fn set_size(&self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn get_size(&self) -> Size {
+        self.get_size()
+    }
+
+    fn set_level(&self, level: WindowLevel) {
+        self.set_level(level)
+    }
+
+    fn bring_to_front_and_focus(&self) {
+        self.bring_to_front_and_focus()
+    }
+    fn request_anim_frame(&self) {
+        self.request_anim_frame()
+    }
+
+    fn invalidate(&self) {
+        self.invalidate()
+    }
+
+    fn invalidate_rect(&self, rect: Rect) {
+        self.invalidate_rect(rect)
+    }
+
+    fn set_title(&self, title: &str) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&self, menu: crate::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu(menu.clone());
+        } else {
+            panic!("Use of macos window with {} menu", menu.0.name())
+        }
+    }
+    fn text(&self) -> PietText {
+        self.text()
+    }
+
+    fn add_text_field(&self) -> TextFieldToken {
+        self.add_text_field()
+    }
+
+    fn remove_text_field(&self, token: TextFieldToken) {
+        self.remove_text_field(token)
+    }
+
+    fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.set_focused_text_field(active_field)
+    }
+    fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.update_text_field(token, update)
+    }
+
+    fn request_timer(&self, deadline: Instant) -> TimerToken {
+        self.request_timer(deadline)
+    }
+
+    fn set_cursor(&mut self, cursor: &Cursor) {
+        self.set_cursor(cursor)
+    }
+
+    fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+        self.make_cursor(desc)
+    }
+
+    fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.open_file(options)
+    }
+
+    fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.save_as(options)
+    }
+    fn show_context_menu(&self, menu: crate::menu::Menu, pos: Point) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.show_context_menu(menu.clone(), pos)
+        } else {
+            panic!("Use of macos window with {} menu", menu.0.name())
+        }
+    }
+
+    fn get_idle_handle(&self) -> Option<crate::window::IdleHandle> {
+        self.get_idle_handle().map(Into::into)
+    }
+    fn get_scale(&self) -> Result<Scale, ShellError> {
+        self.get_scale()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "macos".into()
+    }
+}
+
 /// Builder abstraction for creating new windows.
 pub(crate) struct WindowBuilder {
     handler: Option<Box<dyn WinHandler>>,
@@ -127,11 +270,84 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     transparent: bool,
 }
+impl WindowBuilderBackend for WindowBuilder {
+    fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.set_handler(handler)
+    }
+
+    fn set_size(&mut self, size: Size) {
+        self.set_size(size)
+    }
+
+    fn set_min_size(&mut self, min_size: Size) {
+        self.set_min_size(min_size)
+    }
+
+    fn resizable(&mut self, resizable: bool) {
+        self.resizable(resizable)
+    }
+    fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.show_titlebar(show_titlebar)
+    }
+
+    fn set_transparent(&mut self, transparent: bool) {
+        self.set_transparent(transparent)
+    }
+    fn set_position(&mut self, position: Point) {
+        self.set_position(position)
+    }
+    fn set_level(&mut self, level: WindowLevel) {
+        self.set_level(level)
+    }
+    fn set_title(&mut self, title: String) {
+        self.set_title(title)
+    }
+
+    fn set_menu(&mut self, menu: crate::menu::Menu) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.set_menu((*menu).clone());
+        } else {
+            panic!("Use of mac window with {} menu", menu.0.name())
+        }
+    }
+    fn set_window_state(&mut self, state: WindowState) {
+        self.set_window_state(state)
+    }
+    fn build(self: Box<Self>) -> Result<crate::WindowHandle, anyhow::Error> {
+        self.build().map(Into::<crate::WindowHandle>::into)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "mac".into()
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct IdleHandle {
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
+}
+
+impl IdleWindowHandleBackend for IdleHandle {
+    fn add_idle_callback(&self, callback: Box<dyn FnOnce(&mut dyn WinHandler) + Send>) {
+        self.add_idle_callback(callback)
+    }
+
+    fn add_idle_token(&self, token: IdleToken) {
+        self.add_idle_token(token)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "macos".into()
+    }
 }
 
 #[derive(Debug)]
@@ -166,7 +382,7 @@ struct ViewState {
 pub struct CustomCursor;
 
 impl WindowBuilder {
-    pub fn new(_app: Application) -> WindowBuilder {
+    pub fn new(_backend: std::rc::Rc<dyn ApplicationBackend>) -> WindowBuilder {
         WindowBuilder {
             handler: None,
             title: String::new(),
@@ -226,7 +442,7 @@ impl WindowBuilder {
         self.menu = Some(menu);
     }
 
-    pub fn build(self) -> Result<WindowHandle, Error> {
+    pub fn build(self: Box<Self>) -> Result<WindowHandle, anyhow::Error> {
         assert_main_thread();
         unsafe {
             let mut style_mask = NSWindowStyleMask::NSClosableWindowMask

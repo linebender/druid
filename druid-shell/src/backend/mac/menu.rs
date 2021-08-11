@@ -14,6 +14,8 @@
 
 //! macOS implementation of menus.
 
+use std::any::Any;
+
 use cocoa::appkit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::NSAutoreleasePool;
@@ -23,9 +25,42 @@ use super::util::make_nsstring;
 use crate::common_util::strip_access_key;
 use crate::hotkey::HotKey;
 use crate::keyboard::{KbKey, Modifiers};
+use crate::menu::MenuBackend;
 
+#[derive(Clone)]
 pub struct Menu {
     pub menu: id,
+}
+
+impl MenuBackend for Menu {
+    fn add_dropdown(&mut self, menu: crate::menu::Menu, text: &str, enabled: bool) {
+        if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
+            self.add_dropdown(menu.clone(), text, enabled)
+        }
+    }
+
+    fn add_item(
+        &mut self,
+        id: u32,
+        text: &str,
+        key: Option<&HotKey>,
+        enabled: bool,
+        selected: bool,
+    ) {
+        self.add_item(id, text, key, enabled, selected)
+    }
+
+    fn add_separator(&mut self) {
+        self.add_separator()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "macos".into()
+    }
 }
 
 fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, selected: bool) -> id {

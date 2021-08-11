@@ -276,14 +276,14 @@ pub enum Cursor {
 impl Clone for Box<dyn CursorBackend> {
     fn clone(&self) -> Self {
         match self.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::window::CustomCursor>()
                     .unwrap()
                     .clone(),
             ),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::gtk::window::CustomCursor>()
@@ -298,7 +298,7 @@ impl Clone for Box<dyn CursorBackend> {
 impl PartialEq for Box<dyn CursorBackend> {
     fn eq(&self, other: &Self) -> bool {
         match self.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => match other.name().as_str() {
                 "x11" => PartialEq::eq(
                     self.as_any()
@@ -311,7 +311,7 @@ impl PartialEq for Box<dyn CursorBackend> {
                 ),
                 x => panic!("uncomparable: x11 with {}", x),
             },
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => match other.name().as_str() {
                 "gtk" => PartialEq::eq(
                     self.as_any()
@@ -323,6 +323,22 @@ impl PartialEq for Box<dyn CursorBackend> {
                         .unwrap(),
                 ),
                 x => panic!("uncomparable: gtk with {}", x),
+            },
+            #[cfg(any(
+                feature = "macos",
+                all(target_os = "macos", feature = "default-backend")
+            ))]
+            "macos" => match other.name().as_str() {
+                "macos" => PartialEq::eq(
+                    self.as_any()
+                        .downcast_ref::<crate::backend::mac::window::CustomCursor>()
+                        .unwrap(),
+                    other
+                        .as_any()
+                        .downcast_ref::<crate::backend::mac::window::CustomCursor>()
+                        .unwrap(),
+                ),
+                x => panic!("uncomparable: macos with {}", x),
             },
             x => panic!("cloning unsuported clipboard: {}", x),
         }

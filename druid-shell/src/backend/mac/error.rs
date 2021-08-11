@@ -15,9 +15,21 @@
 //! macOS backend errors.
 
 //TODO: add a backend error for macOS, based on NSError
+use std::any::Any;
+
+use crate::error::ErrorBackend;
 
 #[derive(Debug, Clone)]
 pub struct Error;
+
+impl ErrorBackend for Error {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

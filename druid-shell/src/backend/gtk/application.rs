@@ -55,6 +55,7 @@ impl ApplicationBackend for Application {
         self.primary_clipboard()
     }
 }
+
 impl Application {
     pub(crate) fn is_available() -> bool {
         true

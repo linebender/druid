@@ -13,6 +13,7 @@
 // limitations under the License.
 
 //! Interactions with the system pasteboard on macOS.
+use std::any::Any;
 
 use cocoa::appkit::NSPasteboardTypeString;
 use cocoa::base::{id, nil, BOOL, YES};
@@ -20,10 +21,38 @@ use cocoa::foundation::{NSArray, NSInteger, NSUInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
 use super::util;
-use crate::clipboard::{ClipboardFormat, FormatId};
+use crate::clipboard::{ClipboardBackend, ClipboardFormat, FormatId};
 
 #[derive(Debug, Clone, Default)]
 pub struct Clipboard;
+impl ClipboardBackend for Clipboard {
+    fn put_string(&mut self, s: &str) {
+        self.put_string(s)
+    }
+    fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+        self.put_formats(formats)
+    }
+    fn get_string(&self) -> Option<String> {
+        self.get_string()
+    }
+    fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+        self.preferred_format(formats)
+    }
+    fn get_format(&self, format: FormatId) -> Option<Vec<u8>> {
+        self.get_format(format)
+    }
+    fn available_type_names(&self) -> Vec<String> {
+        self.available_type_names()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "mac".into()
+    }
+}
 
 impl Clipboard {
     /// Put a string onto the system clipboard.

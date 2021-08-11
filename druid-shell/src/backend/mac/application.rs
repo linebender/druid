@@ -16,6 +16,7 @@
 
 #![allow(non_upper_case_globals)]
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
@@ -28,7 +29,7 @@ use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 
-use crate::application::AppHandler;
+use crate::application::{AppHandler, ApplicationBackend};
 
 use super::clipboard::Clipboard;
 use super::error::Error;
@@ -46,6 +47,32 @@ struct State {
     quitting: bool,
 }
 
+impl ApplicationBackend for Application {
+    fn run(&self, handler: Option<Box<dyn AppHandler>>) {
+        self.run(handler)
+    }
+    fn quit(&self) {
+        self.quit()
+    }
+
+    fn clipboard(&self) -> crate::clipboard::Clipboard {
+        self.clipboard().into()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn name(&self) -> String {
+        "gtk".into()
+    }
+
+    #[cfg(feature = "primary-clipboard")]
+    fn primary_clipboard(&self) -> crate::Clipboard {
+        self.primary_clipboard()
+    }
+}
+
 impl Application {
     pub fn new() -> Result<Application, Error> {
         // macOS demands that we run not just on one thread,
@@ -60,7 +87,12 @@ impl Application {
         }
     }
 
-    pub fn run(self, handler: Option<Box<dyn AppHandler>>) {
+    pub(crate) fn is_available() -> bool {
+        //TODO: better selection mechanism
+        true
+    }
+
+    pub fn run(&self, handler: Option<Box<dyn AppHandler>>) {
         unsafe {
             // Initialize the application delegate
             let delegate: id = msg_send![APP_DELEGATE.0, alloc];
@@ -121,8 +153,12 @@ impl Application {
 
 impl crate::platform::mac::MacApplicationExt for crate::Application {
     fn hide(&self) {
-        unsafe {
-            let () = msg_send![self.backend_app.ns_app, hide: nil];
+        if let Some(backend_app) = self.backend_app.as_any().downcast_ref::<Application>() {
+            unsafe {
+                let () = msg_send![backend_app.ns_app, hide: nil];
+            }
+        } else {
+            panic!("unimplemented")
         }
     }
 
@@ -135,8 +171,12 @@ impl crate::platform::mac::MacApplicationExt for crate::Application {
     }
 
     fn set_menu(&self, menu: crate::Menu) {
-        unsafe {
-            NSApp().setMainMenu_(menu.0.menu);
+        if let Some(backend_menu) = menu.0.as_any().downcast_ref::<super::menu::Menu>() {
+            unsafe {
+                NSApp().setMainMenu_(backend_menu.menu);
+            }
+        } else {
+            panic!("unimplemented")
         }
     }
 }

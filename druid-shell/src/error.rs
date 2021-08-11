@@ -40,17 +40,27 @@ pub enum Error {
 impl Debug for dyn ErrorBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => std::fmt::Debug::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
                     .unwrap(),
                 f,
             ),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => std::fmt::Debug::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::gtk::error::Error>()
+                    .unwrap(),
+                f,
+            ),
+            #[cfg(any(
+                feature = "macos",
+                all(target_os = "macos", feature = "default-backend")
+            ))]
+            "macos" => std::fmt::Debug::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::mac::error::Error>()
                     .unwrap(),
                 f,
             ),
@@ -62,14 +72,14 @@ impl Debug for dyn ErrorBackend {
 impl Clone for Box<dyn ErrorBackend> {
     fn clone(&self) -> Self {
         match self.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
                     .unwrap()
                     .clone(),
             ),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => Box::new(
                 self.as_any()
                     .downcast_ref::<crate::backend::gtk::error::Error>()
@@ -83,21 +93,30 @@ impl Clone for Box<dyn ErrorBackend> {
 impl fmt::Display for dyn ErrorBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => std::fmt::Display::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::x11::error::Error>()
                     .unwrap(),
                 f,
             ),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => std::fmt::Display::fmt(
                 self.as_any()
                     .downcast_ref::<crate::backend::gtk::error::Error>()
                     .unwrap(),
                 f,
             ),
-
+            #[cfg(any(
+                feature = "macos",
+                all(target_os = "macos", feature = "default-backend")
+            ))]
+            "macos" => std::fmt::Display::fmt(
+                self.as_any()
+                    .downcast_ref::<crate::backend::mac::error::Error>()
+                    .unwrap(),
+                f,
+            ),
             x => panic!("cloning unsuported clipboard: {}", x),
         }
     }
@@ -124,15 +143,24 @@ impl From<anyhow::Error> for Error {
     }
 }
 
-#[cfg(feature = "gtk")]
+#[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::gtk::error::Error> for Error {
     fn from(src: crate::backend::gtk::error::Error) -> Error {
         Error::Platform(Box::new(src))
     }
 }
-#[cfg(feature = "x11")]
+#[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::x11::error::Error> for Error {
     fn from(src: crate::backend::x11::error::Error) -> Error {
+        Error::Platform(Box::new(src))
+    }
+}
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
+impl From<crate::backend::mac::error::Error> for Error {
+    fn from(src: crate::backend::mac::error::Error) -> Error {
         Error::Platform(Box::new(src))
     }
 }

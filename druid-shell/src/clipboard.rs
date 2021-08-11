@@ -143,7 +143,7 @@ pub struct Clipboard(pub(crate) Box<dyn ClipboardBackend>);
 impl Debug for Clipboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.0.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => std::fmt::Debug::fmt(
                 self.0
                     .as_any()
@@ -151,7 +151,7 @@ impl Debug for Clipboard {
                     .unwrap(),
                 f,
             ),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => std::fmt::Debug::fmt(
                 self.0
                     .as_any()
@@ -159,7 +159,17 @@ impl Debug for Clipboard {
                     .unwrap(),
                 f,
             ),
-
+            #[cfg(any(
+                feature = "macos",
+                all(target_os = "macos", feature = "default-backend")
+            ))]
+            "macos" => std::fmt::Debug::fmt(
+                self.0
+                    .as_any()
+                    .downcast_ref::<crate::backend::mac::clipboard::Clipboard>()
+                    .unwrap(),
+                f,
+            ),
             x => panic!("cloning unsuported clipboard: {}", x),
         }
     }
@@ -168,7 +178,7 @@ impl Debug for Clipboard {
 impl Clone for Clipboard {
     fn clone(&self) -> Self {
         match self.0.name().as_str() {
-            #[cfg(feature = "x11")]
+            #[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
             "x11" => Clipboard(Box::new(
                 self.0
                     .as_any()
@@ -176,7 +186,7 @@ impl Clone for Clipboard {
                     .unwrap()
                     .clone(),
             )),
-            #[cfg(feature = "gtk")]
+            #[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
             "gtk" => Clipboard(Box::new(
                 self.0
                     .as_any()
@@ -269,15 +279,24 @@ impl From<&str> for ClipboardFormat {
     }
 }
 
-#[cfg(feature = "gtk")]
+#[cfg(any(feature = "gtk", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::gtk::clipboard::Clipboard> for Clipboard {
     fn from(src: crate::backend::gtk::clipboard::Clipboard) -> Clipboard {
         Clipboard(Box::new(src))
     }
 }
-#[cfg(feature = "x11")]
+#[cfg(any(feature = "x11", all(target_os = "linux", feature = "default-backend")))]
 impl From<crate::backend::x11::clipboard::Clipboard> for Clipboard {
     fn from(src: crate::backend::x11::clipboard::Clipboard) -> Clipboard {
+        Clipboard(Box::new(src))
+    }
+}
+#[cfg(any(
+    feature = "macos",
+    all(target_os = "macos", feature = "default-backend")
+))]
+impl From<crate::backend::mac::clipboard::Clipboard> for Clipboard {
+    fn from(src: crate::backend::mac::clipboard::Clipboard) -> Clipboard {
         Clipboard(Box::new(src))
     }
 }

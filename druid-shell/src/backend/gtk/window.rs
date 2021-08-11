@@ -215,7 +215,7 @@ impl WindowHandleBackend for WindowHandle {
         if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
             self.show_context_menu(menu.clone(), pos)
         } else {
-            panic!("Use of x11 window with {} menu", menu.0.name())
+            panic!("Use of gtk window with {} menu", menu.0.name())
         }
     }
 
@@ -296,7 +296,7 @@ impl WindowBuilderBackend for WindowBuilder {
         if let Some(menu) = menu.0.as_any().downcast_ref::<Menu>() {
             self.set_menu((*menu).clone());
         } else {
-            panic!("Use of x11 window with {} menu", menu.0.name())
+            panic!("Use of gtk window with {} menu", menu.0.name())
         }
     }
     fn set_window_state(&mut self, state: window::WindowState) {
@@ -430,7 +430,7 @@ impl WindowBuilder {
             }
         } else {
             panic!(
-                "Tried to create an X11 window with a {} application",
+                "Tried to create an gtk window with a {} application",
                 backend.name()
             )
         }
