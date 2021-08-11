@@ -51,7 +51,7 @@ pub fn code_to_location(code: Code) -> Location {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(feature = "gtk", feature = "x11", target_os = "linux"))]
 /// Map hardware keycode to code.
 ///
 /// In theory, the hardware keycode is device dependent, but in
