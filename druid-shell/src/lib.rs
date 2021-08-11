@@ -33,7 +33,7 @@
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
 // The `target_os` requirement is there to exclude anything `wasm` like.
-#[cfg(all(target_os = "linux", feature = "gtk"))]
+#[cfg(any(feature = "gtk", all(target_os = "linux", feature = "gtk")))]
 extern crate gtk_rs as gtk;
 
 // Reexport the version of `image` we are using.
