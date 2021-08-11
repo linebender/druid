@@ -52,6 +52,11 @@ impl Svg {
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
+
+    /// Set the svg data.
+    pub fn set_svg_data(&mut self, svg_data: SvgData) {
+        self.svg_data = svg_data;
+    }
 }
 
 impl<T: Data> Widget<T> for Svg {
