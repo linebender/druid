@@ -134,6 +134,9 @@
 #![warn(missing_docs)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
+)]
 
 // Allows to use macros from druid_derive in this crate
 extern crate self as druid;

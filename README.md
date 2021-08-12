@@ -1,4 +1,4 @@
-# Druid
+![druid banner](https://raw.githubusercontent.com/linebender/druid/screenshots/images/small_banner.png)
 
 ## A data-first Rust-native UI toolkit.
 
@@ -91,7 +91,7 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, Druid requires gtk+3; see [GTK installation page]. 
+On Linux, Druid requires gtk+3; see [GTK installation page].
 (On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
 
 
