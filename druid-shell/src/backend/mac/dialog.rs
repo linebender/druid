@@ -125,7 +125,7 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
     // we add a accessory view to set the file format
     match (&options.allowed_types, ty) {
         (Some(allowed_types), FileDialogType::Save) if !allowed_types.is_empty() => {
-            let accessory_view = allowed_types_accessory_view(&allowed_types);
+            let accessory_view = allowed_types_accessory_view(allowed_types);
             let _: () = msg_send![panel, setAccessoryView: accessory_view];
         }
         _ => (),
