@@ -603,6 +603,7 @@ impl MyWndProc {
                             .ok()
                             .map(|os_str| FileInfo {
                                 path: os_str.into(),
+                                format: None,
                             })
                     };
                     self.with_wnd_state(|s| s.handler.save_as(token, info));
@@ -611,7 +612,10 @@ impl MyWndProc {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Open, options)
                             .ok()
-                            .map(|s| FileInfo { path: s.into() })
+                            .map(|s| FileInfo {
+                                path: s.into(),
+                                format: None,
+                            })
                     };
                     self.with_wnd_state(|s| s.handler.open_file(token, info));
                 }
