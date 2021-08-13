@@ -108,7 +108,7 @@ impl<T: Data> Widget<T> for Svg {
 
 /// Stored SVG data.
 /// Implements `FromStr` and can be converted to piet draw instructions.
-#[derive(Clone)]
+#[derive(Clone, Data)]
 pub struct SvgData {
     tree: Arc<usvg::Tree>,
 }
