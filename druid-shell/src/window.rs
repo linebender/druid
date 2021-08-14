@@ -15,6 +15,7 @@
 //! Platform independent window types.
 
 use std::any::Any;
+use std::fmt;
 use std::time::Duration;
 
 use crate::application::Application;
