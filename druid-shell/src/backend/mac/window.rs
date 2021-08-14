@@ -1216,6 +1216,9 @@ impl WindowHandle {
 
     // Need to translate mac y coords, as they start from bottom left
     pub fn set_position(&self, mut position: Point) {
+        // TODO: Maybe collin can get this into a state where modal windows follow the parent?
+        // There is an API to do child windows, (https://developer.apple.com/documentation/appkit/nswindow/1419152-addchildwindow)
+        // but I have no good way of testing and making sure this works.
         if let Some(parent_state) = &self.parent {
             let pos = (*parent_state).get_position();
             position -= (pos.x, pos.y)
