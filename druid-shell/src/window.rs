@@ -148,7 +148,7 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,
@@ -158,6 +158,17 @@ pub enum WindowLevel {
     DropDown(WindowHandle),
     /// A modal dialog
     Modal(WindowHandle),
+}
+
+impl fmt::Debug for WindowLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WindowLevel::AppWindow => write!(f, "AppWindow"),
+            WindowLevel::Tooltip(_) => write!(f, "ToolTip"),
+            WindowLevel::DropDown(_) => write!(f, "DropDown"),
+            WindowLevel::Modal(_) => write!(f, "Modal"),
+        }
+    }
 }
 
 /// Contains the different states a Window can be in.
@@ -170,7 +181,7 @@ pub enum WindowState {
 
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
-pub struct WindowHandle(pub(crate) platform::WindowHandle);
+pub struct WindowHandle(pub(crate) backend::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.

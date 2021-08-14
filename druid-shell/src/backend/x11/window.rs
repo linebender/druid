@@ -430,9 +430,9 @@ impl WindowBuilder {
         {
             let window_type = match self.level {
                 WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
-                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
-                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
-                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                WindowLevel::Tooltip(_) => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal(_) => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown(_) => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
             };
 
             let conn = self.app.connection();
@@ -445,7 +445,7 @@ impl WindowBuilder {
             ));
             if matches!(
                 self.level,
-                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+                WindowLevel::DropDown(_) | WindowLevel::Modal(_) | WindowLevel::Tooltip(_)
             ) {
                 log_x11!(conn.change_window_attributes(
                     id,
