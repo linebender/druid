@@ -102,7 +102,6 @@ pub(crate) struct WindowHandle {
     /// a view. Also, this is better for hosted applications such as VST.
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
-    parent: Option<Box<crate::WindowHandle>>,
 }
 
 impl std::fmt::Debug for WindowHandle {
@@ -118,7 +117,6 @@ impl Default for WindowHandle {
         WindowHandle {
             nsview: unsafe { WeakPtr::new(nil) },
             idle_queue: Default::default(),
-            parent: None,
         }
     }
 }
@@ -169,6 +167,7 @@ struct ViewState {
     keyboard_state: KeyboardState,
     text: PietText,
     active_text_input: Option<TextFieldToken>,
+    parent: Option<crate::WindowHandle>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -293,7 +292,6 @@ impl WindowBuilder {
             let mut handle = WindowHandle {
                 nsview: view_state.nsview.clone(),
                 idle_queue,
-                parent: None,
             };
 
             if let Some(window_state) = self.window_state {
@@ -302,9 +300,9 @@ impl WindowBuilder {
 
             if let Some(level) = self.level {
                 match &level {
-                    WindowLevel::Tooltip(parent) => handle.parent = Some(Box::new(parent.clone())),
-                    WindowLevel::DropDown(parent) => handle.parent = Some(Box::new(parent.clone())),
-                    WindowLevel::Modal(parent) => handle.parent = Some(Box::new(parent.clone())),
+                    WindowLevel::Tooltip(parent) => (*view_state).parent = Some(parent.clone()),
+                    WindowLevel::DropDown(parent) => (*view_state).parent = Some(parent.clone()),
+                    WindowLevel::Modal(parent) => (*view_state).parent = Some(parent.clone()),
                     _ => {}
                 }
                 handle.set_level(level);
@@ -550,6 +548,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             keyboard_state,
             text: PietText::new_with_unique_state(),
             active_text_input: None,
+            parent: None,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -1219,9 +1218,15 @@ impl WindowHandle {
         // TODO: Maybe collin can get this into a state where modal windows follow the parent?
         // There is an API to do child windows, (https://developer.apple.com/documentation/appkit/nswindow/1419152-addchildwindow)
         // but I have no good way of testing and making sure this works.
-        if let Some(parent_state) = &self.parent {
-            let pos = (*parent_state).get_position();
-            position -= (pos.x, pos.y)
+        unsafe {
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+                if let Some(parent_state) = &state.parent {
+                    let pos = (*parent_state).get_position();
+                    position -= (pos.x, pos.y)
+                }
+            }
         }
 
         self.defer(DeferredOp::SetPosition(position))
