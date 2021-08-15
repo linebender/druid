@@ -183,8 +183,3 @@ pub(crate) fn add_to_env(env: Env) -> Env {
                 .with_size(15.0),
         )
 }
-
-#[deprecated(since = "0.7.0", note = "use Env::default() instead")]
-pub fn init() -> Env {
-    Env::default()
-}

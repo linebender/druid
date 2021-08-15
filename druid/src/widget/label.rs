@@ -89,10 +89,8 @@ pub struct Label<T> {
 
 /// A widget that displays text data.
 ///
-/// This requires the `Data` to be `ArcStr`; to handle static, dynamic, or
+/// This requires the `Data` to implement [`TextStorage`]; to handle static, dynamic, or
 /// localized text, use [`Label`].
-///
-/// [`Label`]: struct.Label.html
 pub struct RawLabel<T> {
     layout: TextLayout<T>,
     line_break_mode: LineBreaking,

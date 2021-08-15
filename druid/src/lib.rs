@@ -106,6 +106,12 @@
 //! features = ["im", "svg", "image"]
 //! ```
 //!
+//! # Note for Windows apps
+//!
+//! By default, Windows will open a console with your application's window. If you don't want
+//! the console to be shown, use `#![windows_subsystem = "windows"]` at the beginning of your
+//! crate.
+//!
 //! [`Widget`]: trait.Widget.html
 //! [`Data`]: trait.Data.html
 //! [`Lens`]: trait.Lens.html

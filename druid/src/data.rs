@@ -88,7 +88,7 @@ use piet::ImageBuf;
 /// #[derive(Clone, Data)]
 /// struct PathEntry {
 ///     // There's no Data impl for PathBuf, but no problem
-///     #[data(same_fn = "PartialEq::eq")]
+///     #[data(eq)]
 ///     path: PathBuf,
 ///     priority: usize,
 ///     // This field is not part of our data model.

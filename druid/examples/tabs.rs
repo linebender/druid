@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::Vector;
 use druid::widget::{
     Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, RadioGroup, Split, TabInfo,

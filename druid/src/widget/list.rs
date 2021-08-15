@@ -139,7 +139,7 @@ where
             cb(&mut ret, i);
 
             if !item.1.same(&ret) {
-                self[&item.0] = ret;
+                self[item.0] = ret;
             }
         }
     }
@@ -361,6 +361,10 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
 
         if self.update_child_count(data, env) {
             ctx.children_changed();
+        }
+
+        if ctx.env_key_changed(&self.spacing) {
+            ctx.request_layout();
         }
     }
 

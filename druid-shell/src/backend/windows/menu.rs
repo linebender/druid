@@ -104,7 +104,7 @@ impl Menu {
         let mut anno_text = text.to_string();
         if let Some(key) = key {
             anno_text.push('\t');
-            format_hotkey(&key, &mut anno_text);
+            format_hotkey(key, &mut anno_text);
         }
         unsafe {
             let mut flags = MF_STRING;

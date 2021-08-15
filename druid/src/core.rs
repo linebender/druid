@@ -649,7 +649,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
             warn!(
                 "{:?} received an event ({:?}) without having been laid out. \
-                This likely indicates a missed call to set_layout_rect.",
+                This likely indicates a missed call to set_origin.",
                 ctx.widget_id(),
                 event,
             );
@@ -1411,7 +1411,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = Env::default();
+        let env = Env::with_default_i10n();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &1, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

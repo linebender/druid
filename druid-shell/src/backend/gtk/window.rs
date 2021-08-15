@@ -842,7 +842,10 @@ impl WindowState {
                         options,
                     )
                     .ok()
-                    .map(|s| FileInfo { path: s.into() });
+                    .map(|s| FileInfo {
+                        path: s.into(),
+                        format: None,
+                    });
                     self.with_handler(|h| h.open_file(token, file_info));
                 }
                 DeferredOp::SaveAs(options, token) => {
@@ -852,7 +855,10 @@ impl WindowState {
                         options,
                     )
                     .ok()
-                    .map(|s| FileInfo { path: s.into() });
+                    .map(|s| FileInfo {
+                        path: s.into(),
+                        format: None,
+                    });
                     self.with_handler(|h| h.save_as(token, file_info));
                 }
                 DeferredOp::ContextMenu(menu, handle) => {

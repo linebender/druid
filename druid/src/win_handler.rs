@@ -71,7 +71,7 @@ pub(crate) struct AppHandler<T> {
 /// State shared by all windows in the UI.
 #[derive(Clone)]
 pub(crate) struct AppState<T> {
-    inner: Rc<RefCell<Inner<T>>>,
+    inner: Rc<RefCell<InnerAppState<T>>>,
 }
 
 /// The information for forwarding druid-shell's file dialog reply to the right place.
@@ -84,7 +84,7 @@ struct DialogInfo {
     cancel_cmd: Selector<()>,
 }
 
-struct Inner<T> {
+struct InnerAppState<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
@@ -158,7 +158,7 @@ impl<T> AppState<T> {
         delegate: Option<Box<dyn AppDelegate<T>>>,
         ext_event_host: ExtEventHost,
     ) -> Self {
-        let inner = Rc::new(RefCell::new(Inner {
+        let inner = Rc::new(RefCell::new(InnerAppState {
             app,
             delegate,
             command_queue: VecDeque::new(),
@@ -180,7 +180,7 @@ impl<T> AppState<T> {
     }
 }
 
-impl<T: Data> Inner<T> {
+impl<T: Data> InnerAppState<T> {
     fn handle_menu_cmd(&mut self, cmd_id: MenuItemId, window_id: Option<WindowId>) {
         let queue = &mut self.command_queue;
         let data = &mut self.data;
@@ -208,7 +208,7 @@ impl<T: Data> Inner<T> {
     where
         F: FnOnce(&mut dyn AppDelegate<T>, &mut T, &Env, &mut DelegateCtx) -> R,
     {
-        let Inner {
+        let InnerAppState {
             ref mut delegate,
             ref mut command_queue,
             ref mut data,
