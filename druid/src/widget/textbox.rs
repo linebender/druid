@@ -25,9 +25,11 @@ use crate::text::{
 use crate::widget::prelude::*;
 use crate::widget::{Padding, Scroll, WidgetWrapper};
 use crate::{
-    theme, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect, SysMods,
-    TextAlignment, TimerToken, Vec2,
+    theme, ArcStr, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect,
+    SysMods, TextAlignment, TimerToken, Vec2,
 };
+
+use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
@@ -47,7 +49,8 @@ const SCROLL_TO_INSETS: Insets = Insets::uniform_xy(40.0, 0.0);
 /// [`Formatter`]: crate::text::format::Formatter
 /// [`ValueTextBox`]: super::ValueTextBox
 pub struct TextBox<T> {
-    placeholder: TextLayout<String>,
+    placeholder_text: LabelText<T>,
+    placeholder_layout: TextLayout<ArcStr>,
     inner: Scroll<T, Padding<T, TextComponent<T>>>,
     scroll_to_selection_after_layout: bool,
     multiline: bool,
@@ -70,8 +73,9 @@ pub struct TextBox<T> {
 impl<T: EditableText + TextStorage> TextBox<T> {
     /// Create a new TextBox widget.
     pub fn new() -> Self {
-        let mut placeholder = TextLayout::from_text("");
-        placeholder.set_text_color(theme::PLACEHOLDER_COLOR);
+        let mut placeholder_layout = TextLayout::new();
+        placeholder_layout.set_text_color(theme::PLACEHOLDER_COLOR);
+        let placeholder_text = "".into();
         let mut scroll = Scroll::new(Padding::new(
             theme::TEXTBOX_INSETS,
             TextComponent::default(),
@@ -81,7 +85,8 @@ impl<T: EditableText + TextStorage> TextBox<T> {
         Self {
             inner: scroll,
             scroll_to_selection_after_layout: false,
-            placeholder,
+            placeholder_text,
+            placeholder_layout,
             multiline: false,
             was_focused_from_click: false,
             cursor_on: false,
@@ -116,12 +121,6 @@ impl<T: EditableText + TextStorage> TextBox<T> {
 }
 
 impl<T> TextBox<T> {
-    /// Builder-style method to set the `TextBox`'s placeholder text.
-    pub fn with_placeholder(mut self, placeholder: impl Into<String>) -> Self {
-        self.placeholder.set_text(placeholder.into());
-        self
-    }
-
     /// Builder-style method for setting the text size.
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
@@ -178,11 +177,6 @@ impl<T> TextBox<T> {
         self
     }
 
-    /// Set the `TextBox`'s placeholder text.
-    pub fn set_placeholder(&mut self, placeholder: impl Into<String>) {
-        self.placeholder.set_text(placeholder.into());
-    }
-
     /// Set the text size.
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
@@ -199,7 +193,7 @@ impl<T> TextBox<T> {
             .borrow_mut()
             .layout
             .set_text_size(size.clone());
-        self.placeholder.set_text_size(size);
+        self.placeholder_layout.set_text_size(size);
     }
 
     /// Set the font.
@@ -217,7 +211,7 @@ impl<T> TextBox<T> {
         }
         let font = font.into();
         self.text_mut().borrow_mut().layout.set_font(font.clone());
-        self.placeholder.set_font(font);
+        self.placeholder_layout.set_font(font);
     }
 
     /// Set the [`TextAlignment`] for this `TextBox``.
@@ -272,6 +266,21 @@ impl<T> TextBox<T> {
     /// This is not valid until `layout` has been called.
     pub fn text_position(&self) -> Point {
         self.text_pos
+    }
+}
+
+impl<T: Data> TextBox<T> {
+    /// Builder-style method to set the `TextBox`'s placeholder text.
+    pub fn with_placeholder(mut self, placeholder: impl Into<LabelText<T>>) -> Self {
+        self.set_placeholder(placeholder);
+        self
+    }
+
+    /// Set the `TextBox`'s placeholder text.
+    pub fn set_placeholder(&mut self, placeholder: impl Into<LabelText<T>>) {
+        self.placeholder_text = placeholder.into();
+        self.placeholder_layout
+            .set_text(self.placeholder_text.display_text());
     }
 }
 
@@ -466,6 +475,9 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
+                if matches!(event, LifeCycle::WidgetAdded) {
+                    self.placeholder_text.resolve(data, env);
+                }
                 ctx.register_text_input(self.text().input_handler());
             }
             LifeCycle::BuildFocusChain => {
@@ -505,8 +517,16 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
     #[instrument(name = "TextBox", level = "trace", skip(self, ctx, old, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, old: &T, data: &T, env: &Env) {
+        let placeholder_changed = self.placeholder_text.resolve(data, env);
+        if placeholder_changed {
+            let new_text = self.placeholder_text.display_text();
+            self.placeholder_layout.set_text(new_text);
+        }
+
         self.inner.update(ctx, old, data, env);
-        if ctx.env_changed() && self.placeholder.needs_rebuild_after_update(ctx) {
+        if placeholder_changed
+            || (ctx.env_changed() && self.placeholder_layout.needs_rebuild_after_update(ctx))
+        {
             ctx.request_layout();
         }
         if self.text().can_write() {
@@ -525,14 +545,14 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         let min_width = env.get(theme::WIDE_WIDGET_WIDTH);
         let textbox_insets = env.get(theme::TEXTBOX_INSETS);
 
-        self.placeholder.rebuild_if_needed(ctx.text(), env);
+        self.placeholder_layout.rebuild_if_needed(ctx.text(), env);
         let min_size = bc.constrain((min_width, 0.0));
         let child_bc = BoxConstraints::new(min_size, bc.max());
 
         let size = self.inner.layout(ctx, &child_bc, data, env);
 
         let text_metrics = if !self.text().can_read() || data.is_empty() {
-            self.placeholder.layout_metrics()
+            self.placeholder_layout.layout_metrics()
         } else {
             self.text().borrow().layout.layout_metrics()
         };
@@ -586,7 +606,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         if !data.is_empty() {
             self.inner.paint(ctx, data, env);
         } else {
-            let text_width = self.placeholder.layout_metrics().size.width;
+            let text_width = self.placeholder_layout.layout_metrics().size.width;
             let extra_width = (size.width - text_width - textbox_insets.x_value()).max(0.);
             let alignment = self.text().borrow().text_alignment();
             // alignment is only used for single-line text boxes
@@ -599,7 +619,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             // clip when we draw the placeholder, since it isn't in a clipbox
             ctx.with_save(|ctx| {
                 ctx.clip(clip_rect);
-                self.placeholder
+                self.placeholder_layout
                     .draw(ctx, (textbox_insets.x0 + x_offset, textbox_insets.y0));
             })
         }
