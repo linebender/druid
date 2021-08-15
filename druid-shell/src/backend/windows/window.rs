@@ -1875,7 +1875,6 @@ impl WindowHandle {
                     }
                 };
                 return position;
-        
             }
         }
         Point::new(0.0, 0.0)
