@@ -32,7 +32,6 @@ pub struct DeviceId(c_int);
 ///
 /// Reference counted under the hood.
 // Assume this isn't threadsafe unless proved otherwise. (e.g. don't implement Send/Sync)
-// TODO do we need UnsafeCell?
 pub struct Context(*mut xkb_context);
 
 impl Context {
