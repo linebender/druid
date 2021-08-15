@@ -1,201 +1,195 @@
-// Copyright 2020 The Druid Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#![allow(non_upper_case_globals)]
 
-//! X11 keycode handling.
+use keyboard_types::Key;
 
-use super::super::shared;
-pub use super::super::shared::code_to_location;
-use crate::keyboard::{Code, KbKey, Modifiers};
-use x11rb::protocol::xproto::Keycode;
+use super::xkbcommon_sys::*;
 
-/// Convert a hardware scan code to a key.
-///
-/// Note: this is a hardcoded layout. We need to detect the user's
-/// layout from the system and apply it.
-pub fn code_to_key(code: Code, m: Modifiers) -> KbKey {
-    fn a(s: &str) -> KbKey {
-        KbKey::Character(s.into())
+/// Map from an xkb_common key code to a key, if possible.
+pub fn map_key(keysym: u32) -> Key {
+    use Key::*;
+    match keysym {
+        XKB_KEY_BackSpace => Backspace,
+        XKB_KEY_Tab | XKB_KEY_KP_Tab | XKB_KEY_ISO_Left_Tab => Tab,
+        XKB_KEY_Clear | XKB_KEY_KP_Begin | XKB_KEY_XF86Clear => Clear,
+        XKB_KEY_Return | XKB_KEY_KP_Enter => Enter,
+        XKB_KEY_Linefeed => Enter,
+        XKB_KEY_Pause => Pause,
+        XKB_KEY_Scroll_Lock => ScrollLock,
+        XKB_KEY_Escape => Escape,
+        XKB_KEY_Multi_key => Compose,
+        XKB_KEY_Kanji => KanjiMode,
+        XKB_KEY_Muhenkan => NonConvert,
+        XKB_KEY_Henkan_Mode => Convert,
+        XKB_KEY_Romaji => Romaji,
+        XKB_KEY_Hiragana => Hiragana,
+        XKB_KEY_Katakana => Katakana,
+        XKB_KEY_Hiragana_Katakana => HiraganaKatakana,
+        XKB_KEY_Zenkaku => Zenkaku,
+        XKB_KEY_Hankaku => Hankaku,
+        XKB_KEY_Zenkaku_Hankaku => ZenkakuHankaku,
+        XKB_KEY_Kana_Lock => KanaMode,
+        XKB_KEY_Eisu_Shift | XKB_KEY_Eisu_toggle => Alphanumeric,
+        XKB_KEY_Hangul => HangulMode,
+        XKB_KEY_Hangul_Hanja => HanjaMode,
+        XKB_KEY_Codeinput => CodeInput,
+        XKB_KEY_SingleCandidate => SingleCandidate,
+        XKB_KEY_MultipleCandidate => AllCandidates,
+        XKB_KEY_PreviousCandidate => PreviousCandidate,
+        XKB_KEY_Home | XKB_KEY_KP_Home => Home,
+        XKB_KEY_Left | XKB_KEY_KP_Left => ArrowLeft,
+        XKB_KEY_Up | XKB_KEY_KP_Up => ArrowUp,
+        XKB_KEY_Right | XKB_KEY_KP_Right => ArrowRight,
+        XKB_KEY_Down | XKB_KEY_KP_Down => ArrowDown,
+        XKB_KEY_Prior | XKB_KEY_KP_Prior => PageUp,
+        XKB_KEY_Next | XKB_KEY_KP_Next | XKB_KEY_XF86ScrollDown => PageDown,
+        XKB_KEY_End | XKB_KEY_KP_End | XKB_KEY_XF86ScrollUp => End,
+        XKB_KEY_Select => Select,
+        // Treat Print/PrintScreen as PrintScreen https://crbug.com/683097.
+        XKB_KEY_Print | XKB_KEY_3270_PrintScreen => PrintScreen,
+        XKB_KEY_Execute => Execute,
+        XKB_KEY_Insert | XKB_KEY_KP_Insert => Insert,
+        XKB_KEY_Undo => Undo,
+        XKB_KEY_Redo => Redo,
+        XKB_KEY_Menu => ContextMenu,
+        XKB_KEY_Find => Find,
+        XKB_KEY_Cancel => Cancel,
+        XKB_KEY_Help => Help,
+        XKB_KEY_Break | XKB_KEY_3270_Attn => Attn,
+        XKB_KEY_Mode_switch => ModeChange,
+        XKB_KEY_Num_Lock => NumLock,
+        XKB_KEY_F1 | XKB_KEY_KP_F1 => F1,
+        XKB_KEY_F2 | XKB_KEY_KP_F2 => F2,
+        XKB_KEY_F3 | XKB_KEY_KP_F3 => F3,
+        XKB_KEY_F4 | XKB_KEY_KP_F4 => F4,
+        XKB_KEY_F5 => F5,
+        XKB_KEY_F6 => F6,
+        XKB_KEY_F7 => F7,
+        XKB_KEY_F8 => F8,
+        XKB_KEY_F9 => F9,
+        XKB_KEY_F10 => F10,
+        XKB_KEY_F11 => F11,
+        XKB_KEY_F12 => F12,
+        // not available in keyboard-types
+        // XKB_KEY_XF86Tools | XKB_KEY_F13 => F13,
+        // XKB_KEY_F14 | XKB_KEY_XF86Launch5 => F14,
+        // XKB_KEY_F15 | XKB_KEY_XF86Launch6 => F15,
+        // XKB_KEY_F16 | XKB_KEY_XF86Launch7 => F16,
+        // XKB_KEY_F17 | XKB_KEY_XF86Launch8 => F17,
+        // XKB_KEY_F18 | XKB_KEY_XF86Launch9 => F18,
+        // XKB_KEY_F19 => F19,
+        // XKB_KEY_F20 => F20,
+        // XKB_KEY_F21 => F21,
+        // XKB_KEY_F22 => F22,
+        // XKB_KEY_F23 => F23,
+        // XKB_KEY_F24 => F24,
+        // XKB_KEY_XF86Calculator => LaunchCalculator,
+        // XKB_KEY_XF86MyComputer | XKB_KEY_XF86Explorer => LaunchMyComputer,
+        // XKB_KEY_ISO_Level3_Latch => AltGraphLatch,
+        // XKB_KEY_ISO_Level5_Shift => ShiftLevel5,
+        XKB_KEY_Shift_L | XKB_KEY_Shift_R => Shift,
+        XKB_KEY_Control_L | XKB_KEY_Control_R => Control,
+        XKB_KEY_Caps_Lock => CapsLock,
+        XKB_KEY_Meta_L | XKB_KEY_Meta_R => Meta,
+        XKB_KEY_Alt_L | XKB_KEY_Alt_R => Alt,
+        XKB_KEY_Super_L | XKB_KEY_Super_R => Meta,
+        XKB_KEY_Hyper_L | XKB_KEY_Hyper_R => Hyper,
+        XKB_KEY_Delete => Delete,
+        XKB_KEY_SunProps => Props,
+        XKB_KEY_XF86Next_VMode => VideoModeNext,
+        XKB_KEY_XF86MonBrightnessUp => BrightnessUp,
+        XKB_KEY_XF86MonBrightnessDown => BrightnessDown,
+        XKB_KEY_XF86Standby | XKB_KEY_XF86Sleep | XKB_KEY_XF86Suspend => Standby,
+        XKB_KEY_XF86AudioLowerVolume => AudioVolumeDown,
+        XKB_KEY_XF86AudioMute => AudioVolumeMute,
+        XKB_KEY_XF86AudioRaiseVolume => AudioVolumeUp,
+        XKB_KEY_XF86AudioPlay => MediaPlayPause,
+        XKB_KEY_XF86AudioStop => MediaStop,
+        XKB_KEY_XF86AudioPrev => MediaTrackPrevious,
+        XKB_KEY_XF86AudioNext => MediaTrackNext,
+        XKB_KEY_XF86HomePage => BrowserHome,
+        XKB_KEY_XF86Mail => LaunchMail,
+        XKB_KEY_XF86Search => BrowserSearch,
+        XKB_KEY_XF86AudioRecord => MediaRecord,
+        XKB_KEY_XF86Calendar => LaunchCalendar,
+        XKB_KEY_XF86Back => BrowserBack,
+        XKB_KEY_XF86Forward => BrowserForward,
+        XKB_KEY_XF86Stop => BrowserStop,
+        XKB_KEY_XF86Refresh | XKB_KEY_XF86Reload => BrowserRefresh,
+        XKB_KEY_XF86PowerOff => PowerOff,
+        XKB_KEY_XF86WakeUp => WakeUp,
+        XKB_KEY_XF86Eject => Eject,
+        XKB_KEY_XF86ScreenSaver => LaunchScreenSaver,
+        XKB_KEY_XF86WWW => LaunchWebBrowser,
+        XKB_KEY_XF86Favorites => BrowserFavorites,
+        XKB_KEY_XF86AudioPause => MediaPause,
+        XKB_KEY_XF86AudioMedia | XKB_KEY_XF86Music => LaunchMusicPlayer,
+        XKB_KEY_XF86AudioRewind => MediaRewind,
+        XKB_KEY_XF86CD | XKB_KEY_XF86Video => LaunchMediaPlayer,
+        XKB_KEY_XF86Close => Close,
+        XKB_KEY_XF86Copy | XKB_KEY_SunCopy => Copy,
+        XKB_KEY_XF86Cut | XKB_KEY_SunCut => Cut,
+        XKB_KEY_XF86Display => DisplaySwap,
+        XKB_KEY_XF86Excel => LaunchSpreadsheet,
+        XKB_KEY_XF86LogOff => LogOff,
+        XKB_KEY_XF86New => New,
+        XKB_KEY_XF86Open | XKB_KEY_SunOpen => Open,
+        XKB_KEY_XF86Paste | XKB_KEY_SunPaste => Paste,
+        XKB_KEY_XF86Reply => MailReply,
+        XKB_KEY_XF86Save => Save,
+        XKB_KEY_XF86Send => MailSend,
+        XKB_KEY_XF86Spell => SpellCheck,
+        XKB_KEY_XF86SplitScreen => SplitScreenToggle,
+        XKB_KEY_XF86Word | XKB_KEY_XF86OfficeHome => LaunchWordProcessor,
+        XKB_KEY_XF86ZoomIn => ZoomIn,
+        XKB_KEY_XF86ZoomOut => ZoomOut,
+        XKB_KEY_XF86WebCam => LaunchWebCam,
+        XKB_KEY_XF86MailForward => MailForward,
+        XKB_KEY_XF86AudioForward => MediaFastForward,
+        XKB_KEY_XF86AudioRandomPlay => RandomToggle,
+        XKB_KEY_XF86Subtitle => Subtitle,
+        XKB_KEY_XF86Hibernate => Hibernate,
+        XKB_KEY_3270_EraseEOF => EraseEof,
+        XKB_KEY_3270_Play => Play,
+        XKB_KEY_3270_ExSelect => ExSel,
+        XKB_KEY_3270_CursorSelect => CrSel,
+        XKB_KEY_ISO_Level3_Shift => AltGraph,
+        XKB_KEY_ISO_Next_Group => GroupNext,
+        XKB_KEY_ISO_Prev_Group => GroupPrevious,
+        XKB_KEY_ISO_First_Group => GroupFirst,
+        XKB_KEY_ISO_Last_Group => GroupLast,
+        XKB_KEY_dead_grave
+        | XKB_KEY_dead_acute
+        | XKB_KEY_dead_circumflex
+        | XKB_KEY_dead_tilde
+        | XKB_KEY_dead_macron
+        | XKB_KEY_dead_breve
+        | XKB_KEY_dead_abovedot
+        | XKB_KEY_dead_diaeresis
+        | XKB_KEY_dead_abovering
+        | XKB_KEY_dead_doubleacute
+        | XKB_KEY_dead_caron
+        | XKB_KEY_dead_cedilla
+        | XKB_KEY_dead_ogonek
+        | XKB_KEY_dead_iota
+        | XKB_KEY_dead_voiced_sound
+        | XKB_KEY_dead_semivoiced_sound
+        | XKB_KEY_dead_belowdot
+        | XKB_KEY_dead_hook
+        | XKB_KEY_dead_horn
+        | XKB_KEY_dead_stroke
+        | XKB_KEY_dead_abovecomma
+        | XKB_KEY_dead_abovereversedcomma
+        | XKB_KEY_dead_doublegrave
+        | XKB_KEY_dead_belowring
+        | XKB_KEY_dead_belowmacron
+        | XKB_KEY_dead_belowcircumflex
+        | XKB_KEY_dead_belowtilde
+        | XKB_KEY_dead_belowbreve
+        | XKB_KEY_dead_belowdiaeresis
+        | XKB_KEY_dead_invertedbreve
+        | XKB_KEY_dead_belowcomma
+        | XKB_KEY_dead_currency
+        | XKB_KEY_dead_greek => Dead,
+        _ => Unidentified,
     }
-    fn s(mods: Modifiers, base: &str, shifted: &str) -> KbKey {
-        if mods.shift() {
-            KbKey::Character(shifted.into())
-        } else {
-            KbKey::Character(base.into())
-        }
-    }
-    fn n(mods: Modifiers, base: KbKey, num: &str) -> KbKey {
-        if mods.contains(Modifiers::NUM_LOCK) != mods.shift() {
-            KbKey::Character(num.into())
-        } else {
-            base
-        }
-    }
-    match code {
-        Code::KeyA => s(m, "a", "A"),
-        Code::KeyB => s(m, "b", "B"),
-        Code::KeyC => s(m, "c", "C"),
-        Code::KeyD => s(m, "d", "D"),
-        Code::KeyE => s(m, "e", "E"),
-        Code::KeyF => s(m, "f", "F"),
-        Code::KeyG => s(m, "g", "G"),
-        Code::KeyH => s(m, "h", "H"),
-        Code::KeyI => s(m, "i", "I"),
-        Code::KeyJ => s(m, "j", "J"),
-        Code::KeyK => s(m, "k", "K"),
-        Code::KeyL => s(m, "l", "L"),
-        Code::KeyM => s(m, "m", "M"),
-        Code::KeyN => s(m, "n", "N"),
-        Code::KeyO => s(m, "o", "O"),
-        Code::KeyP => s(m, "p", "P"),
-        Code::KeyQ => s(m, "q", "Q"),
-        Code::KeyR => s(m, "r", "R"),
-        Code::KeyS => s(m, "s", "S"),
-        Code::KeyT => s(m, "t", "T"),
-        Code::KeyU => s(m, "u", "U"),
-        Code::KeyV => s(m, "v", "V"),
-        Code::KeyW => s(m, "w", "W"),
-        Code::KeyX => s(m, "x", "X"),
-        Code::KeyY => s(m, "y", "Y"),
-        Code::KeyZ => s(m, "z", "Z"),
-
-        Code::Digit0 => s(m, "0", ")"),
-        Code::Digit1 => s(m, "1", "!"),
-        Code::Digit2 => s(m, "2", "@"),
-        Code::Digit3 => s(m, "3", "#"),
-        Code::Digit4 => s(m, "4", "$"),
-        Code::Digit5 => s(m, "5", "%"),
-        Code::Digit6 => s(m, "6", "^"),
-        Code::Digit7 => s(m, "7", "&"),
-        Code::Digit8 => s(m, "8", "*"),
-        Code::Digit9 => s(m, "9", "("),
-
-        Code::Backquote => s(m, "`", "~"),
-        Code::Minus => s(m, "-", "_"),
-        Code::Equal => s(m, "=", "+"),
-        Code::BracketLeft => s(m, "[", "{"),
-        Code::BracketRight => s(m, "]", "}"),
-        Code::Backslash => s(m, "\\", "|"),
-        Code::Semicolon => s(m, ";", ":"),
-        Code::Quote => s(m, "'", "\""),
-        Code::Comma => s(m, ",", "<"),
-        Code::Period => s(m, ".", ">"),
-        Code::Slash => s(m, "/", "?"),
-
-        Code::Space => a(" "),
-
-        Code::Escape => KbKey::Escape,
-        Code::Backspace => KbKey::Backspace,
-        Code::Tab => KbKey::Tab,
-        Code::Enter => KbKey::Enter,
-        Code::ControlLeft => KbKey::Control,
-        Code::ShiftLeft => KbKey::Shift,
-        Code::ShiftRight => KbKey::Shift,
-        Code::NumpadMultiply => a("*"),
-        Code::AltLeft => KbKey::Alt,
-        Code::CapsLock => KbKey::CapsLock,
-        Code::F1 => KbKey::F1,
-        Code::F2 => KbKey::F2,
-        Code::F3 => KbKey::F3,
-        Code::F4 => KbKey::F4,
-        Code::F5 => KbKey::F5,
-        Code::F6 => KbKey::F6,
-        Code::F7 => KbKey::F7,
-        Code::F8 => KbKey::F8,
-        Code::F9 => KbKey::F9,
-        Code::F10 => KbKey::F10,
-        Code::NumLock => KbKey::NumLock,
-        Code::ScrollLock => KbKey::ScrollLock,
-        Code::Numpad0 => n(m, KbKey::Insert, "0"),
-        Code::Numpad1 => n(m, KbKey::End, "1"),
-        Code::Numpad2 => n(m, KbKey::ArrowDown, "2"),
-        Code::Numpad3 => n(m, KbKey::PageDown, "3"),
-        Code::Numpad4 => n(m, KbKey::ArrowLeft, "4"),
-        Code::Numpad5 => n(m, KbKey::Clear, "5"),
-        Code::Numpad6 => n(m, KbKey::ArrowRight, "6"),
-        Code::Numpad7 => n(m, KbKey::Home, "7"),
-        Code::Numpad8 => n(m, KbKey::ArrowUp, "8"),
-        Code::Numpad9 => n(m, KbKey::PageUp, "9"),
-        Code::NumpadSubtract => a("-"),
-        Code::NumpadAdd => a("+"),
-        Code::NumpadDecimal => n(m, KbKey::Delete, "."),
-        Code::IntlBackslash => s(m, "\\", "|"),
-        Code::F11 => KbKey::F11,
-        Code::F12 => KbKey::F12,
-        // This mapping is based on the picture in the w3c spec.
-        Code::IntlRo => a("\\"),
-        Code::Convert => KbKey::Convert,
-        Code::KanaMode => KbKey::KanaMode,
-        Code::NonConvert => KbKey::NonConvert,
-        Code::NumpadEnter => KbKey::Enter,
-        Code::ControlRight => KbKey::Control,
-        Code::NumpadDivide => a("/"),
-        Code::PrintScreen => KbKey::PrintScreen,
-        Code::AltRight => KbKey::Alt,
-        Code::Home => KbKey::Home,
-        Code::ArrowUp => KbKey::ArrowUp,
-        Code::PageUp => KbKey::PageUp,
-        Code::ArrowLeft => KbKey::ArrowLeft,
-        Code::ArrowRight => KbKey::ArrowRight,
-        Code::End => KbKey::End,
-        Code::ArrowDown => KbKey::ArrowDown,
-        Code::PageDown => KbKey::PageDown,
-        Code::Insert => KbKey::Insert,
-        Code::Delete => KbKey::Delete,
-        Code::AudioVolumeMute => KbKey::AudioVolumeMute,
-        Code::AudioVolumeDown => KbKey::AudioVolumeDown,
-        Code::AudioVolumeUp => KbKey::AudioVolumeUp,
-        Code::NumpadEqual => a("="),
-        Code::Pause => KbKey::Pause,
-        Code::NumpadComma => a(","),
-        Code::Lang1 => KbKey::HangulMode,
-        Code::Lang2 => KbKey::HanjaMode,
-        Code::IntlYen => a("¥"),
-        Code::MetaLeft => KbKey::Meta,
-        Code::MetaRight => KbKey::Meta,
-        Code::ContextMenu => KbKey::ContextMenu,
-        Code::BrowserStop => KbKey::BrowserStop,
-        Code::Again => KbKey::Again,
-        Code::Props => KbKey::Props,
-        Code::Undo => KbKey::Undo,
-        Code::Select => KbKey::Select,
-        Code::Copy => KbKey::Copy,
-        Code::Open => KbKey::Open,
-        Code::Paste => KbKey::Paste,
-        Code::Find => KbKey::Find,
-        Code::Cut => KbKey::Cut,
-        Code::Help => KbKey::Help,
-        Code::LaunchApp2 => KbKey::LaunchApplication2,
-        Code::WakeUp => KbKey::WakeUp,
-        Code::LaunchApp1 => KbKey::LaunchApplication1,
-        Code::LaunchMail => KbKey::LaunchMail,
-        Code::BrowserFavorites => KbKey::BrowserFavorites,
-        Code::BrowserBack => KbKey::BrowserBack,
-        Code::BrowserForward => KbKey::BrowserForward,
-        Code::Eject => KbKey::Eject,
-        Code::MediaTrackNext => KbKey::MediaTrackNext,
-        Code::MediaPlayPause => KbKey::MediaPlayPause,
-        Code::MediaTrackPrevious => KbKey::MediaTrackPrevious,
-        Code::MediaStop => KbKey::MediaStop,
-        Code::MediaSelect => KbKey::LaunchMediaPlayer,
-        Code::BrowserHome => KbKey::BrowserHome,
-        Code::BrowserRefresh => KbKey::BrowserRefresh,
-        Code::BrowserSearch => KbKey::BrowserSearch,
-
-        _ => KbKey::Unidentified,
-    }
-}
-
-pub fn hardware_keycode_to_code(hw_keycode: Keycode) -> Code {
-    shared::hardware_keycode_to_code(hw_keycode as u16)
 }

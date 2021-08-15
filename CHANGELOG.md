@@ -55,6 +55,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Slider` widget now warns if max < min and swaps the values ([#1882] by [@Maan2003])
 - Widget/Slider: Add stepping functionality ([#1875] by [@raymanfx])
 - Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
+- X11: detect keyboard layout ([#1779] by [@Maan2003])
 
 ### Changed
 
@@ -750,6 +751,7 @@ Last release without a changelog :(
 [#1761]: https://github.com/linebender/druid/pull/1761
 [#1764]: https://github.com/linebender/druid/pull/1764
 [#1772]: https://github.com/linebender/druid/pull/1772
+[#1779]: https://github.com/linebender/druid/pull/1779
 [#1787]: https://github.com/linebender/druid/pull/1787
 [#1801]: https://github.com/linebender/druid/pull/1800
 [#1802]: https://github.com/linebender/druid/pull/1802

@@ -23,21 +23,65 @@ pub type RawKey = gdk::keys::Key;
 
 #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
 pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
+    // changes from x11 backend keycodes:
+    // * XKB_KEY_ prefix removed
+    // * 3270 is replaced with _3270
+    // * XF86 prefix is removed
+    // * Sun* Keys are gone
     Some(match raw {
-        Escape => Key::Escape,
         BackSpace => Key::Backspace,
-        Tab | ISO_Left_Tab => Key::Tab,
-        Return => Key::Enter,
-        Control_L | Control_R => Key::Control,
-        Alt_L | Alt_R => Key::Alt,
-        Shift_L | Shift_R => Key::Shift,
-        // TODO: investigate mapping. Map Meta_[LR]?
-        Super_L | Super_R => Key::Meta,
-        Caps_Lock => Key::CapsLock,
-        F1 => Key::F1,
-        F2 => Key::F2,
-        F3 => Key::F3,
-        F4 => Key::F4,
+        Tab | KP_Tab | ISO_Left_Tab => Key::Tab,
+        Clear | KP_Begin => Key::Clear,
+        Return | KP_Enter => Key::Enter,
+        Linefeed => Key::Enter,
+        Pause => Key::Pause,
+        Scroll_Lock => Key::ScrollLock,
+        Escape => Key::Escape,
+        Multi_key => Key::Compose,
+        Kanji => Key::KanjiMode,
+        Muhenkan => Key::NonConvert,
+        Henkan_Mode => Key::Convert,
+        Romaji => Key::Romaji,
+        Hiragana => Key::Hiragana,
+        Katakana => Key::Katakana,
+        Hiragana_Katakana => Key::HiraganaKatakana,
+        Zenkaku => Key::Zenkaku,
+        Hankaku => Key::Hankaku,
+        Zenkaku_Hankaku => Key::ZenkakuHankaku,
+        Kana_Lock => Key::KanaMode,
+        Eisu_Shift | Eisu_toggle => Key::Alphanumeric,
+        Hangul => Key::HangulMode,
+        Hangul_Hanja => Key::HanjaMode,
+        Codeinput => Key::CodeInput,
+        SingleCandidate => Key::SingleCandidate,
+        MultipleCandidate => Key::AllCandidates,
+        PreviousCandidate => Key::PreviousCandidate,
+        Home | KP_Home => Key::Home,
+        Left | KP_Left => Key::ArrowLeft,
+        Up | KP_Up => Key::ArrowUp,
+        Right | KP_Right => Key::ArrowRight,
+        Down | KP_Down => Key::ArrowDown,
+        Prior | KP_Prior => Key::PageUp,
+        Next | KP_Next => Key::PageDown,
+        End | KP_End => Key::End,
+        Select => Key::Select,
+        // Treat Print/PrintScreen as PrintScreen https://crbug.com/683097.
+        Print | _3270_PrintScreen => Key::PrintScreen,
+        Execute => Key::Execute,
+        Insert | KP_Insert => Key::Insert,
+        Undo => Key::Undo,
+        Redo => Key::Redo,
+        Menu => Key::ContextMenu,
+        Find => Key::Find,
+        Cancel => Key::Cancel,
+        Help => Key::Help,
+        Break | _3270_Attn => Key::Attn,
+        Mode_switch => Key::ModeChange,
+        Num_Lock => Key::NumLock,
+        F1 | KP_F1 => Key::F1,
+        F2 | KP_F2 => Key::F2,
+        F3 | KP_F3 => Key::F3,
+        F4 | KP_F4 => Key::F4,
         F5 => Key::F5,
         F6 => Key::F6,
         F7 => Key::F7,
@@ -46,51 +90,126 @@ pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
         F10 => Key::F10,
         F11 => Key::F11,
         F12 => Key::F12,
-
-        Print => Key::PrintScreen,
-        Scroll_Lock => Key::ScrollLock,
-        // Pause/Break not audio.
-        Pause => Key::Pause,
-
-        Insert => Key::Insert,
+        // not available in keyboard-types
+        // Tools | F13 => Key::F13,
+        // F14 | Launch5 => Key::F14,
+        // F15 | Launch6 => Key::F15,
+        // F16 | Launch7 => Key::F16,
+        // F17 | Launch8 => Key::F17,
+        // F18 | Launch9 => Key::F18,
+        // F19 => Key::F19,
+        // F20 => Key::F20,
+        // F21 => Key::F21,
+        // F22 => Key::F22,
+        // F23 => Key::F23,
+        // F24 => Key::F24,
+        // Calculator => Key::LaunchCalculator,
+        // MyComputer | Explorer => Key::LaunchMyComputer,
+        // ISO_Level3_Latch => Key::AltGraphLatch,
+        // ISO_Level5_Shift => Key::ShiftLevel5,
+        Shift_L | Shift_R => Key::Shift,
+        Control_L | Control_R => Key::Control,
+        Caps_Lock => Key::CapsLock,
+        Meta_L | Meta_R => Key::Meta,
+        Alt_L | Alt_R => Key::Alt,
+        Super_L | Super_R => Key::Meta,
+        Hyper_L | Hyper_R => Key::Hyper,
         Delete => Key::Delete,
-        Home => Key::Home,
-        End => Key::End,
-        Page_Up => Key::PageUp,
-        Page_Down => Key::PageDown,
-        Num_Lock => Key::NumLock,
-
-        Up => Key::ArrowUp,
-        Down => Key::ArrowDown,
-        Left => Key::ArrowLeft,
-        Right => Key::ArrowRight,
-        Clear => Key::Clear,
-
-        Menu => Key::ContextMenu,
+        Next_VMode => Key::VideoModeNext,
+        MonBrightnessUp => Key::BrightnessUp,
+        MonBrightnessDown => Key::BrightnessDown,
+        Standby | Sleep | Suspend => Key::Standby,
+        AudioLowerVolume => Key::AudioVolumeDown,
+        AudioMute => Key::AudioVolumeMute,
+        AudioRaiseVolume => Key::AudioVolumeUp,
+        AudioPlay => Key::MediaPlayPause,
+        AudioStop => Key::MediaStop,
+        AudioPrev => Key::MediaTrackPrevious,
+        AudioNext => Key::MediaTrackNext,
+        HomePage => Key::BrowserHome,
+        Mail => Key::LaunchMail,
+        Search => Key::BrowserSearch,
+        AudioRecord => Key::MediaRecord,
+        Calendar => Key::LaunchCalendar,
+        Back => Key::BrowserBack,
+        Forward => Key::BrowserForward,
+        Stop => Key::BrowserStop,
+        Refresh | Reload => Key::BrowserRefresh,
+        PowerOff => Key::PowerOff,
         WakeUp => Key::WakeUp,
-        Launch0 => Key::LaunchApplication1,
-        Launch1 => Key::LaunchApplication2,
+        Eject => Key::Eject,
+        ScreenSaver => Key::LaunchScreenSaver,
+        WWW => Key::LaunchWebBrowser,
+        Favorites => Key::BrowserFavorites,
+        AudioPause => Key::MediaPause,
+        AudioMedia | Music => Key::LaunchMusicPlayer,
+        AudioRewind => Key::MediaRewind,
+        CD | Video => Key::LaunchMediaPlayer,
+        Close => Key::Close,
+        Copy => Key::Copy,
+        Cut => Key::Cut,
+        Display => Key::DisplaySwap,
+        Excel => Key::LaunchSpreadsheet,
+        LogOff => Key::LogOff,
+        New => Key::New,
+        Open => Key::Open,
+        Paste => Key::Paste,
+        Reply => Key::MailReply,
+        Save => Key::Save,
+        Send => Key::MailSend,
+        Spell => Key::SpellCheck,
+        SplitScreen => Key::SplitScreenToggle,
+        Word | OfficeHome => Key::LaunchWordProcessor,
+        ZoomIn => Key::ZoomIn,
+        ZoomOut => Key::ZoomOut,
+        WebCam => Key::LaunchWebCam,
+        MailForward => Key::MailForward,
+        AudioForward => Key::MediaFastForward,
+        AudioRandomPlay => Key::RandomToggle,
+        Subtitle => Key::Subtitle,
+        Hibernate => Key::Hibernate,
+        _3270_EraseEOF => Key::EraseEof,
+        _3270_Play => Key::Play,
+        _3270_ExSelect => Key::ExSel,
+        _3270_CursorSelect => Key::CrSel,
         ISO_Level3_Shift => Key::AltGraph,
-
-        KP_Begin => Key::Clear,
-        KP_Delete => Key::Delete,
-        KP_Down => Key::ArrowDown,
-        KP_End => Key::End,
-        KP_Enter => Key::Enter,
-        KP_F1 => Key::F1,
-        KP_F2 => Key::F2,
-        KP_F3 => Key::F3,
-        KP_F4 => Key::F4,
-        KP_Home => Key::Home,
-        KP_Insert => Key::Insert,
-        KP_Left => Key::ArrowLeft,
-        KP_Page_Down => Key::PageDown,
-        KP_Page_Up => Key::PageUp,
-        KP_Right => Key::ArrowRight,
-        // KP_Separator? What does it map to?
-        KP_Tab => Key::Tab,
-        KP_Up => Key::ArrowUp,
-        // TODO: more mappings (media etc)
+        ISO_Next_Group => Key::GroupNext,
+        ISO_Prev_Group => Key::GroupPrevious,
+        ISO_First_Group => Key::GroupFirst,
+        ISO_Last_Group => Key::GroupLast,
+        dead_grave
+        | dead_acute
+        | dead_circumflex
+        | dead_tilde
+        | dead_macron
+        | dead_breve
+        | dead_abovedot
+        | dead_diaeresis
+        | dead_abovering
+        | dead_doubleacute
+        | dead_caron
+        | dead_cedilla
+        | dead_ogonek
+        | dead_iota
+        | dead_voiced_sound
+        | dead_semivoiced_sound
+        | dead_belowdot
+        | dead_hook
+        | dead_horn
+        | dead_stroke
+        | dead_abovecomma
+        | dead_abovereversedcomma
+        | dead_doublegrave
+        | dead_belowring
+        | dead_belowmacron
+        | dead_belowcircumflex
+        | dead_belowtilde
+        | dead_belowbreve
+        | dead_belowdiaeresis
+        | dead_invertedbreve
+        | dead_belowcomma
+        | dead_currency
+        | dead_greek => Key::Dead,
         _ => return None,
     })
 }
