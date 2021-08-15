@@ -372,8 +372,7 @@ impl WindowBuilder {
             marker: std::marker::PhantomData,
         };
         if let Some(pos) = self.position {
-            let px = pos.to_px(win_state.scale.get());
-            win_state.window.move_(px.x as i32, px.y as i32)
+            handle.set_position(pos);
         }
 
         if let Some(state) = self.state {
@@ -949,7 +948,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Some(parent_state) = &state.parent {
                 let pos = (*parent_state).get_position();
-                position -= (pos.x, pos.y)
+                position += (pos.x, pos.y)
             }
         };
 
@@ -962,7 +961,12 @@ impl WindowHandle {
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.get_position();
-            Point::new(x as f64, y as f64).to_dp(state.scale.get())
+            let mut position = Point::new(x as f64, y as f64);
+            if let Some(parent_state) = &state.parent {
+                let pos = (*parent_state).get_position();
+                position -= (pos.x, pos.y)
+            }
+            position.to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }

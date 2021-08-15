@@ -1224,7 +1224,7 @@ impl WindowHandle {
                 let state = &mut (*(state as *mut ViewState));
                 if let Some(parent_state) = &state.parent {
                     let pos = (*parent_state).get_position();
-                    position -= (pos.x, pos.y)
+                    position += (pos.x, pos.y)
                 }
             }
         }
@@ -1240,10 +1240,19 @@ impl WindowHandle {
             let window: id = msg_send![*self.nsview.load(), window];
             let current_frame: NSRect = msg_send![window, frame];
 
-            Point::new(
+            let mut position = Point::new(
                 current_frame.origin.x,
                 screen_height - current_frame.origin.y - current_frame.size.height,
-            )
+            );
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+                if let Some(parent_state) = &state.parent {
+                    let pos = (*parent_state).get_position();
+                    position -= (pos.x, pos.y)
+                }
+            }
+            position
         }
     }
 

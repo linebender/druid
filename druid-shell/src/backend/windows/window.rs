@@ -1843,7 +1843,7 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             if let Some(parent_state) = &state.parent {
                 let pos = (*parent_state).get_position();
-                position -= (pos.x, pos.y)
+                position += (pos.x, pos.y)
             }
         };
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
@@ -1867,7 +1867,15 @@ impl WindowHandle {
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                     );
                 };
-                return Point::new(rect.left as f64, rect.top as f64);
+                let mut position = Point::new(rect.left as f64, rect.top as f64);
+                if let Some(state) = self.state.upgrade() {
+                    if let Some(parent_state) = &state.parent {
+                        let pos = (*parent_state).get_position();
+                        position -= (pos.x, pos.y)
+                    }
+                };
+                return position;
+        
             }
         }
         Point::new(0.0, 0.0)
