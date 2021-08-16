@@ -743,7 +743,9 @@ impl Application {
             if let Some(timeout) = next_timeout {
                 if timeout <= now {
                     if let Ok(state) = self.state.try_borrow() {
-                        for w in state.windows.values() {
+                        let values = state.windows.values().cloned().collect::<Vec<_>>();
+                        drop(state);
+                        for w in values {
                             w.run_timers(now);
                         }
                     } else {
