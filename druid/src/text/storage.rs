@@ -67,6 +67,8 @@ impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
     /// call.
     ///
     /// See [`UpdateCtx::env_key_changed`] for more details.
+    ///
+    /// [`env_update`]: (TextStorage::env_update)
     pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
         self.0.env_key_changed(key)
     }
