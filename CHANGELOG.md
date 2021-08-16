@@ -74,8 +74,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 - x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 - remove prefix from platform extension traits ([#1873] by [@Maan2003])
-- Remove `set_level` on windows ([#1919] by [@Maan2003])
-- Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@Maan2003])
+- Remove `set_level` on windows ([#1919] by [@JAicewizard])
+- Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
 
 ### Deprecated
 
