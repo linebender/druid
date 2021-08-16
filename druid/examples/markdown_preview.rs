@@ -32,12 +32,10 @@ const WINDOW_TITLE: LocalizedString<AppState> = LocalizedString::new("Minimal Ma
 
 const TEXT: &str = "*Hello* ***world***! This is a `TextBox` where you can \
 		    use limited markdown notation, which is reflected in the \
-		    **styling** of the `Label` on the left.
-
+		    **styling** of the `Label` on the left.\n\n\
 		    If you're curious about Druid, a good place to ask questions \
 		    and discuss development work is our [Zulip chat instance], \
 		    in the #druid-help and #druid channels, respectively.\n\n\n\
-
 		    [Zulip chat instance]: https://xi.zulipchat.com";
 
 const SPACER_SIZE: f64 = 8.0;
