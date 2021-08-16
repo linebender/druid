@@ -190,6 +190,10 @@ impl AttributeSpans {
                 .fg_color
                 .iter()
                 .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+            || self
+                .font_descriptor
+                .iter()
+                .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
     }
 }
 
