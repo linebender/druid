@@ -19,6 +19,8 @@ use std::ops::Range;
 use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as PietAttr};
 use crate::{Command, Env, FontDescriptor, KeyOrValue};
 
+use super::EnvUpdateCtx;
+
 /// A clickable range of text with an associated [`Command`].
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -178,6 +180,20 @@ impl AttributeSpans {
         // so items that come from FontDescriptor will stay at the front
         items.sort_by(|a, b| a.0.start.cmp(&b.0.start));
         items
+    }
+
+    pub(crate) fn env_update(&self, ctx: &EnvUpdateCtx) -> bool {
+        self.size
+            .iter()
+            .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+            || self
+                .fg_color
+                .iter()
+                .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+            || self
+                .font_descriptor
+                .iter()
+                .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
     }
 }
 
