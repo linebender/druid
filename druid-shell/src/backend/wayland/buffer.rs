@@ -119,7 +119,7 @@ impl<const N: usize> Buffers<N> {
         if self.recreate_buffers.get() {
             // If all buffers are free, destroy and recreate them
             if self.all_buffers_released() {
-                //log::debug!("all buffers released, recreating");
+                //tracing::debug!("all buffers released, recreating");
                 self.deferred_paint.set(false);
                 self.recreate_buffers_unchecked();
                 self.paint_unchecked();
@@ -130,7 +130,7 @@ impl<const N: usize> Buffers<N> {
             // If the next buffer is free, draw & present. If buffers have not been initialized it
             // is a bug in this code.
             if self.pending_buffer_released() {
-                //log::debug!("next frame has been released: draw and present");
+                //tracing::debug!("next frame has been released: draw and present");
                 self.deferred_paint.set(false);
                 self.paint_unchecked();
             } else {
@@ -551,7 +551,7 @@ impl Drop for Mmap {
     fn drop(&mut self) {
         unsafe {
             if let Err(e) = munmap(self.ptr.as_ptr(), self.size) {
-                log::warn!("Error unmapping memory: {}", e);
+                tracing::warn!("Error unmapping memory: {}", e);
             }
         }
     }
