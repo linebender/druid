@@ -2,7 +2,7 @@
 
 ## A data-first Rust-native UI toolkit.
 
-[![crates.io](https://meritbadge.herokuapp.com/druid)](https://crates.io/crates/druid)
+[![crates.io](https://img.shields.io/crates/v/druid)](https://crates.io/crates/druid)
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
 [![license](https://img.shields.io/crates/l/druid)](https://github.com/linebender/druid/blob/master/LICENSE)
 [![chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://xi.zulipchat.com)
