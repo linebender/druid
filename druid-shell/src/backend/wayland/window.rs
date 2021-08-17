@@ -459,6 +459,7 @@ impl WindowData {
     /// - `size` is the physical size in pixels we are drawing.
     /// - `force` means draw the whole frame, even if it wasn't all invalidated.
     pub(crate) fn paint(&self, size: RawSize, buf: &mut [u8], force: bool) {
+        self.handler.borrow_mut().prepare_paint();
         //tracing::trace!("Paint call");
         //self.data.borrow().assert_size();
         if force {
