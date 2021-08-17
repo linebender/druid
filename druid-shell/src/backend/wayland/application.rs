@@ -23,6 +23,7 @@ use super::{
     window::WindowData,
     xkb,
 };
+use crate::text::simulate_input;
 use crate::{
     application::AppHandler, backend::shared::Timer, keyboard_types::KeyState, kurbo::Point,
     TimerToken, WinHandler,
@@ -460,7 +461,11 @@ impl ApplicationData {
                             KeyState::Down => {
                                 // TODO what do I do if the key event is handled? Do I not update
                                 // the xkb state?
-                                data.handler.borrow_mut().key_down(event.clone());
+                                simulate_input(
+                                    &mut **data.handler.borrow_mut(),
+                                    data.active_text_field.get(),
+                                    event.clone(),
+                                );
                             }
                             KeyState::Up => data.handler.borrow_mut().key_up(event.clone()),
                         }
