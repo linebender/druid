@@ -219,16 +219,26 @@ impl WindowHandle {
     }
 
     pub fn add_text_field(&self) -> TextFieldToken {
-        // I think it makes sense to leave these until @forloveofcats' work on the pango
-        // integration is complete/merged.
         TextFieldToken::next()
     }
 
-    pub fn remove_text_field(&self, token: TextFieldToken) {}
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        if let Some(data) = self.data.upgrade() {
+            if data.active_text_field.get() == Some(token) {
+                data.active_text_field.set(None)
+            }
+        }
+    }
 
-    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {}
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        if let Some(data) = self.data.upgrade() {
+            data.active_text_field.set(active_field);
+        }
+    }
 
-    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {}
+    pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
+        // noop until we get a real text input implementation
+    }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
         if let Some(data) = self.data.upgrade() {
@@ -347,6 +357,7 @@ pub struct WindowData {
     /// These call back into user code, and so should only be run after all user code has returned,
     /// to avoid possible re-entrancy.
     deferred_tasks: RefCell<VecDeque<DeferredTask>>,
+    pub(crate) active_text_field: Cell<Option<TextFieldToken>>,
 }
 
 pub enum DeferredTask {
@@ -728,6 +739,7 @@ impl WindowBuilder {
             handler: RefCell::new(handler),
             damaged_region: RefCell::new(Region::EMPTY),
             deferred_tasks: RefCell::new(VecDeque::new()),
+            active_text_field: Cell::new(None),
         });
 
         let weak_data = Rc::downgrade(&data);
