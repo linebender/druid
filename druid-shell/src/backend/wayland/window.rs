@@ -129,11 +129,11 @@ impl WindowHandle {
     }
 
     pub fn set_level(&self, level: WindowLevel) {
-        log::warn!("level is unsupported on wayland");
+        tracing::warn!("level is unsupported on wayland");
     }
 
     pub fn set_size(&self, size: Size) {
-        log::warn!("setting the size dynamically is unsupported on wayland");
+        tracing::warn!("setting the size dynamically is unsupported on wayland");
     }
 
     pub fn get_size(&self) -> Size {
@@ -383,14 +383,14 @@ impl WindowData {
                 if let Some(output) = app_data.outputs.borrow().get(&id) {
                     scale = scale.max(output.scale);
                 } else {
-                    log::warn!(
+                    tracing::warn!(
                         "we still have a reference to an output that's gone away. The output had id {}",
                         id
                     );
                 }
             }
             if scale == 0 {
-                log::warn!("wayland never reported which output we are drawing to");
+                tracing::warn!("wayland never reported which output we are drawing to");
                 1
             } else {
                 scale
@@ -448,7 +448,7 @@ impl WindowData {
     /// - `size` is the physical size in pixels we are drawing.
     /// - `force` means draw the whole frame, even if it wasn't all invalidated.
     pub(crate) fn paint(&self, size: RawSize, buf: &mut [u8], force: bool) {
-        //log::trace!("Paint call");
+        //tracing::trace!("Paint call");
         //self.data.borrow().assert_size();
         if force {
             self.invalidate();
@@ -788,7 +788,7 @@ impl WindowBuilder {
             move |zxdg_toplevel_decoration_v1, event, _| match event {
                 ZxdgToplevelDecorationV1Event::Configure { mode } => {
                     // do nothing for now
-                    log::debug!("{:?}", mode);
+                    tracing::debug!("{:?}", mode);
                 }
                 _ => (),
             }

@@ -484,7 +484,7 @@ impl ApplicationData {
                 println!("Requested repeat rate={} delay={}", rate, delay);
             }
             evt => {
-                log::warn!("Unhandled keybaord event: {:?}", evt);
+                tracing::warn!("Unhandled keybaord event: {:?}", evt);
             }
         }
     }
@@ -575,7 +575,7 @@ impl ApplicationData {
                 }
             }
             evt => {
-                log::warn!("Unhandled pointer event: {:?}", evt);
+                tracing::warn!("Unhandled pointer event: {:?}", evt);
             }
         }
     }
@@ -598,7 +598,7 @@ impl ApplicationData {
                 Some(s) => s,
                 None => {
                     // NOTE this might be expected
-                    log::warn!("Received event for surface that doesn't exist any more");
+                    tracing::warn!("Received event for surface that doesn't exist any more");
                     continue;
                 }
             };
