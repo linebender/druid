@@ -152,7 +152,7 @@ impl Iterator for Pointer {
                             })
                         }
                         _ => {
-                            log::error!("mouse button changed, but not pressed or released");
+                            tracing::error!("mouse button changed, but not pressed or released");
                             continue;
                         }
                     };
@@ -163,7 +163,7 @@ impl Iterator for Pointer {
                         Axis::VerticalScroll => Vec2::new(0., value),
                         Axis::HorizontalScroll => Vec2::new(value, 0.),
                         _ => {
-                            log::error!("axis direction not vertical or horizontal");
+                            tracing::error!("axis direction not vertical or horizontal");
                             continue;
                         }
                     };
