@@ -9,7 +9,7 @@ use crate::Modifiers;
 
 use super::application::ApplicationData;
 use super::surfaces::buffers;
-use super::xkb;
+use crate::backend::shared::xkb;
 
 pub(super) struct State {
     /// Whether we've currently got keyboard focus.
@@ -35,6 +35,45 @@ impl Default for State {
             xkb_state: std::cell::RefCell::new(None),
             xkb_mods: std::cell::Cell::new(Modifiers::empty()),
         }
+    }
+}
+
+struct ModMap(u32, Modifiers);
+
+impl ModMap {
+    fn merge(self, m: Modifiers, mods: u32, locked: u32) -> Modifiers {
+        if self.0 & mods == 0 && self.0 & locked == 0 {
+            return m;
+        }
+
+        return m | self.1;
+    }
+}
+
+const MOD_SHIFT: ModMap = ModMap(1, Modifiers::SHIFT);
+const MOD_CAP_LOCK: ModMap = ModMap(2, Modifiers::CAPS_LOCK);
+const MOD_CTRL: ModMap = ModMap(4, Modifiers::CONTROL);
+const MOD_ALT: ModMap = ModMap(8, Modifiers::ALT);
+const MOD_NUM_LOCK: ModMap = ModMap(16, Modifiers::NUM_LOCK);
+const MOD_META: ModMap = ModMap(64, Modifiers::META);
+
+pub fn event_to_mods(event: wl_keyboard::Event) -> Modifiers {
+    match event {
+        wl_keyboard::Event::Modifiers {
+            mods_depressed,
+            mods_locked,
+            ..
+        } => {
+            let mods = Modifiers::empty();
+            let mods = MOD_SHIFT.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_CAP_LOCK.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_CTRL.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_ALT.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_NUM_LOCK.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_META.merge(mods, mods_depressed, mods_locked);
+            return mods;
+        }
+        _ => return Modifiers::empty(),
     }
 }
 
@@ -136,21 +175,22 @@ impl Manager {
                 });
             }
             wl_keyboard::Event::Key { key, state, .. } => {
-                let event = keyboardstate
-                    .borrow()
+                let mut event = keyboardstate
+                    .borrow_mut()
                     .xkb_state
-                    .borrow()
-                    .as_ref()
+                    .borrow_mut()
+                    .as_mut()
                     .unwrap()
                     .key_event(
-                        key,
+                        key + 8,
                         match state {
                             wl_keyboard::KeyState::Released => KeyState::Up,
                             wl_keyboard::KeyState::Pressed => KeyState::Down,
                             _ => panic!("unrecognised key event"),
                         },
-                        keyboardstate.borrow().xkb_mods.get(),
                     );
+
+                event.mods = keyboardstate.borrow().xkb_mods.get();
 
                 if let Some(winhandle) = appdata.acquire_current_window() {
                     winhandle.data().map(|windata| {
@@ -182,7 +222,7 @@ impl Manager {
                 keyboardstate
                     .borrow()
                     .xkb_mods
-                    .replace(xkb::event_to_mods(event));
+                    .replace(event_to_mods(event));
             }
             evt => {
                 tracing::warn!("unimplemented keyboard event: {:?}", evt);

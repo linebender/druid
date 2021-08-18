@@ -1,7 +1,7 @@
-#[cfg(not(feature = "x11"))]
+#[cfg(not(any(feature = "x11", feature = "wayland")))]
 fn main() {}
 
-#[cfg(feature = "x11")]
+#[cfg(any(feature = "x11", feature = "wayland"))]
 fn main() {
     use pkg_config::probe_library;
     use std::env;
@@ -14,6 +14,8 @@ fn main() {
     }
 
     probe_library("xkbcommon").unwrap();
+
+    #[cfg(feature = "x11")]
     probe_library("xkbcommon-x11").unwrap();
 
     let bindings = bindgen::Builder::default()

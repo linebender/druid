@@ -32,13 +32,10 @@
 
 #[macro_use]
 mod util;
-mod xkb;
 
 pub mod application;
 pub mod clipboard;
 pub mod error;
-mod keycodes;
 pub mod menu;
 pub mod screen;
 pub mod window;
-mod xkbcommon_sys;
