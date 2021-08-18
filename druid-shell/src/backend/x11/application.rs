@@ -36,8 +36,9 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
+use super::util;
 use super::window::Window;
-use super::{util, xkb};
+use crate::backend::shared::xkb;
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
 // convenience methods to intern and query those atoms). We use the following atoms:
