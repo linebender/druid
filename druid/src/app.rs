@@ -51,7 +51,7 @@ pub enum WindowSizePolicy {
 
 /// Window configuration that can be applied to a WindowBuilder, or to an existing WindowHandle.
 /// It does not include anything related to app data.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct WindowConfig {
     pub(crate) size_policy: WindowSizePolicy,
     pub(crate) size: Option<Size>,
