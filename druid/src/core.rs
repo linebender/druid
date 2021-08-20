@@ -1290,8 +1290,7 @@ impl WidgetState {
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
-        self.text_registrations
-            .extend(child_state.text_registrations.drain(..));
+        self.text_registrations.append(&mut child_state.text_registrations);
         self.update_focus_chain |= child_state.update_focus_chain;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
