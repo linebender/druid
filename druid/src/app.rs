@@ -582,6 +582,12 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
+    /// Set the [`WindowConfig`] of window.
+    pub fn with_config(mut self, config: WindowConfig) -> Self {
+        self.config = config;
+        self
+    }
+
     /// Attempt to create a platform window from this `WindowDesc`.
     pub(crate) fn build_native(
         self,
