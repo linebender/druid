@@ -363,7 +363,6 @@ impl<T: TextStorage + EditableText> TextBox<T> {
             key if HotKey::new(SysMods::Cmd, "y").matches(key) && cfg!(windows) => {
                 Some(sys::REDO.to(our_id))
             }
-            key if HotKey::new(SysMods::Cmd, "a").matches(key) => Some(sys::SELECT_ALL.to(our_id)),
             _ => None,
         }
     }
