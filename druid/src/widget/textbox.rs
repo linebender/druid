@@ -73,9 +73,11 @@ pub struct TextBox<T> {
 impl<T: EditableText + TextStorage> TextBox<T> {
     /// Create a new TextBox widget.
     pub fn new() -> Self {
+        let placeholder_text = ArcStr::from("");
         let mut placeholder_layout = TextLayout::new();
         placeholder_layout.set_text_color(theme::PLACEHOLDER_COLOR);
-        let placeholder_text = "".into();
+        placeholder_layout.set_text(placeholder_text.clone());
+
         let mut scroll = Scroll::new(Padding::new(
             theme::TEXTBOX_INSETS,
             TextComponent::default(),
@@ -85,7 +87,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
         Self {
             inner: scroll,
             scroll_to_selection_after_layout: false,
-            placeholder_text,
+            placeholder_text: placeholder_text.into(),
             placeholder_layout,
             multiline: false,
             was_focused_from_click: false,
