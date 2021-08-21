@@ -16,7 +16,7 @@ default-target = "x86_64-pc-windows-msvc"
 [features]
 default = ["gtk"]
 gtk = ["gdk-sys", "glib-sys", "gtk-sys", "gtk-rs"]
-x11 = ["x11rb", "nix", "cairo-sys-rs", , "bindgen", "pkg-config"]
+x11 = ["x11rb", "nix", "cairo-sys-rs", "bindgen", "pkg-config"]
 # Implement HasRawWindowHandle for WindowHandle
 raw-win-handle = ["raw-window-handle"]
 
