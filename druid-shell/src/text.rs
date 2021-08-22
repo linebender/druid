@@ -105,7 +105,6 @@ use crate::keyboard::{KbKey, KeyEvent};
 use crate::kurbo::{Point, Rect};
 use crate::piet::HitTestPoint;
 use crate::window::{TextFieldToken, WinHandler};
-use crate::{HotKey, SysMods};
 use std::borrow::Cow;
 use std::ops::Range;
 
@@ -589,9 +588,6 @@ pub fn simulate_input<H: WinHandler + ?Sized>(
             } else {
                 input_handler.handle_action(Action::Move(movement));
             }
-        }
-        _ if HotKey::new(SysMods::Cmd, "a").matches(event) => {
-            input_handler.handle_action(Action::SelectAll);
         }
         _ => {
             handler.release_input_lock(token);
