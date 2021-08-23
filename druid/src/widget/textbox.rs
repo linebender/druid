@@ -455,6 +455,20 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 ctx.set_handled();
             }
+            Event::Command(cmd)
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::SELECT_ALL) =>
+            {
+                if let Some(inval) = self
+                    .text_mut()
+                    .borrow_mut()
+                    .set_selection(Selection::new(0, data.as_str().len()))
+                {
+                    ctx.invalidate_text_input(inval);
+                }
+                ctx.set_handled();
+            }
             Event::Paste(ref item) if self.text().can_write() => {
                 if let Some(string) = item.get_string() {
                     let text = if self.multiline {
