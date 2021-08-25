@@ -19,7 +19,7 @@ use std::f64::INFINITY;
 use tracing::{instrument, trace, warn};
 
 use crate::widget::prelude::*;
-use crate::Data;
+use crate::{Data, WidgetPod};
 
 /// A widget with predefined size.
 ///
@@ -30,22 +30,24 @@ use crate::Data;
 /// If not given a child, SizedBox will try to size itself as close to the specified height
 /// and width as possible given the parent's constraints. If height or width is not set,
 /// it will be treated as zero.
-pub struct SizedBox<T> {
-    child: Option<Box<dyn Widget<T>>>,
+pub struct SizedBox<T, W> {
+    child: Option<WidgetPod<T, W>>,
     width: Option<f64>,
     height: Option<f64>,
 }
 
-impl<T> SizedBox<T> {
+impl<T: Data, W: Widget<T>> SizedBox<T, W> {
     /// Construct container with child, and both width and height not set.
-    pub fn new(child: impl Widget<T> + 'static) -> Self {
+    pub fn new(child: W) -> Self {
         Self {
-            child: Some(Box::new(child)),
+            child: Some(WidgetPod::new(child)),
             width: None,
             height: None,
         }
     }
+}
 
+impl<T: Data> SizedBox<T, Box<dyn Widget<T>>> {
     /// Construct container without child, and both width and height not set.
     ///
     /// If the widget is unchanged, it will do nothing, which can be useful if you want to draw a
@@ -58,6 +60,18 @@ impl<T> SizedBox<T> {
             width: None,
             height: None,
         }
+    }
+}
+
+impl<T: Data, W: Widget<T>> SizedBox<T, W> {
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> Option<&WidgetPod<T, W>> {
+        self.child.as_ref()
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> Option<&mut WidgetPod<T, W>> {
+        self.child.as_mut()
     }
 
     /// Set container's width.
@@ -133,7 +147,7 @@ impl<T> SizedBox<T> {
     }
 }
 
-impl<T: Data> Widget<T> for SizedBox<T> {
+impl<T: Data, W: Widget<T>> Widget<T> for SizedBox<T, W> {
     #[instrument(name = "SizedBox", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Some(ref mut child) = self.child {
@@ -151,11 +165,11 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     #[instrument(
         name = "SizedBox",
         level = "trace",
-        skip(self, ctx, old_data, data, env)
+        skip(self, ctx, _old_data, data, env)
     )]
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         if let Some(ref mut child) = self.child {
-            child.update(ctx, old_data, data, env);
+            child.update(ctx, data, env);
         }
     }
 
@@ -189,12 +203,12 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     }
 
     fn id(&self) -> Option<WidgetId> {
-        self.child.as_ref().and_then(|child| child.id())
+        self.child.as_ref()?.widget().id()
     }
 
     fn debug_state(&self, data: &T) -> DebugState {
         let children = if let Some(child) = &self.child {
-            vec![child.debug_state(data)]
+            vec![child.widget().debug_state(data)]
         } else {
             vec![]
         };
@@ -214,7 +228,7 @@ mod tests {
 
     #[test]
     fn expand() {
-        let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
+        let expand = SizedBox::<(), _>::new(Label::new("hello!")).expand();
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
         assert_eq!(child_bc.min(), Size::new(400., 400.,));
@@ -222,7 +236,7 @@ mod tests {
 
     #[test]
     fn no_width() {
-        let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
+        let expand = SizedBox::<(), _>::new(Label::new("hello!")).height(200.);
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
         let child_bc = expand.child_constraints(&bc);
         assert_eq!(child_bc.min(), Size::new(0., 200.,));

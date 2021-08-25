@@ -26,23 +26,33 @@ struct BorderStyle {
 }
 
 /// A widget that provides simple visual styling options to a child.
-pub struct Container<T> {
+pub struct Container<T, W> {
     background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
     corner_radius: KeyOrValue<f64>,
 
-    child: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, W>,
 }
 
-impl<T: Data> Container<T> {
+impl<T: Data, W: Widget<T>> Container<T, W> {
     /// Create Container with a child
-    pub fn new(child: impl Widget<T> + 'static) -> Self {
+    pub fn new(child: W) -> Self {
         Self {
             background: None,
             border: None,
             corner_radius: 0.0.into(),
-            child: WidgetPod::new(child).boxed(),
+            child: WidgetPod::new(child),
         }
+    }
+
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &WidgetPod<T, W> {
+        &self.child
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut WidgetPod<T, W> {
+        &mut self.child
     }
 
     /// Builder-style method for setting the background for this widget.
@@ -140,7 +150,7 @@ impl<T: Data> Container<T> {
     }
 }
 
-impl<T: Data> Widget<T> for Container<T> {
+impl<T: Data, W: Widget<T>> Widget<T> for Container<T, W> {
     #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.child.event(ctx, event, data, env);
