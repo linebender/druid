@@ -105,6 +105,16 @@ impl<W, C> ControllerHost<W, C> {
     pub fn new(widget: W, controller: C) -> ControllerHost<W, C> {
         ControllerHost { widget, controller }
     }
+
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &W {
+        &self.widget
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut W {
+        &mut self.widget
+    }
 }
 
 impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {

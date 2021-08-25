@@ -56,6 +56,16 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
             child: WidgetPod::new(child),
         }
     }
+
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &W {
+        self.child.widget()
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut W {
+        self.child.widget_mut()
+    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {

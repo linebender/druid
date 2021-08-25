@@ -80,6 +80,16 @@ impl<T, U, L, W> LensWrap<T, U, L, W> {
     pub fn lens_mut(&mut self) -> &mut L {
         &mut self.lens
     }
+
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &W {
+        &self.child
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut W {
+        &mut self.child
+    }
 }
 
 impl<T, U, L, W> Widget<T> for LensWrap<T, U, L, W>

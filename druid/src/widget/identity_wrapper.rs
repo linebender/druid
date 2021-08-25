@@ -32,6 +32,16 @@ impl<W> IdentityWrapper<W> {
     pub fn wrap(child: W, id: WidgetId) -> IdentityWrapper<W> {
         IdentityWrapper { id, child }
     }
+
+    /// Returns a reference to the child widget.
+    pub fn child(&self) -> &W {
+        &self.child
+    }
+
+    /// Returns a mutable reference to the child widget.
+    pub fn child_mut(&mut self) -> &mut W {
+        &mut self.child
+    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for IdentityWrapper<W> {
