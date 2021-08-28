@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::commands::CLOSE_WINDOW;
 use druid::lens::Unit;
 use druid::widget::{
@@ -45,7 +48,7 @@ struct HelloState {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title(WINDOW_TITLE)
         .window_size((400.0, 400.0));
 
@@ -60,7 +63,7 @@ pub fn main() {
 
     // start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(initial_state)
         .expect("Failed to launch application");
 }
@@ -130,7 +133,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                     ctx.set_handled();
                     if deadline > now {
                         let wait_for = deadline - now;
-                        log::info!("Waiting another {:?}", wait_for);
+                        tracing::info!("Waiting another {:?}", wait_for);
                         Some(TooltipState::Waiting {
                             last_move: *last_move,
                             timer_expire: deadline,
@@ -161,7 +164,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                 match event {
                     Event::MouseMove(me) if !ctx.is_hot() => {
                         // TODO another timer on leaving
-                        log::info!("Sending close window for {:?}", win_id);
+                        tracing::info!("Sending close window for {:?}", win_id);
                         ctx.submit_command(CLOSE_WINDOW.to(*win_id));
                         Some(TooltipState::Waiting {
                             last_move: now,
@@ -225,7 +228,7 @@ impl<T, W: Widget<T>> Controller<T, W> for DragWindowController {
                     let within_window_change = me.window_pos.to_vec2() - init_pos.to_vec2();
                     let old_pos = ctx.window().get_position();
                     let new_pos = old_pos + within_window_change;
-                    log::info!(
+                    tracing::info!(
                         "Drag {:?} ",
                         (
                             init_pos,
@@ -327,7 +330,7 @@ impl<W: Widget<bool>> Controller<bool, W> for CancelClose {
 
 fn build_root_widget() -> impl Widget<HelloState> {
     let label = EnvScope::new(
-        |env, _t| env.set(theme::LABEL_COLOR, env.get(theme::PRIMARY_LIGHT)),
+        |env, _t| env.set(theme::TEXT_COLOR, env.get(theme::PRIMARY_LIGHT)),
         ControllerHost::new(
             Label::new(|data: &HelloState, _env: &Env| {
                 format!("Hello {}! {} ", data.name, data.sub.my_stuff)

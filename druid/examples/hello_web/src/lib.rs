@@ -39,7 +39,7 @@ pub fn main() {
     //
     // Window title is set in index.html and window size is ignored on the web,
     // so can we leave those off.
-    let main_window = WindowDesc::new(build_root_widget);
+    let main_window = WindowDesc::new(build_root_widget());
 
     // create the initial app state
     let initial_state = HelloState {

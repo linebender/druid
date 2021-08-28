@@ -27,6 +27,9 @@
 //! other circumstances where widgets may need to communicate with specific
 //! other widgets, and identity is a useful mechanism in those cases.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Button, Controller, Flex, Label, WidgetId};
 use druid::{AppLauncher, Data, Lens, Selector, WidgetExt, WindowDesc};
@@ -40,13 +43,13 @@ struct OurData {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(make_ui).title("identity example");
+    let window = WindowDesc::new(make_ui()).title("identity example");
     let data = OurData {
         counter_one: 0,
         counter_two: 0,
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

@@ -15,6 +15,9 @@
 //! An application that accepts keyboard and mouse input, and displays
 //! information about received events.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Controller, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, TextBox};
 use druid::{
@@ -42,7 +45,7 @@ const PROPERTIES: &[(&str, f64)] = &[
     ("Location", 60.0),
 ];
 
-#[allow(clippy::clippy::rc_buffer)]
+#[allow(clippy::rc_buffer)]
 #[derive(Clone, Data, Lens)]
 struct AppState {
     /// The text in the text field
@@ -240,8 +243,13 @@ fn interactive_area() -> impl Widget<AppState> {
         .rounded(5.0)
         .border(INTERACTIVE_AREA_BORDER, 1.0)
         .controller(EventLogger {
-            filter: |event| matches!(event, Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)),
-		});
+            filter: |event| {
+                matches!(
+                    event,
+                    Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)
+                )
+            },
+        });
 
     Flex::row()
         .with_flex_spacer(1.0)
@@ -322,16 +330,16 @@ fn make_list_item() -> impl Widget<LoggedEvent> {
 
 pub fn main() {
     //describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Event Viewer")
         .window_size((760.0, 680.0));
 
     //start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .configure_env(|env, _| {
             env.set(theme::UI_FONT, FontDescriptor::default().with_size(12.0));
-            env.set(theme::LABEL_COLOR, TEXT_COLOR);
+            env.set(theme::TEXT_COLOR, TEXT_COLOR);
             env.set(theme::WIDGET_PADDING_HORIZONTAL, 2.0);
             env.set(theme::WIDGET_PADDING_VERTICAL, 2.0);
         })

@@ -23,10 +23,13 @@ default-target = "x86_64-pc-windows-msvc"
 default = ["gtk"]
 gtk = ["druid-shell/gtk"]
 image = ["druid-shell/image"]
-svg = ["usvg", "harfbuzz-sys"]
+svg = ["usvg"]
 x11 = ["druid-shell/x11"]
 crochet = []
-serde = ["im/serde"]
+serde = ["im/serde", "druid-shell/serde"]
+
+# Implement HasRawWindowHandle for WindowHandle
+raw-win-handle = ["druid-shell/raw-win-handle"]
 
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
@@ -52,11 +55,11 @@ image-all = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "
 druid-shell = { version = "0.7.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
-log = "0.4.11"
-simple_logger = { version = "1.9.0", default-features = false }
-fluent-bundle = "0.12.0"
+tracing = { version = "0.1.22" }
+tracing-subscriber = { version = "0.2.15", features = ["fmt", "ansi"], default-features = false }
+fluent-bundle = "0.15.1"
 fluent-langneg = "0.13.0"
-fluent-syntax = "0.9.3"
+fluent-syntax = "0.11.0"
 unic-langid = "0.9.0"
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.3.0"
@@ -64,21 +67,26 @@ fnv = "1.0.7"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 
 # Optional dependencies
+chrono = { version = "0.4.19", optional = true }
 im = { version = "15.0.0", optional = true }
-usvg = { version = "0.12.0", optional = true }
-# We don't depend directly on harfbuzz-sys, it comes through usvg. But we need to pin
-# the version, because the latest release of harfbuzz_rs is broken with harfbuzz-sys 0.5.
-harfbuzz-sys = { version = "0.4.0", optional = true }
+usvg = { version = "0.14.1", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-console_log = "0.2.0"
+tracing-wasm = { version = "0.2.0" }
+console_error_panic_hook = { version = "0.1.6" }
 
 [dev-dependencies]
 float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 # tempfile 3.2.0 broke wasm; I assume it will be yanked (Jan 12, 2021)
 tempfile = "=3.1.0"
-piet-common = { version = "=0.3.2", features = ["png"] }
+piet-common = { version = "=0.5.0-pre1", features = ["png"] }
 pulldown-cmark = { version = "0.8", default-features = false }
+test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
+# test-env-log needs it
+tracing-subscriber = { version = "0.2.15", features = ["env-filter"] }
+
+[target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
+open = "1.6"
 
 [[example]]
 name = "cursor"

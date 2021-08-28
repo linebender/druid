@@ -15,7 +15,9 @@
 use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
+use tracing::instrument;
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::Data;
 
@@ -36,11 +38,13 @@ impl<T> Parse<T> {
 }
 
 impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse<W> {
+    #[instrument(name = "Parse", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Option<T>, env: &Env) {
         self.widget.event(ctx, event, &mut self.state, env);
         *data = self.state.parse().ok();
     }
 
+    #[instrument(name = "Parse", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(
         &mut self,
         ctx: &mut LifeCycleCtx,
@@ -56,6 +60,7 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         self.widget.lifecycle(ctx, event, &self.state, env)
     }
 
+    #[instrument(name = "Parse", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
         let old = match *data {
             None => return, // Don't clobber the input
@@ -64,6 +69,7 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         self.widget.update(ctx, &old, &self.state, env)
     }
 
+    #[instrument(name = "Parse", level = "trace", skip(self, ctx, bc, _data, env))]
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -74,11 +80,20 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
         self.widget.layout(ctx, bc, &self.state, env)
     }
 
-    fn paint(&mut self, paint: &mut PaintCtx, _data: &Option<T>, env: &Env) {
-        self.widget.paint(paint, &self.state, env)
+    #[instrument(name = "Parse", level = "trace", skip(self, ctx, _data, env))]
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &Option<T>, env: &Env) {
+        self.widget.paint(ctx, &self.state, env)
     }
 
     fn id(&self) -> Option<WidgetId> {
         self.widget.id()
+    }
+
+    fn debug_state(&self, _data: &Option<T>) -> DebugState {
+        DebugState {
+            display_name: "Parse".to_string(),
+            main_value: self.state.clone(),
+            ..Default::default()
+        }
     }
 }

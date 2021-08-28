@@ -15,6 +15,9 @@
 //! This is a very small example of how to setup a druid application.
 //! It does the almost bare minimum while still being useful.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox};
 use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc};
@@ -29,7 +32,7 @@ struct HelloState {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Hello World!")
         .window_size((400.0, 400.0));
 
@@ -40,7 +43,7 @@ pub fn main() {
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

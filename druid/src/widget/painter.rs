@@ -15,6 +15,7 @@
 use crate::piet::{FixedGradient, LinearGradient, PaintBrush, RadialGradient};
 use crate::widget::prelude::*;
 use crate::{Color, Data, Key};
+use tracing::instrument;
 
 /// A widget that only handles painting.
 ///
@@ -106,6 +107,17 @@ impl<T> Painter<T> {
 }
 
 impl<T: Data> BackgroundBrush<T> {
+    /// Request paint if the BackgroundBrush changed.
+    pub fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+        match self {
+            Self::ColorKey(key) if ctx.env_key_changed(key) => {
+                ctx.request_paint();
+            }
+            Self::Painter(p) => p.update(ctx, old_data, data, env),
+            _ => (),
+        }
+    }
+
     /// Draw this `BackgroundBrush` into a provided [`PaintCtx`].
     ///
     /// [`PaintCtx`]: ../struct.PaintCtx.html
@@ -125,14 +137,17 @@ impl<T: Data> BackgroundBrush<T> {
 impl<T: Data> Widget<T> for Painter<T> {
     fn event(&mut self, _: &mut EventCtx, _: &Event, _: &mut T, _: &Env) {}
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &T, _: &Env) {}
-    fn update(&mut self, ctx: &mut UpdateCtx, old: &T, new: &T, _: &Env) {
-        if !old.same(new) {
+    #[instrument(name = "Painter", level = "trace", skip(self, ctx, old_data, data))]
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, _: &Env) {
+        if !old_data.same(data) {
             ctx.request_paint();
         }
     }
+    #[instrument(name = "Painter", level = "trace", skip(self, _ctx, bc))]
     fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &T, _: &Env) -> Size {
         bc.max()
     }
+    #[instrument(name = "Painter", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         (self.0)(ctx, data, env)
     }

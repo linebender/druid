@@ -14,8 +14,7 @@
 
 //! Implementations of the [`druid::text::Formatter`] trait.
 
-use druid::text::format::{Formatter, Validation, ValidationError};
-use druid::text::Selection;
+use druid::text::{Formatter, Selection, Validation, ValidationError};
 use druid::Data;
 
 /// A formatter that can display currency values.
@@ -166,6 +165,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
                 Validation::failure(CurrencyValidationError::TooManyCharsAfterDecimal)
             }
             (Some(c), None, _) if c.is_ascii_digit() => Validation::success(),
+            (Some(c), None, _) => Validation::failure(CurrencyValidationError::InvalidChar(c)),
             (None, None, _) => Validation::success(),
             (Some(c1), Some(c2), _) if c1.is_ascii_digit() && c2.is_ascii_digit() => {
                 Validation::success()
@@ -174,7 +174,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
                 let bad_char = if c1.is_ascii_digit() { other } else { c1 };
                 Validation::failure(CurrencyValidationError::InvalidChar(bad_char))
             }
-            _ => unreachable!(),
+            other => panic!("unexpected: {:?}", other),
         }
     }
 }
@@ -263,7 +263,7 @@ impl Formatter<PostalCode> for CanadianPostalCodeFormatter {
         }
     }
 
-    #[allow(clippy::clippy::many_single_char_names, clippy::clippy::match_ref_pats)]
+    #[allow(clippy::many_single_char_names, clippy::match_ref_pats)]
     fn value(&self, input: &str) -> Result<PostalCode, ValidationError> {
         match input.as_bytes() {
             &[a, b, c, d, e, f] => PostalCode::from_bytes([a, b, c, d, e, f]),
@@ -299,7 +299,7 @@ impl PostalCode {
     }
 }
 
-#[allow(clippy::clippy::many_single_char_names)]
+#[allow(clippy::many_single_char_names)]
 impl std::fmt::Display for PostalCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let [a, b, c, d, e, g] = self.chars;

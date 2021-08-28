@@ -18,6 +18,7 @@ use std::any::Any;
 use std::time::Duration;
 
 use crate::application::Application;
+use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
 use crate::error::Error;
@@ -25,10 +26,12 @@ use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::menu::Menu;
 use crate::mouse::{Cursor, CursorDesc, MouseEvent};
-use crate::platform::window as platform;
 use crate::region::Region;
 use crate::scale::Scale;
+use crate::text::{Event, InputHandler};
 use piet_common::PietText;
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -55,10 +58,35 @@ impl TimerToken {
     }
 }
 
-//NOTE: this has a From<platform::Handle> impl for construction
+/// Uniquely identifies a text input field inside a window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
+pub struct TextFieldToken(u64);
+
+impl TextFieldToken {
+    /// A token that does not correspond to any text input.
+    pub const INVALID: TextFieldToken = TextFieldToken(0);
+
+    /// Create a new token; this should for the most part be called only by platform code.
+    pub fn next() -> TextFieldToken {
+        static TEXT_FIELD_COUNTER: Counter = Counter::new();
+        TextFieldToken(TEXT_FIELD_COUNTER.next())
+    }
+
+    /// Create a new token from a raw value.
+    pub const fn from_raw(id: u64) -> TextFieldToken {
+        TextFieldToken(id)
+    }
+
+    /// Get the raw value for a token.
+    pub const fn into_raw(self) -> u64 {
+        self.0
+    }
+}
+
+//NOTE: this has a From<backend::Handle> impl for construction
 /// A handle that can enqueue tasks on the window loop.
 #[derive(Clone)]
-pub struct IdleHandle(platform::IdleHandle);
+pub struct IdleHandle(backend::IdleHandle);
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
@@ -69,7 +97,7 @@ impl IdleHandle {
     /// priority than other UI events, but that's not necessarily the case.
     pub fn add_idle<F>(&self, callback: F)
     where
-        F: FnOnce(&dyn Any) + Send + 'static,
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
         self.0.add_idle_callback(callback)
     }
@@ -120,7 +148,7 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,
@@ -135,14 +163,14 @@ pub enum WindowLevel {
 /// Contains the different states a Window can be in.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowState {
-    MAXIMIZED,
-    MINIMIZED,
-    RESTORED,
+    Maximized,
+    Minimized,
+    Restored,
 }
 
 /// A handle to a platform window object.
 #[derive(Clone, Default)]
-pub struct WindowHandle(platform::WindowHandle);
+pub struct WindowHandle(backend::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.
@@ -188,26 +216,38 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in [pixels](crate::Scale), relative to the origin of the
+    /// Sets the position of the window in [display points](crate::Scale), relative to the origin of the
     /// virtual screen.
     pub fn set_position(&self, position: impl Into<Point>) {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position of the top left corner of the window in [pixels](crate::Scale), relative to the origin of the
-    /// virtual screen.
+    /// Returns the position of the top left corner of the window in
+    /// [display points], relative to the origin of the virtual screen.
+    ///
+    /// [display points]: crate::Scale
     pub fn get_position(&self) -> Point {
         self.0.get_position()
     }
 
-    /// Returns the insets of the window content from its position and size in [pixels](crate::Scale).
+    /// Returns the insets of the window content from its position and size in [display points].
     ///
-    /// This is to account for any window system provided chrome, eg. title bars.
+    /// This is to account for any window system provided chrome, e.g. title bars. For example, if
+    /// you want your window to have room for contents of size `contents`, then you should call
+    /// [`WindowHandle::get_size`] with an argument of `(contents.to_rect() + insets).size()`,
+    /// where `insets` is the return value of this function.
+    ///
+    /// The details of this function are somewhat platform-dependent. For example, on Windows both
+    /// the insets and the window size include the space taken up by the title bar and window
+    /// decorations; on GTK neither the insets nor the window size include the title bar or window
+    /// decorations.
+    ///
+    /// [display points]: crate::Scale
     pub fn content_insets(&self) -> Insets {
         self.0.content_insets()
     }
 
-    /// Set the window's size in [display points](crate::Scale).
+    /// Set the window's size in [display points].
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -215,11 +255,15 @@ impl WindowHandle {
     /// platform might choose a different size depending on its DPI or other platform-dependent
     /// configuration.  To know the actual size of the window you should handle the
     /// [`WinHandler::size`] method.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_size(&self, size: impl Into<Size>) {
         self.0.set_size(size.into())
     }
 
-    /// Gets the window size, in [pixels](crate::Scale).
+    /// Gets the window size, in [display points].
+    ///
+    /// [display points]: crate::Scale
     pub fn get_size(&self) -> Size {
         self.0.get_size()
     }
@@ -273,6 +317,45 @@ impl WindowHandle {
     /// Get access to a type that can perform text layout.
     pub fn text(&self) -> PietText {
         self.0.text()
+    }
+
+    /// Register a new text input receiver for this window.
+    ///
+    /// This method should be called any time a new editable text field is
+    /// created inside a window.  Any text field with a `TextFieldToken` that
+    /// has not yet been destroyed with `remove_text_field` *must* be ready to
+    /// accept input from the platform via `WinHandler::text_input` at any time,
+    /// even if it is not currently focused.
+    ///
+    /// Returns the `TextFieldToken` associated with this new text input.
+    pub fn add_text_field(&self) -> TextFieldToken {
+        self.0.add_text_field()
+    }
+
+    /// Unregister a previously registered text input receiver.
+    ///
+    /// If `token` is the text field currently focused, the platform automatically
+    /// sets the focused field to `None`.
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        self.0.remove_text_field(token)
+    }
+
+    /// Notify the platform that the focused text input receiver has changed.
+    ///
+    /// This must be called any time focus changes to a different text input, or
+    /// when focus switches away from a text input.
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        self.0.set_focused_text_field(active_field)
+    }
+
+    /// Notify the platform that some text input state has changed, such as the
+    /// selection, contents, etc.
+    ///
+    /// This method should *never* be called in response to edits from a
+    /// `InputHandler`; only in response to changes from the application:
+    /// scrolling, remote edits, etc.
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        self.0.update_text_field(token, update)
     }
 
     /// Schedule a timer.
@@ -338,15 +421,22 @@ impl WindowHandle {
     }
 }
 
+#[cfg(feature = "raw-win-handle")]
+unsafe impl HasRawWindowHandle for WindowHandle {
+    fn raw_window_handle(&self) -> RawWindowHandle {
+        self.0.raw_window_handle()
+    }
+}
+
 /// A builder type for creating new windows.
-pub struct WindowBuilder(platform::WindowBuilder);
+pub struct WindowBuilder(backend::WindowBuilder);
 
 impl WindowBuilder {
     /// Create a new `WindowBuilder`.
     ///
     /// Takes the [`Application`](crate::Application) that this window is for.
     pub fn new(app: Application) -> WindowBuilder {
-        WindowBuilder(platform::WindowBuilder::new(app.platform_app))
+        WindowBuilder(backend::WindowBuilder::new(app.backend_app))
     }
 
     /// Set the [`WinHandler`] for this window.
@@ -356,7 +446,7 @@ impl WindowBuilder {
         self.0.set_handler(handler)
     }
 
-    /// Set the window's initial drawing area size in [display points](crate::Scale).
+    /// Set the window's initial drawing area size in [display points].
     ///
     /// The actual window size in pixels will depend on the platform DPI settings.
     ///
@@ -364,16 +454,20 @@ impl WindowBuilder {
     /// platform might choose a different size depending on its DPI or other platform-dependent
     /// configuration.  To know the actual size of the window you should handle the
     /// [`WinHandler::size`] method.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_size(&mut self, size: Size) {
         self.0.set_size(size)
     }
 
-    /// Set the window's minimum drawing area size in [display points](crate::Scale).
+    /// Set the window's minimum drawing area size in [display points].
     ///
     /// The actual minimum window size in pixels will depend on the platform DPI settings.
     ///
     /// This should be considered a request to the platform to set the minimum size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_min_size(&mut self, size: Size) {
         self.0.set_min_size(size)
     }
@@ -388,8 +482,15 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the initial window position in [pixels](crate::Scale), relative to the origin of the
+    /// Set whether the window background should be transparent
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.0.set_transparent(transparent)
+    }
+
+    /// Sets the initial window position in [display points], relative to the origin of the
     /// virtual screen.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
@@ -498,6 +599,35 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn key_up(&mut self, event: KeyEvent) {}
 
+    /// Take a lock for the text document specified by `token`.
+    ///
+    /// All calls to this method must be balanced with a call to
+    /// [`release_input_lock`].
+    ///
+    /// If `mutable` is true, the lock should be a write lock, and allow calling
+    /// mutating methods on InputHandler.  This method is called from the top
+    /// level of the event loop and expects to acquire a lock successfully.
+    ///
+    /// For more information, see [the text input documentation](crate::text).
+    ///
+    /// [`release_input_lock`]: WinHandler::release_input_lock
+    #[allow(unused_variables)]
+    fn acquire_input_lock(
+        &mut self,
+        token: TextFieldToken,
+        mutable: bool,
+    ) -> Box<dyn InputHandler> {
+        panic!("acquire_input_lock was called on a WinHandler that did not expect text input.")
+    }
+
+    /// Release a lock previously acquired by [`acquire_input_lock`].
+    ///
+    /// [`acquire_input_lock`]: WinHandler::acquire_input_lock
+    #[allow(unused_variables)]
+    fn release_input_lock(&mut self, token: TextFieldToken) {
+        panic!("release_input_lock was called on a WinHandler that did not expect text input.")
+    }
+
     /// Called on a mouse wheel event.
     ///
     /// The polarity is the amount to be added to the scroll position,
@@ -567,8 +697,8 @@ pub trait WinHandler {
     fn as_any(&mut self) -> &mut dyn Any;
 }
 
-impl From<platform::WindowHandle> for WindowHandle {
-    fn from(src: platform::WindowHandle) -> WindowHandle {
+impl From<backend::WindowHandle> for WindowHandle {
+    fn from(src: backend::WindowHandle) -> WindowHandle {
         WindowHandle(src)
     }
 }

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::{
     im,
     kurbo::{Affine, BezPath, Circle, Point},
@@ -48,7 +51,7 @@ enum MyRadio {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Widget Gallery");
+    let main_window = WindowDesc::new(ui_builder()).title("Widget Gallery");
     // Set our initial data
     let data = AppData {
         label_data: "test".into(),
@@ -61,7 +64,7 @@ pub fn main() {
         editable_text: "edit me!".into(),
     };
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }
@@ -152,10 +155,15 @@ fn ui_builder() -> impl Widget<AppData> {
             ))
             .with_child(label_widget(
                 Flex::column()
-                    .with_child(Slider::new().lens(AppData::progressbar))
+                    .with_child(
+                        Slider::new()
+                            .with_range(0.05, 0.95)
+                            .with_step(0.10)
+                            .lens(AppData::progressbar),
+                    )
                     .with_spacer(4.0)
                     .with_child(Label::new(|data: &AppData, _: &_| {
-                        format!("{:3.0}%", data.progressbar * 100.0)
+                        format!("{:3.2}%", data.progressbar * 100.)
                     })),
                 "Slider",
             ))

@@ -14,8 +14,10 @@
 
 //! A widget that switches dynamically between two child views.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Point, WidgetPod};
+use tracing::instrument;
 
 /// A widget that switches between two possible child views.
 pub struct Either<T> {
@@ -45,6 +47,7 @@ impl<T> Either<T> {
 }
 
 impl<T: Data> Widget<T> for Either<T> {
+    #[instrument(name = "Either", level = "trace", skip(self, ctx, event, data, env), fields(branch = self.current))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if event.should_propagate_to_hidden() {
             self.true_branch.event(ctx, event, data, env);
@@ -54,6 +57,7 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
+    #[instrument(name = "Either", level = "trace", skip(self, ctx, event, data, env), fields(branch = self.current))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         if let LifeCycle::WidgetAdded = event {
             self.current = (self.closure)(data, env);
@@ -67,15 +71,17 @@ impl<T: Data> Widget<T> for Either<T> {
         }
     }
 
+    #[instrument(name = "Either", level = "trace", skip(self, ctx, _old_data, data, env), fields(branch = self.current))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let current = (self.closure)(data, env);
         if current != self.current {
             self.current = current;
-            ctx.request_layout();
+            ctx.children_changed();
         }
         self.current_widget().update(ctx, data, env)
     }
 
+    #[instrument(name = "Either", level = "trace", skip(self, ctx, bc, data, env), fields(branch = self.current))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let current_widget = self.current_widget();
         let size = current_widget.layout(ctx, bc, data, env);
@@ -84,8 +90,22 @@ impl<T: Data> Widget<T> for Either<T> {
         size
     }
 
+    #[instrument(name = "Either", level = "trace", skip(self, ctx, data, env), fields(branch = self.current))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.current_widget().paint(ctx, data, env)
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let current_widget = if self.current {
+            &self.true_branch
+        } else {
+            &self.false_branch
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![current_widget.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

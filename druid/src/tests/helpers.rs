@@ -15,6 +15,11 @@
 //! Helper types for test writing.
 //!
 //! This includes tools for making throwaway widgets more easily.
+//!
+//! Note: Some of these types are undocumented. They're meant to help maintainers of Druid and
+//! people trying to build a framework on top of Druid (like crochet), not to be user-facing.
+
+#![allow(missing_docs)]
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -44,7 +49,7 @@ pub struct ModularWidget<S, T> {
 
 /// A widget that can replace its child on command
 pub struct ReplaceChild<T> {
-    inner: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
     replacer: Box<dyn Fn() -> Box<dyn Widget<T>>>,
 }
 
@@ -53,17 +58,21 @@ pub struct ReplaceChild<T> {
 /// Make one like this:
 ///
 /// ```
+/// # use druid::widget::Label;
+/// # use druid::{WidgetExt, LifeCycle};
+/// use druid::tests::helpers::{Recording, Record, TestWidgetExt};
+/// use druid::tests::harness::Harness;
 /// let recording = Recording::default();
-/// let widget = Label::new().padding(4.0).record(&recording);
+/// let widget = Label::new("Hello").padding(4.0).record(&recording);
 ///
-/// Harness::create((), widget, |harness| {
-///     widget.send_initial_events();
-///     assert_matches!(recording.next(), Record::L(LifeCycle::WidgetAdded));
+/// Harness::create_simple((), widget, |harness| {
+///     harness.send_initial_events();
+///     assert!(matches!(recording.next(), Record::L(LifeCycle::WidgetAdded)));
 /// })
 /// ```
 pub struct Recorder<W> {
     recording: Recording,
-    inner: W,
+    child: W,
 }
 
 /// A recording of widget method calls.
@@ -92,7 +101,7 @@ pub enum Record {
 pub trait TestWidgetExt<T: Data>: Widget<T> + Sized + 'static {
     fn record(self, recording: &Recording) -> Recorder<Self> {
         Recorder {
-            inner: self,
+            child: self,
             recording: recording.clone(),
         }
     }
@@ -191,12 +200,12 @@ impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
 
 impl<T: Data> ReplaceChild<T> {
     pub fn new<W: Widget<T> + 'static>(
-        inner: impl Widget<T> + 'static,
+        child: impl Widget<T> + 'static,
         f: impl Fn() -> W + 'static,
     ) -> Self {
-        let inner = WidgetPod::new(inner.boxed());
+        let child = WidgetPod::new(child.boxed());
         let replacer = Box::new(move || f().boxed());
-        ReplaceChild { inner, replacer }
+        ReplaceChild { child, replacer }
     }
 }
 
@@ -204,28 +213,28 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Command(cmd) = event {
             if cmd.is(REPLACE_CHILD) {
-                self.inner = WidgetPod::new((self.replacer)());
+                self.child = WidgetPod::new((self.replacer)());
                 ctx.children_changed();
                 return;
             }
         }
-        self.inner.event(ctx, event, data, env)
+        self.child.event(ctx, event, data, env)
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        self.inner.update(ctx, data, env)
+        self.child.update(ctx, data, env)
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        self.inner.layout(ctx, bc, data, env)
+        self.child.layout(ctx, bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint_raw(ctx, data, env)
+        self.child.paint_raw(ctx, data, env)
     }
 }
 
@@ -268,76 +277,47 @@ impl Recording {
 impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.recording.push(Record::E(event.clone()));
-        self.inner.event(ctx, event, data, env)
+        self.child.event(ctx, event, data, env)
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        let should_record = !matches!(event,
-            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. }) |
-            LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_))
+        let should_record = !matches!(
+            event,
+            LifeCycle::Internal(InternalLifeCycle::DebugRequestState { .. })
+                | LifeCycle::Internal(InternalLifeCycle::DebugInspectState(_))
         );
 
         if should_record {
             self.recording.push(Record::L(event.clone()));
         }
 
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.inner.update(ctx, old_data, data, env);
+        self.child.update(ctx, old_data, data, env);
         self.recording
             .push(Record::Update(ctx.widget_state.invalid.clone()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let size = self.inner.layout(ctx, bc, data, env);
+        let size = self.child.layout(ctx, bc, data, env);
         self.recording.push(Record::Layout(size));
         size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(ctx, data, env);
+        self.child.paint(ctx, data, env);
         self.recording.push(Record::Paint)
     }
 }
 
-// easily make a bunch of WidgetIds
-pub fn widget_id2() -> (WidgetId, WidgetId) {
-    (WidgetId::next(), WidgetId::next())
-}
+pub fn widget_ids<const N: usize>() -> [WidgetId; N] {
+    let mut ids = [WidgetId::reserved(0); N];
 
-pub fn widget_id3() -> (WidgetId, WidgetId, WidgetId) {
-    (WidgetId::next(), WidgetId::next(), WidgetId::next())
-}
+    for id in &mut ids {
+        *id = WidgetId::next()
+    }
 
-pub fn widget_id4() -> (WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
-}
-
-#[allow(dead_code)]
-pub fn widget_id5() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
-}
-
-pub fn widget_id6() -> (WidgetId, WidgetId, WidgetId, WidgetId, WidgetId, WidgetId) {
-    (
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-        WidgetId::next(),
-    )
+    ids
 }

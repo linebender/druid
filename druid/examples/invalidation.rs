@@ -15,6 +15,9 @@
 //! Demonstrates how to debug invalidation regions, and also shows the
 //! invalidation behavior of several build-in widgets.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::Vector;
 use druid::kurbo::{self, Shape};
 use druid::widget::prelude::*;
@@ -24,7 +27,7 @@ use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Point, WidgetExt, W
 use instant::Instant;
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget).title(
+    let window = WindowDesc::new(build_widget()).title(
         LocalizedString::new("invalidate-demo-window-title").with_placeholder("Invalidate demo"),
     );
     let state = AppState {
@@ -32,7 +35,7 @@ pub fn main() {
         circles: Vector::new(),
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(state)
         .expect("launch failed");
 }
@@ -57,7 +60,7 @@ struct CircleView;
 #[derive(Clone, Data)]
 struct Circle {
     pos: Point,
-    #[data(same_fn = "PartialEq::eq")]
+    #[data(eq)]
     time: Instant,
 }
 

@@ -15,6 +15,9 @@
 //! An example of a custom drawing widget.
 //! We draw an image, some text, a shape, and a curve.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::BezPath;
 use druid::piet::{FontFamily, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 use druid::widget::prelude::*;
@@ -151,9 +154,9 @@ impl Widget<String> for CustomWidget {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| CustomWidget {}).title(LocalizedString::new("Fancy Colors"));
+    let window = WindowDesc::new(CustomWidget {}).title(LocalizedString::new("Fancy Colors"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch("Druid + Piet".to_string())
         .expect("launch failed");
 }

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 mod formatters;
 mod widgets;
 
@@ -37,7 +40,7 @@ pub struct AppData {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Formatting and Validation");
+    let main_window = WindowDesc::new(ui_builder()).title("Formatting and Validation");
 
     let data = AppData {
         dollars: 12.2,
@@ -50,7 +53,7 @@ pub fn main() {
     };
 
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

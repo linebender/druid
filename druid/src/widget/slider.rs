@@ -14,9 +14,11 @@
 
 //! A slider widget.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{Circle, Shape};
 use crate::widget::prelude::*;
 use crate::{theme, LinearGradient, Point, Rect, UnitPoint};
+use tracing::{instrument, trace, warn};
 
 const TRACK_THICKNESS: f64 = 4.0;
 const BORDER_WIDTH: f64 = 2.0;
@@ -30,6 +32,7 @@ const KNOB_STROKE_WIDTH: f64 = 2.0;
 pub struct Slider {
     min: f64,
     max: f64,
+    step: Option<f64>,
     knob_pos: Point,
     knob_hovered: bool,
     x_offset: f64,
@@ -41,6 +44,7 @@ impl Slider {
         Slider {
             min: 0.,
             max: 1.,
+            step: None,
             knob_pos: Default::default(),
             knob_hovered: Default::default(),
             x_offset: Default::default(),
@@ -55,6 +59,35 @@ impl Slider {
         self.max = max;
         self
     }
+
+    /// Builder-style method to set the stepping.
+    ///
+    /// The default step size is `0.0` (smooth).
+    pub fn with_step(mut self, step: f64) -> Self {
+        if step < 0.0 {
+            warn!("bad stepping (must be positive): {}", step);
+            return self;
+        }
+        self.step = if step > 0.0 {
+            Some(step)
+        } else {
+            // A stepping value of 0.0 would yield an infinite amount of steps.
+            // Enforce no stepping instead.
+            None
+        };
+        self
+    }
+
+    /// check self.min <= self.max, if not swaps the values.
+    fn check_range(&mut self) {
+        if self.max < self.min {
+            warn!(
+                "min({}) should be less than max({}), swaping the values",
+                self.min, self.max
+            );
+            std::mem::swap(&mut self.max, &mut self.min);
+        }
+    }
 }
 
 impl Slider {
@@ -67,7 +100,24 @@ impl Slider {
         let scalar = ((mouse_x + self.x_offset - knob_width / 2.) / (slider_width - knob_width))
             .max(0.0)
             .min(1.0);
-        self.min + scalar * (self.max - self.min)
+        let mut value = self.min + scalar * (self.max - self.min);
+        if let Some(step) = self.step {
+            let max_step_value = ((self.max - self.min) / step).floor() * step + self.min;
+            if value > max_step_value {
+                // edge case: make sure max is reachable
+                let left_dist = value - max_step_value;
+                let right_dist = self.max - value;
+                value = if left_dist < right_dist {
+                    max_step_value
+                } else {
+                    self.max
+                };
+            } else {
+                // snap to discrete intervals
+                value = (((value - self.min) / step).round() * step + self.min).min(self.max);
+            }
+        }
+        value
     }
 
     fn normalize(&self, data: f64) -> f64 {
@@ -76,60 +126,88 @@ impl Slider {
 }
 
 impl Widget<f64> for Slider {
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let slider_width = ctx.size().width;
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
-                if self.knob_hit_test(knob_size, mouse.pos) {
-                    self.x_offset = self.knob_pos.x - mouse.pos.x
-                } else {
-                    self.x_offset = 0.;
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    if self.knob_hit_test(knob_size, mouse.pos) {
+                        self.x_offset = self.knob_pos.x - mouse.pos.x
+                    } else {
+                        self.x_offset = 0.;
+                        *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
+                    }
+                    ctx.request_paint();
                 }
-                ctx.request_paint();
             }
             Event::MouseUp(mouse) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
+                if ctx.is_active() && !ctx.is_disabled() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
                 }
+                ctx.set_active(false);
             }
             Event::MouseMove(mouse) => {
-                if ctx.is_active() {
-                    *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
-                    ctx.request_paint();
-                }
-                if ctx.is_hot() {
-                    let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
-                    if knob_hover != self.knob_hovered {
-                        self.knob_hovered = knob_hover;
+                if !ctx.is_disabled() {
+                    if ctx.is_active() {
+                        *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                         ctx.request_paint();
                     }
+                    if ctx.is_hot() {
+                        let knob_hover = self.knob_hit_test(knob_size, mouse.pos);
+                        if knob_hover != self.knob_hovered {
+                            self.knob_hovered = knob_hover;
+                            ctx.request_paint();
+                        }
+                    }
+                } else {
+                    ctx.set_active(false);
                 }
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, event, _data, _env))]
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
+        match event {
+            // checked in LifeCycle::WidgetAdded because logging may not be setup in with_range
+            LifeCycle::WidgetAdded => self.check_range(),
+            LifeCycle::DisabledChanged(_) => ctx.request_paint(),
+            _ => (),
+        }
+    }
 
+    #[instrument(
+        name = "Slider",
+        level = "trace",
+        skip(self, ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &f64, _data: &f64, _env: &Env) {
         ctx.request_paint();
     }
 
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, bc, _data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &f64, env: &Env) -> Size {
         bc.debug_check("Slider");
         let height = env.get(theme::BASIC_WIDGET_HEIGHT);
         let width = env.get(theme::WIDE_WIDGET_WIDTH);
         let baseline_offset = (height / 2.0) - TRACK_THICKNESS;
         ctx.set_baseline_offset(baseline_offset);
-        bc.constrain((width, height))
+        let size = bc.constrain((width, height));
+        trace!(
+            "Computed layout: size={}, baseline_offset={:?}",
+            size,
+            baseline_offset
+        );
+        size
     }
 
+    #[instrument(name = "Slider", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let clamped = self.normalize(*data);
         let rect = ctx.size().to_rect();
@@ -164,31 +242,37 @@ impl Widget<f64> for Slider {
         self.knob_pos = Point::new(knob_position, knob_size / 2.);
         let knob_circle = Circle::new(self.knob_pos, (knob_size - KNOB_STROKE_WIDTH) / 2.);
 
-        let normal_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_LIGHT),
-                env.get(theme::FOREGROUND_DARK),
-            ),
-        );
-        let flipped_knob_gradient = LinearGradient::new(
-            UnitPoint::TOP,
-            UnitPoint::BOTTOM,
-            (
-                env.get(theme::FOREGROUND_DARK),
-                env.get(theme::FOREGROUND_LIGHT),
-            ),
-        );
-
-        let knob_gradient = if is_active {
-            flipped_knob_gradient
+        let knob_gradient = if ctx.is_disabled() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::DISABLED_FOREGROUND_LIGHT),
+                    env.get(theme::DISABLED_FOREGROUND_DARK),
+                ),
+            )
+        } else if ctx.is_active() {
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_DARK),
+                    env.get(theme::FOREGROUND_LIGHT),
+                ),
+            )
         } else {
-            normal_knob_gradient
+            LinearGradient::new(
+                UnitPoint::TOP,
+                UnitPoint::BOTTOM,
+                (
+                    env.get(theme::FOREGROUND_LIGHT),
+                    env.get(theme::FOREGROUND_DARK),
+                ),
+            )
         };
 
         //Paint the border
-        let border_color = if is_hovered || is_active {
+        let border_color = if (is_hovered || is_active) && !ctx.is_disabled() {
             env.get(theme::FOREGROUND_LIGHT)
         } else {
             env.get(theme::FOREGROUND_DARK)
@@ -198,5 +282,13 @@ impl Widget<f64> for Slider {
 
         //Actually paint the knob
         ctx.fill(knob_circle, &knob_gradient);
+    }
+
+    fn debug_state(&self, data: &f64) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
+        }
     }
 }

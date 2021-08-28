@@ -16,11 +16,12 @@
 
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::{Point, Size};
+use crate::menu::MenuManager;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle, WindowLevel};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
 use crate::window::WindowId;
-use crate::{AppDelegate, Data, Env, LocalizedString, MenuDesc, Widget};
+use crate::{AppDelegate, Data, Env, LocalizedString, Menu, Widget};
 
 use druid_shell::WindowState;
 
@@ -37,7 +38,7 @@ pub struct AppLauncher<T> {
 }
 
 /// Defines how a windows size should be determined
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum WindowSizePolicy {
     /// Use the content of the window to determine the size.
     ///
@@ -50,13 +51,14 @@ pub enum WindowSizePolicy {
 
 /// Window configuration that can be applied to a WindowBuilder, or to an existing WindowHandle.
 /// It does not include anything related to app data.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct WindowConfig {
     pub(crate) size_policy: WindowSizePolicy,
     pub(crate) size: Option<Size>,
     pub(crate) min_size: Option<Size>,
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
+    pub(crate) transparent: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
     pub(crate) state: Option<WindowState>,
@@ -79,23 +81,24 @@ pub struct WindowDesc<T> {
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
-    pub(crate) menu: Option<MenuDesc<T>>,
+    pub(crate) transparent: bool,
+    pub(crate) menu: Option<MenuManager<T>>,
     pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
                                               // when the native window is constructed.
 }
 
 impl<T: Data> PendingWindow<T> {
     /// Create a pending window from any widget.
-    pub fn new<W, F>(root: F) -> PendingWindow<T>
+    pub fn new<W>(root: W) -> PendingWindow<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         // This just makes our API slightly cleaner; callers don't need to explicitly box.
         PendingWindow {
-            root: Box::new(root()),
+            root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
-            menu: MenuDesc::platform_default(),
+            menu: MenuManager::platform_default(),
+            transparent: false,
             size_policy: WindowSizePolicy::User,
         }
     }
@@ -111,9 +114,22 @@ impl<T: Data> PendingWindow<T> {
         self
     }
 
+    /// Set wether the background should be transparent
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.transparent = transparent;
+        self
+    }
+
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
-        self.menu = Some(menu);
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
+        self.menu = Some(MenuManager::new(menu));
         self
     }
 }
@@ -147,20 +163,51 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
-    /// Initialize a minimal logger for printing logs out to stderr.
+    /// Initialize a minimal logger with DEBUG max level for printing logs out to stderr.
     ///
-    /// Meant for use during development only.
+    /// This is meant for use during development only.
     ///
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
+    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
+        self.log_to_console()
+    }
+
+    /// Initialize a minimal tracing subscriber with DEBUG max level for printing logs out to
+    /// stderr.
+    ///
+    /// This is meant for quick-and-dirty debugging. If you want more serious trace handling,
+    /// it's probably better to implement it yourself.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the subscriber fails to initialize.
+    pub fn log_to_console(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
-        simple_logger::SimpleLogger::new()
-            .init()
-            .expect("Failed to initialize logger.");
+        {
+            use tracing_subscriber::prelude::*;
+            let filter_layer = tracing_subscriber::filter::LevelFilter::DEBUG;
+            let fmt_layer = tracing_subscriber::fmt::layer()
+                // Display target (eg "my_crate::some_mod::submod") with logs
+                .with_target(true);
+
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(fmt_layer)
+                .init();
+        }
+        // Note - tracing-wasm might not work in headless Node.js. Probably doesn't matter anyway,
+        // because this is a GUI framework, so wasm targets will virtually always be browsers.
         #[cfg(target_arch = "wasm32")]
-        console_log::init_with_level(log::Level::Trace).expect("Failed to initialize logger.");
+        {
+            console_error_panic_hook::set_once();
+            let config = tracing_wasm::WASMLayerConfigBuilder::new()
+                .set_max_level(tracing::Level::DEBUG)
+                .build();
+            tracing_wasm::set_as_global_default_with_config(config)
+        }
         self
     }
 
@@ -195,7 +242,7 @@ impl<T: Data> AppLauncher<T> {
         let mut env = self
             .l10n_resources
             .map(|it| Env::with_i10n(it.0, &it.1))
-            .unwrap_or_default();
+            .unwrap_or_else(Env::with_default_i10n);
 
         if let Some(f) = self.env_setup.take() {
             f(&mut env, &data);
@@ -229,6 +276,7 @@ impl Default for WindowConfig {
             position: None,
             resizable: None,
             show_titlebar: None,
+            transparent: None,
             level: None,
             state: None,
         }
@@ -238,6 +286,15 @@ impl Default for WindowConfig {
 impl WindowConfig {
     /// Set the window size policy.
     pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        #[cfg(windows)]
+        {
+            // On Windows content_insets doesn't work on window with no initial size
+            // so the window size can't be adapted to the content, to fix this a
+            // non null initial size is set here.
+            if size_policy == WindowSizePolicy::Content {
+                self.size = Some(Size::new(1., 1.))
+            }
+        }
         self.size_policy = size_policy;
         self
     }
@@ -316,6 +373,12 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the window background should be transparent
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.transparent = Some(transparent);
+        self
+    }
+
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
         if let Some(resizable) = self.resizable {
@@ -334,6 +397,10 @@ impl WindowConfig {
 
         if let Some(position) = self.position {
             builder.set_position(position);
+        }
+
+        if let Some(transparent) = self.transparent {
+            builder.set_transparent(transparent);
         }
 
         if let Some(level) = self.level {
@@ -381,16 +448,12 @@ impl WindowConfig {
 }
 
 impl<T: Data> WindowDesc<T> {
-    /// Create a new `WindowDesc`, taking a function that will generate the root
-    /// [`Widget`] for this window.
-    ///
-    /// It is possible that a `WindowDesc` can be reused to launch multiple windows.
+    /// Create a new `WindowDesc`, taking the root [`Widget`] for this window.
     ///
     /// [`Widget`]: trait.Widget.html
-    pub fn new<W, F>(root: F) -> WindowDesc<T>
+    pub fn new<W>(root: W) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
-        F: FnOnce() -> W + 'static,
     {
         WindowDesc {
             pending: PendingWindow::new(root),
@@ -411,13 +474,29 @@ impl<T: Data> WindowDesc<T> {
     }
 
     /// Set the menu for this window.
-    pub fn menu(mut self, menu: MenuDesc<T>) -> Self {
+    ///
+    /// `menu` is a callback for creating the menu. Its first argument is the id of the window that
+    /// will have the menu, or `None` if it's creating the root application menu for an app with no
+    /// menus (which can happen, for example, on macOS).
+    pub fn menu(
+        mut self,
+        menu: impl FnMut(Option<WindowId>, &T, &Env) -> Menu<T> + 'static,
+    ) -> Self {
         self.pending = self.pending.menu(menu);
         self
     }
 
     /// Set the window size policy
     pub fn window_size_policy(mut self, size_policy: WindowSizePolicy) -> Self {
+        #[cfg(windows)]
+        {
+            // On Windows content_insets doesn't work on window with no initial size
+            // so the window size can't be adapted to the content, to fix this a
+            // non null initial size is set here.
+            if size_policy == WindowSizePolicy::Content {
+                self.config.size = Some(Size::new(1., 1.))
+            }
+        }
         self.config.size_policy = size_policy;
         self
     }
@@ -471,10 +550,19 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Sets the initial window position in virtual screen coordinates.
-    /// [`position`] Position in pixels.
+    /// Builder-style method to set whether this window's background should be
+    /// transparent.
+    pub fn transparent(mut self, transparent: bool) -> Self {
+        self.config = self.config.transparent(transparent);
+        self.pending = self.pending.transparent(transparent);
+        self
+    }
+
+    /// Sets the initial window position in [display points], relative to the origin
+    /// of the [virtual screen].
     ///
-    /// [`position`]: struct.Point.html
+    /// [display points]: crate::Scale
+    /// [virtual screen]: crate::Screen
     pub fn set_position(mut self, position: impl Into<Point>) -> Self {
         self.config = self.config.set_position(position.into());
         self
@@ -491,6 +579,12 @@ impl<T: Data> WindowDesc<T> {
     /// Set initial state for the window.
     pub fn set_window_state(mut self, state: WindowState) -> Self {
         self.config = self.config.set_window_state(state);
+        self
+    }
+
+    /// Set the [`WindowConfig`] of window.
+    pub fn with_config(mut self, config: WindowConfig) -> Self {
+        self.config = config;
         self
     }
 

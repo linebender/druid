@@ -21,6 +21,9 @@
 //! rest of the app. If this is something the rest of your widgets should know
 //! about, you could put it in the `data`.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::f64::consts::PI;
 
 use druid::kurbo::{Circle, Line};
@@ -81,12 +84,12 @@ impl Widget<()> for AnimWidget {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| AnimWidget { t: 0.0 }).title(
+    let window = WindowDesc::new(AnimWidget { t: 0.0 }).title(
         LocalizedString::new("anim-demo-window-title")
             .with_placeholder("You spin me right round..."),
     );
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(())
         .expect("launch failed");
 }

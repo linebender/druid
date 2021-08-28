@@ -14,9 +14,11 @@
 
 //! A widget that accepts a closure to update the environment for its child.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Point, WidgetPod};
+use tracing::instrument;
 
 /// A widget that accepts a closure to update the environment for its child.
 pub struct EnvScope<T, W> {
@@ -39,7 +41,7 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
     /// # fn build_widget() -> impl Widget<String> {
     /// EnvScope::new(
     ///     |env, data| {
-    ///         env.set(theme::LABEL_COLOR, Color::WHITE);
+    ///         env.set(theme::TEXT_COLOR, Color::WHITE);
     ///     },
     ///     Label::new("White text!")
     /// )
@@ -57,42 +59,59 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.event(ctx, event, data, &new_env)
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
         self.child.lifecycle(ctx, event, data, &new_env)
     }
 
+    #[instrument(
+        name = "EnvScope",
+        level = "trace",
+        skip(self, ctx, _old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.update(ctx, data, &new_env);
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("EnvScope");
 
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
-        let size = self.child.layout(ctx, &bc, data, &new_env);
+        let size = self.child.layout(ctx, bc, data, &new_env);
         self.child.set_origin(ctx, data, env, Point::ORIGIN);
         size
     }
 
+    #[instrument(name = "EnvScope", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let mut new_env = env.clone();
-        (self.f)(&mut new_env, &data);
+        (self.f)(&mut new_env, data);
 
         self.child.paint(ctx, data, &new_env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

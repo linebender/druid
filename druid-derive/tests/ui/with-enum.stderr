@@ -1,0 +1,5 @@
+error: Lens implementations cannot be derived from enums
+ --> $DIR/with-enum.rs:4:1
+  |
+4 | enum Foobar {
+  | ^^^^

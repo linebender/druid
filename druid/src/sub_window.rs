@@ -17,13 +17,11 @@ use crate::commands::{SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::lens::Unit;
 use crate::widget::prelude::*;
 use crate::win_handler::AppState;
-use crate::{
-    Command, Data, Point, Rect, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId,
-};
+use crate::{Data, Point, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
 use druid_shell::Error;
 use std::any::Any;
 use std::ops::Deref;
-
+use tracing::{instrument, warn};
 // We can't have any type arguments here, as both ends would need to know them
 // ahead of time in order to instantiate correctly.
 // So we erase everything to ()
@@ -72,7 +70,7 @@ impl SubWindowDesc {
         app_state: &mut AppState<T>,
     ) -> Result<WindowHandle, Error> {
         let sub_window_root = self.sub_window_root;
-        let pending = PendingWindow::new(|| sub_window_root.lens(Unit::default()));
+        let pending = PendingWindow::new(sub_window_root.lens(Unit::default()));
         app_state.build_native_window(self.window_id, pending, self.window_config)
     }
 }
@@ -98,6 +96,11 @@ impl<U, W: Widget<U>> SubWindowHost<U, W> {
 }
 
 impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, event, _data, _env)
+    )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut (), _env: &Env) {
         match event {
             Event::Command(cmd) if cmd.is(SUB_WINDOW_PARENT_TO_HOST) => {
@@ -107,7 +110,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                         self.data = dc.deref().clone();
                         ctx.request_update();
                     } else {
-                        log::warn!("Received a sub window parent to host command that could not be unwrapped. \
+                        warn!("Received a sub window parent to host command that could not be unwrapped. \
                         This could mean that the sub window you requested and the enclosing widget pod that you opened it from do not share a common data type. \
                         Make sure you have a widget pod between your requesting widget and any lenses." )
                     }
@@ -121,37 +124,49 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                 let old = self.data.clone(); // Could avoid this by keeping two bit of data or if we could ask widget pod?
                 self.child.event(ctx, event, &mut self.data, &self.env);
                 if !old.same(&self.data) {
-                    ctx.submit_command(Command::new(
-                        SUB_WINDOW_HOST_TO_PARENT,
-                        Box::new(self.data.clone()),
-                        self.parent_id,
-                    ))
+                    ctx.submit_command(
+                        SUB_WINDOW_HOST_TO_PARENT
+                            .with(Box::new(self.data.clone()))
+                            .to(self.parent_id),
+                    )
                 }
             }
         }
     }
 
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, event, _data, _env)
+    )]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &(), _env: &Env) {
         self.child.lifecycle(ctx, event, &self.data, &self.env)
     }
 
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, _old_data, _data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &(), _data: &(), _env: &Env) {
         if ctx.has_requested_update() {
             self.child.update(ctx, &self.data, &self.env);
         }
     }
 
+    #[instrument(
+        name = "SubWindowHost",
+        level = "trace",
+        skip(self, ctx, bc, _data, _env)
+    )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &(), _env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, &self.data, &self.env);
-        self.child.set_layout_rect(
-            ctx,
-            &self.data,
-            &self.env,
-            Rect::from_origin_size(Point::ORIGIN, size),
-        );
+        self.child
+            .set_origin(ctx, &self.data, &self.env, Point::ORIGIN);
         size
     }
 
+    #[instrument(name = "SubWindowHost", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &(), _env: &Env) {
         self.child.paint_raw(ctx, &self.data, &self.env);
     }

@@ -15,8 +15,10 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
+use tracing::{instrument, trace, trace_span};
 
 struct BorderStyle {
     width: KeyOrValue<f64>,
@@ -29,17 +31,17 @@ pub struct Container<T> {
     border: Option<BorderStyle>,
     corner_radius: KeyOrValue<f64>,
 
-    inner: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
 
 impl<T: Data> Container<T> {
     /// Create Container with a child
-    pub fn new(inner: impl Widget<T> + 'static) -> Self {
+    pub fn new(child: impl Widget<T> + 'static) -> Self {
         Self {
             background: None,
             border: None,
             corner_radius: 0.0.into(),
-            inner: WidgetPod::new(inner).boxed(),
+            child: WidgetPod::new(child).boxed(),
         }
     }
 
@@ -74,6 +76,11 @@ impl<T: Data> Container<T> {
         self.background = Some(brush.into());
     }
 
+    /// Clears background.
+    pub fn clear_background(&mut self) {
+        self.background = None;
+    }
+
     /// Builder-style method for painting a border around the widget with a color and width.
     ///
     /// Arguments can be either concrete values, or a [`Key`] of the respective
@@ -106,6 +113,11 @@ impl<T: Data> Container<T> {
         });
     }
 
+    /// Clears border.
+    pub fn clear_border(&mut self) {
+        self.border = None;
+    }
+
     /// Builder style method for rounding off corners of this container by setting a corner radius
     pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
         self.set_rounded(radius);
@@ -129,21 +141,42 @@ impl<T: Data> Container<T> {
 }
 
 impl<T: Data> Widget<T> for Container<T> {
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        self.inner.event(ctx, event, data, env);
+        self.child.event(ctx, event, data, env);
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
+    #[instrument(
+        name = "Container",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        if let Some(BackgroundBrush::Painter(p)) = self.background.as_mut() {
-            p.update(ctx, old_data, data, env);
+        if let Some(brush) = self.background.as_mut() {
+            trace_span!("update background").in_scope(|| {
+                brush.update(ctx, old_data, data, env);
+            });
         }
-        self.inner.update(ctx, data, env);
+        if let Some(border) = &self.border {
+            if ctx.env_key_changed(&border.width) {
+                ctx.request_layout();
+            }
+            if ctx.env_key_changed(&border.color) {
+                ctx.request_paint();
+            }
+        }
+        if ctx.env_key_changed(&self.corner_radius) {
+            ctx.request_paint();
+        }
+        self.child.update(ctx, data, env);
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Container");
 
@@ -153,29 +186,33 @@ impl<T: Data> Widget<T> for Container<T> {
             None => 0.0,
         };
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
-        let size = self.inner.layout(ctx, &child_bc, data, env);
+        let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
-        self.inner.set_origin(ctx, data, env, origin);
+        self.child.set_origin(ctx, data, env, origin);
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,
             size.height + 2.0 * border_width,
         );
 
-        let my_insets = self.inner.compute_parent_paint_insets(my_size);
+        let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        trace!("Computed layout: size={}, insets={:?}", my_size, my_insets);
         my_size
     }
 
+    #[instrument(name = "Container", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let corner_radius = self.corner_radius.resolve(env);
 
         if let Some(background) = self.background.as_mut() {
             let panel = ctx.size().to_rounded_rect(corner_radius);
 
-            ctx.with_save(|ctx| {
-                ctx.clip(panel);
-                background.paint(ctx, data, env);
+            trace_span!("paint background").in_scope(|| {
+                ctx.with_save(|ctx| {
+                    ctx.clip(panel);
+                    background.paint(ctx, data, env);
+                });
             });
         }
 
@@ -189,6 +226,14 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.stroke(border_rect, &border.color.resolve(env), border_width);
         };
 
-        self.inner.paint(ctx, data, env);
+        self.child.paint(ctx, data, env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }

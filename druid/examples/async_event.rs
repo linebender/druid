@@ -18,6 +18,9 @@
 //! takes a long time but don't want to block the main thread
 //! (waiting on an http request, some cpu intensive work etc.)
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use instant::Instant;
 use std::thread;
 use std::time::Duration;
@@ -31,7 +34,7 @@ use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
 const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
 
 pub fn main() {
-    let window = WindowDesc::new(make_ui).title("External Event Demo");
+    let window = WindowDesc::new(make_ui()).title("External Event Demo");
 
     let launcher = AppLauncher::with_window(window);
 
@@ -48,7 +51,7 @@ pub fn main() {
     thread::spawn(move || generate_colors(event_sink));
 
     launcher
-        .use_simple_logger()
+        .log_to_console()
         .launch(Color::BLACK)
         .expect("launch failed");
 }

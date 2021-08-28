@@ -14,7 +14,6 @@
 
 //! Common functions used by the backends
 
-use std::any::Any;
 use std::cell::Cell;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -23,6 +22,7 @@ use std::time::Duration;
 use instant::Instant;
 
 use crate::kurbo::Point;
+use crate::WinHandler;
 
 // This is the default timing on windows.
 const MULTI_CLICK_INTERVAL: Duration = Duration::from_millis(500);
@@ -32,7 +32,7 @@ const MULTI_CLICK_MAX_DISTANCE: f64 = 5.0;
 /// Strip the access keys from the menu string.
 ///
 /// Changes "E&xit" to "Exit". Actual ampersands are escaped as "&&".
-#[cfg(any(target_os = "macos", all(target_os = "linux", feature = "gtk")))]
+#[allow(dead_code)]
 pub fn strip_access_key(raw_menu_text: &str) -> String {
     let mut saw_ampersand = false;
     let mut result = String::new();
@@ -52,11 +52,11 @@ pub fn strip_access_key(raw_menu_text: &str) -> String {
 
 /// A trait for implementing the boxed callback hack.
 pub(crate) trait IdleCallback: Send {
-    fn call(self: Box<Self>, a: &dyn Any);
+    fn call(self: Box<Self>, a: &mut dyn WinHandler);
 }
 
-impl<F: FnOnce(&dyn Any) + Send> IdleCallback for F {
-    fn call(self: Box<F>, a: &dyn Any) {
+impl<F: FnOnce(&mut dyn WinHandler) + Send> IdleCallback for F {
+    fn call(self: Box<F>, a: &mut dyn WinHandler) {
         (*self)(a)
     }
 }

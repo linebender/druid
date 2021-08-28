@@ -1,8 +1,8 @@
-# Druid
+![druid banner](https://raw.githubusercontent.com/linebender/druid/screenshots/images/small_banner.png)
 
 ## A data-first Rust-native UI toolkit.
 
-[![crates.io](https://meritbadge.herokuapp.com/druid)](https://crates.io/crates/druid)
+[![crates.io](https://img.shields.io/crates/v/druid)](https://crates.io/crates/druid)
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
 [![license](https://img.shields.io/crates/l/druid)](https://github.com/linebender/druid/blob/master/LICENSE)
 [![chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://xi.zulipchat.com)
@@ -32,17 +32,17 @@ We gladly accept contributions via GitHub pull requests. Please see
 
 ## Example
 
-Here's a simple counter example app.
+Here's a simple counter example app:
 
 ```rust
 use druid::widget::{Button, Flex, Label};
 use druid::{AppLauncher, LocalizedString, PlatformError, Widget, WidgetExt, WindowDesc};
 
 fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(ui_builder);
+    let main_window = WindowDesc::new(ui_builder());
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
 }
 
@@ -58,9 +58,10 @@ fn ui_builder() -> impl Widget<u32> {
     Flex::column().with_child(label).with_child(button)
 }
 ```
+This example works with master. Here's an example for 0.7.0: https://docs.rs/druid/latest/druid/#examples
 
 Check out the [the examples folder] for a more comprehensive demonstration of
-Druid's existing functionality and widgets.
+Druid's existing functionality and widgets. Check [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) for more widgets.
 
 ## Screenshots
 
@@ -91,6 +92,8 @@ druid = { git = "https://github.com/linebender/druid.git" }
 #### Linux
 
 On Linux, Druid requires gtk+3; see [GTK installation page].
+(On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
+
 
 Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
@@ -225,7 +228,7 @@ fn build_widget() -> impl Widget<u32> {
     let mut col = Flex::column();
     for i in 0..30 {
         let button = Button::new(format!("Button {}", i).padding(5.0);
-        col.add_child(button, 0.0);
+        col.add_child(button);
     }
     Scroll::new(col)
 }
@@ -314,4 +317,3 @@ active and friendly community.
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
-

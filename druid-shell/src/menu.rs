@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::backend::menu as backend;
 use crate::hotkey::HotKey;
-use crate::platform::menu as platform;
 
 /// A menu object.
 ///
@@ -25,12 +25,12 @@ use crate::platform::menu as platform;
 /// Currently, a menu and its items cannot be changed once created. If you need
 /// to change anything about a menu (for instance, disabling or selecting items)
 /// you need to create a new menu with the desired properties.
-pub struct Menu(platform::Menu);
+pub struct Menu(pub(crate) backend::Menu);
 
 impl Menu {
     /// Create a new empty window or application menu.
     pub fn new() -> Menu {
-        Menu(platform::Menu::new())
+        Menu(backend::Menu::new())
     }
 
     /// Create a new empty context menu.
@@ -38,11 +38,11 @@ impl Menu {
     /// Some platforms distinguish between these types of menus, and some
     /// do not.
     pub fn new_for_popup() -> Menu {
-        Menu(platform::Menu::new_for_popup())
+        Menu(backend::Menu::new_for_popup())
     }
 
     /// Consume this `Menu`, returning the platform menu object.
-    pub(crate) fn into_inner(self) -> platform::Menu {
+    pub(crate) fn into_inner(self) -> backend::Menu {
         self.0
     }
 

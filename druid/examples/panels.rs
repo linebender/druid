@@ -14,6 +14,9 @@
 
 //! This example shows how to construct a basic layout.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::Circle;
 use druid::widget::{Flex, Label, Painter};
 use druid::{
@@ -92,10 +95,10 @@ fn build_app() -> impl Widget<()> {
 }
 
 pub fn main() -> Result<(), PlatformError> {
-    let main_window = WindowDesc::new(build_app)
+    let main_window = WindowDesc::new(build_app())
         .title(LocalizedString::new("panels-demo-window-title").with_placeholder("Fancy Boxes!"));
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(())?;
 
     Ok(())

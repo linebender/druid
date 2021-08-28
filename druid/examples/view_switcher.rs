@@ -14,6 +14,9 @@
 
 //! This example demonstrates the `ViewSwitcher` widget
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Button, Flex, Label, Split, TextBox, ViewSwitcher};
 use druid::{AppLauncher, Data, Env, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 
@@ -24,13 +27,13 @@ struct AppState {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(make_ui).title(LocalizedString::new("View Switcher"));
+    let main_window = WindowDesc::new(make_ui()).title(LocalizedString::new("View Switcher"));
     let data = AppState {
         current_view: 0,
         current_text: "Edit me!".to_string(),
     };
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

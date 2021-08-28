@@ -25,8 +25,9 @@ use crate::Data;
 /// the lens itself is zero-sized. Another case is accessing an array
 /// element, in which case the lens contains the array index.
 ///
-/// Many `Lens` implementations will be derived by macro, but custom
-/// implementations are practical as well.
+/// The most common way to create `Lens` implementations is to
+/// use [`#[derive(Lens)]`](druid_derive::Lens) to access a struct's
+/// fields, but custom implementations are practical as well.
 ///
 /// The name "lens" is inspired by the [Haskell lens] package, which
 /// has generally similar goals. It's likely we'll develop more
@@ -283,18 +284,20 @@ where
 /// This is a convenience macro for constructing `Field` lenses for fields or indexable elements.
 ///
 /// ```
-/// struct Foo { x: u32 }
+/// struct Foo { x: Bar }
+/// struct Bar { y: [i32; 10] }
 /// let lens = druid::lens!(Foo, x);
 /// let lens = druid::lens!((u32, bool), 1);
 /// let lens = druid::lens!([u8], [4]);
+/// let lens = druid::lens!(Foo, x.y[5]);
 /// ```
 #[macro_export]
 macro_rules! lens {
     ($ty:ty, [$index:expr]) => {
         $crate::lens::Field::new::<$ty, _>(move |x| &x[$index], move |x| &mut x[$index])
     };
-    ($ty:ty, $field:tt) => {
-        $crate::lens::Field::new::<$ty, _>(move |x| &x.$field, move |x| &mut x.$field)
+    ($ty:ty, $($field:tt)*) => {
+        $crate::lens::Field::new::<$ty, _>(move |x| &x.$($field)*, move |x| &mut x.$($field)*)
     };
 }
 
@@ -567,3 +570,66 @@ impl<A, B: Clone> Lens<A, B> for Constant<B> {
         f(&mut tmp)
     }
 }
+
+macro_rules! impl_lens_for_tuple {
+    ($(($Lens:ident, $B:ident, $i:tt)),*) => {
+        #[allow(non_snake_case)]
+        impl<A, $($Lens,)* $($B,)*> Lens<A, ($($B,)*)> for ($($Lens,)*)
+        where
+            $($B: Clone,)*
+            $($Lens: Lens<A, $B>,)*
+        {
+            fn with<V, F: FnOnce(&($($B,)*)) -> V>(&self, data: &A, f: F) -> V {
+                $(let $B = self.$i.with(data, |v| v.clone());)*
+                let tuple = ($($B,)*);
+                f(&tuple)
+            }
+            fn with_mut<V, F: FnOnce(&mut ($($B,)*)) -> V>(&self, data: &mut A, f: F) -> V {
+                $(let $B = self.$i.with(data, |v| v.clone());)*
+                let mut tuple = ($($B,)*);
+                let out = f(&mut tuple);
+                let ($($B,)*) = tuple;
+                $(self.$i.with_mut(data, |v| *v = $B);)*
+                out
+            }
+        }
+    };
+}
+
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1));
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1), (L2, L2B, 2));
+impl_lens_for_tuple!((L0, L0B, 0), (L1, L1B, 1), (L2, L2B, 2), (L3, L3B, 3));
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5),
+    (L6, L6B, 6)
+);
+impl_lens_for_tuple!(
+    (L0, L0B, 0),
+    (L1, L1B, 1),
+    (L2, L2B, 2),
+    (L3, L3B, 3),
+    (L4, L4B, 4),
+    (L5, L5B, 5),
+    (L6, L6B, 6),
+    (L7, L7B, 7)
+);

@@ -14,6 +14,9 @@
 
 //! Simple calculator.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::{
     theme, AppLauncher, Color, Data, Lens, LocalizedString, RenderContext, Widget, WidgetExt,
     WindowDesc,
@@ -243,7 +246,7 @@ fn build_calc() -> impl Widget<CalcState> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_calc)
+    let window = WindowDesc::new(build_calc())
         .window_size((223., 300.))
         .resizable(false)
         .title(
@@ -256,7 +259,7 @@ pub fn main() {
         in_num: false,
     };
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(calc_state)
         .expect("launch failed");
 }

@@ -176,6 +176,15 @@ pub enum Event {
     ///
     /// [`EventCtx::set_handled`]: crate::EventCtx::set_handled
     Notification(Notification),
+    /// Sent to a widget when the platform may have mutated shared IME state.
+    ///
+    /// This is sent to a widget that has an attached IME session anytime the
+    /// platform has released a mutable lock on shared state.
+    ///
+    /// This does not *mean* that any state has changed, but the widget
+    /// should check the shared state, perform invalidation, and update `Data`
+    /// as necessary.
+    ImeStateChange,
     /// Internal druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -202,6 +211,8 @@ pub enum InternalEvent {
     TargetedCommand(Command),
     /// Used for routing timer events.
     RouteTimer(TimerToken, WidgetId),
+    /// Route an IME change event.
+    RouteImeStateChange(WidgetId),
 }
 
 /// Application life cycle events.
@@ -254,6 +265,15 @@ pub enum LifeCycle {
     /// [`Size`]: struct.Size.html
     /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
     Size(Size),
+    /// Called when the Disabled state of the widgets is changed.
+    ///
+    /// To check if a widget is disabled, see [`is_disabled`].
+    ///
+    /// To change a widget's disabled state, see [`set_disabled`].
+    ///
+    /// [`is_disabled`]: crate::EventCtx::is_disabled
+    /// [`set_disabled`]: crate::EventCtx::set_disabled
+    DisabledChanged(bool),
     /// Called when the "hot" status changes.
     ///
     /// This will always be called _before_ the event that triggered it; that is,
@@ -263,6 +283,16 @@ pub enum LifeCycle {
     /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
+    /// This is called when the widget-tree changes and druid wants to rebuild the
+    /// Focus-chain.
+    ///
+    /// It is the only place from witch [`register_for_focus`] should be called.
+    /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
+    ///
+    /// [`register_for_focus`]: crate::LifeCycleCtx::register_for_focus
+    /// [`focus_next`]: crate::EventCtx::focus_next
+    /// [`focus_prev`]: crate::EventCtx::focus_prev
+    BuildFocusChain,
     /// Called when the focus status changes.
     ///
     /// This will always be called immediately after a new widget gains focus.
@@ -299,20 +329,35 @@ pub enum InternalLifeCycle {
         /// the widget that is gaining focus, if any
         new: Option<WidgetId>,
     },
+    /// Used to route the `DisabledChanged` event to the required widgets.
+    RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
     ParentWindowOrigin,
-    /// Testing only: request the `WidgetState` of a specific widget.
+    /// For testing: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
     /// somewhere in the tree is as expected. In that case you can dispatch
     /// this event, specifying the widget in question, and that widget will
     /// set its state in the provided `Cell`, if it exists.
-    #[cfg(test)]
     DebugRequestState {
+        /// the widget whose state is requested
         widget: WidgetId,
+        /// a cell used to store the a widget's state
         state_cell: StateCell,
     },
-    #[cfg(test)]
+    /// For testing: request the `DebugState` of a specific widget.
+    ///
+    /// This is useful if you need to get a best-effort description of the
+    /// state of this widget and its children. You can dispatch this event,
+    /// specifying the widget in question, and that widget will
+    /// set its state in the provided `Cell`, if it exists.
+    DebugRequestDebugState {
+        /// the widget whose state is requested
+        widget: WidgetId,
+        /// a cell used to store the a widget's state
+        state_cell: DebugStateCell,
+    },
+    /// For testing: apply the given function on every widget.
     DebugInspectState(StateCheckFn),
 }
 
@@ -364,8 +409,23 @@ impl Event {
         }
     }
 
-    /// Whether this event should be sent to widgets which are currently not visible
-    /// (for example the hidden tabs in a tabs widget).
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// For example: the hidden tabs in a tabs widget are `hidden` whereas the non-visible
+    /// widgets in a scroll are not, since you can bring them into view by scrolling.
+    ///
+    /// This distinction between scroll and tabs is due to one of the main purposes of
+    /// this method: determining which widgets are allowed to receive focus. As a rule
+    /// of thumb a widget counts as `hidden` if it makes no sense for it to receive focus
+    /// when the user presses thee 'tab' key.
+    ///
+    /// If a widget changes which children are hidden it must call [`children_changed`].
+    ///
+    /// See also [`LifeCycle::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`LifeCycle::should_propagate_to_hidden`]: LifeCycle::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             Event::WindowConnected
@@ -384,34 +444,70 @@ impl Event {
             | Event::KeyDown(_)
             | Event::KeyUp(_)
             | Event::Paste(_)
+            | Event::ImeStateChange
             | Event::Zoom(_) => false,
         }
     }
 }
 
 impl LifeCycle {
-    /// Whether this event should be sent to widgets which are currently not visible
-    /// (for example the hidden tabs in a tabs widget).
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            LifeCycle::WidgetAdded | LifeCycle::Internal(_) => true,
-            LifeCycle::Size(_) | LifeCycle::HotChanged(_) | LifeCycle::FocusChanged(_) => false,
+            LifeCycle::Internal(internal) => internal.should_propagate_to_hidden(),
+            LifeCycle::WidgetAdded | LifeCycle::DisabledChanged(_) => true,
+            LifeCycle::Size(_)
+            | LifeCycle::HotChanged(_)
+            | LifeCycle::FocusChanged(_)
+            | LifeCycle::BuildFocusChain => false,
         }
     }
 }
 
-#[cfg(test)]
-pub(crate) use state_cell::{StateCell, StateCheckFn};
+impl InternalLifeCycle {
+    /// Whether this event should be sent to widgets which are currently not visible and not
+    /// accessible.
+    ///
+    /// If a widget changes which children are `hidden` it must call [`children_changed`].
+    /// For a more detailed explanation of the `hidden` state, see [`Event::should_propagate_to_hidden`].
+    ///
+    /// [`children_changed`]: crate::EventCtx::children_changed
+    /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
+    pub fn should_propagate_to_hidden(&self) -> bool {
+        match self {
+            InternalLifeCycle::RouteWidgetAdded
+            | InternalLifeCycle::RouteFocusChanged { .. }
+            | InternalLifeCycle::RouteDisabledChanged => true,
+            InternalLifeCycle::ParentWindowOrigin => false,
+            InternalLifeCycle::DebugRequestState { .. }
+            | InternalLifeCycle::DebugRequestDebugState { .. }
+            | InternalLifeCycle::DebugInspectState(_) => true,
+        }
+    }
+}
 
-#[cfg(test)]
+pub(crate) use state_cell::{DebugStateCell, StateCell, StateCheckFn};
+
 mod state_cell {
     use crate::core::WidgetState;
+    use crate::debug_state::DebugState;
     use crate::WidgetId;
     use std::{cell::RefCell, rc::Rc};
 
-    /// An interior-mutable struct for fetching BasteState.
+    /// An interior-mutable struct for fetching WidgetState.
     #[derive(Clone, Default)]
     pub struct StateCell(Rc<RefCell<Option<WidgetState>>>);
+
+    /// An interior-mutable struct for fetching DebugState.
+    #[derive(Clone, Default)]
+    pub struct DebugStateCell(Rc<RefCell<Option<DebugState>>>);
 
     #[derive(Clone)]
     pub struct StateCheckFn(Rc<dyn Fn(&WidgetState)>);
@@ -442,6 +538,21 @@ mod state_cell {
         }
     }
 
+    impl DebugStateCell {
+        /// Set the state. This will panic if it is called twice.
+        pub(crate) fn set(&self, state: DebugState) {
+            assert!(
+                self.0.borrow_mut().replace(state).is_none(),
+                "DebugStateCell already set"
+            )
+        }
+
+        #[allow(dead_code)]
+        pub(crate) fn take(&self) -> Option<DebugState> {
+            self.0.borrow_mut().take()
+        }
+    }
+
     impl StateCheckFn {
         #[cfg(not(target_arch = "wasm32"))]
         pub(crate) fn new(f: impl Fn(&WidgetState) + 'static) -> Self {
@@ -450,10 +561,12 @@ mod state_cell {
 
         pub(crate) fn call(&self, state: &WidgetState) {
             let mut panic_reporter = WidgetDrop(true, state.id);
-            (self.0)(&state);
+            (self.0)(state);
             panic_reporter.0 = false;
         }
     }
+
+    // TODO - Use fmt.debug_tuple?
 
     impl std::fmt::Debug for StateCell {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -463,6 +576,17 @@ mod state_cell {
                 "None"
             };
             write!(f, "StateCell({})", inner)
+        }
+    }
+
+    impl std::fmt::Debug for DebugStateCell {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            let inner = if self.0.borrow().is_some() {
+                "Some"
+            } else {
+                "None"
+            };
+            write!(f, "DebugStateCell({})", inner)
         }
     }
 

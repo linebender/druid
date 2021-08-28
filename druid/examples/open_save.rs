@@ -14,6 +14,9 @@
 
 //! Usage of file open and saving.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Align, Button, Flex, TextBox};
 use druid::{
     commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, FileDialogOptions, FileSpec,
@@ -23,12 +26,12 @@ use druid::{
 struct Delegate;
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("open-save-demo").with_placeholder("Opening/Saving Demo"));
     let data = "Type here.".to_owned();
     AppLauncher::with_window(main_window)
         .delegate(Delegate)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }
@@ -56,18 +59,10 @@ fn ui_builder() -> impl Widget<String> {
 
     let input = TextBox::new();
     let save = Button::new("Save").on_click(move |ctx, _, _| {
-        ctx.submit_command(Command::new(
-            druid::commands::SHOW_SAVE_PANEL,
-            save_dialog_options.clone(),
-            Target::Auto,
-        ))
+        ctx.submit_command(druid::commands::SHOW_SAVE_PANEL.with(save_dialog_options.clone()))
     });
     let open = Button::new("Open").on_click(move |ctx, _, _| {
-        ctx.submit_command(Command::new(
-            druid::commands::SHOW_OPEN_PANEL,
-            open_dialog_options.clone(),
-            Target::Auto,
-        ))
+        ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(open_dialog_options.clone()))
     });
 
     let mut col = Flex::column();

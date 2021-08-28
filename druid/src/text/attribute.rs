@@ -17,7 +17,18 @@
 use std::ops::Range;
 
 use crate::piet::{Color, FontFamily, FontStyle, FontWeight, TextAttribute as PietAttr};
-use crate::{Env, FontDescriptor, KeyOrValue};
+use crate::{Command, Env, FontDescriptor, KeyOrValue};
+
+use super::EnvUpdateCtx;
+
+/// A clickable range of text with an associated [`Command`].
+#[derive(Debug, Clone)]
+pub struct Link {
+    /// The range of text for the link.
+    pub range: Range<usize>,
+    /// A [`Command`] representing the link's payload.
+    pub command: Command,
+}
 
 /// A collection of spans of attributes of various kinds.
 #[derive(Debug, Clone, Default)]
@@ -93,6 +104,18 @@ pub enum Attribute {
     Descriptor(KeyOrValue<FontDescriptor>),
 }
 
+impl Link {
+    /// Create a new `Link`.
+    pub fn new(range: Range<usize>, command: Command) -> Self {
+        Self { range, command }
+    }
+
+    /// Get this `Link`'s range.
+    pub fn range(&self) -> Range<usize> {
+        self.range.clone()
+    }
+}
+
 impl AttributeSpans {
     /// Create a new, empty `AttributeSpans`.
     pub fn new() -> Self {
@@ -158,6 +181,20 @@ impl AttributeSpans {
         items.sort_by(|a, b| a.0.start.cmp(&b.0.start));
         items
     }
+
+    pub(crate) fn env_update(&self, ctx: &EnvUpdateCtx) -> bool {
+        self.size
+            .iter()
+            .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+            || self
+                .fg_color
+                .iter()
+                .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+            || self
+                .font_descriptor
+                .iter()
+                .any(|span_attr| ctx.env_key_changed(&span_attr.attr))
+    }
 }
 
 impl<T: Clone> SpanSet<T> {
@@ -220,7 +257,8 @@ impl<T: Clone> SpanSet<T> {
     //as requred for insertions in the interior of a span.
     //TODO: this isn't currently used; it should be used if we use spans with
     //some editable type.
-    #[allow(dead_code)]
+    // the branches are much more readable without sharing code
+    #[allow(dead_code, clippy::branches_sharing_code)]
     fn edit(&mut self, changed: Range<usize>, new_len: usize) {
         let old_len = changed.len();
         let mut to_insert = None;
@@ -324,6 +362,7 @@ impl<T> Default for SpanSet<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_env_log::test;
 
     #[test]
     fn smoke_test_spans() {

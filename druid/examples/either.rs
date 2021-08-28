@@ -16,6 +16,9 @@
 //! This is a very simple example, it uses a bool to determine
 //! which widget gets shown.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Checkbox, Either, Flex, Label, Slider};
 use druid::{AppLauncher, Data, Lens, WidgetExt, WindowDesc};
@@ -45,9 +48,9 @@ fn ui_builder() -> impl Widget<AppState> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title("Switcheroo");
+    let main_window = WindowDesc::new(ui_builder()).title("Switcheroo");
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(AppState::default())
         .expect("launch failed");
 }

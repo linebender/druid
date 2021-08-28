@@ -19,6 +19,9 @@
 //! open so we have to work around that. When we receive the
 //! `WindowConnected` command we initiate the cursor.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::{
     AppLauncher, Color, Cursor, CursorDesc, Data, Env, ImageBuf, Lens, LocalizedString, WidgetExt,
     WindowDesc,
@@ -88,9 +91,9 @@ impl AppState {
     fn next_cursor(&mut self) {
         self.cursor = match self.cursor {
             Cursor::Arrow => Cursor::IBeam,
-            Cursor::IBeam => Cursor::Crosshair,
-            Cursor::Crosshair => Cursor::OpenHand,
-            Cursor::OpenHand => Cursor::NotAllowed,
+            Cursor::IBeam => Cursor::Pointer,
+            Cursor::Pointer => Cursor::Crosshair,
+            Cursor::Crosshair => Cursor::NotAllowed,
             Cursor::NotAllowed => Cursor::ResizeLeftRight,
             Cursor::ResizeLeftRight => Cursor::ResizeUpDown,
             Cursor::ResizeUpDown => {
@@ -101,12 +104,14 @@ impl AppState {
                 }
             }
             Cursor::Custom(_) => Cursor::Arrow,
+            _ => Cursor::Arrow,
         };
     }
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder).title(LocalizedString::new("Blocking functions"));
+    let main_window =
+        WindowDesc::new(ui_builder()).title(LocalizedString::new("Blocking functions"));
     let cursor_image = ImageBuf::from_data(include_bytes!("./assets/PicWithAlpha.png")).unwrap();
     // The (0,0) refers to where the "hotspot" is located, so where the mouse actually points.
     // (0,0) is the top left, and (cursor_image.width(), cursor_image.width()) the bottom right.
@@ -118,7 +123,7 @@ pub fn main() {
         custom_desc,
     };
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

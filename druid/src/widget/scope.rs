@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Lens, Point, WidgetPod};
+use tracing::instrument;
 
 /// A policy that controls how a [`Scope`] will interact with its surrounding
 /// application data. Specifically, how to create an initial State from the
@@ -114,7 +115,7 @@ impl<L: Lens<State, In>, In: Data, State: Data> ScopeTransfer for LensScopeTrans
 
     fn read_input(&self, state: &mut State, data: &In) {
         self.lens.with_mut(state, |inner| {
-            if !inner.same(&data) {
+            if !inner.same(data) {
                 *inner = data.clone()
             }
         });
@@ -122,7 +123,7 @@ impl<L: Lens<State, In>, In: Data, State: Data> ScopeTransfer for LensScopeTrans
 
     fn write_back_input(&self, state: &State, data: &mut In) {
         self.lens.with(state, |inner| {
-            if !inner.same(&data) {
+            if !inner.same(data) {
                 *data = inner.clone();
             }
         });
@@ -270,20 +271,24 @@ impl<In: Data, State: Data, F: Fn(In) -> State, L: Lens<State, In>, W: Widget<St
 }
 
 impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
+    #[instrument(name = "Scope", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.event(ctx, event, state, env));
         self.write_back_input(data);
         ctx.request_update()
     }
 
+    #[instrument(name = "Scope", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.lifecycle(ctx, event, state, env));
     }
 
+    #[instrument(name = "Scope", level = "trace", skip(self, ctx, _old_data, data, env))]
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &SP::In, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.update(ctx, state, env));
     }
 
+    #[instrument(name = "Scope", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -298,9 +303,13 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
         })
     }
 
+    #[instrument(name = "Scope", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SP::In, env: &Env) {
         self.with_state(data, |state, inner| inner.paint_raw(ctx, state, env));
     }
+
+    // TODO
+    // fn debug_state(&self, data: &SP::In) -> DebugState;
 }
 
 impl<SP: ScopePolicy, W: Widget<SP::State>> WidgetWrapper for Scope<SP, W> {

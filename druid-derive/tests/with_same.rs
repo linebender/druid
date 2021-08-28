@@ -5,7 +5,7 @@ fn same_fn() {
     #[derive(Clone, Data)]
     struct Nanana {
         bits: f64,
-        #[data(same_fn = "PartialEq::eq")]
+        #[data(eq)]
         peq: f64,
     }
 

@@ -14,6 +14,9 @@
 
 //! This example allows to play with scroll bars over different color tones.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{Container, Flex, Scroll, SizedBox};
 use druid::{AppLauncher, Color, LocalizedString, Widget, WindowDesc};
 
@@ -42,12 +45,12 @@ fn build_app() -> impl Widget<u32> {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(build_app).title(
+    let main_window = WindowDesc::new(build_app()).title(
         LocalizedString::new("scroll-colors-demo-window-title").with_placeholder("Rainbows!"),
     );
     let data = 0_u32;
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

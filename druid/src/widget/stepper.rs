@@ -16,7 +16,9 @@
 
 use std::f64::EPSILON;
 use std::time::Duration;
+use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::BezPath;
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::widget::prelude::*;
@@ -115,6 +117,7 @@ impl Default for Stepper {
 }
 
 impl Widget<f64> for Stepper {
+    #[instrument(name = "Stepper", level = "trace", skip(self, ctx, _data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &f64, env: &Env) {
         let stroke_width = 2.0;
         let rounded_rect = ctx
@@ -137,6 +140,15 @@ impl Widget<f64> for Stepper {
         let increase_button_rect = Rect::from_origin_size(increase_button_origin, button_size);
         let decrease_button_rect = Rect::from_origin_size(decrease_button_origin, button_size);
 
+        let disabled_gradient = LinearGradient::new(
+            UnitPoint::TOP,
+            UnitPoint::BOTTOM,
+            (
+                env.get(theme::DISABLED_BUTTON_LIGHT),
+                env.get(theme::DISABLED_BUTTON_DARK),
+            ),
+        );
+
         let active_gradient = LinearGradient::new(
             UnitPoint::TOP,
             UnitPoint::BOTTOM,
@@ -150,13 +162,17 @@ impl Widget<f64> for Stepper {
         );
 
         // draw buttons that are currently triggered as active
-        if self.increase_active {
+        if ctx.is_disabled() {
+            ctx.fill(increase_button_rect, &disabled_gradient);
+        } else if self.increase_active {
             ctx.fill(increase_button_rect, &active_gradient);
         } else {
             ctx.fill(increase_button_rect, &inactive_gradient);
         };
 
-        if self.decrease_active {
+        if ctx.is_disabled() {
+            ctx.fill(decrease_button_rect, &disabled_gradient);
+        } else if self.decrease_active {
             ctx.fill(decrease_button_rect, &active_gradient);
         } else {
             ctx.fill(decrease_button_rect, &inactive_gradient);
@@ -174,9 +190,20 @@ impl Widget<f64> for Stepper {
         arrows.line_to(Point::new(width / 2., height - 4.));
         arrows.close_path();
 
-        ctx.fill(arrows, &env.get(theme::LABEL_COLOR));
+        let color = if ctx.is_disabled() {
+            env.get(theme::DISABLED_TEXT_COLOR)
+        } else {
+            env.get(theme::TEXT_COLOR)
+        };
+
+        ctx.fill(arrows, &color);
     }
 
+    #[instrument(
+        name = "Stepper",
+        level = "trace",
+        skip(self, _layout_ctx, bc, _data, env)
+    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -184,30 +211,35 @@ impl Widget<f64> for Stepper {
         _data: &f64,
         env: &Env,
     ) -> Size {
-        bc.constrain(Size::new(
+        let size = bc.constrain(Size::new(
             env.get(theme::BASIC_WIDGET_HEIGHT),
             env.get(theme::BORDERED_WIDGET_HEIGHT),
-        ))
+        ));
+        trace!("Computed size: {}", size);
+        size
     }
 
+    #[instrument(name = "Stepper", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut f64, env: &Env) {
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
         match event {
             Event::MouseDown(mouse) => {
-                ctx.set_active(true);
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
 
-                if mouse.pos.y > height / 2. {
-                    self.decrease_active = true;
-                    self.decrement(data);
-                } else {
-                    self.increase_active = true;
-                    self.increment(data);
+                    if mouse.pos.y > height / 2. {
+                        self.decrease_active = true;
+                        self.decrement(data);
+                    } else {
+                        self.increase_active = true;
+                        self.increment(data);
+                    }
+
+                    self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
+
+                    ctx.request_paint();
                 }
-
-                self.timer_id = ctx.request_timer(STEPPER_REPEAT_DELAY);
-
-                ctx.request_paint();
             }
             Event::MouseUp(_) => {
                 ctx.set_active(false);
@@ -219,23 +251,44 @@ impl Widget<f64> for Stepper {
                 ctx.request_paint();
             }
             Event::Timer(id) if *id == self.timer_id => {
-                if self.increase_active {
-                    self.increment(data);
+                if !ctx.is_disabled() {
+                    if self.increase_active {
+                        self.increment(data);
+                    }
+                    if self.decrease_active {
+                        self.decrement(data);
+                    }
+                    self.timer_id = ctx.request_timer(STEPPER_REPEAT);
+                } else {
+                    ctx.set_active(false);
                 }
-                if self.decrease_active {
-                    self.decrement(data);
-                }
-                self.timer_id = ctx.request_timer(STEPPER_REPEAT);
             }
             _ => (),
         }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &f64, _env: &Env) {}
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &f64, _env: &Env) {
+        if let LifeCycle::DisabledChanged(_) = event {
+            ctx.request_paint();
+        }
+    }
 
+    #[instrument(
+        name = "Stepper",
+        level = "trace",
+        skip(self, ctx, old_data, data, _env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
         if (*data - old_data).abs() > EPSILON {
             ctx.request_paint();
+        }
+    }
+
+    fn debug_state(&self, data: &f64) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
         }
     }
 }

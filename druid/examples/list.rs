@@ -14,6 +14,9 @@
 
 //! Demos basic list widget and list manipulations.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::{vector, Vector};
 use druid::lens::{self, LensExt};
 use druid::widget::{Button, CrossAxisAlignment, Flex, Label, List, Scroll};
@@ -30,7 +33,7 @@ struct AppData {
 }
 
 pub fn main() {
-    let main_window = WindowDesc::new(ui_builder)
+    let main_window = WindowDesc::new(ui_builder())
         .title(LocalizedString::new("list-demo-window-title").with_placeholder("List Demo"));
     // Set our initial data
     let left = vector![1, 2];
@@ -42,7 +45,7 @@ pub fn main() {
         right,
     };
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(data)
         .expect("launch failed");
 }

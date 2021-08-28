@@ -14,6 +14,9 @@
 
 //! An example of various text layout features.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
 use druid::text::{Attribute, RichText, TextStorage};
 use druid::widget::prelude::*;
@@ -79,7 +82,7 @@ impl Controller<AppState, RawLabel<AppState>> for LabelController {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title(WINDOW_TITLE)
         .window_size((400.0, 600.0));
 
@@ -100,7 +103,7 @@ pub fn main() {
 
     // start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

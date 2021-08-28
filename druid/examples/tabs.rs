@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::im::Vector;
 use druid::widget::{
     Axis, Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, RadioGroup, Split, TabInfo,
@@ -43,7 +46,7 @@ impl DynamicTabData {
 
     fn remove_tab(&mut self, idx: usize) {
         if idx >= self.tab_labels.len() {
-            log::warn!("Attempt to remove non existent tab at index {}", idx)
+            tracing::warn!("Attempt to remove non existent tab at index {}", idx)
         } else {
             self.removed_tabs += 1;
             self.tab_labels.remove(idx);
@@ -72,7 +75,7 @@ struct AppState {
 
 pub fn main() {
     // describe the main window
-    let main_window = WindowDesc::new(build_root_widget)
+    let main_window = WindowDesc::new(build_root_widget())
         .title("Tabs")
         .window_size((700.0, 400.0));
 
@@ -89,7 +92,7 @@ pub fn main() {
 
     // start the application
     AppLauncher::with_window(main_window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(initial_state)
         .expect("Failed to launch application");
 }

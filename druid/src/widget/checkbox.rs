@@ -14,10 +14,12 @@
 
 //! A checkbox widget.
 
+use crate::debug_state::DebugState;
 use crate::kurbo::{BezPath, Size};
 use crate::piet::{LineCap, LineJoin, LinearGradient, RenderContext, StrokeStyle, UnitPoint};
 use crate::theme;
 use crate::widget::{prelude::*, Label, LabelText};
+use tracing::{instrument, trace};
 
 /// A checkbox that toggles a `bool`.
 pub struct Checkbox {
@@ -39,46 +41,59 @@ impl Checkbox {
 }
 
 impl Widget<bool> for Checkbox {
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, event, data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut bool, _env: &Env) {
         match event {
             Event::MouseDown(_) => {
-                ctx.set_active(true);
-                ctx.request_paint();
+                if !ctx.is_disabled() {
+                    ctx.set_active(true);
+                    ctx.request_paint();
+                    trace!("Checkbox {:?} pressed", ctx.widget_id());
+                }
             }
             Event::MouseUp(_) => {
-                if ctx.is_active() {
-                    ctx.set_active(false);
+                if ctx.is_active() && !ctx.is_disabled() {
                     if ctx.is_hot() {
                         if *data {
                             *data = false;
+                            trace!("Checkbox {:?} released - unchecked", ctx.widget_id());
                         } else {
                             *data = true;
+                            trace!("Checkbox {:?} released - checked", ctx.widget_id());
                         }
                     }
                     ctx.request_paint();
                 }
+                ctx.set_active(false);
             }
             _ => (),
         }
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &bool, env: &Env) {
         self.child_label.lifecycle(ctx, event, data, env);
-        if let LifeCycle::HotChanged(_) = event {
+        if let LifeCycle::HotChanged(_) | LifeCycle::DisabledChanged(_) = event {
             ctx.request_paint();
         }
     }
 
+    #[instrument(
+        name = "CheckBox",
+        level = "trace",
+        skip(self, ctx, old_data, data, env)
+    )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &bool, data: &bool, env: &Env) {
         self.child_label.update(ctx, old_data, data, env);
         ctx.request_paint();
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, bc, data, env))]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &bool, env: &Env) -> Size {
         bc.debug_check("Checkbox");
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
         let check_size = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let label_size = self.child_label.layout(ctx, &bc, data, env);
+        let label_size = self.child_label.layout(ctx, bc, data, env);
 
         let desired_size = Size::new(
             check_size + x_padding + label_size.width,
@@ -87,9 +102,11 @@ impl Widget<bool> for Checkbox {
         let our_size = bc.constrain(desired_size);
         let baseline = self.child_label.baseline_offset() + (our_size.height - label_size.height);
         ctx.set_baseline_offset(baseline);
+        trace!("Computed layout: size={}, baseline={}", our_size, baseline);
         our_size
     }
 
+    #[instrument(name = "CheckBox", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &bool, env: &Env) {
         let size = env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
@@ -112,7 +129,7 @@ impl Widget<bool> for Checkbox {
 
         ctx.fill(rect, &background_gradient);
 
-        let border_color = if ctx.is_hot() {
+        let border_color = if ctx.is_hot() && !ctx.is_disabled() {
             env.get(theme::BORDER_LIGHT)
         } else {
             env.get(theme::BORDER_DARK)
@@ -131,10 +148,29 @@ impl Widget<bool> for Checkbox {
                 .line_cap(LineCap::Round)
                 .line_join(LineJoin::Round);
 
-            ctx.stroke_styled(path, &env.get(theme::LABEL_COLOR), 2., &style);
+            let brush = if ctx.is_disabled() {
+                env.get(theme::DISABLED_TEXT_COLOR)
+            } else {
+                env.get(theme::TEXT_COLOR)
+            };
+
+            ctx.stroke_styled(path, &brush, 2., &style);
         }
 
         // Paint the text label
         self.child_label.draw_at(ctx, (size + x_padding, 0.0));
+    }
+
+    fn debug_state(&self, data: &bool) -> DebugState {
+        let display_value = if *data {
+            format!("[X] {}", self.child_label.text())
+        } else {
+            format!("[_] {}", self.child_label.text())
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: display_value,
+            ..Default::default()
+        }
     }
 }

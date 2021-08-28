@@ -23,7 +23,11 @@ use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key}
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
 
-pub const LABEL_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
+#[deprecated(since = "0.8.0", note = "renamed to TEXT_COLOR")]
+pub const LABEL_COLOR: Key<Color> = TEXT_COLOR;
+pub const TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
+pub const DISABLED_TEXT_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_label_color");
 pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.placeholder_color");
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.primary_light");
@@ -34,14 +38,27 @@ pub const BACKGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.ba
 pub const BACKGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.background_dark");
 pub const FOREGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.foreground_light");
 pub const FOREGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.foreground_dark");
+pub const DISABLED_FOREGROUND_LIGHT: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_foreground_light");
+pub const DISABLED_FOREGROUND_DARK: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_foreground_dark");
 pub const BUTTON_DARK: Key<Color> = Key::new("org.linebender.druid.theme.button_dark");
 pub const BUTTON_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.button_light");
+pub const DISABLED_BUTTON_DARK: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_button_dark");
+pub const DISABLED_BUTTON_LIGHT: Key<Color> =
+    Key::new("org.linebender.druid.theme.disabled_button_light");
 pub const BUTTON_BORDER_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.button_border_width");
 pub const BORDER_DARK: Key<Color> = Key::new("org.linebender.druid.theme.border_dark");
 pub const BORDER_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.border_light");
-pub const SELECTION_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.selection_color");
+#[deprecated(since = "0.8.0", note = "use SELECTED_TEXT_BACKGROUND_COLOR instead")]
+pub const SELECTION_COLOR: Key<Color> = SELECTED_TEXT_BACKGROUND_COLOR;
+pub const SELECTED_TEXT_BACKGROUND_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.selection_color");
+pub const SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.selection_color_inactive");
 pub const SELECTION_TEXT_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.selection_text_color");
 pub const CURSOR_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.cursor_color");
@@ -95,11 +112,15 @@ pub const SCROLLBAR_PAD: Key<f64> = Key::new("org.linebender.druid.theme.scrollb
 pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_radius");
 pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.scrollbar_edge_width");
+/// Minimum length for any scrollbar to be when measured on that
+/// scrollbar's primary axis.
+pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollbar_min_size");
 
 /// An initial theme.
 pub(crate) fn add_to_env(env: Env) -> Env {
     env.adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))
-        .adding(LABEL_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(TEXT_COLOR, Color::rgb8(0xf0, 0xf0, 0xea))
+        .adding(DISABLED_TEXT_COLOR, Color::rgb8(0xa0, 0xa0, 0x9a))
         .adding(PLACEHOLDER_COLOR, Color::rgb8(0x80, 0x80, 0x80))
         .adding(PRIMARY_LIGHT, Color::rgb8(0x5c, 0xc4, 0xff))
         .adding(PRIMARY_DARK, Color::rgb8(0x00, 0x8d, 0xdd))
@@ -108,13 +129,21 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BACKGROUND_DARK, Color::rgb8(0x31, 0x31, 0x31))
         .adding(FOREGROUND_LIGHT, Color::rgb8(0xf9, 0xf9, 0xf9))
         .adding(FOREGROUND_DARK, Color::rgb8(0xbf, 0xbf, 0xbf))
+        .adding(DISABLED_FOREGROUND_LIGHT, Color::rgb8(0x89, 0x89, 0x89))
+        .adding(DISABLED_FOREGROUND_DARK, Color::rgb8(0x6f, 0x6f, 0x6f))
         .adding(BUTTON_DARK, Color::BLACK)
         .adding(BUTTON_LIGHT, Color::rgb8(0x21, 0x21, 0x21))
+        .adding(DISABLED_BUTTON_DARK, Color::grey8(0x28))
+        .adding(DISABLED_BUTTON_LIGHT, Color::grey8(0x38))
         .adding(BUTTON_BORDER_RADIUS, 4.)
         .adding(BUTTON_BORDER_WIDTH, 2.)
         .adding(BORDER_DARK, Color::rgb8(0x3a, 0x3a, 0x3a))
         .adding(BORDER_LIGHT, Color::rgb8(0xa1, 0xa1, 0xa1))
-        .adding(SELECTION_COLOR, Color::rgb8(0xf3, 0x00, 0x21))
+        .adding(
+            SELECTED_TEXT_BACKGROUND_COLOR,
+            Color::rgb8(0x43, 0x70, 0xA8),
+        )
+        .adding(SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR, Color::grey8(0x74))
         .adding(SELECTION_TEXT_COLOR, Color::rgb8(0x00, 0x00, 0x00))
         .adding(CURSOR_COLOR, Color::WHITE)
         .adding(TEXT_SIZE_NORMAL, 15.0)
@@ -124,13 +153,14 @@ pub(crate) fn add_to_env(env: Env) -> Env {
         .adding(BORDERED_WIDGET_HEIGHT, 24.0)
         .adding(TEXTBOX_BORDER_RADIUS, 2.)
         .adding(TEXTBOX_BORDER_WIDTH, 1.)
-        .adding(TEXTBOX_INSETS, Insets::new(4.0, 2.0, 4.0, 2.0))
+        .adding(TEXTBOX_INSETS, Insets::new(4.0, 4.0, 4.0, 4.0))
         .adding(SCROLLBAR_COLOR, Color::rgb8(0xff, 0xff, 0xff))
         .adding(SCROLLBAR_BORDER_COLOR, Color::rgb8(0x77, 0x77, 0x77))
         .adding(SCROLLBAR_MAX_OPACITY, 0.7)
         .adding(SCROLLBAR_FADE_DELAY, 1500u64)
         .adding(SCROLLBAR_WIDTH, 8.)
         .adding(SCROLLBAR_PAD, 2.)
+        .adding(SCROLLBAR_MIN_SIZE, 45.)
         .adding(SCROLLBAR_RADIUS, 5.)
         .adding(SCROLLBAR_EDGE_WIDTH, 1.)
         .adding(WIDGET_PADDING_VERTICAL, 10.0)
@@ -152,9 +182,4 @@ pub(crate) fn add_to_env(env: Env) -> Env {
                 .with_style(FontStyle::Italic)
                 .with_size(15.0),
         )
-}
-
-#[deprecated(since = "0.7.0", note = "use Env::default() instead")]
-pub fn init() -> Env {
-    Env::default()
 }

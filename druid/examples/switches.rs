@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{
     Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox,
     WidgetExt,
@@ -67,10 +70,10 @@ fn build_widget() -> impl Widget<DemoState> {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(build_widget)
+    let window = WindowDesc::new(build_widget())
         .title(LocalizedString::new("switch-demo-window-title").with_placeholder("Switch Demo"));
     AppLauncher::with_window(window)
-        .use_simple_logger()
+        .log_to_console()
         .launch(DemoState {
             value: true,
             stepper_value: 1.0,

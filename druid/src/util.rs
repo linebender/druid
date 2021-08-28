@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::mem;
 
-/// Panic in debug and log::error in release mode.
+/// Panic in debug and tracing::error in release mode.
 ///
 /// This macro is in some way a combination of `panic` and `debug_assert`,
 /// but it will log the provided message instead of ignoring it in release builds.
@@ -30,7 +30,7 @@ macro_rules! debug_panic {
         if cfg!(debug_assertions) {
             panic!($msg);
         } else {
-            log::error!($msg);
+            tracing::error!($msg);
         }
     };
     ($msg:expr,) => { debug_panic!($msg) };
@@ -38,7 +38,7 @@ macro_rules! debug_panic {
         if cfg!(debug_assertions) {
             panic!($fmt, $($arg)*);
         } else {
-            log::error!($fmt, $($arg)*);
+            tracing::error!($fmt, $($arg)*);
         }
     };
 }

@@ -17,18 +17,20 @@
 use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
-use super::{Attribute, AttributeSpans, TextStorage};
+use super::attribute::Link;
+use super::{Attribute, AttributeSpans, EnvUpdateCtx, TextStorage};
 use crate::piet::{
     util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayoutBuilder,
     TextStorage as PietTextStorage,
 };
-use crate::{ArcStr, Data, Env, FontDescriptor, KeyOrValue};
+use crate::{ArcStr, Command, Data, Env, FontDescriptor, KeyOrValue};
 
 /// Text with optional style spans.
-#[derive(Debug, Clone, Data)]
+#[derive(Clone, Debug, Data)]
 pub struct RichText {
     buffer: ArcStr,
     attrs: Arc<AttributeSpans>,
+    links: Arc<[Link]>,
 }
 
 impl RichText {
@@ -42,6 +44,7 @@ impl RichText {
         RichText {
             buffer,
             attrs: Arc::new(attributes),
+            links: Arc::new([]),
         }
     }
 
@@ -89,6 +92,14 @@ impl TextStorage for RichText {
         }
         builder
     }
+
+    fn env_update(&self, ctx: &EnvUpdateCtx) -> bool {
+        self.attrs.env_update(ctx)
+    }
+
+    fn links(&self) -> &[Link] {
+        &self.links
+    }
 }
 
 /// A builder for creating [`RichText`] objects.
@@ -101,18 +112,23 @@ impl TextStorage for RichText {
 /// # Example
 /// ```
 /// # use druid::text::{Attribute, RichTextBuilder};
-/// # use druid::FontWeight;
+/// # use druid::{FontWeight, Color};
 /// let mut builder = RichTextBuilder::new();
 /// builder.push("Hello ");
 /// builder.push("World!").weight(FontWeight::BOLD);
+///
+/// // Can also use write!
+/// write!(builder, "Here is your number: {}", 1).underline(true).text_color(Color::RED);
+///
 /// let rich_text = builder.build();
 /// ```
 ///
 /// [`RichText`]: RichText
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct RichTextBuilder {
     buffer: String,
     attrs: AttributeSpans,
+    links: Vec<Link>,
 }
 
 impl RichTextBuilder {
@@ -131,6 +147,19 @@ impl RichTextBuilder {
         self.add_attributes_for_range(range)
     }
 
+    /// Glue for usage of the write! macro.
+    ///
+    /// This method should generally not be invoked manually, but rather through the write! macro itself.
+    #[doc(hidden)]
+    pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder {
+        use std::fmt::Write;
+        let start = self.buffer.len();
+        self.buffer
+            .write_fmt(fmt)
+            .expect("a formatting trait implementation returned an error");
+        self.add_attributes_for_range(start..self.buffer.len())
+    }
+
     /// Get an [`AttributesAdder`] for the given range.
     ///
     /// This can be used to modify styles for a given range after it has been added.
@@ -144,9 +173,14 @@ impl RichTextBuilder {
 
     /// Build the `RichText`.
     pub fn build(self) -> RichText {
-        RichText::new_with_attributes(self.buffer.into(), self.attrs)
+        RichText {
+            buffer: self.buffer.into(),
+            attrs: self.attrs.into(),
+            links: self.links.into(),
+        }
     }
 }
+
 /// Adds Attributes to the text.
 ///
 /// See also: [`RichTextBuilder`](RichTextBuilder)
@@ -201,6 +235,16 @@ impl AttributesAdder<'_> {
     /// Add a `FontDescriptor` attribute.
     pub fn font_descriptor(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> &mut Self {
         self.add_attr(Attribute::font_descriptor(font));
+        self
+    }
+
+    /// Add a [`Link`] attribute.
+    ///
+    /// [`Link`]: super::attribute::Link
+    pub fn link(&mut self, command: impl Into<Command>) -> &mut Self {
+        self.rich_text_builder
+            .links
+            .push(Link::new(self.range.clone(), command.into()));
         self
     }
 }

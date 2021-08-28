@@ -18,7 +18,7 @@ use std::any::{Any, TypeId};
 
 use crate::{
     commands, core::CommandQueue, ext_event::ExtEventHost, Command, Data, Env, Event, ExtEventSink,
-    Handled, MenuDesc, SingleUse, Target, WindowDesc, WindowId,
+    Handled, SingleUse, Target, WindowDesc, WindowId,
 };
 
 /// A context passed in to [`AppDelegate`] functions.
@@ -67,22 +67,6 @@ impl<'a> DelegateCtx<'a> {
             );
         } else {
             debug_panic!("DelegateCtx::new_window<T> - T must match the application data type.");
-        }
-    }
-
-    /// Set the window's menu.
-    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
-    ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
-    pub fn set_menu<T: Any>(&mut self, menu: MenuDesc<T>, window: WindowId) {
-        if self.app_data_type == TypeId::of::<T>() {
-            self.submit_command(
-                commands::SET_MENU
-                    .with(Box::new(menu))
-                    .to(Target::Window(window)),
-            );
-        } else {
-            debug_panic!("DelegateCtx::set_menu<T> - T must match the application data type.");
         }
     }
 }

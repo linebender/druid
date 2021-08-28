@@ -18,6 +18,7 @@
 
 use crate::widget::Controller;
 use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
+use tracing::{instrument, trace};
 
 /// A clickable [`Controller`] widget. Pass this and a child widget to a
 /// [`ControllerHost`] to make the child interactive. More conveniently, this is
@@ -50,21 +51,28 @@ impl<T: Data> Click<T> {
 }
 
 impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
+    #[instrument(
+        name = "Click",
+        level = "trace",
+        skip(self, child, ctx, event, data, env)
+    )]
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse_event) => {
-                if mouse_event.button == MouseButton::Left {
+                if mouse_event.button == MouseButton::Left && !ctx.is_disabled() {
                     ctx.set_active(true);
                     ctx.request_paint();
+                    trace!("Widget {:?} pressed", ctx.widget_id());
                 }
             }
             Event::MouseUp(mouse_event) => {
                 if ctx.is_active() && mouse_event.button == MouseButton::Left {
                     ctx.set_active(false);
-                    if ctx.is_hot() {
+                    if ctx.is_hot() && !ctx.is_disabled() {
                         (self.action)(ctx, data, env);
                     }
                     ctx.request_paint();
+                    trace!("Widget {:?} released", ctx.widget_id());
                 }
             }
             _ => {}
@@ -73,6 +81,11 @@ impl<T: Data, W: Widget<T>> Controller<T, W> for Click<T> {
         child.event(ctx, event, data, env);
     }
 
+    #[instrument(
+        name = "Click",
+        level = "trace",
+        skip(self, child, ctx, event, data, env)
+    )]
     fn lifecycle(
         &mut self,
         child: &mut W,
