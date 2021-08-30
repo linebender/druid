@@ -402,6 +402,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             Some(pos) => rect.winding(pos) != 0,
             None => false,
         };
+        trace!(
+            "Widget {:?}: set hot state to {}",
+            child_state.id,
+            child_state.is_hot
+        );
         if had_hot != child_state.is_hot {
             let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
             let mut child_ctx = LifeCycleCtx {
@@ -990,6 +995,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(widget)
                     }
                 }
+                InternalLifeCycle::DebugRequestDebugState { widget, state_cell } => {
+                    if *widget == self.id() {
+                        if let Some(data) = &self.old_data {
+                            state_cell.set(self.inner.debug_state(data));
+                        }
+                        false
+                    } else {
+                        // Recurse when the target widget could be our descendant.
+                        // The bloom filter we're checking can return false positives.
+                        self.state.children.may_contain(widget)
+                    }
+                }
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true
@@ -1327,11 +1344,12 @@ impl WidgetState {
     /// For more information, see [`WidgetPod::paint_rect`].
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
-    pub(crate) fn paint_rect(&self) -> Rect {
+    pub fn paint_rect(&self) -> Rect {
         self.layout_rect() + self.paint_insets
     }
 
-    pub(crate) fn layout_rect(&self) -> Rect {
+    /// The rectangle used when calculating layout with other widgets
+    pub fn layout_rect(&self) -> Rect {
         Rect::from_origin_size(self.origin, self.size)
     }
 

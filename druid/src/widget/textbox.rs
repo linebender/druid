@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
 use crate::text::{
@@ -73,9 +74,11 @@ pub struct TextBox<T> {
 impl<T: EditableText + TextStorage> TextBox<T> {
     /// Create a new TextBox widget.
     pub fn new() -> Self {
+        let placeholder_text = ArcStr::from("");
         let mut placeholder_layout = TextLayout::new();
         placeholder_layout.set_text_color(theme::PLACEHOLDER_COLOR);
-        let placeholder_text = "".into();
+        placeholder_layout.set_text(placeholder_text.clone());
+
         let mut scroll = Scroll::new(Padding::new(
             theme::TEXTBOX_INSETS,
             TextComponent::default(),
@@ -85,7 +88,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
         Self {
             inner: scroll,
             scroll_to_selection_after_layout: false,
-            placeholder_text,
+            placeholder_text: placeholder_text.into(),
             placeholder_layout,
             multiline: false,
             was_focused_from_click: false,
@@ -453,6 +456,20 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 ctx.set_handled();
             }
+            Event::Command(cmd)
+                if !self.text().is_composing()
+                    && ctx.is_focused()
+                    && cmd.is(crate::commands::SELECT_ALL) =>
+            {
+                if let Some(inval) = self
+                    .text_mut()
+                    .borrow_mut()
+                    .set_selection(Selection::new(0, data.as_str().len()))
+                {
+                    ctx.invalidate_text_input(inval);
+                }
+                ctx.set_handled();
+            }
             Event::Paste(ref item) if self.text().can_write() => {
                 if let Some(string) = item.get_string() {
                     let text = if self.multiline {
@@ -654,6 +671,15 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
         // Paint the border
         ctx.stroke(clip_rect, &border_color, border_width);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let text = data.slice(0..data.len()).unwrap_or_default();
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: text.to_string(),
+            ..Default::default()
+        }
     }
 }
 
