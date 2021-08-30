@@ -134,6 +134,9 @@
 #![warn(missing_docs)]
 #![allow(clippy::new_ret_no_self, clippy::needless_doctest_main)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
+)]
 
 // Allows to use macros from druid_derive in this crate
 extern crate self as druid;
@@ -162,6 +165,7 @@ mod command;
 mod contexts;
 mod core;
 mod data;
+pub mod debug_state;
 mod dialog;
 pub mod env;
 mod event;
@@ -197,7 +201,7 @@ pub use shell::{
 #[cfg(feature = "raw-win-handle")]
 pub use crate::shell::raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
-pub use crate::core::WidgetPod;
+pub use crate::core::{WidgetPod, WidgetState};
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};
 pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
@@ -218,7 +222,7 @@ pub use win_handler::DruidHandler;
 pub use window::{Window, WindowId};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) use event::{StateCell, StateCheckFn};
+pub(crate) use event::{DebugStateCell, StateCell, StateCheckFn};
 
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
 pub use piet::{FontFamily, FontStyle, FontWeight, TextAlignment};

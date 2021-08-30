@@ -56,6 +56,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Widget/Slider: Add stepping functionality ([#1875] by [@raymanfx])
 - Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
 - X11: detect keyboard layout ([#1779] by [@Maan2003])
+- WindowDesc::with_config ([#1929] by [@Maan2003])
 
 ### Changed
 
@@ -782,6 +783,7 @@ Last release without a changelog :(
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
 [#1907]: https://github.com/linebender/druid/pull/1907
+[#1929]: https://github.com/linebender/druid/pull/1929
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

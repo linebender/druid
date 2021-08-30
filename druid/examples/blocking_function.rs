@@ -107,6 +107,7 @@ fn main() {
         WindowDesc::new(ui_builder()).title(LocalizedString::new("Blocking functions"));
     AppLauncher::with_window(main_window)
         .delegate(Delegate {})
+        .log_to_console()
         .launch(AppState::default())
         .expect("launch failed");
 }

@@ -51,7 +51,7 @@ pub enum WindowSizePolicy {
 
 /// Window configuration that can be applied to a WindowBuilder, or to an existing WindowHandle.
 /// It does not include anything related to app data.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct WindowConfig {
     pub(crate) size_policy: WindowSizePolicy,
     pub(crate) size: Option<Size>,
@@ -579,6 +579,12 @@ impl<T: Data> WindowDesc<T> {
     /// Set initial state for the window.
     pub fn set_window_state(mut self, state: WindowState) -> Self {
         self.config = self.config.set_window_state(state);
+        self
+    }
+
+    /// Set the [`WindowConfig`] of window.
+    pub fn with_config(mut self, config: WindowConfig) -> Self {
+        self.config = config;
         self
     }
 

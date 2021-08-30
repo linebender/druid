@@ -15,6 +15,9 @@
 //! derive macros for druid.
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
+)]
 
 extern crate proc_macro;
 

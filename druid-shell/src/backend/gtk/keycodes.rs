@@ -14,12 +14,12 @@
 
 //! GTK code handling.
 
-use gdk::keys::constants::*;
+use gtk::gdk::keys::constants::*;
 
 pub use super::super::shared::hardware_keycode_to_code;
 use crate::keyboard_types::{Key, Location};
 
-pub type RawKey = gdk::keys::Key;
+pub type RawKey = gtk::gdk::keys::Key;
 
 #[allow(clippy::just_underscores_and_digits, non_upper_case_globals)]
 pub fn raw_key_to_key(raw: RawKey) -> Option<Key> {
