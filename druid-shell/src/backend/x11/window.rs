@@ -909,8 +909,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.invalid)?.add_rect(rect);
+        let scale = self.scale.get();
+        borrow_mut!(self.invalid)?.add_rect(rect.to_px(scale).expand().to_dp(scale));
         Ok(())
     }
 
