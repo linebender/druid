@@ -12,6 +12,7 @@ These three projects provide the basis that Druid works on
 - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
 - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
 - [kiro-synth](https://github.com/chris-zen/kiro-synth) An in progress modular sound synthesizer.
+- [psst](https://github.com/jpochyla/psst) A non-Electron GUI Spotify client.
 - *pull requests welcome*
 
 ## Projects that work with Druid (widgets etc)
