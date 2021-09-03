@@ -182,7 +182,7 @@ impl AttributeSpans {
         items.extend(
             self.strikethrough
                 .iter()
-                .map(|s| (s.range.clone(), PietAttr::Strikethrough(s.attr)))
+                .map(|s| (s.range.clone(), PietAttr::Strikethrough(s.attr))),
         );
 
         // sort by ascending start order; this is a stable sort
