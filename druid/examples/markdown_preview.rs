@@ -17,7 +17,7 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
-use pulldown_cmark::{Event as ParseEvent, Parser, Tag};
+use pulldown_cmark::{Event as ParseEvent, Options, Parser, Tag};
 
 use druid::text::{AttributesAdder, RichText, RichTextBuilder};
 use druid::widget::prelude::*;
@@ -141,7 +141,7 @@ fn rebuild_rendered_text(text: &str) -> RichText {
     let mut builder = RichTextBuilder::new();
     let mut tag_stack = Vec::new();
 
-    let parser = Parser::new(text);
+    let parser = Parser::new_ext(text, Options::ENABLE_STRIKETHROUGH);
     for event in parser {
         match event {
             ParseEvent::Start(tag) => {
@@ -217,6 +217,9 @@ fn add_attribute_for_tag(tag: &Tag, mut attrs: AttributesAdder) {
         }
         Tag::Strong => {
             attrs.weight(FontWeight::BOLD);
+        }
+        Tag::Strikethrough => {
+            attrs.strikethrough(true);
         }
         Tag::Link(_link_ty, target, _title) => {
             attrs
