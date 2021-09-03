@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
 - System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
