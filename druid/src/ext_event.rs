@@ -18,9 +18,10 @@ use std::any::Any;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+use crate::command::SelectorSymbol;
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
+use crate::{Command, Data, DruidHandler, Selector, Target, WindowId};
 
 pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Target);
 
@@ -116,6 +117,23 @@ impl ExtEventSink {
             target,
         ));
         Ok(())
+    }
+
+    /// Schedule an idle callback.
+    pub fn add_idle_callback<T: 'static + Data>(&self, cb: impl FnOnce(&mut T) + Send + 'static) {
+        let mut handle = self.handle.lock().unwrap();
+        if let Some(handle) = handle.as_mut() {
+            handle.add_idle(|win_handler| {
+                let win_handler = win_handler
+                    .as_any()
+                    .downcast_mut::<DruidHandler<T>>()
+                    .expect(&format!(
+                        "{} is not the type of root data",
+                        std::any::type_name::<T>()
+                    ));
+                win_handler.app_state.handle_idle_callback(cb);
+            });
+        }
     }
 }
 
