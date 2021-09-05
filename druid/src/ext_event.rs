@@ -127,10 +127,12 @@ impl ExtEventSink {
                 let win_handler = win_handler
                     .as_any()
                     .downcast_mut::<DruidHandler<T>>()
-                    .expect(&format!(
-                        "{} is not the type of root data",
-                        std::any::type_name::<T>()
-                    ));
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{} is not the type of root data",
+                            std::any::type_name::<T>()
+                        )
+                    });
                 win_handler.app_state.handle_idle_callback(cb);
             });
         }
