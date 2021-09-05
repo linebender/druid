@@ -120,20 +120,28 @@ impl ExtEventSink {
     }
 
     /// Schedule an idle callback.
+    ///
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+    ///
+    /// Add an idle callback, which is called (once) when the message loop
+    /// is empty. The idle callback will be run from the main UI thread.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
+    ///
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn add_idle_callback<T: 'static + Data>(&self, cb: impl FnOnce(&mut T) + Send + 'static) {
         let mut handle = self.handle.lock().unwrap();
         if let Some(handle) = handle.as_mut() {
             handle.add_idle(|win_handler| {
-                let win_handler = win_handler
-                    .as_any()
-                    .downcast_mut::<DruidHandler<T>>()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "{} is not the type of root data",
-                            std::any::type_name::<T>()
-                        )
-                    });
-                win_handler.app_state.handle_idle_callback(cb);
+                if let Some(win_handler) = win_handler.as_any().downcast_mut::<DruidHandler<T>>() {
+                    win_handler.app_state.handle_idle_callback(cb);
+                } else {
+                    debug_panic!(
+                        "{} is not the type of root data",
+                        std::any::type_name::<T>()
+                    );
+                }
             });
         }
     }
