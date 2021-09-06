@@ -22,8 +22,8 @@ use std::rc::Rc;
 use crate::kurbo::Size;
 use crate::piet::Piet;
 use crate::shell::{
-    text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, MouseEvent, Region,
-    Scale, TextFieldToken, WinHandler, WindowHandle,
+    text::InputHandler, Application, FileDialogToken, FileInfo, IdleToken, Region, Scale,
+    TextFieldToken, WinHandler, WindowHandle,
 };
 
 use crate::app_delegate::{AppDelegate, DelegateCtx};
@@ -933,25 +933,31 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.handle_dialog_response(token, file_info);
     }
 
-    fn mouse_down(&mut self, event: &MouseEvent) {
-        // TODO: double-click detection (or is this done in druid-shell?)
-        let event = Event::MouseDown(event.clone().into());
+    fn pointer_down(&mut self, event: &druid_shell::PointerEvent) {
+        let event = Event::PointerDown(event.clone().into());
         self.app_state.do_window_event(event, self.window_id);
     }
 
-    fn mouse_up(&mut self, event: &MouseEvent) {
-        let event = Event::MouseUp(event.clone().into());
+    fn pointer_up(&mut self, event: &druid_shell::PointerEvent) {
+        let event = Event::PointerUp(event.clone().into());
         self.app_state.do_window_event(event, self.window_id);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent) {
-        let event = Event::MouseMove(event.clone().into());
+    fn pointer_move(&mut self, event: &druid_shell::PointerEvent) {
+        let event = Event::PointerMove(event.clone().into());
         self.app_state.do_window_event(event, self.window_id);
     }
 
-    fn mouse_leave(&mut self) {
-        self.app_state
-            .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
+    fn pointer_leave(&mut self, event: &druid_shell::PointerEvent) {
+        if event.is_primary {
+            self.app_state
+                .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
+        }
+    }
+
+    fn pointer_cancel(&mut self, event: &druid_shell::PointerEvent) {
+        let event = Event::PointerCancel(event.clone().into());
+        self.app_state.do_window_event(event, self.window_id);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
@@ -965,7 +971,7 @@ impl<T: Data> WinHandler for DruidHandler<T> {
             .do_window_event(Event::KeyUp(event), self.window_id);
     }
 
-    fn wheel(&mut self, event: &MouseEvent) {
+    fn wheel(&mut self, event: &druid_shell::PointerEvent) {
         self.app_state
             .do_window_event(Event::Wheel(event.clone().into()), self.window_id);
     }

@@ -415,7 +415,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     ctx.set_handled();
                 }
             }
-            Event::MouseDown(mouse) if self.text().can_write() => {
+            Event::PointerDown(mouse) if self.text().can_write() => {
                 if !ctx.is_disabled() {
                     if !mouse.focus {
                         ctx.request_focus();

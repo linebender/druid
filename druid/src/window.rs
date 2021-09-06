@@ -235,10 +235,11 @@ impl<T: Data> Window<T> {
     ) -> Handled {
         match &event {
             Event::WindowSize(size) => self.size = *size,
-            Event::MouseDown(e) | Event::MouseUp(e) | Event::MouseMove(e) | Event::Wheel(e) => {
-                self.last_mouse_pos = Some(e.pos)
-            }
-            Event::Internal(InternalEvent::MouseLeave) => self.last_mouse_pos = None,
+            Event::PointerDown(e)
+            | Event::PointerUp(e)
+            | Event::PointerMove(e)
+            | Event::Wheel(e) => self.last_mouse_pos = Some(e.pos),
+            Event::PointerCancel(ev) if ev.is_primary => self.last_mouse_pos = None,
             _ => (),
         }
 
@@ -307,10 +308,7 @@ impl<T: Data> Window<T> {
 
         if let Some(cursor) = &widget_state.cursor {
             self.handle.set_cursor(cursor);
-        } else if matches!(
-            event,
-            Event::MouseMove(..) | Event::Internal(InternalEvent::MouseLeave)
-        ) {
+        } else if matches!(event, Event::PointerMove(..) | Event::PointerCancel(..)) {
             self.handle.set_cursor(&Cursor::Arrow);
         }
 

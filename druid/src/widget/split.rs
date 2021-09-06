@@ -311,7 +311,7 @@ impl<T: Data> Widget<T> for Split<T> {
         }
         if self.draggable {
             match event {
-                Event::MouseDown(mouse) => {
+                Event::PointerDown(mouse) if mouse.is_primary => {
                     if mouse.button.is_left() && self.bar_hit_test(ctx.size(), mouse.pos) {
                         ctx.set_handled();
                         ctx.set_active(true);
@@ -330,7 +330,7 @@ impl<T: Data> Widget<T> for Split<T> {
                         }
                     }
                 }
-                Event::MouseUp(mouse) => {
+                Event::PointerUp(mouse) if mouse.is_primary => {
                     if mouse.button.is_left() && ctx.is_active() {
                         ctx.set_handled();
                         ctx.set_active(false);
@@ -343,7 +343,7 @@ impl<T: Data> Widget<T> for Split<T> {
                         }
                     }
                 }
-                Event::MouseMove(mouse) => {
+                Event::PointerMove(mouse) if mouse.is_primary => {
                     if ctx.is_active() {
                         // If active, assume always hover/hot
                         let effective_pos = match self.split_axis {

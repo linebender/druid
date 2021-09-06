@@ -547,14 +547,14 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
     )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
-            Event::MouseUp(event) => {
+            Event::PointerUp(event) if event.is_primary => {
                 // Account for the padding
                 let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
                 if let Some(link) = self.layout.link_for_pos(pos) {
                     ctx.submit_command(link.command.clone());
                 }
             }
-            Event::MouseMove(event) => {
+            Event::PointerMove(event) if event.is_primary => {
                 // Account for the padding
                 let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
 

@@ -22,7 +22,7 @@ use druid::widget::prelude::*;
 use druid::widget::{Controller, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, TextBox};
 use druid::{
     theme, AppLauncher, Color, Data, FontDescriptor, KeyEvent, Lens, Location, Modifiers,
-    MouseButton, MouseEvent, WidgetExt, WindowDesc,
+    PointerButton, MouseEvent, WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
@@ -109,8 +109,8 @@ struct LoggedEvent {
 impl LoggedEvent {
     fn try_from_event(event: &Event, number: usize) -> Option<Self> {
         let to_log = match event {
-            Event::MouseUp(mouse) => Some((EventType::MouseUp, Some(mouse.clone()), None)),
-            Event::MouseDown(mouse) => Some((EventType::MouseDown, Some(mouse.clone()), None)),
+            Event::PointerUp(mouse) => Some((EventType::MouseUp, Some(mouse.clone()), None)),
+            Event::PointerDown(mouse) => Some((EventType::MouseDown, Some(mouse.clone()), None)),
             Event::Wheel(mouse) => Some((EventType::Wheel, Some(mouse.clone()), None)),
             Event::KeyUp(key) => Some((EventType::KeyUp, None, Some(key.clone()))),
             Event::KeyDown(key) => Some((EventType::KeyDown, None, Some(key.clone()))),
@@ -160,12 +160,12 @@ impl LoggedEvent {
             .as_ref()
             .map(|m| {
                 match m.button {
-                    MouseButton::Left => "Left",
-                    MouseButton::Right => "Right",
-                    MouseButton::X1 => "X1",
-                    MouseButton::X2 => "X2",
-                    MouseButton::None => "",
-                    MouseButton::Middle => "Middle",
+                    PointerButton::Left => "Left",
+                    PointerButton::Right => "Right",
+                    PointerButton::X1 => "X1",
+                    PointerButton::X2 => "X2",
+                    PointerButton::None => "",
+                    PointerButton::Middle => "Middle",
                 }
                 .into()
             })
@@ -246,7 +246,7 @@ fn interactive_area() -> impl Widget<AppState> {
             filter: |event| {
                 matches!(
                     event,
-                    Event::MouseDown(_) | Event::MouseUp(_) | Event::Wheel(_)
+                    Event::PointerDown(_) | Event::PointerUp(_) | Event::Wheel(_)
                 )
             },
         });

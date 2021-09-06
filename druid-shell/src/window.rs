@@ -26,7 +26,8 @@ use crate::error::Error;
 use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
 use crate::menu::Menu;
-use crate::mouse::{Cursor, CursorDesc, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc};
+use crate::pointer::PointerEvent;
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
@@ -640,27 +641,33 @@ pub trait WinHandler {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     #[allow(unused_variables)]
-    fn wheel(&mut self, event: &MouseEvent) {}
+    fn wheel(&mut self, event: &PointerEvent) {}
 
     /// Called when a platform-defined zoom gesture occurs (such as pinching
     /// on the trackpad).
     #[allow(unused_variables)]
     fn zoom(&mut self, delta: f64) {}
 
-    /// Called when the mouse moves.
+    /// Called when a pointer moves.
     #[allow(unused_variables)]
-    fn mouse_move(&mut self, event: &MouseEvent) {}
+    fn pointer_move(&mut self, event: &PointerEvent) {}
 
-    /// Called on mouse button down.
+    /// Called when a pointer is pressed down. TODO: better docs
     #[allow(unused_variables)]
-    fn mouse_down(&mut self, event: &MouseEvent) {}
+    fn pointer_down(&mut self, event: &PointerEvent) {}
 
-    /// Called on mouse button up.
+    /// Called when a pointer is raised. TODO: better docs
     #[allow(unused_variables)]
-    fn mouse_up(&mut self, event: &MouseEvent) {}
+    fn pointer_up(&mut self, event: &PointerEvent) {}
 
-    /// Called when the mouse cursor has left the application window
-    fn mouse_leave(&mut self) {}
+    /// Called when a pointer leaves the window.
+    #[allow(unused_variables)]
+    fn pointer_leave(&mut self, event: &PointerEvent) {}
+
+    /// Called when a pointer is cancelled, for example because a touch-related pointer was
+    /// determined to be making a gesture.
+    #[allow(unused_variables)]
+    fn pointer_cancel(&mut self, event: &PointerEvent) {}
 
     /// Called on timer event.
     ///

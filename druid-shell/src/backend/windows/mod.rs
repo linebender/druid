@@ -23,6 +23,7 @@ pub mod error;
 mod keyboard;
 pub mod menu;
 pub mod paint;
+pub mod pointer;
 pub mod screen;
 mod timers;
 pub mod util;

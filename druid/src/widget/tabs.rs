@@ -339,12 +339,12 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
     #[instrument(name = "TabBar", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         match event {
-            Event::MouseDown(e) => {
+            Event::PointerDown(e) if e.is_primary => {
                 if let Some(idx) = self.find_idx(e.pos) {
                     data.selected = idx;
                 }
             }
-            Event::MouseMove(e) => {
+            Event::PointerMove(e) if e.is_primary => {
                 let new_hot = if ctx.is_hot() {
                     self.find_idx(e.pos)
                 } else {

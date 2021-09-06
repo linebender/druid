@@ -272,7 +272,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
     )]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::MouseDown(mouse) if self.can_write() && !ctx.is_disabled() => {
+            Event::PointerDown(mouse) if self.can_write() && !ctx.is_disabled() => {
                 ctx.set_active(true);
                 // ensure data is up to date before a click
                 let needs_rebuild = self
@@ -294,7 +294,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 ctx.request_update();
                 ctx.request_paint();
             }
-            Event::MouseMove(mouse) if self.can_write() => {
+            Event::PointerMove(mouse) if self.can_write() => {
                 if !ctx.is_disabled() {
                     ctx.set_cursor(&Cursor::IBeam);
                     if ctx.is_active() {
@@ -312,7 +312,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                     ctx.clear_cursor();
                 }
             }
-            Event::MouseUp(_) if ctx.is_active() => {
+            Event::PointerUp(_) if ctx.is_active() => {
                 ctx.set_active(false);
                 ctx.request_paint();
             }

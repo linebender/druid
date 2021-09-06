@@ -319,7 +319,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
             }
         // if we *aren't* editing:
         } else {
-            if let Event::MouseDown(_) = event {
+            if let Event::PointerDown(_) = event {
                 self.begin(ctx, data);
             }
             self.child.event(ctx, event, &mut self.buffer, env);

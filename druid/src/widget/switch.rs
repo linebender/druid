@@ -101,13 +101,13 @@ impl Widget<bool> for Switch {
         let off_pos = knob_size / 2. + SWITCH_PADDING;
 
         match event {
-            Event::MouseDown(_) => {
+            Event::PointerDown(p) if p.is_primary => {
                 if !ctx.is_disabled() {
                     ctx.set_active(true);
                     ctx.request_paint();
                 }
             }
-            Event::MouseUp(_) => {
+            Event::PointerUp(p) if p.is_primary => {
                 if !ctx.is_disabled() {
                     if self.knob_dragged {
                         // toggle value when dragging if knob has been moved far enough
@@ -124,7 +124,7 @@ impl Widget<bool> for Switch {
                 self.animation_in_progress = true;
                 ctx.request_anim_frame();
             }
-            Event::MouseMove(mouse) => {
+            Event::PointerMove(mouse) if mouse.is_primary => {
                 if !ctx.is_disabled() {
                     if ctx.is_active() {
                         self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);

@@ -15,7 +15,7 @@
 //! The mousey bits
 
 use crate::kurbo::{Point, Vec2};
-use crate::{Cursor, Data, Modifiers, MouseButton, MouseButtons};
+use crate::{Cursor, Data, Modifiers, PointerButton, PointerButtons};
 
 /// The state of the mouse for a click, mouse-up, move, or wheel event.
 ///
@@ -41,14 +41,14 @@ pub struct MouseEvent {
     /// Mouse buttons being held down during a move or after a click event.
     /// Thus it will contain the `button` that triggered a mouse-down event,
     /// and it will not contain the `button` that triggered a mouse-up event.
-    pub buttons: MouseButtons,
+    pub buttons: PointerButtons,
     /// Keyboard modifiers at the time of the event.
     pub mods: Modifiers,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for a mouse-up and mouse-move events.
     pub count: u8,
     /// Focus is `true` on macOS when the mouse-down event (or its companion mouse-up event)
-    /// with `MouseButton::Left` was the event that caused the window to gain focus.
+    /// with `PointerButton::Left` was the event that caused the window to gain focus.
     ///
     /// This is primarily used in relation to text selection.
     /// If there is some text selected in some text widget and it receives a click
@@ -58,8 +58,8 @@ pub struct MouseEvent {
     pub focus: bool,
     /// The button that was pressed down in the case of mouse-down,
     /// or the button that was released in the case of mouse-up.
-    /// This will always be `MouseButton::None` in the case of mouse-move.
-    pub button: MouseButton,
+    /// This will always be `PointerButton::None` in the case of mouse-move.
+    pub button: PointerButton,
     /// The wheel movement.
     ///
     /// The polarity is the amount to be added to the scroll position,
@@ -69,30 +69,6 @@ pub struct MouseEvent {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     pub wheel_delta: Vec2,
-}
-
-impl From<druid_shell::MouseEvent> for MouseEvent {
-    fn from(src: druid_shell::MouseEvent) -> MouseEvent {
-        let druid_shell::MouseEvent {
-            pos,
-            buttons,
-            mods,
-            count,
-            focus,
-            button,
-            wheel_delta,
-        } = src;
-        MouseEvent {
-            pos,
-            window_pos: pos,
-            buttons,
-            mods,
-            count,
-            focus,
-            button,
-            wheel_delta,
-        }
-    }
 }
 
 impl Data for Cursor {

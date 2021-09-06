@@ -18,8 +18,7 @@ use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
-use crate::mouse::MouseEvent;
-use crate::{Command, Notification, WidgetId};
+use crate::{Command, Notification, PointerEvent, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -81,27 +80,31 @@ pub enum Event {
     /// in the WindowPod, but after that it might be considered better
     /// to just handle it in `layout`.
     WindowSize(Size),
-    /// Called when a mouse button is pressed.
-    MouseDown(MouseEvent),
-    /// Called when a mouse button is released.
-    MouseUp(MouseEvent),
-    /// Called when the mouse is moved.
+    /// DOCME
+    PointerCancel(PointerEvent),
+    /// Called when a pointer goes down, for example because a mouse button is pressed or a pen
+    /// touches the screen.
+    PointerDown(PointerEvent),
+    /// Called when a pointer goes up, for example because a mouse button is released or a pen is
+    /// lifted off the screen.
+    PointerUp(PointerEvent),
+    /// Called when a pointer is moved.
     ///
-    /// The `MouseMove` event is propagated to the active widget, if
+    /// The `PointerMove` event is propagated to the active widget, if
     /// there is one, otherwise to hot widgets (see `HotChanged`).
-    /// If a widget loses its hot status due to `MouseMove` then that specific
-    /// `MouseMove` event is also still sent to that widget.
+    /// If a widget loses its hot status due to `PointerMove` then that specific
+    /// `PointerMove` event is also still sent to that widget.
     ///
-    /// The `MouseMove` event is also the primary mechanism for widgets
+    /// The `PointerMove` event is also the primary mechanism for widgets
     /// to set a cursor, for example to an I-bar inside a text widget. A
     /// simple tactic is for the widget to unconditionally call
-    /// [`set_cursor`] in the MouseMove handler, as `MouseMove` is only
+    /// [`set_cursor`] in the PointerMove handler, as `PointerMove` is only
     /// propagated to active or hot widgets.
     ///
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
-    MouseMove(MouseEvent),
+    PointerMove(PointerEvent),
     /// Called when the mouse wheel or trackpad is scrolled.
-    Wheel(MouseEvent),
+    Wheel(PointerEvent),
     /// Called when a key is pressed.
     KeyDown(KeyEvent),
     /// Called when a key is released.
@@ -204,8 +207,8 @@ pub enum Event {
 pub enum InternalEvent {
     /// Sent in some cases when the mouse has left the window.
     ///
-    /// This is used in cases when the platform no longer sends mouse events,
-    /// but we know that we've stopped receiving the mouse events.
+    /// This is used to correctly handle the hot state in situations where the pointer leaves the
+    /// window but we can't tell that from the pointer move event.
     MouseLeave,
     /// A command still in the process of being dispatched.
     TargetedCommand(Command),
@@ -369,29 +372,29 @@ impl Event {
     /// or hot.
     pub fn transform_scroll(&self, offset: Vec2, viewport: Rect, force: bool) -> Option<Event> {
         match self {
-            Event::MouseDown(mouse_event) => {
+            Event::PointerDown(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
-                    Some(Event::MouseDown(mouse_event))
+                    Some(Event::PointerDown(mouse_event))
                 } else {
                     None
                 }
             }
-            Event::MouseUp(mouse_event) => {
+            Event::PointerUp(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
-                    Some(Event::MouseUp(mouse_event))
+                    Some(Event::PointerUp(mouse_event))
                 } else {
                     None
                 }
             }
-            Event::MouseMove(mouse_event) => {
+            Event::PointerMove(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos += offset;
-                    Some(Event::MouseMove(mouse_event))
+                    Some(Event::PointerMove(mouse_event))
                 } else {
                     None
                 }
@@ -437,9 +440,10 @@ impl Event {
             | Event::Command(_)
             | Event::Notification(_)
             | Event::Internal(_) => true,
-            Event::MouseDown(_)
-            | Event::MouseUp(_)
-            | Event::MouseMove(_)
+            Event::PointerCancel(_)
+            | Event::PointerDown(_)
+            | Event::PointerUp(_)
+            | Event::PointerMove(_)
             | Event::Wheel(_)
             | Event::KeyDown(_)
             | Event::KeyUp(_)
