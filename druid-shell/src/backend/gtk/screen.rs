@@ -38,7 +38,7 @@ fn translate_gdk_monitor(mon: gtk::gdk::Monitor) -> Monitor {
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
     if !gtk::is_initialized() {
-        gdk::init();
+        gtk::gdk::init();
     }
     DisplayManager::get()
         .list_displays()
