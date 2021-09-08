@@ -536,7 +536,7 @@ impl Lens&lt;Container, String&gt; for InnerLens {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only vaid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>. We made the choice how to transform <code>Container</code> into <code>String</code> when we implemented <code>Lens</code>.</p>
+<p>This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only valid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>. We made the choice how to transform <code>Container</code> into <code>String</code> when we implemented <code>Lens</code>.</p>
 <blockquote>
 <p>Side note: Actually we could project on to any string we have access to, including something in a global mutex, or a string that we create and discard in the lens. Lenses made like this are usually not what you want.</p>
 </blockquote>
