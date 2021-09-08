@@ -48,7 +48,7 @@ impl Lens<Container, String> for InnerLens {
 }
 ```
 
-This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only vaid lens from `Container` to `String` we could have made - we could also project from `Container` to `another`. We made the choice how to transform `Container` into `String` when we implemented `Lens`.
+This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only valid lens from `Container` to `String` we could have made - we could also project from `Container` to `another`. We made the choice how to transform `Container` into `String` when we implemented `Lens`.
 
 > Side note: Actually we could project on to any string we have access to, including something in a global mutex, or a string that we create and discard in the lens. Lenses made like this are usually not what you want.
 
