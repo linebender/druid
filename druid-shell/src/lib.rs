@@ -29,6 +29,9 @@
 #![warn(broken_intra_doc_links)]
 #![allow(clippy::new_without_default)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
+)]
 
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
@@ -42,6 +45,10 @@ pub use image;
 
 pub use kurbo;
 pub use piet_common as piet;
+
+// Reexport the version of `raw_window_handle` we are using.
+#[cfg(feature = "raw-win-handle")]
+pub use raw_window_handle;
 
 #[macro_use]
 mod util;

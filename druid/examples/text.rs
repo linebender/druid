@@ -14,6 +14,9 @@
 
 //! An example of various text layout features.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
 use druid::text::{Attribute, RichText, TextStorage};
 use druid::widget::prelude::*;

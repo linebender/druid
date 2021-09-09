@@ -16,13 +16,16 @@
 //! propperties. You can change the parameters in the GUI to see how
 //! everything behaves.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::piet::InterpolationMode;
 use druid::text::ParseFormatter;
 use druid::widget::{prelude::*, FillStrat, Image};
 use druid::widget::{
     Checkbox, CrossAxisAlignment, Flex, Label, RadioGroup, SizedBox, TextBox, WidgetExt,
 };
-use druid::{AppLauncher, Color, Data, ImageBuf, Lens, LensExt, WindowDesc};
+use druid::{AppLauncher, Color, Data, ImageBuf, Lens, WindowDesc};
 
 static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
     ("Contain", FillStrat::Contain),
@@ -62,7 +65,7 @@ impl Rebuilder {
     }
 
     fn rebuild_inner(&mut self, data: &AppState) {
-        self.inner = build_widget(&data);
+        self.inner = build_widget(data);
     }
 }
 
@@ -79,7 +82,7 @@ impl Widget<AppState> for Rebuilder {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppState, data: &AppState, _env: &Env) {
-        if !old_data.same(&data) {
+        if !old_data.same(data) {
             self.rebuild_inner(data);
             ctx.children_changed();
         }
@@ -157,7 +160,7 @@ fn make_width() -> impl Widget<AppState> {
             Flex::row().with_child(
                 TextBox::new()
                     .with_formatter(ParseFormatter::new())
-                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
+                    .lens(AppState::width)
                     .fix_width(60.0),
             ),
         )
@@ -171,7 +174,7 @@ fn make_height() -> impl Widget<AppState> {
             Flex::row().with_child(
                 TextBox::new()
                     .with_formatter(ParseFormatter::new())
-                    .lens(AppState::width.map(|x| *x, |x, y| *x = y))
+                    .lens(AppState::height)
                     .fix_width(60.0),
             ),
         )

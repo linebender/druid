@@ -52,6 +52,11 @@ impl Svg {
     pub fn set_fill_mode(&mut self, newfil: FillStrat) {
         self.fill = newfil;
     }
+
+    /// Set the svg data.
+    pub fn set_svg_data(&mut self, svg_data: SvgData) {
+        self.svg_data = svg_data;
+    }
 }
 
 impl<T: Data> Widget<T> for Svg {
@@ -103,7 +108,7 @@ impl<T: Data> Widget<T> for Svg {
 
 /// Stored SVG data.
 /// Implements `FromStr` and can be converted to piet draw instructions.
-#[derive(Clone)]
+#[derive(Clone, Data)]
 pub struct SvgData {
     tree: Arc<usvg::Tree>,
 }
@@ -201,10 +206,12 @@ impl FromStr for SvgData {
     type Err = Box<dyn Error>;
 
     fn from_str(svg_str: &str) -> Result<Self, Self::Err> {
-        let re_opt = usvg::Options {
+        let mut re_opt = usvg::Options {
             keep_named_groups: false,
             ..usvg::Options::default()
         };
+
+        re_opt.fontdb.load_system_fonts();
 
         match usvg::Tree::from_str(svg_str, &re_opt) {
             Ok(tree) => Ok(SvgData {

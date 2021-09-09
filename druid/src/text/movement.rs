@@ -165,14 +165,41 @@ pub fn movement<T: EditableText + TextStorage>(
 ///
 /// [UAX#29]: http://www.unicode.org/reports/tr29/
 pub(crate) fn word_range_for_pos(text: &str, pos: usize) -> Range<usize> {
-    let mut word_iter = text.split_word_bound_indices().peekable();
-    let mut word_start = pos;
-    while let Some((ix, _)) = word_iter.next() {
-        if word_iter.peek().map(|(ix, _)| *ix > pos).unwrap_or(false) {
-            word_start = ix;
-            break;
-        }
+    text.split_word_bound_indices()
+        .map(|(ix, word)| ix..(ix + word.len()))
+        .find(|range| range.contains(&pos))
+        .unwrap_or(pos..pos)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn word_range_simple() {
+        assert_eq!(word_range_for_pos("hello world", 3), 0..5);
+        assert_eq!(word_range_for_pos("hello world", 8), 6..11);
     }
-    let word_end = word_iter.next().map(|(ix, _)| ix).unwrap_or(pos);
-    word_start..word_end
+
+    #[test]
+    fn word_range_whitespace() {
+        assert_eq!(word_range_for_pos("hello world", 5), 5..6);
+    }
+
+    #[test]
+    fn word_range_rtl() {
+        let rtl = "مرحبا بالعالم";
+        assert_eq!(word_range_for_pos(rtl, 5), 0..10);
+        assert_eq!(word_range_for_pos(rtl, 16), 11..25);
+        assert_eq!(word_range_for_pos(rtl, 10), 10..11);
+    }
+
+    #[test]
+    fn word_range_mixed() {
+        let mixed = "hello مرحبا بالعالم world";
+        assert_eq!(word_range_for_pos(mixed, 3), 0..5);
+        assert_eq!(word_range_for_pos(mixed, 8), 6..16);
+        assert_eq!(word_range_for_pos(mixed, 19), 17..31);
+        assert_eq!(word_range_for_pos(mixed, 36), 32..37);
+    }
 }

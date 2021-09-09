@@ -49,7 +49,7 @@ pub struct ModularWidget<S, T> {
 
 /// A widget that can replace its child on command
 pub struct ReplaceChild<T> {
-    inner: WidgetPod<T, Box<dyn Widget<T>>>,
+    child: WidgetPod<T, Box<dyn Widget<T>>>,
     replacer: Box<dyn Fn() -> Box<dyn Widget<T>>>,
 }
 
@@ -72,7 +72,7 @@ pub struct ReplaceChild<T> {
 /// ```
 pub struct Recorder<W> {
     recording: Recording,
-    inner: W,
+    child: W,
 }
 
 /// A recording of widget method calls.
@@ -101,7 +101,7 @@ pub enum Record {
 pub trait TestWidgetExt<T: Data>: Widget<T> + Sized + 'static {
     fn record(self, recording: &Recording) -> Recorder<Self> {
         Recorder {
-            inner: self,
+            child: self,
             recording: recording.clone(),
         }
     }
@@ -200,12 +200,12 @@ impl<S, T: Data> Widget<T> for ModularWidget<S, T> {
 
 impl<T: Data> ReplaceChild<T> {
     pub fn new<W: Widget<T> + 'static>(
-        inner: impl Widget<T> + 'static,
+        child: impl Widget<T> + 'static,
         f: impl Fn() -> W + 'static,
     ) -> Self {
-        let inner = WidgetPod::new(inner.boxed());
+        let child = WidgetPod::new(child.boxed());
         let replacer = Box::new(move || f().boxed());
-        ReplaceChild { inner, replacer }
+        ReplaceChild { child, replacer }
     }
 }
 
@@ -213,28 +213,28 @@ impl<T: Data> Widget<T> for ReplaceChild<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if let Event::Command(cmd) = event {
             if cmd.is(REPLACE_CHILD) {
-                self.inner = WidgetPod::new((self.replacer)());
+                self.child = WidgetPod::new((self.replacer)());
                 ctx.children_changed();
                 return;
             }
         }
-        self.inner.event(ctx, event, data, env)
+        self.child.event(ctx, event, data, env)
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-        self.inner.update(ctx, data, env)
+        self.child.update(ctx, data, env)
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        self.inner.layout(ctx, bc, data, env)
+        self.child.layout(ctx, bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint_raw(ctx, data, env)
+        self.child.paint_raw(ctx, data, env)
     }
 }
 
@@ -277,7 +277,7 @@ impl Recording {
 impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         self.recording.push(Record::E(event.clone()));
-        self.inner.event(ctx, event, data, env)
+        self.child.event(ctx, event, data, env)
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
@@ -291,23 +291,23 @@ impl<T: Data, W: Widget<T>> Widget<T> for Recorder<W> {
             self.recording.push(Record::L(event.clone()));
         }
 
-        self.inner.lifecycle(ctx, event, data, env)
+        self.child.lifecycle(ctx, event, data, env)
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
-        self.inner.update(ctx, old_data, data, env);
+        self.child.update(ctx, old_data, data, env);
         self.recording
             .push(Record::Update(ctx.widget_state.invalid.clone()));
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let size = self.inner.layout(ctx, bc, data, env);
+        let size = self.child.layout(ctx, bc, data, env);
         self.recording.push(Record::Layout(size));
         size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.inner.paint(ctx, data, env);
+        self.child.paint(ctx, data, env);
         self.recording.push(Record::Paint)
     }
 }

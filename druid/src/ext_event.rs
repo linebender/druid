@@ -18,9 +18,10 @@ use std::any::Any;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+use crate::command::SelectorSymbol;
 use crate::shell::IdleHandle;
 use crate::win_handler::EXT_EVENT_IDLE_TOKEN;
-use crate::{command::SelectorSymbol, Command, Selector, Target, WindowId};
+use crate::{Command, Data, DruidHandler, Selector, Target, WindowId};
 
 pub(crate) type ExtCommand = (SelectorSymbol, Box<dyn Any + Send>, Target);
 
@@ -116,6 +117,33 @@ impl ExtEventSink {
             target,
         ));
         Ok(())
+    }
+
+    /// Schedule an idle callback.
+    ///
+    /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
+    ///
+    /// Add an idle callback, which is called (once) when the message loop
+    /// is empty. The idle callback will be run from the main UI thread.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
+    ///
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
+    pub fn add_idle_callback<T: 'static + Data>(&self, cb: impl FnOnce(&mut T) + Send + 'static) {
+        let mut handle = self.handle.lock().unwrap();
+        if let Some(handle) = handle.as_mut() {
+            handle.add_idle(|win_handler| {
+                if let Some(win_handler) = win_handler.as_any().downcast_mut::<DruidHandler<T>>() {
+                    win_handler.app_state.handle_idle_callback(cb);
+                } else {
+                    debug_panic!(
+                        "{} is not the type of root data",
+                        std::any::type_name::<T>()
+                    );
+                }
+            });
+        }
     }
 }
 

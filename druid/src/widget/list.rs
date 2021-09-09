@@ -26,6 +26,7 @@ use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::debug_state::DebugState;
 use crate::{
     widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
@@ -139,7 +140,7 @@ where
             cb(&mut ret, i);
 
             if !item.1.same(&ret) {
-                self[&item.0] = ret;
+                self[item.0] = ret;
             }
         }
     }
@@ -362,6 +363,10 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         if self.update_child_count(data, env) {
             ctx.children_changed();
         }
+
+        if ctx.env_key_changed(&self.spacing) {
+            ctx.request_layout();
+        }
     }
 
     #[instrument(name = "List", level = "trace", skip(self, ctx, bc, data, env))]
@@ -406,5 +411,21 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 child.paint(ctx, child_data, env);
             }
         });
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let mut children = self.children.iter();
+        let mut children_state = Vec::with_capacity(data.data_len());
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                children_state.push(child.widget().debug_state(child_data));
+            }
+        });
+
+        DebugState {
+            display_name: "List".to_string(),
+            children: children_state,
+            ..Default::default()
+        }
     }
 }

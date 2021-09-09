@@ -49,6 +49,6 @@ pub use self::movement::movement;
 pub use input_component::{EditSession, TextComponent};
 pub use input_methods::ImeHandlerRef;
 pub use rich_text::{AttributesAdder, RichText, RichTextBuilder};
-pub use storage::{ArcStr, TextStorage};
+pub use storage::{ArcStr, EnvUpdateCtx, TextStorage};
 
 pub(crate) use input_methods::TextFieldRegistration;

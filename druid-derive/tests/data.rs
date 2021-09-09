@@ -102,3 +102,28 @@ fn test_data_derive_same() {
     assert!(v.same(&v));
     assert!(!v.same(&TypeParamForUserTraitAndLifetimeEnum::V1(Value(12))));
 }
+
+#[derive(Data, Clone)]
+struct DataAttrEq {
+    #[data(eq)]
+    f: PanicOnPartialEq,
+}
+
+#[derive(Clone, Copy)]
+struct PanicOnPartialEq;
+impl PartialEq for PanicOnPartialEq {
+    fn eq(&self, _other: &Self) -> bool {
+        panic!("PartialEq::eq called");
+    }
+}
+
+#[test]
+#[should_panic = "PartialEq::eq called"]
+fn data_attr_eq() {
+    DataAttrEq {
+        f: PanicOnPartialEq,
+    }
+    .same(&DataAttrEq {
+        f: PanicOnPartialEq,
+    });
+}

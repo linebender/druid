@@ -345,6 +345,18 @@ pub enum InternalLifeCycle {
         /// a cell used to store the a widget's state
         state_cell: StateCell,
     },
+    /// For testing: request the `DebugState` of a specific widget.
+    ///
+    /// This is useful if you need to get a best-effort description of the
+    /// state of this widget and its children. You can dispatch this event,
+    /// specifying the widget in question, and that widget will
+    /// set its state in the provided `Cell`, if it exists.
+    DebugRequestDebugState {
+        /// the widget whose state is requested
+        widget: WidgetId,
+        /// a cell used to store the a widget's state
+        state_cell: DebugStateCell,
+    },
     /// For testing: apply the given function on every widget.
     DebugInspectState(StateCheckFn),
 }
@@ -475,21 +487,27 @@ impl InternalLifeCycle {
             | InternalLifeCycle::RouteDisabledChanged => true,
             InternalLifeCycle::ParentWindowOrigin => false,
             InternalLifeCycle::DebugRequestState { .. }
+            | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
         }
     }
 }
 
-pub(crate) use state_cell::{StateCell, StateCheckFn};
+pub(crate) use state_cell::{DebugStateCell, StateCell, StateCheckFn};
 
 mod state_cell {
     use crate::core::WidgetState;
+    use crate::debug_state::DebugState;
     use crate::WidgetId;
     use std::{cell::RefCell, rc::Rc};
 
-    /// An interior-mutable struct for fetching BasteState.
+    /// An interior-mutable struct for fetching WidgetState.
     #[derive(Clone, Default)]
     pub struct StateCell(Rc<RefCell<Option<WidgetState>>>);
+
+    /// An interior-mutable struct for fetching DebugState.
+    #[derive(Clone, Default)]
+    pub struct DebugStateCell(Rc<RefCell<Option<DebugState>>>);
 
     #[derive(Clone)]
     pub struct StateCheckFn(Rc<dyn Fn(&WidgetState)>);
@@ -520,6 +538,21 @@ mod state_cell {
         }
     }
 
+    impl DebugStateCell {
+        /// Set the state. This will panic if it is called twice.
+        pub(crate) fn set(&self, state: DebugState) {
+            assert!(
+                self.0.borrow_mut().replace(state).is_none(),
+                "DebugStateCell already set"
+            )
+        }
+
+        #[allow(dead_code)]
+        pub(crate) fn take(&self) -> Option<DebugState> {
+            self.0.borrow_mut().take()
+        }
+    }
+
     impl StateCheckFn {
         #[cfg(not(target_arch = "wasm32"))]
         pub(crate) fn new(f: impl Fn(&WidgetState) + 'static) -> Self {
@@ -533,6 +566,8 @@ mod state_cell {
         }
     }
 
+    // TODO - Use fmt.debug_tuple?
+
     impl std::fmt::Debug for StateCell {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             let inner = if self.0.borrow().is_some() {
@@ -541,6 +576,17 @@ mod state_cell {
                 "None"
             };
             write!(f, "StateCell({})", inner)
+        }
+    }
+
+    impl std::fmt::Debug for DebugStateCell {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            let inner = if self.0.borrow().is_some() {
+                "Some"
+            } else {
+                "None"
+            };
+            write!(f, "DebugStateCell({})", inner)
         }
     }
 

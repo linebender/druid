@@ -53,7 +53,7 @@ pub(crate) const EXT_EVENT_IDLE_TOKEN: IdleToken = IdleToken::new(2);
 /// it publicly.
 pub struct DruidHandler<T> {
     /// The shared app state.
-    app_state: AppState<T>,
+    pub(crate) app_state: AppState<T>,
     /// The id for the current window.
     window_id: WindowId,
 }
@@ -71,7 +71,7 @@ pub(crate) struct AppHandler<T> {
 /// State shared by all windows in the UI.
 #[derive(Clone)]
 pub(crate) struct AppState<T> {
-    inner: Rc<RefCell<Inner<T>>>,
+    inner: Rc<RefCell<InnerAppState<T>>>,
 }
 
 /// The information for forwarding druid-shell's file dialog reply to the right place.
@@ -84,7 +84,7 @@ struct DialogInfo {
     cancel_cmd: Selector<()>,
 }
 
-struct Inner<T> {
+struct InnerAppState<T> {
     app: Application,
     delegate: Option<Box<dyn AppDelegate<T>>>,
     command_queue: CommandQueue,
@@ -158,7 +158,7 @@ impl<T> AppState<T> {
         delegate: Option<Box<dyn AppDelegate<T>>>,
         ext_event_host: ExtEventHost,
     ) -> Self {
-        let inner = Rc::new(RefCell::new(Inner {
+        let inner = Rc::new(RefCell::new(InnerAppState {
             app,
             delegate,
             command_queue: VecDeque::new(),
@@ -180,7 +180,7 @@ impl<T> AppState<T> {
     }
 }
 
-impl<T: Data> Inner<T> {
+impl<T: Data> InnerAppState<T> {
     fn handle_menu_cmd(&mut self, cmd_id: MenuItemId, window_id: Option<WindowId>) {
         let queue = &mut self.command_queue;
         let data = &mut self.data;
@@ -208,7 +208,7 @@ impl<T: Data> Inner<T> {
     where
         F: FnOnce(&mut dyn AppDelegate<T>, &mut T, &Env, &mut DelegateCtx) -> R,
     {
-        let Inner {
+        let InnerAppState {
             ref mut delegate,
             ref mut command_queue,
             ref mut data,
@@ -474,7 +474,7 @@ impl<T: Data> Inner<T> {
 
         #[cfg(target_os = "macos")]
         {
-            use druid_shell::platform::mac::MacApplicationExt;
+            use druid_shell::platform::mac::ApplicationExt as _;
 
             let windows = &mut self.windows;
             let window = self.menu_window.and_then(|w| windows.get_mut(w));
@@ -611,6 +611,12 @@ impl<T: Data> AppState<T> {
             }
             other => tracing::warn!("unexpected idle token {:?}", other),
         }
+    }
+
+    pub(crate) fn handle_idle_callback(&mut self, cb: impl FnOnce(&mut T)) {
+        let mut inner = self.inner.borrow_mut();
+        cb(&mut inner.data);
+        inner.do_update();
     }
 
     fn process_commands(&mut self) {
@@ -841,13 +847,13 @@ impl<T: Data> AppState<T> {
 
     #[cfg(target_os = "macos")]
     fn hide_app(&self) {
-        use druid_shell::platform::mac::MacApplicationExt;
+        use druid_shell::platform::mac::ApplicationExt as _;
         self.inner.borrow().app.hide()
     }
 
     #[cfg(target_os = "macos")]
     fn hide_others(&mut self) {
-        use druid_shell::platform::mac::MacApplicationExt;
+        use druid_shell::platform::mac::ApplicationExt as _;
         self.inner.borrow().app.hide_others();
     }
 

@@ -17,6 +17,9 @@
 //! knobs to change all the parameters. 99% of the time you will want to
 //! hard-code these parameters, which will simplify your code considerably.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::text::ParseFormatter;
 use druid::widget::prelude::*;
 use druid::widget::{

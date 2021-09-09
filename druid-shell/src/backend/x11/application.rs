@@ -36,8 +36,8 @@ use x11rb::xcb_ffi::XCBConnection;
 use crate::application::AppHandler;
 
 use super::clipboard::Clipboard;
-use super::util;
 use super::window::Window;
+use super::{util, xkb};
 
 // This creates a `struct WindowAtoms` containing the specified atoms as members (along with some
 // convenience methods to intern and query those atoms). We use the following atoms:
@@ -175,6 +175,7 @@ pub(crate) struct Application {
     render_argb32_pictformat_cursor: Option<Pictformat>,
     /// Newest timestamp that we received
     timestamp: Rc<Cell<Timestamp>>,
+    xkb_context: xkb::Context,
 }
 
 /// The mutable `Application` state.
@@ -183,6 +184,7 @@ struct State {
     quitting: bool,
     /// A collection of all the `Application` windows.
     windows: HashMap<u32, Rc<Window>>,
+    xkb_state: xkb::State,
 }
 
 #[derive(Clone, Debug)]
@@ -208,11 +210,27 @@ impl Application {
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
         let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
+        let xkb_context = xkb::Context::new();
+        xkb_context.set_log_level(tracing::Level::DEBUG);
+        use x11rb::protocol::xkb::ConnectionExt;
+        conn.xkb_use_extension(1, 0)?
+            .reply()
+            .context("init xkb extension")?;
+        let device_id = xkb_context
+            .core_keyboard_device_id(&conn)
+            .context("get core keyboard device id")?;
+
+        let keymap = xkb_context
+            .keymap_from_device(&conn, device_id)
+            .context("key map from device")?;
+
+        let xkb_state = keymap.state();
         let connection = Rc::new(conn);
         let window_id = Application::create_event_window(&connection, screen_num)?;
         let state = Rc::new(RefCell::new(State {
             quitting: false,
             windows: HashMap::new(),
+            xkb_state,
         }));
 
         let (idle_read, idle_write) = nix::unistd::pipe2(nix::fcntl::OFlag::O_NONBLOCK)?;
@@ -289,9 +307,9 @@ impl Application {
             .roots
             .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
-        let root_visual_type = util::get_visual_from_screen(&screen)
+        let root_visual_type = util::get_visual_from_screen(screen)
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
-        let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
+        let argb_visual_type = util::get_argb_visual_type(&*connection, screen)?;
 
         let timestamp = Rc::new(Cell::new(x11rb::CURRENT_TIME));
         let pending_events = Default::default();
@@ -331,6 +349,7 @@ impl Application {
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
             timestamp,
+            xkb_context,
         })
     }
 
@@ -523,7 +542,25 @@ impl Application {
                 let w = self
                     .window(ev.event)
                     .context("KEY_PRESS - failed to get window")?;
-                w.handle_key_press(ev);
+                let hw_keycode = ev.detail;
+                let mut state = borrow_mut!(self.state)?;
+                let key_event = state
+                    .xkb_state
+                    .key_event(hw_keycode as _, keyboard_types::KeyState::Down);
+
+                w.handle_key_event(key_event);
+            }
+            Event::KeyRelease(ev) => {
+                let w = self
+                    .window(ev.event)
+                    .context("KEY_PRESS - failed to get window")?;
+                let hw_keycode = ev.detail;
+                let mut state = borrow_mut!(self.state)?;
+                let key_event = state
+                    .xkb_state
+                    .key_event(hw_keycode as _, keyboard_types::KeyState::Up);
+
+                w.handle_key_event(key_event);
             }
             Event::ButtonPress(ev) => {
                 let w = self
@@ -706,7 +743,9 @@ impl Application {
             if let Some(timeout) = next_timeout {
                 if timeout <= now {
                     if let Ok(state) = self.state.try_borrow() {
-                        for w in state.windows.values() {
+                        let values = state.windows.values().cloned().collect::<Vec<_>>();
+                        drop(state);
+                        for w in values {
                             w.run_timers(now);
                         }
                     } else {
@@ -770,22 +809,43 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        let var_non_empty = |var| match std::env::var(var) {
-            Ok(s) if s.is_empty() => None,
-            Ok(s) => Some(s),
-            Err(_) => None,
-        };
+        fn locale_env_var(var: &str) -> Option<String> {
+            match std::env::var(var) {
+                Ok(s) if s.is_empty() => {
+                    tracing::debug!("locale: ignoring empty env var {}", var);
+                    None
+                }
+                Ok(s) => {
+                    tracing::debug!("locale: env var {} found: {:?}", var, &s);
+                    Some(s)
+                }
+                Err(std::env::VarError::NotPresent) => {
+                    tracing::debug!("locale: env var {} not found", var);
+                    None
+                }
+                Err(std::env::VarError::NotUnicode(_)) => {
+                    tracing::debug!("locale: ignoring invalid unicode env var {}", var);
+                    None
+                }
+            }
+        }
 
         // from gettext manual
         // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
-        var_non_empty("LANGUAGE")
+        let mut locale = locale_env_var("LANGUAGE")
             // the LANGUAGE value is priority list seperated by :
             // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
             .and_then(|locale| locale.split(':').next().map(String::from))
-            .or_else(|| var_non_empty("LC_ALL"))
-            .or_else(|| var_non_empty("LC_MESSAGES"))
-            .or_else(|| var_non_empty("LANG"))
-            .unwrap_or_else(|| "en-US".to_string())
+            .or_else(|| locale_env_var("LC_ALL"))
+            .or_else(|| locale_env_var("LC_MESSAGES"))
+            .or_else(|| locale_env_var("LANG"))
+            .unwrap_or_else(|| "en-US".to_string());
+
+        // This is done because the locale parsing library we use expects an unicode locale, but these vars have an ISO locale
+        if let Some(idx) = locale.chars().position(|c| c == '.' || c == '@') {
+            locale.truncate(idx);
+        }
+        locale
     }
 
     pub(crate) fn idle_pipe(&self) -> RawFd {
@@ -793,7 +853,7 @@ impl Application {
     }
 }
 
-impl crate::platform::linux::LinuxApplicationExt for crate::Application {
+impl crate::platform::linux::ApplicationExt for crate::Application {
     fn primary_clipboard(&self) -> crate::Clipboard {
         self.backend_app.primary.clone().into()
     }

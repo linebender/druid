@@ -15,6 +15,9 @@
 //! Shows a scroll widget, and also demonstrates how widgets that paint
 //! outside their bounds can specify their paint region.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::Circle;
 use druid::piet::RadialGradient;
 use druid::widget::prelude::*;

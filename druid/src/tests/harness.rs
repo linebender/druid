@@ -23,6 +23,8 @@ use crate::ext_event::ExtEventHost;
 use crate::piet::{BitmapTarget, Device, Error, ImageFormat, Piet};
 use crate::*;
 
+use crate::debug_state::DebugState;
+
 pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 
 /// A type that tries very hard to provide a comforting and safe environment
@@ -47,13 +49,13 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// Also, timers don't work.  ¯\_(ツ)_/¯
 pub struct Harness<'a, T> {
     piet: Piet<'a>,
-    inner: Inner<T>,
+    mock_app: MockAppState<T>,
     window_size: Size,
 }
 
 /// All of the state except for the `Piet` (render context). We need to pass
 /// that in to get around some lifetime issues.
-struct Inner<T> {
+struct MockAppState<T> {
     data: T,
     env: Env,
     window: Window<T>,
@@ -152,16 +154,16 @@ impl<T: Data> Harness<'_, T> {
             let pending = PendingWindow::new(root);
             let window = Window::new(WindowId::next(), Default::default(), pending, ext_handle);
 
-            let inner = Inner {
+            let mock_app = MockAppState {
                 data,
-                env: Env::default(),
+                env: Env::with_default_i10n(),
                 window,
                 cmds: Default::default(),
             };
 
             let mut harness = Harness {
                 piet,
-                inner,
+                mock_app,
                 window_size,
             };
             harness_closure(&mut harness);
@@ -176,17 +178,17 @@ impl<T: Data> Harness<'_, T> {
     }
 
     pub fn window(&self) -> &Window<T> {
-        &self.inner.window
+        &self.mock_app.window
     }
 
     #[allow(dead_code)]
     pub fn window_mut(&mut self) -> &mut Window<T> {
-        &mut self.inner.window
+        &mut self.mock_app.window
     }
 
     #[allow(dead_code)]
     pub fn data(&self) -> &T {
-        &self.inner.data
+        &self.mock_app.data
     }
 
     /// Retrieve a copy of this widget's `WidgetState`, or die trying.
@@ -208,6 +210,32 @@ impl<T: Data> Harness<'_, T> {
         cell.take()
     }
 
+    /// Retrieve a copy of the root widget's `DebugState` (and by recursion, all others)
+    pub fn get_root_debug_state(&self) -> DebugState {
+        self.mock_app.root_debug_state()
+    }
+
+    /// Retrieve a copy of this widget's `DebugState`, or die trying.
+    pub fn get_debug_state(&mut self, widget_id: WidgetId) -> DebugState {
+        match self.try_get_debug_state(widget_id) {
+            Some(thing) => thing,
+            None => panic!("get_debug_state failed for widget {:?}", widget_id),
+        }
+    }
+
+    /// Attempt to retrieve a copy of this widget's `DebugState`.
+    pub fn try_get_debug_state(&mut self, widget_id: WidgetId) -> Option<DebugState> {
+        let cell = DebugStateCell::default();
+        let state_cell = cell.clone();
+        self.lifecycle(LifeCycle::Internal(
+            InternalLifeCycle::DebugRequestDebugState {
+                widget: widget_id,
+                state_cell,
+            },
+        ));
+        cell.take()
+    }
+
     /// Inspect the `WidgetState` of each widget in the tree.
     ///
     /// The provided closure will be called on each widget.
@@ -220,7 +248,7 @@ impl<T: Data> Harness<'_, T> {
 
     /// Send a command to a target.
     pub fn submit_command(&mut self, cmd: impl Into<Command>) {
-        let command = cmd.into().default_to(self.inner.window.id.into());
+        let command = cmd.into().default_to(self.mock_app.window.id.into());
         let event = Event::Internal(InternalEvent::TargetedCommand(command));
         self.event(event);
     }
@@ -239,14 +267,14 @@ impl<T: Data> Harness<'_, T> {
     ///
     /// Commands dispatched during `update` will not be sent?
     pub fn event(&mut self, event: Event) {
-        self.inner.event(event);
+        self.mock_app.event(event);
         self.process_commands();
         self.update();
     }
 
     fn process_commands(&mut self) {
         loop {
-            let cmd = self.inner.cmds.pop_front();
+            let cmd = self.mock_app.cmds.pop_front();
             match cmd {
                 Some(cmd) => self.event(Event::Internal(InternalEvent::TargetedCommand(cmd))),
                 None => break,
@@ -255,17 +283,17 @@ impl<T: Data> Harness<'_, T> {
     }
 
     pub(crate) fn lifecycle(&mut self, event: LifeCycle) {
-        self.inner.lifecycle(event)
+        self.mock_app.lifecycle(event)
     }
 
     //TODO: should we expose this? I don't think so?
     fn update(&mut self) {
-        self.inner.update()
+        self.mock_app.update()
     }
 
     /// Only do a layout pass, without painting
     pub fn just_layout(&mut self) {
-        self.inner.layout()
+        self.mock_app.layout()
     }
 
     /// Paints just the part of the window that was invalidated by calls to `request_paint` or
@@ -275,19 +303,23 @@ impl<T: Data> Harness<'_, T> {
     #[allow(dead_code)]
     pub fn paint_invalid(&mut self) {
         let invalid = std::mem::replace(self.window_mut().invalid_mut(), Region::EMPTY);
-        self.inner.paint_region(&mut self.piet, &invalid);
+        self.mock_app.paint_region(&mut self.piet, &invalid);
     }
 
     /// Paints the entire window and resets the invalid region.
     #[allow(dead_code)]
     pub fn paint(&mut self) {
         self.window_mut().invalid_mut().clear();
-        self.inner
+        self.mock_app
             .paint_region(&mut self.piet, &self.window_size.to_rect().into());
+    }
+
+    pub fn root_debug_state(&self) -> DebugState {
+        self.mock_app.root_debug_state()
     }
 }
 
-impl<T: Data> Inner<T> {
+impl<T: Data> MockAppState<T> {
     fn event(&mut self, event: Event) {
         self.window
             .event(&mut self.cmds, event, &mut self.data, &self.env);
@@ -311,6 +343,10 @@ impl<T: Data> Inner<T> {
     fn paint_region(&mut self, piet: &mut Piet, invalid: &Region) {
         self.window
             .do_paint(piet, invalid, &mut self.cmds, &self.data, &self.env);
+    }
+
+    pub fn root_debug_state(&self) -> DebugState {
+        self.window.root_debug_state(&self.data)
     }
 }
 

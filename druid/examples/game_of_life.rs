@@ -15,6 +15,9 @@
 //! This is an example of how you would implement the game of life with druid.
 //! This example doesnt showcase anything specific in druid.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::ops::{Index, IndexMut};
 use std::time::{Duration, Instant};
 

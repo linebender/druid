@@ -15,8 +15,8 @@ default-target = "x86_64-pc-windows-msvc"
 
 [features]
 default = ["gtk"]
-gtk = ["gio", "gdk", "gdk-sys", "glib", "glib-sys", "gtk-sys", "gtk-rs", "gdk-pixbuf"]
-x11 = ["x11rb", "nix", "cairo-sys-rs"]
+gtk = ["gdk-sys", "glib-sys", "gtk-sys", "gtk-rs"]
+x11 = ["x11rb", "nix", "cairo-sys-rs", "bindgen", "pkg-config"]
 # Implement HasRawWindowHandle for WindowHandle
 raw-win-handle = ["raw-window-handle"]
 
@@ -36,11 +36,12 @@ tga = ["piet-common/tga"]
 farbfeld = ["piet-common/farbfeld"]
 dxt = ["piet-common/dxt"]
 hdr = ["piet-common/hdr"]
+serde = ["kurbo/serde"]
 
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.4.1"
+piet-common = "=0.5.0-pre1"
 kurbo = "0.8.1"
 
 tracing = "0.1.22"
@@ -64,7 +65,7 @@ version = "0.3.9"
 features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "winuser",
             "shellscalingapi", "shobjidl", "combaseapi", "synchapi", "dxgi1_3", "dcomp",
             "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi",
-            "shellapi"]
+            "shellapi", "winnls"]
 
 [target.'cfg(target_os="macos")'.dependencies]
 block = "0.1.6"
@@ -76,19 +77,15 @@ bitflags = "1.2.1"
 
 [target.'cfg(target_os="linux")'.dependencies]
 # TODO(x11/dependencies): only use feature "xcb" if using X11
-cairo-rs = { version = "0.9.1", default_features = false, features = ["xcb"] }
-cairo-sys-rs = { version = "0.10.0", default_features = false, optional = true }
-gio = { version = "0.9.1", optional = true }
-gdk = { version = "0.13.2", optional = true }
-gdk-pixbuf = { version = "0.9.0", optional = true }
-gdk-sys = { version = "0.10.0", optional = true }
+cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
+cairo-sys-rs = { version = "0.14.0", default_features = false, optional = true }
+gdk-sys = { version = "0.14.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
-gtk-rs = { version = "0.9.2", features = ["v3_22"], package = "gtk", optional = true }
-glib = { version = "0.10.1", optional = true }
-glib-sys = { version = "0.10.0", optional = true }
-gtk-sys = { version = "0.10.0", optional = true }
+gtk-rs = { version = "0.14.0", features = ["v3_22"], package = "gtk", optional = true }
+glib-sys = { version = "0.14.0", optional = true }
+gtk-sys = { version = "0.14.0", optional = true }
 nix = { version = "0.18.0", optional = true }
-x11rb = { version = "0.8.0", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "resource_manager", "cursor"], optional = true }
+x11rb = { version = "0.8.0", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "xkb", "resource_manager", "cursor"], optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 wasm-bindgen = "0.2.67"
@@ -99,8 +96,12 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "=0.4.1", features = ["png"] }
+piet-common = { version = "=0.5.0-pre1", features = ["png"] }
 static_assertions = "1.1.0"
 test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = "0.2.15"
 unicode-segmentation = "1.7.0"
+
+[build-dependencies]
+bindgen = {version = "0.58", optional = true}
+pkg-config = { version = "0.3", optional = true }

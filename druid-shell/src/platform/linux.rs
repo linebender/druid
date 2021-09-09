@@ -18,7 +18,7 @@ use crate::Clipboard;
 /// Linux specific extensions to [`Application`]
 ///
 /// [`Application`]: crate::Application
-pub trait LinuxApplicationExt {
+pub trait ApplicationExt {
     /// Returns a handle to the primary system clipboard.
     ///
     /// This is useful for middle mouse paste.
@@ -32,5 +32,5 @@ mod test {
 
     use super::*;
     use static_assertions as sa;
-    sa::assert_impl_all!(Application: LinuxApplicationExt);
+    sa::assert_impl_all!(Application: ApplicationExt);
 }

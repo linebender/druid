@@ -18,6 +18,7 @@ use std::f64::EPSILON;
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::BezPath;
 use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::widget::prelude::*;
@@ -280,6 +281,14 @@ impl Widget<f64> for Stepper {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
         if (*data - old_data).abs() > EPSILON {
             ctx.request_paint();
+        }
+    }
+
+    fn debug_state(&self, data: &f64) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: data.to_string(),
+            ..Default::default()
         }
     }
 }
