@@ -338,6 +338,93 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
         trace!("clear_cursor");
         self.widget_state.cursor_change = CursorChange::Default;
     }
+
+    /// Request keyboard focus.
+    ///
+    /// Because only one widget can be focused at a time, multiple focus requests
+    /// from different widgets during a single event cycle means that the last
+    /// widget that requests focus will override the previous requests.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn request_focus(&mut self) {
+        trace!("request_focus");
+        // We need to send the request even if we're currently focused,
+        // because we may have a sibling widget that already requested focus
+        // and we have no way of knowing that yet. We need to override that
+        // to deliver on the "last focus request wins" promise.
+        let id = self.widget_id();
+        self.widget_state.request_focus = Some(FocusChange::Focus(id));
+    }
+
+    /// Transfer focus to the widget with the given `WidgetId`.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn set_focus(&mut self, target: WidgetId) {
+        trace!("set_focus target={:?}", target);
+        self.widget_state.request_focus = Some(FocusChange::Focus(target));
+    }
+
+    /// Transfer focus to the next focusable widget.
+    ///
+    /// This should only be called by a widget that currently has focus.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn focus_next(&mut self) {
+        trace!("focus_next");
+        if self.has_focus() {
+            self.widget_state.request_focus = Some(FocusChange::Next);
+        } else {
+            warn!(
+                "focus_next can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
+        }
+    }
+
+    /// Transfer focus to the previous focusable widget.
+    ///
+    /// This should only be called by a widget that currently has focus.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn focus_prev(&mut self) {
+        trace!("focus_prev");
+        if self.has_focus() {
+            self.widget_state.request_focus = Some(FocusChange::Previous);
+        } else {
+            warn!(
+                "focus_prev can only be called by the currently \
+                            focused widget or one of its ancestors."
+            );
+        }
+    }
+
+    /// Give up focus.
+    ///
+    /// This should only be called by a widget that currently has focus.
+    ///
+    /// See [`is_focused`] for more information about focus.
+    ///
+    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
+    pub fn resign_focus(&mut self) {
+        trace!("resign_focus");
+        if self.has_focus() {
+            self.widget_state.request_focus = Some(FocusChange::Resign);
+        } else {
+            warn!(
+                "resign_focus can only be called by the currently focused widget \
+                 or one of its ancestors. ({:?})",
+                self.widget_id()
+            );
+        }
+    }
 });
 
 // methods on event, update, and lifecycle
@@ -584,93 +671,6 @@ impl EventCtx<'_, '_> {
     /// Determine whether the event has been handled by some other widget.
     pub fn is_handled(&self) -> bool {
         self.is_handled
-    }
-
-    /// Request keyboard focus.
-    ///
-    /// Because only one widget can be focused at a time, multiple focus requests
-    /// from different widgets during a single event cycle means that the last
-    /// widget that requests focus will override the previous requests.
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn request_focus(&mut self) {
-        trace!("request_focus");
-        // We need to send the request even if we're currently focused,
-        // because we may have a sibling widget that already requested focus
-        // and we have no way of knowing that yet. We need to override that
-        // to deliver on the "last focus request wins" promise.
-        let id = self.widget_id();
-        self.widget_state.request_focus = Some(FocusChange::Focus(id));
-    }
-
-    /// Transfer focus to the widget with the given `WidgetId`.
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn set_focus(&mut self, target: WidgetId) {
-        trace!("set_focus target={:?}", target);
-        self.widget_state.request_focus = Some(FocusChange::Focus(target));
-    }
-
-    /// Transfer focus to the next focusable widget.
-    ///
-    /// This should only be called by a widget that currently has focus.
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn focus_next(&mut self) {
-        trace!("focus_next");
-        if self.has_focus() {
-            self.widget_state.request_focus = Some(FocusChange::Next);
-        } else {
-            warn!(
-                "focus_next can only be called by the currently \
-                            focused widget or one of its ancestors."
-            );
-        }
-    }
-
-    /// Transfer focus to the previous focusable widget.
-    ///
-    /// This should only be called by a widget that currently has focus.
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn focus_prev(&mut self) {
-        trace!("focus_prev");
-        if self.has_focus() {
-            self.widget_state.request_focus = Some(FocusChange::Previous);
-        } else {
-            warn!(
-                "focus_prev can only be called by the currently \
-                            focused widget or one of its ancestors."
-            );
-        }
-    }
-
-    /// Give up focus.
-    ///
-    /// This should only be called by a widget that currently has focus.
-    ///
-    /// See [`is_focused`] for more information about focus.
-    ///
-    /// [`is_focused`]: struct.EventCtx.html#method.is_focused
-    pub fn resign_focus(&mut self) {
-        trace!("resign_focus");
-        if self.has_focus() {
-            self.widget_state.request_focus = Some(FocusChange::Resign);
-        } else {
-            warn!(
-                "resign_focus can only be called by the currently focused widget \
-                 or one of its ancestors. ({:?})",
-                self.widget_id()
-            );
-        }
     }
 
     /// Request an update cycle.
