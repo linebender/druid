@@ -373,7 +373,13 @@ impl SvgRenderer {
                 let color = color_from_svg(*c, opacity);
                 Rc::new(ctx.solid_brush(color))
             }
-            usvg::Paint::Link(id) => self.defs.find(id).unwrap(),
+            usvg::Paint::Link(id) => match self.defs.find(id) {
+                Some(v) => v,
+                None => {
+                    trace!("svg link id requested but not found: {:?}", id);
+                    Rc::new(ctx.solid_brush(Color::TRANSPARENT))
+                }
+            },
         }
     }
 }
