@@ -17,8 +17,8 @@
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::f64;
-use std::sync::Arc;
 use std::ops::Deref;
+use std::sync::Arc;
 
 use tracing::{instrument, trace};
 
@@ -28,7 +28,10 @@ use crate::im::{OrdMap, Vector};
 use crate::kurbo::{Point, Rect, Size};
 
 use crate::debug_state::DebugState;
-use crate::{widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod};
+use crate::{
+    widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
+};
 
 /// A list widget for a variable-size collection of items.
 pub struct List<T> {
@@ -125,9 +128,9 @@ impl<T: Data> ListIter<T> for Vector<T> {
 //with how the List Widget handles the reordering of its data.
 #[cfg(feature = "im")]
 impl<K, V> ListIter<V> for OrdMap<K, V>
-    where
-        K: Data + Ord,
-        V: Data,
+where
+    K: Data + Ord,
+    V: Data,
 {
     fn for_each(&self, mut cb: impl FnMut(&V, usize)) {
         for (i, item) in self.iter().enumerate() {
@@ -199,7 +202,7 @@ impl<T: Data> ListIter<T> for Arc<Vec<T>> {
                 match &mut new_data {
                     Some(vec) => {
                         vec[i] = d;
-                    },
+                    }
                     None => {
                         let mut new = (**self).clone();
                         new[i] = d;
@@ -240,7 +243,7 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
                 match &mut new_data {
                     Some(vec) => {
                         vec[i] = d.1;
-                    },
+                    }
                     None => {
                         let mut new = self.1.deref().clone();
                         new[i] = d.1;
@@ -277,7 +280,7 @@ impl<T: Data> ListIter<T> for Arc<VecDeque<T>> {
                 match &mut new_data {
                     Some(vec) => {
                         vec[i] = d;
-                    },
+                    }
                     None => {
                         let mut new = (**self).clone();
                         new[i] = d;
@@ -318,7 +321,7 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<VecDeque<T>>) {
                 match &mut new_data {
                     Some(vec) => {
                         vec[i] = d.1;
-                    },
+                    }
                     None => {
                         let mut new = self.1.deref().clone();
                         new[i] = d.1;
