@@ -15,6 +15,9 @@
 //! An example of a transparent window background.
 //! Useful for dropdowns, tooltips and other overlay windows.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::Circle;
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, Painter, TextBox, WidgetExt};

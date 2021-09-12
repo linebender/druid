@@ -15,6 +15,9 @@
 //! This example shows how to construct a basic layout,
 //! using columns, rows, and loops, for repeated Widgets.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{AspectRatioBox, Button, Flex, Label, LineBreaking};
 use druid::{AppLauncher, Color, Widget, WidgetExt, WindowDesc};
 

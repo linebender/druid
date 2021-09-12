@@ -18,17 +18,15 @@
 //! takes a long time but don't want to block the main thread
 //! (waiting on an http request, some cpu intensive work etc.)
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use instant::Instant;
 use std::thread;
 use std::time::Duration;
 
-use druid::widget::prelude::*;
-use druid::{AppLauncher, Color, Selector, Target, WidgetExt, WindowDesc};
-
-// If you want to submit commands to an event sink you have to give it some kind
-// of ID. The selector is that, it also assures the accompanying data-type is correct.
-// look at the docs for `Selector` for more detail.
-const SET_COLOR: Selector<Color> = Selector::new("event-example.set-color");
+use druid::widget::Painter;
+use druid::{AppLauncher, Color, RenderContext, Widget, WidgetExt, WindowDesc};
 
 pub fn main() {
     let window = WindowDesc::new(make_ui()).title("External Event Demo");
@@ -72,62 +70,22 @@ fn generate_colors(event_sink: druid::ExtEventSink) {
             (_, _) => Color::rgb8(r, g, b.wrapping_add(3)),
         };
 
-        // We send a command to the event_sink. This command will be
-        // send to the widgets, and widgets or controllers can look for this
-        // event. We give it the data associated with the event and a target.
-        // In this case this is just `Target::Auto`, look at the identity example
-        // for more detail on how to send commands to specific widgets.
-        if event_sink
-            .submit_command(SET_COLOR, color.clone(), Target::Auto)
-            .is_err()
-        {
-            break;
-        }
+        let color_clone = color.clone();
+        // schedule idle callback to change the data
+        event_sink.add_idle_callback(move |data: &mut Color| {
+            *data = color_clone;
+        });
         thread::sleep(Duration::from_millis(20));
     }
 }
 
-/// A widget that displays a color.
-struct ColorWell;
-
-impl Widget<Color> for ColorWell {
-    fn event(&mut self, _ctx: &mut EventCtx, event: &Event, data: &mut Color, _env: &Env) {
-        match event {
-            // This is where we handle our command.
-            Event::Command(cmd) if cmd.is(SET_COLOR) => {
-                // We don't do much data processing in the `event` method.
-                // All we really do is just set the data. This causes a call
-                // to `update` which requests a paint. You can also request a paint
-                // during the event, but this should be reserved for changes to self.
-                // For changes to `Data` always make `update` do the paint requesting.
-                *data = cmd.get_unchecked(SET_COLOR).clone();
-            }
-            _ => (),
-        }
-    }
-
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &Color, _: &Env) {}
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Color, data: &Color, _: &Env) {
-        if old_data != data {
-            ctx.request_paint()
-        }
-    }
-
-    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &Color, _: &Env) -> Size {
-        bc.max()
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &Color, _env: &Env) {
+fn make_ui() -> impl Widget<Color> {
+    Painter::new(|ctx, data, _env| {
         let rect = ctx.size().to_rounded_rect(5.0);
         ctx.fill(rect, data);
-    }
-}
-
-fn make_ui() -> impl Widget<Color> {
-    ColorWell
-        .fix_width(300.0)
-        .fix_height(300.0)
-        .padding(10.0)
-        .center()
+    })
+    .fix_width(300.0)
+    .fix_height(300.0)
+    .padding(10.0)
+    .center()
 }

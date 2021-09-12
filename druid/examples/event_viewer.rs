@@ -15,6 +15,9 @@
 //! An application that accepts keyboard and mouse input, and displays
 //! information about received events.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{Controller, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, TextBox};
 use druid::{

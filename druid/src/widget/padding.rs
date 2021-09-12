@@ -14,6 +14,7 @@
 
 //! A widget that just adds padding during layout.
 
+use crate::debug_state::DebugState;
 use crate::widget::{prelude::*, WidgetWrapper};
 use crate::{Data, Insets, KeyOrValue, Point, WidgetPod};
 
@@ -112,5 +113,13 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
     #[instrument(name = "Padding", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }

@@ -15,6 +15,9 @@
 //! An example of a custom drawing widget.
 //! We draw an image, some text, a shape, and a curve.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::kurbo::BezPath;
 use druid::piet::{FontFamily, ImageFormat, InterpolationMode, Text, TextLayoutBuilder};
 use druid::widget::prelude::*;
@@ -60,11 +63,11 @@ impl Widget<String> for CustomWidget {
         // using this, since always make sure the widget is bounded.
         // If bx.max() is used in a scrolling widget things will probably
         // not work correctly.
-        if bc.is_width_bounded() | bc.is_height_bounded() {
+        if bc.is_width_bounded() && bc.is_height_bounded() {
+            bc.max()
+        } else {
             let size = Size::new(100.0, 100.0);
             bc.constrain(size)
-        } else {
-            bc.max()
         }
     }
 

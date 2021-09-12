@@ -14,9 +14,11 @@
 
 //! A widget for optional data, with different `Some` and `None` children.
 
+use crate::debug_state::DebugState;
+
 use druid::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
-    UpdateCtx, Widget, WidgetExt, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    Point, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
 };
 
 use druid::widget::SizedBox;
@@ -123,12 +125,12 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
         match data.as_ref() {
             Some(d) => self.widget.with_some(|w| {
                 let size = w.layout(ctx, bc, d, env);
-                w.set_layout_rect(ctx, d, env, size.to_rect());
+                w.set_origin(ctx, d, env, Point::ORIGIN);
                 size
             }),
             None => self.widget.with_none(|w| {
                 let size = w.layout(ctx, bc, &(), env);
-                w.set_layout_rect(ctx, &(), env, size.to_rect());
+                w.set_origin(ctx, &(), env, Point::ORIGIN);
                 size
             }),
         }
@@ -140,6 +142,19 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
             Some(d) => self.widget.with_some(|w| w.paint(ctx, d, env)),
             None => self.widget.with_none(|w| w.paint(ctx, &(), env)),
         };
+    }
+
+    fn debug_state(&self, data: &Option<T>) -> DebugState {
+        let child_state = match (&self.widget, data.as_ref()) {
+            (MaybeWidget::Some(widget_pod), Some(d)) => vec![widget_pod.widget().debug_state(d)],
+            (MaybeWidget::None(widget_pod), None) => vec![widget_pod.widget().debug_state(&())],
+            _ => vec![],
+        };
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: child_state,
+            ..Default::default()
+        }
     }
 }
 

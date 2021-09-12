@@ -14,6 +14,9 @@
 
 //! An example of a timer.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::time::Duration;
 
 use druid::widget::prelude::*;

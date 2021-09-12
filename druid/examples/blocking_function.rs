@@ -16,6 +16,9 @@
 //! the other thread some data and then we also pass some data back
 //! to the main thread using commands.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use std::{thread, time};
 
 use druid::widget::prelude::*;
@@ -104,6 +107,7 @@ fn main() {
         WindowDesc::new(ui_builder()).title(LocalizedString::new("Blocking functions"));
     AppLauncher::with_window(main_window)
         .delegate(Delegate {})
+        .log_to_console()
         .launch(AppState::default())
         .expect("launch failed");
 }

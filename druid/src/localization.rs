@@ -287,6 +287,16 @@ impl L10nManager {
     //TODO: handle locale change
 }
 
+impl std::fmt::Debug for L10nManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("L10nManager")
+            .field("resources", &self.resources)
+            .field("res_mgr.locales", &self.res_mgr.locales)
+            .field("current_locale", &self.current_locale)
+            .finish()
+    }
+}
+
 impl<T> LocalizedString<T> {
     /// Create a new `LocalizedString` with the given key.
     pub const fn new(key: &'static str) -> Self {
@@ -338,16 +348,19 @@ impl<T> LocalizedString<T> {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
-        if self.args.is_some()
-            || self.resolved_lang.as_ref() != Some(&env.localization_manager().current_locale)
-        {
+        let manager = match env.localization_manager() {
+            Some(manager) => manager,
+            None => return false,
+        };
+
+        if self.args.is_some() || self.resolved_lang.as_ref() != Some(&manager.current_locale) {
             let args: Option<FluentArgs> = self
                 .args
                 .as_ref()
                 .map(|a| a.iter().map(|(k, v)| (*k, (v.0)(data, env))).collect());
 
-            self.resolved_lang = Some(env.localization_manager().current_locale.clone());
-            let next = env.localization_manager().localize(self.key, args.as_ref());
+            self.resolved_lang = Some(manager.current_locale.clone());
+            let next = manager.localize(self.key, args.as_ref());
             let result = next != self.resolved;
             self.resolved = next;
             result

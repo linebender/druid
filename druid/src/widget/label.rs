@@ -15,9 +15,11 @@
 //! A label widget.
 
 use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 use druid_shell::Cursor;
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
@@ -89,10 +91,8 @@ pub struct Label<T> {
 
 /// A widget that displays text data.
 ///
-/// This requires the `Data` to be `ArcStr`; to handle static, dynamic, or
+/// This requires the `Data` to implement [`TextStorage`]; to handle static, dynamic, or
 /// localized text, use [`Label`].
-///
-/// [`Label`]: struct.Label.html
 pub struct RawLabel<T> {
     layout: TextLayout<T>,
     line_break_mode: LineBreaking,
@@ -121,6 +121,7 @@ pub enum LineBreaking {
 /// [`ArcStr`]: ../type.ArcStr.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
 /// [`Label`]: struct.Label.html
+#[derive(Clone)]
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
     Localized(LocalizedString<T>),
@@ -132,12 +133,14 @@ pub enum LabelText<T> {
 }
 
 /// Text that is computed dynamically.
+#[derive(Clone)]
 pub struct Dynamic<T> {
-    f: Box<dyn Fn(&T, &Env) -> String>,
+    f: Arc<dyn Fn(&T, &Env) -> String>,
     resolved: ArcStr,
 }
 
 /// Static text.
+#[derive(Debug, Clone)]
 pub struct Static {
     /// The text.
     string: ArcStr,
@@ -526,6 +529,14 @@ impl<T: Data> Widget<T> for Label<T> {
         }
         self.label.paint(ctx, &self.current_text, env)
     }
+
+    fn debug_state(&self, _data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: self.current_text.to_string(),
+            ..Default::default()
+        }
+    }
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
@@ -669,7 +680,7 @@ impl<T> From<LocalizedString<T>> for LabelText<T> {
 
 impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
     fn from(src: F) -> LabelText<T> {
-        let f = Box::new(src);
+        let f = Arc::new(src);
         LabelText::Dynamic(Dynamic {
             f,
             resolved: ArcStr::from(""),

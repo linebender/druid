@@ -419,12 +419,8 @@ impl ClipboardState {
                     if data.len() > maximum_property_length(conn) {
                         // We need to do an INCR transfer.
                         debug!("Starting new INCR transfer");
-                        let transfer = IncrementalTransfer::new(
-                            conn,
-                            event,
-                            Rc::clone(&data),
-                            self.atoms.INCR,
-                        );
+                        let transfer =
+                            IncrementalTransfer::new(conn, event, Rc::clone(data), self.atoms.INCR);
                         match transfer {
                             Ok(transfer) => self.incremental.push(transfer),
                             Err(err) => {

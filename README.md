@@ -1,8 +1,8 @@
-# Druid
+![druid banner](https://raw.githubusercontent.com/linebender/druid/screenshots/images/small_banner.png)
 
 ## A data-first Rust-native UI toolkit.
 
-[![crates.io](https://meritbadge.herokuapp.com/druid)](https://crates.io/crates/druid)
+[![crates.io](https://img.shields.io/crates/v/druid)](https://crates.io/crates/druid)
 [![docs.rs](https://docs.rs/druid/badge.svg)](https://docs.rs/druid/)
 [![license](https://img.shields.io/crates/l/druid)](https://github.com/linebender/druid/blob/master/LICENSE)
 [![chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://xi.zulipchat.com)
@@ -91,7 +91,7 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, Druid requires gtk+3; see [GTK installation page]. 
+On Linux, Druid requires gtk+3; see [GTK installation page].
 (On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
 
 

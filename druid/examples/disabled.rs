@@ -17,6 +17,9 @@
 //! respond. Pressing Tab should only focus widgets not marked as disabled. If a widget
 //! is focused while getting disabled it should resign the focus.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::{
     Button, Checkbox, CrossAxisAlignment, Flex, Label, Slider, Stepper, Switch, TextBox,
 };

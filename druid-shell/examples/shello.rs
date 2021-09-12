@@ -58,12 +58,24 @@ impl WinHandler for HelloState {
                 ]);
                 self.handle.open_file(options);
             }
+            0x102 => {
+                let options = FileDialogOptions::new().show_hidden().allowed_types(vec![
+                    FileSpec::new("Rust Files", &["rs", "toml"]),
+                    FileSpec::TEXT,
+                    FileSpec::JPG,
+                ]);
+                self.handle.save_as(options);
+            }
             _ => println!("unexpected id {}", id),
         }
     }
 
     fn open_file(&mut self, _token: FileDialogToken, file_info: Option<FileInfo>) {
         println!("open file result: {:?}", file_info);
+    }
+
+    fn save_as(&mut self, _token: FileDialogToken, file: Option<FileInfo>) {
+        println!("save file result: {:?}", file);
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
@@ -135,6 +147,13 @@ fn main() {
         0x101,
         "O&pen",
         Some(&HotKey::new(SysMods::Cmd, "o")),
+        true,
+        false,
+    );
+    file_menu.add_item(
+        0x102,
+        "S&ave",
+        Some(&HotKey::new(SysMods::Cmd, "s")),
         true,
         false,
     );

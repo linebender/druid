@@ -402,6 +402,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             Some(pos) => rect.winding(pos) != 0,
             None => false,
         };
+        trace!(
+            "Widget {:?}: set hot state to {}",
+            child_state.id,
+            child_state.is_hot
+        );
         if had_hot != child_state.is_hot {
             let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
             let mut child_ctx = LifeCycleCtx {
@@ -649,7 +654,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
             warn!(
                 "{:?} received an event ({:?}) without having been laid out. \
-                This likely indicates a missed call to set_layout_rect.",
+                This likely indicates a missed call to set_origin.",
                 ctx.widget_id(),
                 event,
             );
@@ -990,6 +995,18 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.children.may_contain(widget)
                     }
                 }
+                InternalLifeCycle::DebugRequestDebugState { widget, state_cell } => {
+                    if *widget == self.id() {
+                        if let Some(data) = &self.old_data {
+                            state_cell.set(self.inner.debug_state(data));
+                        }
+                        false
+                    } else {
+                        // Recurse when the target widget could be our descendant.
+                        // The bloom filter we're checking can return false positives.
+                        self.state.children.may_contain(widget)
+                    }
+                }
                 InternalLifeCycle::DebugInspectState(f) => {
                     f.call(&self.state);
                     true
@@ -1291,7 +1308,7 @@ impl WidgetState {
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
         self.timers.extend_drain(&mut child_state.timers);
         self.text_registrations
-            .extend(child_state.text_registrations.drain(..));
+            .append(&mut child_state.text_registrations);
         self.update_focus_chain |= child_state.update_focus_chain;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
@@ -1327,11 +1344,12 @@ impl WidgetState {
     /// For more information, see [`WidgetPod::paint_rect`].
     ///
     /// [`WidgetPod::paint_rect`]: struct.WidgetPod.html#method.paint_rect
-    pub(crate) fn paint_rect(&self) -> Rect {
+    pub fn paint_rect(&self) -> Rect {
         self.layout_rect() + self.paint_insets
     }
 
-    pub(crate) fn layout_rect(&self) -> Rect {
+    /// The rectangle used when calculating layout with other widgets
+    pub fn layout_rect(&self) -> Rect {
         Rect::from_origin_size(self.origin, self.size)
     }
 
@@ -1411,7 +1429,7 @@ mod tests {
             state: &mut state,
         };
 
-        let env = Env::default();
+        let env = Env::with_default_i10n();
 
         widget.lifecycle(&mut ctx, &LifeCycle::WidgetAdded, &1, &env);
         assert!(ctx.widget_state.children.may_contain(&ID_1));

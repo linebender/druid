@@ -33,7 +33,7 @@ pub enum Error {
     /// Windows error code.
     Hr(HRESULT),
     // Maybe include the full error from the direct2d crate.
-    D2Error,
+    Direct2D,
     /// A function is available on newer version of windows.
     OldWindows,
     /// The `hwnd` pointer was null.
@@ -75,7 +75,7 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
-            Error::D2Error => write!(f, "Direct2D error"),
+            Error::Direct2D => write!(f, "Direct2D error"),
             Error::OldWindows => write!(f, "Attempted newer API on older Windows"),
             Error::NullHwnd => write!(f, "Window handle is Null"),
         }

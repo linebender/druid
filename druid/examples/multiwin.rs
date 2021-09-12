@@ -14,6 +14,9 @@
 
 //! Opening and closing windows and using window and context menus.
 
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 use druid::widget::prelude::*;
 use druid::widget::{
     Align, BackgroundBrush, Button, Controller, ControllerHost, Flex, Label, Padding,

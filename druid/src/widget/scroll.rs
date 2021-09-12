@@ -14,6 +14,7 @@
 
 //! A container that scrolls its contents.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
@@ -225,6 +226,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.clip.paint(ctx, data, env);
         self.scroll_component
             .draw_bars(ctx, &self.clip.viewport(), env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.clip.debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 
