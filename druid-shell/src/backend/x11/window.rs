@@ -47,10 +47,11 @@ use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyState, Modifiers};
-use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::keyboard::KeyState;
+use crate::kurbo::{Insets, Point, Rect, Size};
+use crate::mouse::{Cursor, CursorDesc};
 use crate::piet::{Piet, PietText, RenderContext};
+use crate::pointer::{Button, PointerEvent};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
@@ -61,7 +62,7 @@ use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
 use super::menu::Menu;
-use super::util::Timer;
+use super::util::{key_mods, Timer};
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
 /// is used to interoperate with cairo.
@@ -1053,21 +1054,10 @@ impl Window {
         &self,
         button_press: &xproto::ButtonPressEvent,
     ) -> Result<(), Error> {
-        let button = mouse_button(button_press.detail);
         let scale = self.scale.get();
-        let mouse_event = MouseEvent {
-            pos: Point::new(button_press.event_x as f64, button_press.event_y as f64).to_dp(scale),
-            // The xcb state field doesn't include the newly pressed button, but
-            // druid wants it to be included.
-            buttons: mouse_buttons(button_press.state).with(button),
-            mods: key_mods(button_press.state),
-            // TODO: detect the count
-            count: 1,
-            focus: false,
-            button,
-            wheel_delta: Vec2::ZERO,
-        };
-        self.with_handler(|h| h.mouse_down(&mouse_event));
+        let mouse_event = PointerEvent::from_button_press(button_press, scale);
+        // TODO: detect the count
+        self.with_handler(|h| h.pointer_down(&mouse_event));
         Ok(())
     }
 
@@ -1076,20 +1066,8 @@ impl Window {
         button_release: &xproto::ButtonReleaseEvent,
     ) -> Result<(), Error> {
         let scale = self.scale.get();
-        let button = mouse_button(button_release.detail);
-        let mouse_event = MouseEvent {
-            pos: Point::new(button_release.event_x as f64, button_release.event_y as f64)
-                .to_dp(scale),
-            // The xcb state includes the newly released button, but druid
-            // doesn't want it.
-            buttons: mouse_buttons(button_release.state).without(button),
-            mods: key_mods(button_release.state),
-            count: 0,
-            focus: false,
-            button,
-            wheel_delta: Vec2::ZERO,
-        };
-        self.with_handler(|h| h.mouse_up(&mouse_event));
+        let mouse_event = PointerEvent::from_button_release(button_release, scale);
+        self.with_handler(|h| h.pointer_up(&mouse_event));
         Ok(())
     }
 
@@ -1109,16 +1087,9 @@ impl Window {
             7 => (120.0, 0.0),
             _ => return Err(anyhow!("unexpected mouse wheel button: {}", button)),
         };
-        let mouse_event = MouseEvent {
-            pos: Point::new(event.event_x as f64, event.event_y as f64).to_dp(scale),
-            buttons: mouse_buttons(event.state),
-            mods: key_mods(event.state),
-            count: 0,
-            focus: false,
-            button: MouseButton::None,
-            wheel_delta: delta.into(),
-        };
-
+        let mut mouse_event = PointerEvent::from_button_press(event, scale);
+        mouse_event.button = Button::None;
+        mouse_event.wheel_delta = delta.into();
         self.with_handler(|h| h.wheel(&mouse_event));
         Ok(())
     }
@@ -1128,17 +1099,8 @@ impl Window {
         motion_notify: &xproto::MotionNotifyEvent,
     ) -> Result<(), Error> {
         let scale = self.scale.get();
-        let mouse_event = MouseEvent {
-            pos: Point::new(motion_notify.event_x as f64, motion_notify.event_y as f64)
-                .to_dp(scale),
-            buttons: mouse_buttons(motion_notify.state),
-            mods: key_mods(motion_notify.state),
-            count: 0,
-            focus: false,
-            button: MouseButton::None,
-            wheel_delta: Vec2::ZERO,
-        };
-        self.with_handler(|h| h.mouse_move(&mouse_event));
+        let mouse_event = PointerEvent::from_motion_notify(motion_notify, scale);
+        self.with_handler(|h| h.pointer_move(&mouse_event));
         Ok(())
     }
 
@@ -1430,65 +1392,6 @@ impl PresentData {
         self.serial += 1;
         Ok(())
     }
-}
-
-// Converts from, e.g., the `details` field of `xcb::xproto::ButtonPressEvent`
-fn mouse_button(button: u8) -> MouseButton {
-    match button {
-        1 => MouseButton::Left,
-        2 => MouseButton::Middle,
-        3 => MouseButton::Right,
-        // buttons 4 through 7 are for scrolling.
-        4..=7 => MouseButton::None,
-        8 => MouseButton::X1,
-        9 => MouseButton::X2,
-        _ => {
-            warn!("unknown mouse button code {}", button);
-            MouseButton::None
-        }
-    }
-}
-
-// Extracts the mouse buttons from, e.g., the `state` field of
-// `xcb::xproto::ButtonPressEvent`
-fn mouse_buttons(mods: u16) -> MouseButtons {
-    let mut buttons = MouseButtons::new();
-    let button_masks = &[
-        (xproto::ButtonMask::M1, MouseButton::Left),
-        (xproto::ButtonMask::M2, MouseButton::Middle),
-        (xproto::ButtonMask::M3, MouseButton::Right),
-        // TODO: determine the X1/X2 state, using our own caching if necessary.
-        // BUTTON_MASK_4/5 do not work: they are for scroll events.
-    ];
-    for (mask, button) in button_masks {
-        if mods & u16::from(*mask) != 0 {
-            buttons.insert(*button);
-        }
-    }
-    buttons
-}
-
-// Extracts the keyboard modifiers from, e.g., the `state` field of
-// `xcb::xproto::ButtonPressEvent`
-fn key_mods(mods: u16) -> Modifiers {
-    let mut ret = Modifiers::default();
-    let mut key_masks = [
-        (xproto::ModMask::SHIFT, Modifiers::SHIFT),
-        (xproto::ModMask::CONTROL, Modifiers::CONTROL),
-        // X11's mod keys are configurable, but this seems
-        // like a reasonable default for US keyboards, at least,
-        // where the "windows" key seems to be MOD_MASK_4.
-        (xproto::ModMask::M1, Modifiers::ALT),
-        (xproto::ModMask::M2, Modifiers::NUM_LOCK),
-        (xproto::ModMask::M4, Modifiers::META),
-        (xproto::ModMask::LOCK, Modifiers::CAPS_LOCK),
-    ];
-    for (mask, modifiers) in &mut key_masks {
-        if mods & u16::from(*mask) != 0 {
-            ret |= *modifiers;
-        }
-    }
-    ret
 }
 
 /// A handle that can get used to schedule an idle handler. Note that

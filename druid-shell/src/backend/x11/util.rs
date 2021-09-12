@@ -23,9 +23,10 @@ use x11rb::connection::RequestConnection;
 use x11rb::errors::ReplyError;
 use x11rb::protocol::randr::{ConnectionExt, ModeFlag};
 use x11rb::protocol::render::{self, ConnectionExt as _};
-use x11rb::protocol::xproto::{Screen, Visualid, Visualtype, Window};
+use x11rb::protocol::xproto::{self, Screen, Visualid, Visualtype, Window};
 use x11rb::xcb_ffi::XCBConnection;
 
+use crate::keyboard::Modifiers;
 use crate::window::TimerToken;
 
 // See: https://github.com/rtbo/rust-xcb/blob/master/examples/randr_screen_modes.rs
@@ -189,4 +190,27 @@ impl PartialOrd for Timer {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
+}
+
+// Extracts the keyboard modifiers from, e.g., the `state` field of
+// `xcb::xproto::ButtonPressEvent`
+pub(crate) fn key_mods(mods: u16) -> Modifiers {
+    let mut ret = Modifiers::default();
+    let mut key_masks = [
+        (xproto::ModMask::SHIFT, Modifiers::SHIFT),
+        (xproto::ModMask::CONTROL, Modifiers::CONTROL),
+        // X11's mod keys are configurable, but this seems
+        // like a reasonable default for US keyboards, at least,
+        // where the "windows" key seems to be MOD_MASK_4.
+        (xproto::ModMask::M1, Modifiers::ALT),
+        (xproto::ModMask::M2, Modifiers::NUM_LOCK),
+        (xproto::ModMask::M4, Modifiers::META),
+        (xproto::ModMask::LOCK, Modifiers::CAPS_LOCK),
+    ];
+    for (mask, modifiers) in &mut key_masks {
+        if mods & u16::from(*mask) != 0 {
+            ret |= *modifiers;
+        }
+    }
+    ret
 }
