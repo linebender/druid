@@ -76,6 +76,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 - x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 - remove prefix from platform extension traits ([#1873] by [@Maan2003])
+- `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
 
 ### Deprecated
 
@@ -99,6 +100,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 - `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
 - RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
+- `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
 
 ### Visual
 
@@ -784,6 +786,8 @@ Last release without a changelog :(
 [#1886]: https://github.com/linebender/druid/pull/1886
 [#1907]: https://github.com/linebender/druid/pull/1907
 [#1929]: https://github.com/linebender/druid/pull/1929
+[#1929]: https://github.com/linebender/druid/pull/1967
+
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
