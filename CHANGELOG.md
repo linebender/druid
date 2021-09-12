@@ -99,6 +99,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 - `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
 - RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
+- GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
 
 ### Visual
 
@@ -784,6 +785,7 @@ Last release without a changelog :(
 [#1886]: https://github.com/linebender/druid/pull/1886
 [#1907]: https://github.com/linebender/druid/pull/1907
 [#1929]: https://github.com/linebender/druid/pull/1929
+[#1947]: https://github.com/linebender/druid/pull/1947
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
