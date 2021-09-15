@@ -19,12 +19,10 @@ use tracing::{instrument, trace};
 
 use crate::{
     kurbo::BezPath,
-    piet::{
-        self, FixedLinearGradient, GradientStop, LineCap, LineJoin, RadialGradient, StrokeStyle,
-    },
+    piet::{self, GradientStop, LineCap, LineJoin, LinearGradient, RadialGradient, StrokeStyle},
     widget::common::FillStrat,
     widget::prelude::*,
-    Affine, Color, Data, Point, Rect, UnitPoint,
+    Affine, Color, Data, Rect, UnitPoint,
 };
 
 /// A widget that renders a SVG
@@ -345,12 +343,9 @@ impl SvgRenderer {
     }
 
     fn linear_gradient_def(&mut self, lg: &usvg::LinearGradient) {
-        // Get start and stop of gradient and transform them to image space (TODO check we need to
-        // apply offset matrix)
-        let start = self.offset_matrix * Point::new(lg.x1, lg.y1);
-        let end = self.offset_matrix * Point::new(lg.x2, lg.y2);
+        let start = UnitPoint::new(lg.x1, lg.y1);
+        let end = UnitPoint::new(lg.x2, lg.y2);
         let stops: Vec<_> = lg
-            .base
             .stops
             .iter()
             .map(|stop| GradientStop {
@@ -359,10 +354,9 @@ impl SvgRenderer {
             })
             .collect();
 
-        let gradient = piet::FixedGradient::Linear(FixedLinearGradient { start, end, stops });
-        trace!("gradient: {} => {:?}", lg.id, gradient);
+        let gradient = LinearGradient::new(start, end, stops);
         self.defs
-            .add_def(lg.id.clone(), piet::PaintBrush::Fixed(gradient));
+            .add_def(lg.id.clone(), piet::PaintBrush::Linear(gradient));
     }
 
     fn radial_gradient_def(&mut self, g: &usvg::RadialGradient) {
@@ -394,7 +388,7 @@ impl SvgRenderer {
             }
             usvg::Paint::Link(id) => match self.defs.find(id) {
                 None => {
-                    // generally this occurs due to unimplement SVG functionality.
+                    // generally this occurs due to unimplemented SVG functionality.
                     // until the SVG implementation matures log as a trace.
                     // other logging above will detect and emit the error that
                     // triggered the issue.
