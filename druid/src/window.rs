@@ -426,7 +426,10 @@ impl<T: Data> Window<T> {
         for &r in invalid.rects() {
             piet.clear(
                 Some(r),
-                if self.transparent {
+                if self.transparent
+                    && (env.get(crate::theme::WINDOW_BACKGROUND_COLOR).as_rgba().3 - 1.0).abs()
+                        < f64::EPSILON
+                {
                     Color::TRANSPARENT
                 } else {
                     env.get(crate::theme::WINDOW_BACKGROUND_COLOR)

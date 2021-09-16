@@ -100,7 +100,7 @@ impl<T: Data> PendingWindow<T> {
             root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
             menu: MenuManager::platform_default(),
-            transparent: false,
+            transparent: true,
             size_policy: WindowSizePolicy::User,
         }
     }
@@ -278,7 +278,7 @@ impl Default for WindowConfig {
             position: None,
             resizable: None,
             show_titlebar: None,
-            transparent: None,
+            transparent: Some(true),
             level: None,
             state: None,
         }
@@ -554,7 +554,19 @@ impl<T: Data> WindowDesc<T> {
 
     /// Builder-style method to set whether this window's background should be
     /// transparent.
+    ///
+    /// the transparent setting in general
+    /// is unnecessary, simply setting the alpha channel on the
+    /// window background color < 1.0 should be sufficient to make
+    /// the determination to enable blending underlying windows/desktops.
+    /// as a result deprecate this setting. it remains primarily
+    /// because of concerns over automatically blending having potential performance
+    /// implications, and even though there is an implementation path to remove
+    /// this setting and still prevent any performance regressions, its a larger
+    /// change that can wait for a bit. see https://github.com/linebender/druid/pull/1973
+    /// for details.
     pub fn transparent(mut self, transparent: bool) -> Self {
+        tracing::warn!("setting transparent is deprecated, and should only be used to disable transparency for performance reasons.");
         self.config = self.config.transparent(transparent);
         self.pending = self.pending.transparent(transparent);
         self
