@@ -14,12 +14,13 @@
 
 //! A container that scrolls its contents.
 
-use crate::debug_state::DebugState;
-use crate::widget::prelude::*;
-use crate::widget::{Axis, ClipBox, Viewport};
-use crate::{scroll_component::*, Data, Rect, Vec2, Selector, Key};
 use tracing::{instrument, trace};
-use crate::commands::SCROLL_TO;
+
+use crate::{Data, Rect, scroll_component::*, Vec2};
+use crate::commands::SCROLL_TO_VIEW;
+use crate::debug_state::DebugState;
+use crate::widget::{Axis, ClipBox};
+use crate::widget::prelude::*;
 
 /// A container that scrolls its contents.
 ///
@@ -194,7 +195,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         if !self.scroll_component.are_bars_held() {
             // We only scroll to the component if the user is not trying to move the scrollbar.
             if let Event::Notification(notification) = event {
-                if let Some(&global_highlight_rect) = notification.get(SCROLL_TO) {
+                if let Some(&global_highlight_rect) = notification.get(SCROLL_TO_VIEW) {
                     ctx.set_handled();
 
                     self.clip.with_port(|port| {
@@ -261,37 +262,4 @@ fn log_size_warnings(size: Size) {
     if size.height.is_infinite() {
         tracing::warn!("Scroll widget's child has an infinite height.");
     }
-}
-
-pub fn default_scroll_to_view_handling(ctx: &mut EventCtx, port: &mut Viewport, global_highlight_rect: Rect) {
-    let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-    let content_highlight_rect = global_highlight_rect - global_content_offset;
-    let view_rect = Rect::from_origin_size(port.view_origin, port.view_size);
-
-    let mut new_origin = port.view_origin;
-    //TODO: decide whether the scroll should pan to the upper-left corner of the
-    // requested area if the view area is smaller than the requested area and
-    // already inside of it.
-    if content_highlight_rect.x0 < view_rect.x0 || content_highlight_rect.size().width > port.view_size.width {
-        //Prefer the left over the right side if the scroll_to content is bigger than the view_size
-        new_origin.x = content_highlight_rect.x0;
-    } else if content_highlight_rect.x1 > view_rect.x1 {
-        new_origin.x = content_highlight_rect.x1 - port.view_size.width;
-    }
-    if content_highlight_rect.y0 < view_rect.y0 || content_highlight_rect.size().height > port.view_size.height {
-        //Prefer the upper over the lower side if the scroll_to content is bigger than the view_size
-        new_origin.y = content_highlight_rect.y0;
-    } else if content_highlight_rect.y1 > view_rect.y1 {
-        new_origin.y = content_highlight_rect.y1 - port.view_size.height;
-    }
-
-    if port.pan_to(new_origin) {
-        ctx.request_paint();
-    }
-
-    // This is a new value since view_origin has changed in the meantime
-    let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-
-    //
-    ctx.submit_notification(SCROLL_TO.with(content_highlight_rect + global_content_offset));
 }

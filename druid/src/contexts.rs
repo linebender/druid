@@ -23,6 +23,7 @@ use std::{
 };
 use tracing::{error, trace, warn};
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::menu::ContextMenu;
@@ -35,8 +36,6 @@ use crate::{
     ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
     Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
-use crate::widget::Scroll;
-use crate::commands::SCROLL_TO;
 
 /// A macro for implementing methods on multiple contexts.
 ///
@@ -466,9 +465,9 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// [`Scroll`]: widget::Scroll
     /// [`hidden`]: Event::should_propagate_to_hidden
-        pub fn scroll_to_view(&mut self) {
-            self.scroll_area_to_view(self.size().to_rect())
-        }
+    pub fn scroll_to_view(&mut self) {
+        self.scroll_area_to_view(self.size().to_rect())
+    }
 });
 
 // methods on everyone but paintctx
@@ -715,7 +714,7 @@ impl EventCtx<'_, '_> {
     /// [`hidden`]: Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_notification(SCROLL_TO.with(area + self.window_origin().to_vec2()));
+        self.submit_notification(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
     }
 }
 
@@ -769,7 +768,11 @@ impl UpdateCtx<'_, '_> {
     /// [`hidden`]: Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
+        self.submit_command(Command::new(
+            SCROLL_TO_VIEW,
+            area + self.window_origin().to_vec2(),
+            self.widget_id(),
+        ));
     }
 }
 
@@ -819,7 +822,11 @@ impl LifeCycleCtx<'_, '_> {
     /// [`hidden`]: Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
+        self.submit_command(Command::new(
+            SCROLL_TO_VIEW,
+            area + self.window_origin().to_vec2(),
+            self.widget_id(),
+        ));
     }
 }
 

@@ -19,6 +19,7 @@ use tracing::{info_span, trace, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
+use crate::commands::SCROLL_TO_VIEW;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
@@ -29,8 +30,6 @@ use crate::{
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
     RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
 };
-use crate::widget::Scroll;
-use crate::commands::SCROLL_TO;
 
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<Command>;
@@ -851,11 +850,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                     ctx.is_handled = true
                 }
-                Event::Command(cmd) if cmd.is(SCROLL_TO) => {
+                Event::Command(cmd) if cmd.is(SCROLL_TO_VIEW) => {
                     // Submit the SCROLL_TO notification if it was used from a update or lifecycle
                     // call.
-                    let rect = cmd.get_unchecked(SCROLL_TO);
-                    inner_ctx.submit_notification(SCROLL_TO.with(*rect));
+                    let rect = cmd.get_unchecked(SCROLL_TO_VIEW);
+                    inner_ctx.submit_notification(SCROLL_TO_VIEW.with(*rect));
                     ctx.is_handled = true;
                 }
                 _ => {
@@ -978,7 +977,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.has_focus = change;
                         extra_event = Some(LifeCycle::FocusChanged(change));
 
-                        if change == true {
+                        if change {
                             //TODO: decide whether this should be done manually
                             ctx.scroll_to_view();
                         }

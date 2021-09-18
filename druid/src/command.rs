@@ -175,7 +175,10 @@ pub mod sys {
     use std::any::Any;
 
     use super::Selector;
-    use crate::{sub_window::{SubWindowDesc, SubWindowUpdate}, FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig, Rect};
+    use crate::{
+        sub_window::{SubWindowDesc, SubWindowUpdate},
+        FileDialogOptions, FileInfo, Rect, SingleUse, WidgetId, WindowConfig,
+    };
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -325,7 +328,21 @@ pub mod sys {
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
         Selector::new("druid-builtin.invalidate-ime");
 
-    pub const SCROLL_TO: Selector<Rect> = Selector::new("druid_builtin.scroll_to");
+    /// Informs this widget, that a child wants a specific region to be shown. The payload is the
+    /// requested region in global coordinates.
+    ///
+    /// This notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// are called.
+    ///
+    /// Widgets which hide their children, should always call `ctx.set_handled()` in response to
+    /// avoid unintended behaviour from widgets further down the tree.
+    /// If possible the widget should move its children to bring the area into view and then submit
+    /// a new notification with the region translated by the amount, the child it contained was
+    /// translated.
+    ///
+    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_are_to_view()
+    pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid_builtin.scroll_to");
 
     /// A change that has occured to text state, and needs to be
     /// communicated to the platform.

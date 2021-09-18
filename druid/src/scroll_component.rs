@@ -17,10 +17,11 @@
 
 use std::time::Duration;
 
+use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
+use crate::command::sys::SCROLL_TO_VIEW;
 use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
-use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 #[derive(Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
@@ -515,12 +516,63 @@ impl ScrollComponent {
     }
 }
 
+/// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
+///
+/// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+/// are called.
+///
+/// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+/// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+/// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+pub fn default_scroll_to_view_handling(
+    ctx: &mut EventCtx,
+    port: &mut Viewport,
+    global_highlight_rect: Rect,
+) {
+    let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+    let content_highlight_rect = global_highlight_rect - global_content_offset;
+    let view_rect = Rect::from_origin_size(port.view_origin, port.view_size);
+
+    let mut new_origin = port.view_origin;
+    //TODO: decide whether the scroll should pan to the upper-left corner of the
+    // requested area if the view area is smaller than the requested area and
+    // already inside of it.
+    if content_highlight_rect.x0 < view_rect.x0
+        || content_highlight_rect.size().width > port.view_size.width
+    {
+        //Prefer the left over the right side if the scroll_to content is bigger than the view_size
+        new_origin.x = content_highlight_rect.x0;
+    } else if content_highlight_rect.x1 > view_rect.x1 {
+        new_origin.x = content_highlight_rect.x1 - port.view_size.width;
+    }
+    if content_highlight_rect.y0 < view_rect.y0
+        || content_highlight_rect.size().height > port.view_size.height
+    {
+        //Prefer the upper over the lower side if the scroll_to content is bigger than the view_size
+        new_origin.y = content_highlight_rect.y0;
+    } else if content_highlight_rect.y1 > view_rect.y1 {
+        new_origin.y = content_highlight_rect.y1 - port.view_size.height;
+    }
+
+    if port.pan_to(new_origin) {
+        ctx.request_paint();
+    }
+
+    // This is a new value since view_origin has changed in the meantime
+    let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+
+    //
+    ctx.submit_notification(SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset));
+}
+
+
 #[cfg(test)]
 mod tests {
     use float_cmp::approx_eq;
 
-    use super::*;
     use crate::kurbo::Size;
+
+    use super::*;
 
     const TEST_SCROLLBAR_WIDTH: f64 = 11.0;
     const TEST_SCROLLBAR_PAD: f64 = 3.0;
