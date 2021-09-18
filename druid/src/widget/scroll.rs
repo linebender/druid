@@ -16,11 +16,11 @@
 
 use tracing::{instrument, trace};
 
-use crate::{Data, Rect, scroll_component::*, Vec2};
 use crate::commands::SCROLL_TO_VIEW;
 use crate::debug_state::DebugState;
-use crate::widget::{Axis, ClipBox};
 use crate::widget::prelude::*;
+use crate::widget::{Axis, ClipBox};
+use crate::{scroll_component::*, Data, Rect, Vec2};
 
 /// A container that scrolls its contents.
 ///

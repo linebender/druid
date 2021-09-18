@@ -17,11 +17,11 @@
 
 use std::time::Duration;
 
-use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 use crate::command::sys::SCROLL_TO_VIEW;
 use crate::kurbo::{Point, Rect, Vec2};
 use crate::theme;
 use crate::widget::{Axis, Viewport};
+use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
 #[derive(Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
@@ -564,7 +564,6 @@ pub fn default_scroll_to_view_handling(
     //
     ctx.submit_notification(SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset));
 }
-
 
 #[cfg(test)]
 mod tests {
