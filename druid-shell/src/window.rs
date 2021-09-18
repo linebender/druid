@@ -181,7 +181,7 @@ pub enum WindowState {
 }
 
 /// A handle to a platform window object.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct WindowHandle(pub(crate) backend::WindowHandle);
 
 impl WindowHandle {

@@ -110,6 +110,17 @@ pub struct WindowHandle {
     marker: std::marker::PhantomData<*const ()>,
 }
 
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.state.upgrade(), other.state.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
+
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
@@ -340,7 +351,7 @@ impl WindowBuilder {
                 WindowLevel::AppWindow => false,
                 WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
             };
-            if let Some(window) = window.get_window() {
+            if let Some(window) = window.window() {
                 window.set_override_redirect(override_redirect);
             }
         }
@@ -971,7 +982,7 @@ impl WindowHandle {
 
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
-            let (x, y) = state.window.get_position();
+            let (x, y) = state.window.position();
             let mut position = Point::new(x as f64, y as f64);
             if let Some(parent_state) = &state.parent {
                 let pos = (*parent_state).get_position();

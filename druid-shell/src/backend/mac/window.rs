@@ -103,6 +103,16 @@ pub(crate) struct WindowHandle {
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
 }
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.idle_queue.upgrade(), other.idle_queue.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 impl std::fmt::Debug for WindowHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {

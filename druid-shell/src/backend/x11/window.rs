@@ -1549,6 +1549,12 @@ pub(crate) struct WindowHandle {
     id: u32,
     window: Weak<Window>,
 }
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id;
+    }
+}
+impl Eq for WindowHandle {}
 
 impl WindowHandle {
     fn new(id: u32, window: Weak<Window>) -> WindowHandle {

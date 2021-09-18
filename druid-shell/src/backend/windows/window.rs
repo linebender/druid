@@ -169,6 +169,17 @@ pub struct WindowHandle {
     state: Weak<WindowState>,
 }
 
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.state.upgrade(), other.state.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
+
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
