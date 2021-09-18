@@ -89,7 +89,7 @@ pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
 pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
-pub use scroll::Scroll;
+pub use scroll::{Scroll, default_scroll_to_view_handling};
 pub use sized_box::SizedBox;
 pub use slider::Slider;
 pub use spinner::Spinner;
