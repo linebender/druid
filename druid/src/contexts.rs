@@ -36,6 +36,7 @@ use crate::{
     Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 use crate::widget::Scroll;
+use crate::commands::SCROLL_TO;
 
 /// A macro for implementing methods on multiple contexts.
 ///
@@ -481,7 +482,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// [`hidden`]: Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_command(Scroll::SCROLL_TO.with(area + self.window_origin().to_vec2()));
+        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
     }
 });
 

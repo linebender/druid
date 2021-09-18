@@ -175,10 +175,7 @@ pub mod sys {
     use std::any::Any;
 
     use super::Selector;
-    use crate::{
-        sub_window::{SubWindowDesc, SubWindowUpdate},
-        FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig,
-    };
+    use crate::{sub_window::{SubWindowDesc, SubWindowUpdate}, FileDialogOptions, FileInfo, SingleUse, WidgetId, WindowConfig, Rect};
 
     /// Quit the running application. This command is handled by the druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
@@ -327,6 +324,8 @@ pub mod sys {
     /// Text input state has changed, and we need to notify the platform.
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
         Selector::new("druid-builtin.invalidate-ime");
+
+    pub const SCROLL_TO: Selector<Rect> = Selector::new("druid_builtin.scroll_to");
 
     /// A change that has occured to text state, and needs to be
     /// communicated to the platform.

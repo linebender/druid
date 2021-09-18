@@ -30,6 +30,7 @@ use crate::{
     RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
 };
 use crate::widget::Scroll;
+use crate::commands::SCROLL_TO;
 
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<Command>;
@@ -850,15 +851,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                     ctx.is_handled = true
                 }
-                Event::Command(cmd) if cmd.is(Scroll::SCROLL_TO) => {
-                    if let Some(rect) = cmd
-                        .get_unchecked(Scroll::SCROLL_TO)
-                        .downcast_ref::<T>()
-                    {
-                        *data = (*update).clone();
-                    }
+                Event::Command(cmd) if cmd.is(SCROLL_TO) => {
+                    // Submit the SCROLL_TO notification if it was used from a update or lifecycle
+                    // call.
+                    let rect = cmd.get_unchecked(SCROLL_TO);
+                    inner_ctx.submit_notification(SCROLL_TO.with(*rect));
                     ctx.is_handled = true;
-                    inner_ctx.submit_notification(Scroll::SCROLL_TO.with(*rect));
                 }
                 _ => {
                     self.inner.event(&mut inner_ctx, inner_event, data, env);
@@ -979,6 +977,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if let Some(change) = this_changed {
                         self.state.has_focus = change;
                         extra_event = Some(LifeCycle::FocusChanged(change));
+
+                        if change == true {
+                            //TODO: decide whether this should be done manually
+                            ctx.scroll_to_view();
+                        }
                     } else {
                         self.state.has_focus = false;
                     }
