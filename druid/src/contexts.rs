@@ -454,6 +454,35 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.submit_command(commands::NEW_SUB_WINDOW.with(SingleUse::new(req)));
         window_id
     }
+
+    /// Scrolls this widget into view.
+    ///
+    /// If this widget is only partially visible or not visible at all because of [`Scroll`]s
+    /// it is wrapped in, they will do the minimum amount of scrolling necessary to bring this
+    /// widget fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: widget::Scroll
+    /// [`hidden`]: Event::should_propagate_to_hidden
+        pub fn scroll_to_view(&mut self) {
+            self.scroll_area_to_view(self.size().to_rect())
+        }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: widget::Scroll
+    /// [`hidden`]: Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(Scroll::SCROLL_TO.with(area + self.window_origin().to_vec2()));
+    }
 });
 
 // methods on everyone but paintctx
@@ -477,35 +506,6 @@ impl_context_method!(
         pub fn submit_command(&mut self, cmd: impl Into<Command>) {
             trace!("submit_command");
             self.state.submit_command(cmd.into())
-        }
-
-        /// Scrolls this widget into view.
-        ///
-        /// If this widget is only partially visible or not visible at all because of [`Scroll`]s
-        /// it is wrapped in, they will do the minimum amount of scrolling necessary to bring this
-        /// widget fully into view.
-        ///
-        /// If the widget is [`hidden`], this method has no effect.
-        ///
-        /// [`Scroll`]: widget::Scroll
-        /// [`hidden`]: Event::should_propagate_to_hidden
-        pub fn scroll_to_view(&mut self) {
-            self.scroll_area_to_view(self.size().to_rect())
-        }
-
-        /// Scrolls the area into view.
-        ///
-        /// If the area is only partially visible or not visible at all because of [`Scroll`]s
-        /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
-        /// bring the area fully into view.
-        ///
-        /// If the widget is [`hidden`], this method has no effect.
-        ///
-        /// [`Scroll`]: widget::Scroll
-        /// [`hidden`]: Event::should_propagate_to_hidden
-        pub fn scroll_area_to_view(&mut self, area: Rect) {
-            //TODO: only do something if this widget is not hidden
-            self.submit_command(Scroll::SCROLL_TO.with(area + self.window_origin().to_vec2()));
         }
 
         /// Returns an [`ExtEventSink`] that can be moved between threads,
