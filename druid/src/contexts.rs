@@ -463,8 +463,8 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// If the widget is [`hidden`], this method has no effect.
     ///
-    /// [`Scroll`]: widget::Scroll
-    /// [`hidden`]: Event::should_propagate_to_hidden
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_to_view(&mut self) {
         self.scroll_area_to_view(self.size().to_rect())
     }
@@ -710,8 +710,8 @@ impl EventCtx<'_, '_> {
     ///
     /// If the widget is [`hidden`], this method has no effect.
     ///
-    /// [`Scroll`]: widget::Scroll
-    /// [`hidden`]: Event::should_propagate_to_hidden
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
         self.submit_notification(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
@@ -764,8 +764,8 @@ impl UpdateCtx<'_, '_> {
     ///
     /// If the widget is [`hidden`], this method has no effect.
     ///
-    /// [`Scroll`]: widget::Scroll
-    /// [`hidden`]: Event::should_propagate_to_hidden
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
         self.submit_command(Command::new(
@@ -818,8 +818,8 @@ impl LifeCycleCtx<'_, '_> {
     ///
     /// If the widget is [`hidden`], this method has no effect.
     ///
-    /// [`Scroll`]: widget::Scroll
-    /// [`hidden`]: Event::should_propagate_to_hidden
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
         self.submit_command(Command::new(

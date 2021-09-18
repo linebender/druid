@@ -341,7 +341,7 @@ pub mod sys {
     /// translated.
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
-    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_are_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid_builtin.scroll_to");
 
     /// A change that has occured to text state, and needs to be
