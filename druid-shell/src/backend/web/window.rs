@@ -83,7 +83,7 @@ impl PartialEq for WindowHandle {
     fn eq(&self, other: &Self) -> bool {
         match (self.0.upgrade(), other.0.upgrade()) {
             (None, None) => true,
-            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (Some(s), Some(o)) => std::rc::Rc::ptr_eq(&s, &o),
             (_, _) => false,
         }
     }
