@@ -24,7 +24,7 @@ use tracing::{instrument, trace};
 pub struct Viewport {
     /// The size of the area that we have a viewport into.
     pub content_size: Size,
-    /// The origin of the view rectangle.
+    /// The origin of the view rectangle, relative to the content.
     pub view_origin: Point,
     /// The size of the view rectangle.
     pub view_size: Size,

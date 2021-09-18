@@ -17,7 +17,7 @@
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
-use crate::{scroll_component::*, Data, Rect, Vec2};
+use crate::{scroll_component::*, Data, Rect, Vec2, Selector};
 use tracing::{instrument, trace};
 
 /// A container that scrolls its contents.
@@ -38,6 +38,8 @@ pub struct Scroll<T, W> {
 }
 
 impl<T, W: Widget<T>> Scroll<T, W> {
+    const SCROLL_TO: Selector<Rect> = Selector::new("org.linebender.druid.scroll.scroll_to");
+
     /// Create a new scroll container.
     ///
     /// This method will allow scrolling in all directions if child's bounds
@@ -184,9 +186,50 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             self.clip.event(ctx, event, data, env);
         }
 
+        // Handle scroll after the inner widget processed the events, to prefer inner widgets while
+        // scrolling.
         self.clip.with_port(|port| {
             scroll_component.handle_scroll(port, ctx, event, env);
         });
+
+        if !self.scroll_component.are_bars_held() {
+            // We only scroll to the component if the user is not trying to move the scrollbar.
+            if let Event::Notification(notification) = event {
+                if let Some(&global_highlight_rect) = notification.get(Self::SCROLL_TO) {
+                    ctx.set_handled();
+
+                    self.clip.with_port(|port| {
+                        let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+                        let content_highlight_rect = global_highlight_rect - global_content_offset;
+                        let view_rect = Rect::from_origin_size(port.view_origin, port.view_size);
+
+                        let mut new_origin = port.view_origin;
+                        if content_highlight_rect.x0 < view_rect.x0 || content_highlight_rect.size().width > port.view_size.width {
+                            //Prefer the left over the right side if the scroll_to content is bigger than the view_size
+                            new_origin.x = content_highlight_rect.x0;
+                        } else if content_highlight_rect.x1 > view_rect.x1 {
+                            new_origin.x = content_highlight_rect.x1 - port.view_size.width;
+                        }
+                        if content_highlight_rect.y0 < view_rect.y0 || content_highlight_rect.size().height > port.view_size.height {
+                            //Prefer the upper over the lower side if the scroll_to content is bigger than the view_size
+                            new_origin.y = content_highlight_rect.y0;
+                        } else if content_highlight_rect.y1 > view_rect.y1 {
+                            new_origin.y = content_highlight_rect.y1 - port.view_size.height;
+                        }
+
+                        if port.pan_to(new_origin) {
+                            ctx.request_paint();
+                        }
+
+                        // This is a new value since view_origin has changed in the meantime
+                        let global_content_offset = ctx.window_origin().to_vec2() + port.view_origin.to_vec2();
+
+                        //
+                        ctx.submit_notification(Self::SCROLL_TO.with(content_highlight_rect + global_content_offset));
+                    });
+                }
+            }
+        }
     }
 
     #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
