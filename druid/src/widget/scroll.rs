@@ -38,7 +38,7 @@ pub struct Scroll<T, W> {
 }
 
 impl<T, W: Widget<T>> Scroll<T, W> {
-    const SCROLL_TO: Selector<Rect> = Selector::new("org.linebender.druid.scroll.scroll_to");
+    pub const SCROLL_TO: Selector<Rect> = Selector::new("org.linebender.druid.scroll.scroll_to");
 
     /// Create a new scroll container.
     ///
@@ -204,6 +204,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                         let view_rect = Rect::from_origin_size(port.view_origin, port.view_size);
 
                         let mut new_origin = port.view_origin;
+                        //TODO: decide whether the scroll should pan to the upper-left corner of the
+                        // requested area if the view area is smaller than the requested area and
+                        // already inside of it.
                         if content_highlight_rect.x0 < view_rect.x0 || content_highlight_rect.size().width > port.view_size.width {
                             //Prefer the left over the right side if the scroll_to content is bigger than the view_size
                             new_origin.x = content_highlight_rect.x0;

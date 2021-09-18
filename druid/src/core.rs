@@ -29,6 +29,7 @@ use crate::{
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
     RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
 };
+use crate::widget::Scroll;
 
 /// Our queue type
 pub(crate) type CommandQueue = VecDeque<Command>;
@@ -848,6 +849,16 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         *data = (*update).clone();
                     }
                     ctx.is_handled = true
+                }
+                Event::Command(cmd) if cmd.is(Scroll::SCROLL_TO) => {
+                    if let Some(rect) = cmd
+                        .get_unchecked(Scroll::SCROLL_TO)
+                        .downcast_ref::<T>()
+                    {
+                        *data = (*update).clone();
+                    }
+                    ctx.is_handled = true;
+                    inner_ctx.submit_notification(Scroll::SCROLL_TO.with(*rect));
                 }
                 _ => {
                     self.inner.event(&mut inner_ctx, inner_event, data, env);
