@@ -903,7 +903,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     inner_ctx.is_handled = false;
                 } else if let Event::Notification(notification) = event {
                     // we will try again with the next parent
-                    inner_ctx.notifications.push_back(notification);
+                    inner_ctx.notifications.push_back(notification.with_route(self_id));
                 } else {
                     // could be unchecked but we avoid unsafe in druid :shrug:
                     unreachable!()
