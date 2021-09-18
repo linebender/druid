@@ -469,21 +469,6 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         pub fn scroll_to_view(&mut self) {
             self.scroll_area_to_view(self.size().to_rect())
         }
-
-    /// Scrolls the area into view.
-    ///
-    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
-    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
-    /// bring the area fully into view.
-    ///
-    /// If the widget is [`hidden`], this method has no effect.
-    ///
-    /// [`Scroll`]: widget::Scroll
-    /// [`hidden`]: Event::should_propagate_to_hidden
-    pub fn scroll_area_to_view(&mut self, area: Rect) {
-        //TODO: only do something if this widget is not hidden
-        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
-    }
 });
 
 // methods on everyone but paintctx
@@ -717,6 +702,21 @@ impl EventCtx<'_, '_> {
         trace!("request_update");
         self.widget_state.request_update = true;
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: widget::Scroll
+    /// [`hidden`]: Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_notification(SCROLL_TO.with(area + self.window_origin().to_vec2()));
+    }
 }
 
 impl UpdateCtx<'_, '_> {
@@ -756,6 +756,21 @@ impl UpdateCtx<'_, '_> {
             None => false,
         }
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: widget::Scroll
+    /// [`hidden`]: Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
+    }
 }
 
 impl LifeCycleCtx<'_, '_> {
@@ -790,6 +805,21 @@ impl LifeCycleCtx<'_, '_> {
             widget_id: self.widget_id(),
         };
         self.widget_state.text_registrations.push(registration);
+    }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: widget::Scroll
+    /// [`hidden`]: Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(Command::new(SCROLL_TO, area + self.window_origin().to_vec2(), self.widget_id()));
     }
 }
 
