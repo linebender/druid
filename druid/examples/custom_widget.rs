@@ -63,11 +63,11 @@ impl Widget<String> for CustomWidget {
         // using this, since always make sure the widget is bounded.
         // If bx.max() is used in a scrolling widget things will probably
         // not work correctly.
-        if bc.is_width_bounded() | bc.is_height_bounded() {
+        if bc.is_width_bounded() && bc.is_height_bounded() {
+            bc.max()
+        } else {
             let size = Size::new(100.0, 100.0);
             bc.constrain(size)
-        } else {
-            bc.max()
         }
     }
 

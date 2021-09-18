@@ -53,7 +53,7 @@ pub(crate) const EXT_EVENT_IDLE_TOKEN: IdleToken = IdleToken::new(2);
 /// it publicly.
 pub struct DruidHandler<T> {
     /// The shared app state.
-    app_state: AppState<T>,
+    pub(crate) app_state: AppState<T>,
     /// The id for the current window.
     window_id: WindowId,
 }
@@ -611,6 +611,12 @@ impl<T: Data> AppState<T> {
             }
             other => tracing::warn!("unexpected idle token {:?}", other),
         }
+    }
+
+    pub(crate) fn handle_idle_callback(&mut self, cb: impl FnOnce(&mut T)) {
+        let mut inner = self.inner.borrow_mut();
+        cb(&mut inner.data);
+        inner.do_update();
     }
 
     fn process_commands(&mut self) {

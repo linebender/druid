@@ -46,7 +46,7 @@ kurbo = "0.8.1"
 
 tracing = "0.1.22"
 lazy_static = "1.4.0"
-time = "0.2.16"
+time = "0.3.0"
 cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
