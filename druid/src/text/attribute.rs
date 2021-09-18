@@ -39,6 +39,7 @@ pub struct AttributeSpans {
     fg_color: SpanSet<KeyOrValue<Color>>,
     style: SpanSet<FontStyle>,
     underline: SpanSet<bool>,
+    strikethrough: SpanSet<bool>,
     font_descriptor: SpanSet<KeyOrValue<FontDescriptor>>,
 }
 
@@ -100,6 +101,8 @@ pub enum Attribute {
     Style(FontStyle),
     /// Underline.
     Underline(bool),
+    /// Strikethrough
+    Strikethrough(bool),
     /// A [`FontDescriptor`](struct.FontDescriptor.html).
     Descriptor(KeyOrValue<FontDescriptor>),
 }
@@ -131,6 +134,7 @@ impl AttributeSpans {
             Attribute::TextColor(attr) => self.fg_color.add(Span::new(range, attr)),
             Attribute::Style(attr) => self.style.add(Span::new(range, attr)),
             Attribute::Underline(attr) => self.underline.add(Span::new(range, attr)),
+            Attribute::Strikethrough(attr) => self.strikethrough.add(Span::new(range, attr)),
             Attribute::Descriptor(attr) => self.font_descriptor.add(Span::new(range, attr)),
         }
     }
@@ -174,6 +178,11 @@ impl AttributeSpans {
             self.underline
                 .iter()
                 .map(|s| (s.range.clone(), PietAttr::Underline(s.attr))),
+        );
+        items.extend(
+            self.strikethrough
+                .iter()
+                .map(|s| (s.range.clone(), PietAttr::Strikethrough(s.attr))),
         );
 
         // sort by ascending start order; this is a stable sort
@@ -254,7 +263,7 @@ impl<T: Clone> SpanSet<T> {
     ///
     /// `new_len` is the length of the inserted text.
     //TODO: we could be smarter here about just extending the existing spans
-    //as requred for insertions in the interior of a span.
+    //as required for insertions in the interior of a span.
     //TODO: this isn't currently used; it should be used if we use spans with
     //some editable type.
     // the branches are much more readable without sharing code
@@ -322,7 +331,7 @@ impl Attribute {
         Attribute::FontSize(size.into())
     }
 
-    /// Create a new forground color attribute.
+    /// Create a new foreground color attribute.
     pub fn text_color(color: impl Into<KeyOrValue<Color>>) -> Self {
         Attribute::TextColor(color.into())
     }
@@ -345,6 +354,11 @@ impl Attribute {
     /// Create a new underline attribute.
     pub fn underline(underline: bool) -> Self {
         Attribute::Underline(underline)
+    }
+
+    /// Create a new strikethrough attribute.
+    pub fn strikethrough(strikethrough: bool) -> Self {
+        Attribute::Strikethrough(strikethrough)
     }
 
     /// Create a new `FontDescriptor` attribute.

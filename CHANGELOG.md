@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
 - System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
@@ -516,6 +517,7 @@ Last release without a changelog :(
 [@bjorn]: https://github.com/bjorn
 [@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
+[@jenra-uwu]: https://github.com/jenra-uwu
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -789,6 +791,7 @@ Last release without a changelog :(
 [#1929]: https://github.com/linebender/druid/pull/1929
 [#1947]: https://github.com/linebender/druid/pull/1947
 [#1967]: https://github.com/linebender/druid/pull/1967
+[#1953]: https://github.com/linebender/druid/pull/1953
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
