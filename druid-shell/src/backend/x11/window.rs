@@ -1551,7 +1551,7 @@ pub(crate) struct WindowHandle {
 }
 impl PartialEq for WindowHandle {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id;
+        self.id == other.id
     }
 }
 impl Eq for WindowHandle {}
