@@ -74,12 +74,17 @@ impl Lens<TodoItem, bool> for CompletedLens {
 struct Item {
     #[lens(name = "count_lens")]
     count: usize,
+    #[lens(ignore)]
+    complete: bool,
 }
 
 // This works now:
 impl Item {
     fn count(&self) -> usize {
         self.count
+    }
+    fn complete(&mut self) {
+        self.complete = true;
     }
 }
 // ANCHOR_END: lens_name

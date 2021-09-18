@@ -14,6 +14,7 @@
 
 //! A widget that accepts a closure to update the environment for its child.
 
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::WidgetWrapper;
 use crate::{Data, Point, WidgetPod};
@@ -103,6 +104,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         (self.f)(&mut new_env, data);
 
         self.child.paint(ctx, data, &new_env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

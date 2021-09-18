@@ -16,10 +16,12 @@
 
 use std::sync::Arc;
 
+use crate::env::KeyLike;
 use crate::piet::{PietTextLayoutBuilder, TextStorage as PietTextStorage};
 use crate::{Data, Env};
 
 use super::attribute::Link;
+use crate::UpdateCtx;
 
 /// A type that represents text that can be displayed.
 pub trait TextStorage: PietTextStorage + Data {
@@ -28,6 +30,13 @@ pub trait TextStorage: PietTextStorage + Data {
     #[allow(unused_variables)]
     fn add_attributes(&self, builder: PietTextLayoutBuilder, env: &Env) -> PietTextLayoutBuilder {
         builder
+    }
+
+    /// This is called whenever the Env changes and should return true
+    /// if the layout should be rebuilt.
+    #[allow(unused_variables)]
+    fn env_update(&self, ctx: &EnvUpdateCtx) -> bool {
+        false
     }
 
     /// Any additional [`Link`] attributes on this text.
@@ -42,6 +51,26 @@ pub trait TextStorage: PietTextStorage + Data {
     /// [`piet`]: https://docs.rs/piet
     fn links(&self) -> &[Link] {
         &[]
+    }
+}
+
+/// Provides information about keys change for more fine grained invalidation
+pub struct EnvUpdateCtx<'a, 'b>(&'a UpdateCtx<'a, 'b>);
+
+impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
+    /// Create an EnvChangeCtx for Widget::update
+    pub(crate) fn for_update(ctx: &'a UpdateCtx<'a, 'b>) -> Self {
+        Self(ctx)
+    }
+
+    /// Returns `true` if the given key has changed since the last [`env_update`]
+    /// call.
+    ///
+    /// See [`UpdateCtx::env_key_changed`] for more details.
+    ///
+    /// [`env_update`]: (TextStorage::env_update)
+    pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
+        self.0.env_key_changed(key)
     }
 }
 

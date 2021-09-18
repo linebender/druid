@@ -14,7 +14,7 @@
 
 //! An environment which is passed downward into the widget tree.
 
-use std::any;
+use std::any::{self, Any};
 use std::borrow::Borrow;
 use std::collections::{hash_map::Entry, HashMap};
 use std::fmt::{Debug, Formatter};
@@ -92,11 +92,8 @@ pub struct Key<T> {
     value_type: PhantomData<T>,
 }
 
-// we could do some serious deriving here: the set of types that can be stored
-// could be defined per-app
-// Also consider Box<Any> (though this would also impact debug).
 /// A dynamic type representing all values that can be stored in an environment.
-#[derive(Clone, Data, PartialEq)]
+#[derive(Clone, Data)]
 #[allow(missing_docs)]
 // ANCHOR: value_type
 pub enum Value {
@@ -110,6 +107,7 @@ pub enum Value {
     UnsignedInt(u64),
     String(ArcStr),
     Font(FontDescriptor),
+    Other(Arc<dyn Any + Send + Sync>),
 }
 // ANCHOR_END: value_type
 
@@ -472,6 +470,7 @@ impl Debug for Value {
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
             Value::Font(font) => write!(f, "Font {:?}", font),
+            Value::Other(other) => write!(f, "{:?}", other),
         }
     }
 }
@@ -614,6 +613,25 @@ impl_value_type!(Size, Size);
 impl_value_type!(Insets, Insets);
 impl_value_type!(ArcStr, String);
 impl_value_type!(FontDescriptor, Font);
+
+impl<T: 'static + Send + Sync> From<Arc<T>> for Value {
+    fn from(this: Arc<T>) -> Value {
+        Value::Other(this)
+    }
+}
+
+impl<T: 'static + Send + Sync> ValueType for Arc<T> {
+    fn try_from_value(v: &Value) -> Result<Self, ValueTypeError> {
+        let err = ValueTypeError {
+            expected: any::type_name::<T>(),
+            found: v.clone(),
+        };
+        match v {
+            Value::Other(o) => o.clone().downcast::<T>().map_err(|_| err),
+            _ => Err(err),
+        }
+    }
+}
 
 impl<T: ValueType> KeyOrValue<T> {
     /// Resolve the concrete type `T` from this `KeyOrValue`, using the provided

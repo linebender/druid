@@ -55,6 +55,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Slider` widget now warns if max < min and swaps the values ([#1882] by [@Maan2003])
 - Widget/Slider: Add stepping functionality ([#1875] by [@raymanfx])
 - Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
+- X11: detect keyboard layout ([#1779] by [@Maan2003])
+- WindowDesc::with_config ([#1929] by [@Maan2003])
 
 ### Changed
 
@@ -76,6 +78,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - remove prefix from platform extension traits ([#1873] by [@Maan2003])
 - Remove `set_level` on windows ([#1919] by [@JAicewizard])
 - Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
+- `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
 
 ### Deprecated
 
@@ -98,6 +101,9 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now supports changing cursors ([#1755] by [@Maan2003])
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 - `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
+- RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
+- GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
+- `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
 
 ### Visual
 
@@ -114,6 +120,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 
 ### Examples
+- Add readme ([#1423] by [@JAicewizard])
 
 ### Maintenance
 
@@ -694,7 +701,9 @@ Last release without a changelog :(
 [#1259]: https://github.com/linebender/druid/pull/1259
 [#1361]: https://github.com/linebender/druid/pull/1361
 [#1371]: https://github.com/linebender/druid/pull/1371
+[#1401]: https://github.com/linebender/druid/pull/1401
 [#1410]: https://github.com/linebender/druid/pull/1410
+[#1423]: https://github.com/linebender/druid/pull/1423
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
 [#1441]: https://github.com/linebender/druid/pull/1441
@@ -752,6 +761,7 @@ Last release without a changelog :(
 [#1761]: https://github.com/linebender/druid/pull/1761
 [#1764]: https://github.com/linebender/druid/pull/1764
 [#1772]: https://github.com/linebender/druid/pull/1772
+[#1779]: https://github.com/linebender/druid/pull/1779
 [#1787]: https://github.com/linebender/druid/pull/1787
 [#1801]: https://github.com/linebender/druid/pull/1800
 [#1802]: https://github.com/linebender/druid/pull/1802
@@ -777,7 +787,11 @@ Last release without a changelog :(
 [#1884]: https://github.com/linebender/druid/pull/1884
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
+[#1907]: https://github.com/linebender/druid/pull/1907
 [#1919]: https://github.com/linebender/druid/pull/1919
+[#1929]: https://github.com/linebender/druid/pull/1929
+[#1947]: https://github.com/linebender/druid/pull/1947
+[#1967]: https://github.com/linebender/druid/pull/1967
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

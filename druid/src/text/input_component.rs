@@ -348,6 +348,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 }
                 if let Some(selection) = selection {
                     self.borrow_mut().selection = selection;
+                    ctx.request_paint();
                 }
                 ctx.request_update();
             }

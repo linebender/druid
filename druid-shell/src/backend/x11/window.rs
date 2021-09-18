@@ -47,7 +47,7 @@ use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
-use crate::keyboard::{KeyEvent, KeyState, Modifiers};
+use crate::keyboard::{KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -57,10 +57,9 @@ use crate::text::{simulate_input, Event};
 use crate::window::{
     FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel,
 };
-use crate::{window, ScaledArea};
+use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
-use super::keycodes;
 use super::menu::Menu;
 use super::util::Timer;
 
@@ -766,10 +765,10 @@ impl Window {
         let invalid = std::mem::replace(&mut *borrow_mut!(self.invalid)?, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
-            let cairo_ctx = cairo::Context::new(&surface);
+            let cairo_ctx = cairo::Context::new(&surface).unwrap();
             let scale = self.scale.get();
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale);
+                let rect = rect.to_px(scale).round();
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
@@ -819,7 +818,7 @@ impl Window {
             buffers.idle_pixmaps.pop();
         } else {
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale).expand();
+                let rect = rect.to_px(scale).round();
                 let (x, y) = (rect.x0 as i16, rect.y0 as i16);
                 let (w, h) = (rect.width() as u16, rect.height() as u16);
                 self.app
@@ -910,8 +909,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.invalid)?.add_rect(rect);
+        let scale = self.scale.get();
+        borrow_mut!(self.invalid)?.add_rect(rect.to_px(scale).expand().to_dp(scale));
         Ok(())
     }
 
@@ -1041,26 +1040,12 @@ impl Window {
         Ok(())
     }
 
-    pub fn handle_key_press(&self, key_press: &xproto::KeyPressEvent) {
-        let hw_keycode = key_press.detail;
-        let code = keycodes::hardware_keycode_to_code(hw_keycode);
-        let mods = key_mods(key_press.state);
-        let key = keycodes::code_to_key(code, mods);
-        let location = keycodes::code_to_location(code);
-        let state = KeyState::Down;
-        let key_event = KeyEvent {
-            code,
-            key,
-            mods,
-            location,
-            state,
-            repeat: false,
-            is_composing: false,
-        };
-        self.with_handler(|h| {
-            if !h.key_down(key_event.clone()) {
-                simulate_input(h, self.active_text_field.get(), key_event);
+    pub fn handle_key_event(&self, event: KeyEvent) {
+        self.with_handler(|h| match event.state {
+            KeyState::Down => {
+                simulate_input(h, self.active_text_field.get(), event);
             }
+            KeyState::Up => h.key_up(event),
         });
     }
 
@@ -1401,7 +1386,7 @@ impl PresentData {
             .rects()
             .iter()
             .map(|r| {
-                let r = r.to_px(scale).expand();
+                let r = r.to_px(scale).round();
                 Rectangle {
                     x: r.x0 as i16,
                     y: r.y0 as i16,

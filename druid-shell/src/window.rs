@@ -149,7 +149,7 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,

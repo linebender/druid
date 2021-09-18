@@ -18,7 +18,7 @@ use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
 use super::attribute::Link;
-use super::{Attribute, AttributeSpans, TextStorage};
+use super::{Attribute, AttributeSpans, EnvUpdateCtx, TextStorage};
 use crate::piet::{
     util, Color, FontFamily, FontStyle, FontWeight, PietTextLayoutBuilder, TextLayoutBuilder,
     TextStorage as PietTextStorage,
@@ -91,6 +91,10 @@ impl TextStorage for RichText {
             builder = builder.range_attribute(range, attr);
         }
         builder
+    }
+
+    fn env_update(&self, ctx: &EnvUpdateCtx) -> bool {
+        self.attrs.env_update(ctx)
     }
 
     fn links(&self) -> &[Link] {
