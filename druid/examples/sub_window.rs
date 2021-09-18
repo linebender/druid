@@ -145,11 +145,9 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .window_size_policy(WindowSizePolicy::Content)
-                                .set_level(WindowLevel::Tooltip)
+                                .set_level(WindowLevel::Tooltip(ctx.window().clone()))
                                 .set_position(
-                                    ctx.window().get_position()
-                                        + window_pos.to_vec2()
-                                        + cursor_size.to_vec2(),
+                                    (window_pos.to_vec2() + cursor_size.to_vec2()).to_point(),
                                 ),
                             Label::<()>::new(self.tip.clone()),
                             (),

@@ -15,6 +15,7 @@
 //! Platform independent window types.
 
 use std::any::Any;
+use std::fmt;
 use std::time::Duration;
 
 use crate::application::Application;
@@ -148,16 +149,27 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,
     /// A window that should stay above app windows - like a tooltip
-    Tooltip,
+    Tooltip(WindowHandle),
     /// A user interface element such as a dropdown menu or combo box
-    DropDown,
+    DropDown(WindowHandle),
     /// A modal dialog
-    Modal,
+    Modal(WindowHandle),
+}
+
+impl fmt::Debug for WindowLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WindowLevel::AppWindow => write!(f, "AppWindow"),
+            WindowLevel::Tooltip(_) => write!(f, "ToolTip"),
+            WindowLevel::DropDown(_) => write!(f, "DropDown"),
+            WindowLevel::Modal(_) => write!(f, "Modal"),
+        }
+    }
 }
 
 /// Contains the different states a Window can be in.
@@ -169,8 +181,8 @@ pub enum WindowState {
 }
 
 /// A handle to a platform window object.
-#[derive(Clone, Default)]
-pub struct WindowHandle(backend::WindowHandle);
+#[derive(Clone, Default, PartialEq)]
+pub struct WindowHandle(pub(crate) backend::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.
@@ -266,15 +278,6 @@ impl WindowHandle {
     /// [display points]: crate::Scale
     pub fn get_size(&self) -> Size {
         self.0.get_size()
-    }
-
-    /// Sets the [`WindowLevel`](crate::WindowLevel), the z-order in the Window system / compositor
-    ///
-    /// We do not currently have a getter method, mostly because the system's levels aren't a
-    /// perfect one-to-one map to `druid_shell`'s levels. A getter method may be added in the
-    /// future.
-    pub fn set_level(&self, level: WindowLevel) {
-        self.0.set_level(level)
     }
 
     /// Bring this window to the front of the window stack and give it focus.

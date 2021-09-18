@@ -79,6 +79,16 @@ pub(crate) struct WindowBuilder {
 
 #[derive(Clone, Default)]
 pub struct WindowHandle(Weak<WindowState>);
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.0.upgrade(), other.0.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::rc::Rc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
@@ -477,10 +487,6 @@ impl WindowHandle {
 
     pub fn set_position(&self, _position: Point) {
         warn!("WindowHandle::set_position unimplemented for web");
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level  is currently unimplemented for web.");
     }
 
     pub fn get_position(&self) -> Point {
