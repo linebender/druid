@@ -47,9 +47,9 @@ use tracing::{error, warn};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::piet::{Color, Piet, PietText, RenderContext};
 
-use crate::common_util::{ClickCounter, IdleCallback};
+use crate::common_util::{is_transparent, ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
@@ -151,7 +151,7 @@ pub(crate) struct WindowBuilder {
     min_size: Option<Size>,
     resizable: bool,
     show_titlebar: bool,
-    transparent: bool,
+    background: Color,
 }
 
 #[derive(Clone)]
@@ -232,7 +232,7 @@ impl WindowBuilder {
             min_size: None,
             resizable: true,
             show_titlebar: true,
-            transparent: false,
+            background: Color::TRANSPARENT,
         }
     }
 
@@ -256,8 +256,8 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
-        self.transparent = transparent;
+    pub fn set_background(&mut self, background: Color) {
+        self.background = background;
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -290,8 +290,8 @@ impl WindowBuilder {
         window.set_title(&self.title);
         window.set_resizable(self.resizable);
         window.set_decorated(self.show_titlebar);
-        let mut transparent = false;
-        if self.transparent {
+        let mut transparent = is_transparent(&self.background);
+        if transparent {
             if let Some(screen) = window.screen() {
                 let visual = screen.rgba_visual();
                 transparent = visual.is_some();

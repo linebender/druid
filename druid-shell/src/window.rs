@@ -30,7 +30,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
-use piet_common::PietText;
+use piet_common::{Color, PietText};
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
@@ -485,9 +485,10 @@ impl WindowBuilder {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Set whether the window background should be transparent
-    pub fn set_transparent(&mut self, transparent: bool) {
-        self.0.set_transparent(transparent)
+    /// Set the prototype background color for the window.
+    /// used to determine transparency.
+    pub fn set_background(&mut self, background: Color) {
+        self.0.set_background(background)
     }
 
     /// Sets the initial window position in [display points], relative to the origin of the

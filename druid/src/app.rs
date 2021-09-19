@@ -17,6 +17,7 @@
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::kurbo::{Point, Size};
 use crate::menu::MenuManager;
+use crate::piet::Color;
 use crate::shell::{Application, Error as PlatformError, WindowBuilder, WindowHandle, WindowLevel};
 use crate::widget::LabelText;
 use crate::win_handler::{AppHandler, AppState};
@@ -60,7 +61,7 @@ pub struct WindowConfig {
     pub(crate) min_size: Option<Size>,
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
-    pub(crate) transparent: Option<bool>,
+    pub(crate) background: Color,
     pub(crate) show_titlebar: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
     pub(crate) state: Option<WindowState>,
@@ -83,7 +84,7 @@ pub struct WindowDesc<T> {
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
     pub(crate) title: LabelText<T>,
-    pub(crate) transparent: bool,
+    pub(crate) background: Color,
     pub(crate) menu: Option<MenuManager<T>>,
     pub(crate) size_policy: WindowSizePolicy, // This is copied over from the WindowConfig
                                               // when the native window is constructed.
@@ -100,7 +101,7 @@ impl<T: Data> PendingWindow<T> {
             root: Box::new(root),
             title: LocalizedString::new("app-name").into(),
             menu: MenuManager::platform_default(),
-            transparent: true,
+            background: Color::TRANSPARENT,
             size_policy: WindowSizePolicy::User,
         }
     }
@@ -116,9 +117,9 @@ impl<T: Data> PendingWindow<T> {
         self
     }
 
-    /// Set wether the background should be transparent
-    pub fn transparent(mut self, transparent: bool) -> Self {
-        self.transparent = transparent;
+    /// Set background prototype of the window.
+    pub fn background(mut self, background: Color) -> Self {
+        self.background = background;
         self
     }
 
@@ -278,7 +279,7 @@ impl Default for WindowConfig {
             position: None,
             resizable: None,
             show_titlebar: None,
-            transparent: Some(true),
+            background: Color::TRANSPARENT,
             level: None,
             state: None,
         }
@@ -375,14 +376,16 @@ impl WindowConfig {
         self
     }
 
-    /// Set whether the window background should be transparent
-    pub fn transparent(mut self, transparent: bool) -> Self {
-        self.transparent = Some(transparent);
+    /// Set background prototype of the window.
+    pub fn background(mut self, background: Color) -> Self {
+        self.background = background;
         self
     }
 
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
+        builder.set_background(self.background.clone());
+
         if let Some(resizable) = self.resizable {
             builder.resizable(resizable);
         }
@@ -399,10 +402,6 @@ impl WindowConfig {
 
         if let Some(position) = self.position {
             builder.set_position(position);
-        }
-
-        if let Some(transparent) = self.transparent {
-            builder.set_transparent(transparent);
         }
 
         if let Some(level) = self.level.clone() {
@@ -552,23 +551,12 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Builder-style method to set whether this window's background should be
-    /// transparent.
-    ///
-    /// the transparent setting in general
-    /// is unnecessary, simply setting the alpha channel on the
-    /// window background color < 1.0 should be sufficient to make
-    /// the determination to enable blending underlying windows/desktops.
-    /// as a result deprecate this setting. it remains primarily
-    /// because of concerns over automatically blending having potential performance
-    /// implications, and even though there is an implementation path to remove
-    /// this setting and still prevent any performance regressions, its a larger
-    /// change that can wait for a bit. see https://github.com/linebender/druid/pull/1973
-    /// for details.
-    pub fn transparent(mut self, transparent: bool) -> Self {
-        tracing::warn!("setting transparent is deprecated, and should only be used to disable transparency for performance reasons.");
-        self.config = self.config.transparent(transparent);
-        self.pending = self.pending.transparent(transparent);
+    /// Set the background prototype, used to determine window transparency.
+    /// primarily used to disable window transparency at initialization for
+    /// performance reasons.
+    pub fn background(mut self, background: Color) -> Self {
+        self.config = self.config.background(background.clone());
+        self.pending = self.pending.background(background);
         self
     }
 

@@ -24,6 +24,8 @@ use instant::Instant;
 use crate::kurbo::Point;
 use crate::WinHandler;
 
+use crate::piet;
+
 // This is the default timing on windows.
 const MULTI_CLICK_INTERVAL: Duration = Duration::from_millis(500);
 // the max distance between two clicks for them to count as a multi-click
@@ -150,5 +152,24 @@ impl ClickCounter {
 impl Default for ClickCounter {
     fn default() -> Self {
         ClickCounter::new(MULTI_CLICK_INTERVAL, MULTI_CLICK_MAX_DISTANCE)
+    }
+}
+
+#[allow(dead_code)]
+pub fn is_transparent(c: &piet::Color) -> bool {
+    c.as_rgba8().3 < 255
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::piet;
+
+    #[test]
+    fn detect_transparent_colors() {
+        assert!(is_transparent(&piet::Color::TRANSPARENT));
+        assert!(is_transparent(&piet::Color::BLACK.with_alpha(0.)));
+        assert!(is_transparent(&piet::Color::BLACK.with_alpha(0.99)));
+        assert!(!is_transparent(&piet::Color::BLACK));
     }
 }

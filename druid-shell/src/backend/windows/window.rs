@@ -53,7 +53,7 @@ use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::piet::{Color, Piet, PietText, RenderContext};
 
 use super::accels::register_accel;
 use super::application::Application;
@@ -66,7 +66,7 @@ use super::paint;
 use super::timers::TimerSlots;
 use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
-use crate::common_util::IdleCallback;
+use crate::common_util::{is_transparent, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
@@ -94,7 +94,7 @@ pub(crate) struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     size: Option<Size>,
-    transparent: bool,
+    background: Color,
     min_size: Option<Size>,
     position: Option<Point>,
     level: Option<WindowLevel>,
@@ -1271,7 +1271,7 @@ impl WindowBuilder {
             menu: None,
             resizable: true,
             show_titlebar: true,
-            transparent: false,
+            background: Color::TRANSPARENT,
             present_strategy: Default::default(),
             size: None,
             min_size: None,
@@ -1302,13 +1302,14 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
+    pub fn set_background(&mut self, background: Color) {
+        self.background = background.clone().with_alpha(1.0);
         // Transparency and Flip is only supported on Windows 8 and newer and
         // require DComposition
-        if transparent {
+        if is_transparent(&background) {
             if OPTIONAL_FUNCTIONS.DCompositionCreateDevice.is_some() {
                 self.present_strategy = PresentStrategy::Flip;
-                self.transparent = true;
+                self.background = background;
             } else {
                 tracing::warn!("Transparency requires Windows 8 or newer");
             }
@@ -1342,6 +1343,7 @@ impl WindowBuilder {
 
     pub fn build(self) -> Result<WindowHandle, Error> {
         unsafe {
+            let transparent = is_transparent(&self.background);
             let class_name = super::util::CLASS_NAME.to_wide();
             let dwrite_factory = DwriteFactory::new().unwrap();
             let fonts = self.app.fonts.clone();
@@ -1415,7 +1417,7 @@ impl WindowBuilder {
                 deferred_queue: RefCell::new(Vec::new()),
                 has_titlebar: Cell::new(self.show_titlebar),
                 is_resizable: Cell::new(self.resizable),
-                is_transparent: Cell::new(self.transparent),
+                is_transparent: Cell::new(transparent),
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
@@ -1436,7 +1438,7 @@ impl WindowBuilder {
                 keyboard_state: KeyboardState::new(),
                 captured_mouse_buttons: MouseButtons::new(),
                 has_mouse_focus: false,
-                transparent: self.transparent,
+                transparent,
                 last_click_time: Instant::now(),
                 last_click_pos: (0, 0),
                 click_count: 0,

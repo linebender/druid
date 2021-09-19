@@ -44,13 +44,13 @@ use x11rb::xcb_ffi::XCBConnection;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
-use crate::common_util::IdleCallback;
+use crate::common_util::{is_transparent, IdleCallback};
 use crate::dialog::FileDialogOptions;
 use crate::error::Error as ShellError;
 use crate::keyboard::{KeyState, Modifiers};
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::piet::{Color, Piet, PietText, RenderContext};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{simulate_input, Event};
@@ -113,7 +113,7 @@ pub(crate) struct WindowBuilder {
     app: Application,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
-    transparent: bool,
+    background: Color,
     position: Option<Point>,
     size: Size,
     min_size: Size,
@@ -128,7 +128,7 @@ impl WindowBuilder {
             app,
             handler: None,
             title: String::new(),
-            transparent: false,
+            background: Color::TRANSPARENT,
             position: None,
             size: Size::new(500.0, 400.0),
             min_size: Size::new(0.0, 0.0),
@@ -164,8 +164,8 @@ impl WindowBuilder {
         warn!("WindowBuilder::show_titlebar is currently unimplemented for X11 backend.");
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
-        self.transparent = transparent;
+    pub fn set_background(&mut self, background: Color) {
+        self.background = background;
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -223,7 +223,7 @@ impl WindowBuilder {
         let screen_num = self.app.screen_num();
         let id = conn.generate_id()?;
         let setup = conn.setup();
-
+        let background_transparent = is_transparent(&self.background);
         let env_dpi = std::env::var("DRUID_X11_DPI")
             .ok()
             .map(|x| x.parse::<f64>());
@@ -249,16 +249,18 @@ impl WindowBuilder {
             .roots
             .get(screen_num)
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
-        let visual_type = if self.transparent {
+        let visual_type = if background_transparent {
             self.app.argb_visual_type()
         } else {
             None
         };
+
         let (transparent, visual_type) = match visual_type {
             Some(visual) => (true, visual),
             None => (false, self.app.root_visual_type()),
         };
-        if transparent != self.transparent {
+
+        if transparent != background_transparent {
             warn!("Windows with transparent backgrounds do not work");
         }
 

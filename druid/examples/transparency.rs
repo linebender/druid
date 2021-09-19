@@ -32,11 +32,16 @@ pub fn main() {
     let window = WindowDesc::new(build_root_widget())
         .show_titlebar(false)
         .window_size((512., 512.))
-        .transparent(true)
         .resizable(true)
         .title("Transparent background");
 
     AppLauncher::with_window(window)
+        .configure_env(|env: &mut druid::Env, _: &_| {
+            env.set(
+                druid::theme::WINDOW_BACKGROUND_COLOR,
+                druid::Color::TRANSPARENT,
+            )
+        })
         .log_to_console()
         .launch(HelloState { name: "".into() })
         .expect("launch failed");

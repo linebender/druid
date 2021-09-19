@@ -43,7 +43,7 @@ use tracing::{debug, error, info};
 use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
+use crate::piet::{Color, Piet, PietText, RenderContext};
 
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
@@ -54,7 +54,7 @@ use super::keyboard::{make_modifiers, KeyboardState};
 use super::menu::Menu;
 use super::text_input::NSRange;
 use super::util::{assert_main_thread, make_nsstring};
-use crate::common_util::IdleCallback;
+use crate::common_util::{is_transparent, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard_types::KeyState;
 use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
@@ -143,7 +143,7 @@ pub(crate) struct WindowBuilder {
     window_state: Option<WindowState>,
     resizable: bool,
     show_titlebar: bool,
-    transparent: bool,
+    background: Color,
 }
 
 #[derive(Clone)]
@@ -197,7 +197,7 @@ impl WindowBuilder {
             window_state: None,
             resizable: true,
             show_titlebar: true,
-            transparent: false,
+            background: Color::TRANSPARENT,
         }
     }
 
@@ -221,8 +221,8 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
-        self.transparent = transparent;
+    pub fn set_background(&mut self, background: Color) {
+        self.background = background;
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
@@ -278,7 +278,7 @@ impl WindowBuilder {
                 window.setContentMinSize_(size);
             }
 
-            if self.transparent {
+            if is_transparent(&self.background) {
                 window.setOpaque_(NO);
                 window.setBackgroundColor_(NSColor::clearColor(nil));
             }

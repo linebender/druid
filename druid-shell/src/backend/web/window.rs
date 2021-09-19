@@ -29,7 +29,7 @@ use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
-use crate::piet::{PietText, RenderContext};
+use crate::piet::{Color, PietText, RenderContext};
 
 use super::application::Application;
 use super::error::Error;
@@ -381,7 +381,7 @@ impl WindowBuilder {
         // Ignored
     }
 
-    pub fn set_transparent(&mut self, _transparent: bool) {
+    pub fn set_background(&mut self, _background: Color) {
         // Ignored
     }
 

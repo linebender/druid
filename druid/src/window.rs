@@ -53,6 +53,7 @@ pub struct Window<T> {
     size_policy: WindowSizePolicy,
     size: Size,
     invalid: Region,
+    background: Color,
     pub(crate) menu: Option<MenuManager<T>>,
     pub(crate) context_menu: Option<(MenuManager<T>, Point)>,
     // This will be `Some` whenever the most recently displayed frame was an animation frame.
@@ -61,7 +62,6 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
-    pub(crate) transparent: bool,
     pub(crate) ime_handlers: Vec<(TextFieldToken, TextFieldRegistration)>,
     ext_handle: ExtEventSink,
     pub(crate) ime_focus_change: Option<Option<TextFieldToken>>,
@@ -81,7 +81,6 @@ impl<T> Window<T> {
             size: Size::ZERO,
             invalid: Region::EMPTY,
             title: pending.title,
-            transparent: pending.transparent,
             menu: pending.menu,
             context_menu: None,
             last_anim: None,
@@ -92,6 +91,7 @@ impl<T> Window<T> {
             ext_handle,
             ime_handlers: Vec::new(),
             ime_focus_change: None,
+            background: Color::TRANSPARENT,
         }
     }
 }
@@ -426,14 +426,8 @@ impl<T: Data> Window<T> {
         for &r in invalid.rects() {
             piet.clear(
                 Some(r),
-                if self.transparent
-                    && (env.get(crate::theme::WINDOW_BACKGROUND_COLOR).as_rgba().3 - 1.0).abs()
-                        < f64::EPSILON
-                {
-                    Color::TRANSPARENT
-                } else {
-                    env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
-                },
+                env.try_get(crate::theme::WINDOW_BACKGROUND_COLOR)
+                    .unwrap_or_else(|_| self.background.clone()),
             );
         }
         self.paint(piet, invalid, queue, data, env);
