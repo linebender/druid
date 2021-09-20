@@ -15,7 +15,6 @@
 //! Platform independent window types.
 
 use std::any::Any;
-use std::fmt;
 use std::time::Duration;
 
 use crate::application::Application;
@@ -159,17 +158,6 @@ pub enum WindowLevel {
     DropDown(WindowHandle),
     /// A modal dialog
     Modal(WindowHandle),
-}
-
-impl fmt::Debug for WindowLevel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            WindowLevel::AppWindow => write!(f, "AppWindow"),
-            WindowLevel::Tooltip(_) => write!(f, "ToolTip"),
-            WindowLevel::DropDown(_) => write!(f, "DropDown"),
-            WindowLevel::Modal(_) => write!(f, "Modal"),
-        }
-    }
 }
 
 /// Contains the different states a Window can be in.

@@ -212,6 +212,17 @@ impl_context_method!(
             content_origin + self.to_window(widget_point).to_vec2()
         }
 
+        /// Convert a point in window coordinate space to the screen's.
+        /// See the [`Screen`] module
+        ///
+        /// [`Screen`]: crate::shell::Screen
+        pub fn window_coordinates_to_screen_coordinates(
+            &self,
+            point_in_window_coordinates: Point,
+        ) -> Point {
+            self.window().get_position() + point_in_window_coordinates.to_vec2()
+        }
+
         /// The "hot" (aka hover) status of a widget.
         ///
         /// A widget is "hot" when the mouse is hovered over it. Widgets will
