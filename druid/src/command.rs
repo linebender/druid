@@ -539,7 +539,7 @@ impl Notification {
 
     /// The [`WidgetId`] of the last [`Widget`] that this [`Notification`] was passed through.
     ///
-    /// #Example
+    /// # Example
     ///
     /// ```ignore
     /// fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
