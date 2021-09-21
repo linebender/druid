@@ -541,7 +541,7 @@ impl Notification {
     ///
     /// #Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
     ///     if let Event::Notification(notification) = event {
     ///         if notification.route() == self.widget1.id() {
