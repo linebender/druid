@@ -1377,7 +1377,7 @@ impl WindowBuilder {
                 None => (0 as HMENU, None, false),
             };
 
-            let mut dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+            let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
             if let Some(level) = self.level {
