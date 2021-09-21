@@ -163,11 +163,22 @@ enum DeferredOp {
     ReleaseMouseCapture,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WindowHandle {
     text: PietText,
     state: Weak<WindowState>,
 }
+
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.state.upgrade(), other.state.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::rc::Rc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
@@ -226,6 +237,17 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
+
+    parent: Option<crate::WindowHandle>,
+}
+
+impl std::fmt::Debug for WindowState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowState{\n")?;
+        f.write_str(format!("{:p}", self.hwnd.get()).as_str())?;
+        f.write_str("}")?;
+        Ok(())
+    }
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -1311,7 +1333,7 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
+            WindowLevel::AppWindow | WindowLevel::Tooltip(_) => self.level = Some(level),
             _ => {
                 warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows backend.", level);
             }
@@ -1360,19 +1382,21 @@ impl WindowBuilder {
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
+            let mut parent: Option<crate::WindowHandle> = None;
             if let Some(level) = self.level {
                 match level {
                     WindowLevel::AppWindow => (),
-                    WindowLevel::Tooltip => {
+                    WindowLevel::Tooltip(p) => {
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
+                        parent = Some(p)
                     }
-                    WindowLevel::DropDown => {
+                    WindowLevel::DropDown(_) => {
                         dwStyle = WS_CHILD;
                         dwExStyle = 0;
                     }
-                    WindowLevel::Modal => {
+                    WindowLevel::Modal(_) => {
                         dwStyle = WS_OVERLAPPED;
                         dwExStyle = WS_EX_TOPMOST;
                     }
@@ -1395,6 +1419,8 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
+
+                parent,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1823,13 +1849,16 @@ impl WindowHandle {
     }
 
     // Sets the position of the window in virtual screen coordinates
-    pub fn set_position(&self, position: Point) {
+    pub fn set_position(&self, mut position: Point) {
+        //TODO: Make the window follow the parent, mostly for modal windows.
+        if let Some(state) = self.state.upgrade() {
+            if let Some(parent_state) = &state.parent {
+                let pos = (*parent_state).get_position();
+                position += (pos.x, pos.y)
+            }
+        };
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         self.defer(DeferredOp::SetPosition(position));
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("Window level unimplemented for Windows!");
     }
 
     // Gets the position of the window in virtual screen coordinates
@@ -1849,7 +1878,14 @@ impl WindowHandle {
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                     );
                 };
-                return Point::new(rect.left as f64, rect.top as f64);
+                let mut position = Point::new(rect.left as f64, rect.top as f64);
+                if let Some(state) = self.state.upgrade() {
+                    if let Some(parent_state) = &state.parent {
+                        let pos = (*parent_state).get_position();
+                        position -= (pos.x, pos.y)
+                    }
+                };
+                return position;
             }
         }
         Point::new(0.0, 0.0)

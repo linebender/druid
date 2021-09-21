@@ -89,9 +89,9 @@ mod levels {
         use WindowLevel::*;
         match window_level {
             AppWindow => NSNormalWindowLevel,
-            Tooltip => NSFloatingWindowLevel,
-            DropDown => NSFloatingWindowLevel,
-            Modal => NSModalPanelWindowLevel,
+            Tooltip(_) => NSFloatingWindowLevel,
+            DropDown(_) => NSFloatingWindowLevel,
+            Modal(_) => NSModalPanelWindowLevel,
         }
     }
 }
@@ -102,6 +102,24 @@ pub(crate) struct WindowHandle {
     /// a view. Also, this is better for hosted applications such as VST.
     nsview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
+}
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.idle_queue.upgrade(), other.idle_queue.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
+
+impl std::fmt::Debug for WindowHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowHandle{\n")?;
+        f.write_str("}")?;
+        Ok(())
+    }
 }
 
 impl Default for WindowHandle {
@@ -159,6 +177,7 @@ struct ViewState {
     keyboard_state: KeyboardState,
     text: PietText,
     active_text_input: Option<TextFieldToken>,
+    parent: Option<crate::WindowHandle>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -290,7 +309,13 @@ impl WindowBuilder {
             }
 
             if let Some(level) = self.level {
-                handle.set_level(level)
+                match &level {
+                    WindowLevel::Tooltip(parent) => (*view_state).parent = Some(parent.clone()),
+                    WindowLevel::DropDown(parent) => (*view_state).parent = Some(parent.clone()),
+                    WindowLevel::Modal(parent) => (*view_state).parent = Some(parent.clone()),
+                    _ => {}
+                }
+                handle.set_level(level);
             }
 
             // set_window_state above could have invalidated the frame size
@@ -533,6 +558,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             keyboard_state,
             text: PietText::new_with_unique_state(),
             active_text_input: None,
+            parent: None,
         };
         let state_ptr = Box::into_raw(Box::new(state));
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
@@ -1198,7 +1224,21 @@ impl WindowHandle {
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
     // Need to translate mac y coords, as they start from bottom left
-    pub fn set_position(&self, position: Point) {
+    pub fn set_position(&self, mut position: Point) {
+        // TODO: Maybe @cmyr can get this into a state where modal windows follow the parent?
+        // There is an API to do child windows, (https://developer.apple.com/documentation/appkit/nswindow/1419152-addchildwindow)
+        // but I have no good way of testing and making sure this works.
+        unsafe {
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+                if let Some(parent_state) = &state.parent {
+                    let pos = (*parent_state).get_position();
+                    position += (pos.x, pos.y)
+                }
+            }
+        }
+
         self.defer(DeferredOp::SetPosition(position))
     }
 
@@ -1210,10 +1250,19 @@ impl WindowHandle {
             let window: id = msg_send![*self.nsview.load(), window];
             let current_frame: NSRect = msg_send![window, frame];
 
-            Point::new(
+            let mut position = Point::new(
                 current_frame.origin.x,
                 screen_height - current_frame.origin.y - current_frame.size.height,
-            )
+            );
+            if let Some(view) = self.nsview.load().as_ref() {
+                let state: *mut c_void = *view.get_ivar("viewState");
+                let state = &mut (*(state as *mut ViewState));
+                if let Some(parent_state) = &state.parent {
+                    let pos = (*parent_state).get_position();
+                    position -= (pos.x, pos.y)
+                }
+            }
+            position
         }
     }
 
@@ -1245,7 +1294,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_level(&self, level: WindowLevel) {
+    fn set_level(&self, level: WindowLevel) {
         unsafe {
             let level = levels::as_raw_window_level(level);
             let window: id = msg_send![*self.nsview.load(), window];

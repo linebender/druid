@@ -19,10 +19,10 @@ use tracing::{instrument, trace};
 
 use crate::{
     kurbo::BezPath,
-    piet::{self, FixedLinearGradient, GradientStop, LineCap, LineJoin, StrokeStyle},
+    piet::{self, GradientStop, LineCap, LineJoin, LinearGradient, RadialGradient, StrokeStyle},
     widget::common::FillStrat,
     widget::prelude::*,
-    Affine, Color, Data, Point, Rect,
+    Affine, Color, Data, Rect, UnitPoint,
 };
 
 /// A widget that renders a SVG
@@ -244,7 +244,10 @@ impl SvgRenderer {
                 for def in n.children() {
                     match &*def.borrow() {
                         usvg::NodeKind::LinearGradient(linear_gradient) => {
-                            self.linear_gradient_def(linear_gradient, ctx);
+                            self.linear_gradient_def(linear_gradient);
+                        }
+                        usvg::NodeKind::RadialGradient(gradient) => {
+                            self.radial_gradient_def(gradient);
                         }
                         other => tracing::error!("unsupported element: {:?}", other),
                     }
@@ -303,7 +306,7 @@ impl SvgRenderer {
 
         match &p.fill {
             Some(fill) => {
-                let brush = self.brush_from_usvg(&fill.paint, fill.opacity, ctx);
+                let brush = self.brush_from_usvg(&fill.paint, fill.opacity);
                 if let usvg::FillRule::EvenOdd = fill.rule {
                     ctx.fill_even_odd(path.clone(), &*brush);
                 } else {
@@ -315,7 +318,7 @@ impl SvgRenderer {
 
         match &p.stroke {
             Some(stroke) => {
-                let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity, ctx);
+                let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity);
                 let mut stroke_style = StrokeStyle::new()
                     .line_join(match stroke.linejoin {
                         usvg::LineJoin::Miter => LineJoin::Miter {
@@ -339,13 +342,10 @@ impl SvgRenderer {
         }
     }
 
-    fn linear_gradient_def(&mut self, lg: &usvg::LinearGradient, ctx: &mut PaintCtx) {
-        // Get start and stop of gradient and transform them to image space (TODO check we need to
-        // apply offset matrix)
-        let start = self.offset_matrix * Point::new(lg.x1, lg.y1);
-        let end = self.offset_matrix * Point::new(lg.x2, lg.y2);
+    fn linear_gradient_def(&mut self, lg: &usvg::LinearGradient) {
+        let start = UnitPoint::new(lg.x1, lg.y1);
+        let end = UnitPoint::new(lg.x2, lg.y2);
         let stops: Vec<_> = lg
-            .base
             .stops
             .iter()
             .map(|stop| GradientStop {
@@ -354,32 +354,54 @@ impl SvgRenderer {
             })
             .collect();
 
-        // TODO error handling
-        let gradient = FixedLinearGradient { start, end, stops };
-        trace!("gradient: {} => {:?}", lg.id, gradient);
-        let gradient = ctx.gradient(gradient).unwrap();
-        self.defs.add_def(lg.id.clone(), gradient);
+        let gradient = LinearGradient::new(start, end, stops);
+        self.defs
+            .add_def(lg.id.clone(), piet::PaintBrush::Linear(gradient));
     }
 
-    fn brush_from_usvg(
-        &self,
-        paint: &usvg::Paint,
-        opacity: usvg::Opacity,
-        ctx: &mut PaintCtx,
-    ) -> Rc<piet::Brush> {
+    fn radial_gradient_def(&mut self, g: &usvg::RadialGradient) {
+        let center = UnitPoint::new(g.fx, g.fy);
+        let origin = UnitPoint::new(g.cx, g.cy);
+
+        let stops: Vec<_> = g
+            .stops
+            .iter()
+            .map(|stop| GradientStop {
+                pos: stop.offset.value() as f32,
+                color: color_from_svg(stop.color, stop.opacity),
+            })
+            .collect();
+
+        let gradient = RadialGradient::new(g.r.value(), stops)
+            .with_center(center)
+            .with_origin(origin);
+        self.defs
+            .add_def(g.id.clone(), piet::PaintBrush::Radial(gradient));
+    }
+
+    fn brush_from_usvg(&self, paint: &usvg::Paint, opacity: usvg::Opacity) -> Rc<piet::PaintBrush> {
         match paint {
             usvg::Paint::Color(c) => {
                 // TODO I'm going to assume here that not retaining colors is OK.
                 let color = color_from_svg(*c, opacity);
-                Rc::new(ctx.solid_brush(color))
+                Rc::new(piet::PaintBrush::Color(color))
             }
-            usvg::Paint::Link(id) => self.defs.find(id).unwrap(),
+            usvg::Paint::Link(id) => match self.defs.find(id) {
+                None => {
+                    // generally this occurs due to unimplemented SVG functionality.
+                    // until the SVG implementation matures log as a trace.
+                    // other logging above will detect and emit the error that
+                    // triggered the issue.
+                    trace!("svg link id requested, but not found: {:?}", id);
+                    Rc::new(piet::PaintBrush::Color(Color::TRANSPARENT))
+                }
+                Some(v) => v,
+            },
         }
     }
 }
 
-// TODO just support linear gradient for now.
-type Def = piet::Brush;
+type Def = piet::PaintBrush;
 
 /// A map from id to <def>
 struct Defs(HashMap<String, Rc<Def>>);

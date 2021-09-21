@@ -429,9 +429,9 @@ impl WindowBuilder {
         {
             let window_type = match self.level {
                 WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
-                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
-                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
-                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                WindowLevel::Tooltip(_) => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal(_) => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown(_) => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
             };
 
             let conn = self.app.connection();
@@ -444,7 +444,7 @@ impl WindowBuilder {
             ));
             if matches!(
                 self.level,
-                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+                WindowLevel::DropDown(_) | WindowLevel::Modal(_) | WindowLevel::Tooltip(_)
             ) {
                 log_x11!(conn.change_window_attributes(
                     id,
@@ -768,7 +768,7 @@ impl Window {
             let cairo_ctx = cairo::Context::new(&surface).unwrap();
             let scale = self.scale.get();
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale);
+                let rect = rect.to_px(scale).round();
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
@@ -818,7 +818,7 @@ impl Window {
             buffers.idle_pixmaps.pop();
         } else {
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale).expand();
+                let rect = rect.to_px(scale).round();
                 let (x, y) = (rect.x0 as i16, rect.y0 as i16);
                 let (w, h) = (rect.width() as u16, rect.height() as u16);
                 self.app
@@ -909,8 +909,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.invalid)?.add_rect(rect);
+        let scale = self.scale.get();
+        borrow_mut!(self.invalid)?.add_rect(rect.to_px(scale).expand().to_dp(scale));
         Ok(())
     }
 
@@ -1386,7 +1386,7 @@ impl PresentData {
             .rects()
             .iter()
             .map(|r| {
-                let r = r.to_px(scale).expand();
+                let r = r.to_px(scale).round();
                 Rectangle {
                     x: r.x0 as i16,
                     y: r.y0 as i16,
@@ -1549,6 +1549,12 @@ pub(crate) struct WindowHandle {
     id: u32,
     window: Weak<Window>,
 }
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for WindowHandle {}
 
 impl WindowHandle {
     fn new(id: u32, window: Weak<Window>) -> WindowHandle {
@@ -1607,10 +1613,6 @@ impl WindowHandle {
     pub fn content_insets(&self) -> Insets {
         warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
     pub fn set_size(&self, size: Size) {
