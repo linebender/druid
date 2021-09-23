@@ -204,7 +204,7 @@ impl WindowHandle {
     }
 
     /// Sets the state of the window.
-    pub fn set_window_state(&mut self, state: WindowState) {
+    pub fn set_window_state(&self, state: WindowState) {
         self.0.set_window_state(state);
     }
 
