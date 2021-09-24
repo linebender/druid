@@ -58,8 +58,6 @@ pub use widget::{Widget, WidgetId};
 pub use widget_ext::WidgetExt;
 pub use widget_wrapper::WidgetWrapper;
 
-pub use crate::scroll_component::default_scroll_to_view_handling;
-
 pub use self::image::Image;
 
 // First as it defines macros

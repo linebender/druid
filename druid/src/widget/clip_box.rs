@@ -18,6 +18,7 @@ use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
 use tracing::{instrument, trace};
+use crate::commands::SCROLL_TO_VIEW;
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -307,6 +308,36 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         f(&mut self.port);
         self.child
             .set_viewport_offset(self.viewport_origin().to_vec2());
+    }
+
+    /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
+    ///
+    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// are called.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    pub fn default_scroll_to_view_handling(
+        &mut self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+    ) -> bool {
+        let mut viewport_changed = false;
+        self.with_port(|port| {
+            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+            let content_highlight_rect = global_highlight_rect - global_content_offset;
+
+            if port.pan_to_visible(content_highlight_rect) {
+                ctx.request_paint();
+                viewport_changed = true;
+            }
+
+            // This is a new value since view_origin has changed in the meantime
+            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+            ctx.submit_notification(SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset));
+        });
+        viewport_changed
     }
 }
 
