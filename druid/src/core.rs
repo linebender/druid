@@ -1296,6 +1296,7 @@ impl WidgetState {
         self.children_changed |= child_state.children_changed;
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
+        self.update_focus_chain |= child_state.update_focus_chain;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
         // things will be recalculated just from `cursor_change`.
