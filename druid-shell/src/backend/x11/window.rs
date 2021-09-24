@@ -429,9 +429,9 @@ impl WindowBuilder {
         {
             let window_type = match self.level {
                 WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
-                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
-                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
-                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                WindowLevel::Tooltip(_) => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal(_) => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown(_) => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
             };
 
             let conn = self.app.connection();
@@ -444,7 +444,7 @@ impl WindowBuilder {
             ));
             if matches!(
                 self.level,
-                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+                WindowLevel::DropDown(_) | WindowLevel::Modal(_) | WindowLevel::Tooltip(_)
             ) {
                 log_x11!(conn.change_window_attributes(
                     id,
@@ -1549,6 +1549,12 @@ pub(crate) struct WindowHandle {
     id: u32,
     window: Weak<Window>,
 }
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for WindowHandle {}
 
 impl WindowHandle {
     fn new(id: u32, window: Weak<Window>) -> WindowHandle {
@@ -1607,10 +1613,6 @@ impl WindowHandle {
     pub fn content_insets(&self) -> Insets {
         warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
     pub fn set_size(&self, size: Size) {
