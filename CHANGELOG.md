@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
 - System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
@@ -77,6 +78,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 - x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 - remove prefix from platform extension traits ([#1873] by [@Maan2003])
+- Remove `set_level` on windows ([#1919] by [@JAicewizard])
+- Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
 - `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
 
 ### Deprecated
@@ -517,6 +520,7 @@ Last release without a changelog :(
 [@bjorn]: https://github.com/bjorn
 [@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
+[@jenra-uwu]: https://github.com/jenra-uwu
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -787,8 +791,10 @@ Last release without a changelog :(
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
 [#1907]: https://github.com/linebender/druid/pull/1907
+[#1919]: https://github.com/linebender/druid/pull/1919
 [#1929]: https://github.com/linebender/druid/pull/1929
 [#1947]: https://github.com/linebender/druid/pull/1947
+[#1953]: https://github.com/linebender/druid/pull/1953
 [#1967]: https://github.com/linebender/druid/pull/1967
 [#1976]: https://github.com/linebender/druid/pull/1976
 
