@@ -30,7 +30,6 @@ use crate::core::{CommandQueue, FocusChange, WidgetState};
 use crate::debug_state::DebugState;
 use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
-use crate::util::ExtendDrain;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
@@ -61,6 +60,7 @@ pub struct Window<T> {
     pub(crate) focus: Option<WidgetId>,
     pub(crate) handle: WindowHandle,
     pub(crate) timers: HashMap<TimerToken, WidgetId>,
+    pub(crate) pending_text_registrations: Vec<TextFieldRegistration>,
     pub(crate) transparent: bool,
     pub(crate) ime_handlers: Vec<(TextFieldToken, TextFieldRegistration)>,
     ext_handle: ExtEventSink,
@@ -92,6 +92,7 @@ impl<T> Window<T> {
             ext_handle,
             ime_handlers: Vec::new(),
             ime_focus_change: None,
+            pending_text_registrations: Vec::new(),
         }
     }
 }
@@ -202,15 +203,12 @@ impl<T: Data> Window<T> {
 
         self.update_focus(widget_state, queue, data, env);
 
-        // Add all the requested timers to the window's timers map.
-        self.timers.extend_drain(&mut widget_state.timers);
-
         // If we need a new paint pass, make sure druid-shell knows it.
         if self.wants_animation_frame() {
             self.handle.request_anim_frame();
         }
         self.invalid.union_with(&widget_state.invalid);
-        for ime_field in widget_state.text_registrations.drain(..) {
+        for ime_field in self.pending_text_registrations.drain(..) {
             let token = self.handle.add_text_field();
             tracing::debug!("{:?} added", token);
             self.ime_handlers.push((token, ime_field));
@@ -268,8 +266,15 @@ impl<T: Data> Window<T> {
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let is_handled = {
-            let mut state =
-                ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+            let mut state = ContextState::new::<T>(
+                queue,
+                &self.ext_handle,
+                &self.handle,
+                self.id,
+                self.focus,
+                &mut self.timers,
+                &mut self.pending_text_registrations,
+            );
             let mut notifications = VecDeque::new();
             let mut ctx = EventCtx {
                 state: &mut state,
@@ -332,8 +337,15 @@ impl<T: Data> Window<T> {
         process_commands: bool,
     ) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_handle,
+            &self.handle,
+            self.id,
+            self.focus,
+            &mut self.timers,
+            &mut self.pending_text_registrations,
+        );
         let mut ctx = LifeCycleCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -352,8 +364,15 @@ impl<T: Data> Window<T> {
         self.update_title(data, env);
 
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_handle,
+            &self.handle,
+            self.id,
+            self.focus,
+            &mut self.timers,
+            &mut self.pending_text_registrations,
+        );
         let mut update_ctx = UpdateCtx {
             widget_state: &mut widget_state,
             state: &mut state,
@@ -438,8 +457,15 @@ impl<T: Data> Window<T> {
 
     fn layout(&mut self, queue: &mut CommandQueue, data: &T, env: &Env) {
         let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_handle,
+            &self.handle,
+            self.id,
+            self.focus,
+            &mut self.timers,
+            &mut self.pending_text_registrations,
+        );
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
@@ -491,8 +517,15 @@ impl<T: Data> Window<T> {
         env: &Env,
     ) {
         let widget_state = WidgetState::new(self.root.id(), Some(self.size));
-        let mut state =
-            ContextState::new::<T>(queue, &self.ext_handle, &self.handle, self.id, self.focus);
+        let mut state = ContextState::new::<T>(
+            queue,
+            &self.ext_handle,
+            &self.handle,
+            self.id,
+            self.focus,
+            &mut self.timers,
+            &mut self.pending_text_registrations,
+        );
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
