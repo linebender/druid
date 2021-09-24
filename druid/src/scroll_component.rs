@@ -522,7 +522,6 @@ mod tests {
     use super::*;
     use crate::kurbo::Size;
 
-
     const TEST_SCROLLBAR_WIDTH: f64 = 11.0;
     const TEST_SCROLLBAR_PAD: f64 = 3.0;
     const TEST_SCROLLBAR_MIN_SIZE: f64 = 17.0;

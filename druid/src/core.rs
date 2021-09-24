@@ -977,10 +977,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         self.state.has_focus = change;
                         extra_event = Some(LifeCycle::FocusChanged(change));
 
-                        if change {
-                            //TODO: decide whether this should be done manually
-                            ctx.scroll_to_view();
-                        }
                     } else {
                         self.state.has_focus = false;
                     }

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::debug_state::DebugState;
 use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
 use tracing::{instrument, trace};
-use crate::commands::SCROLL_TO_VIEW;
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -335,7 +335,9 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
 
             // This is a new value since view_origin has changed in the meantime
             let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-            ctx.submit_notification(SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset));
+            ctx.submit_notification(
+                SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
+            );
         });
         viewport_changed
     }
