@@ -519,9 +519,9 @@ impl ScrollComponent {
 mod tests {
     use float_cmp::approx_eq;
 
+    use super::*;
     use crate::kurbo::Size;
 
-    use super::*;
 
     const TEST_SCROLLBAR_WIDTH: f64 = 11.0;
     const TEST_SCROLLBAR_PAD: f64 = 3.0;

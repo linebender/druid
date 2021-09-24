@@ -14,52 +14,6 @@
 
 //! Common widgets.
 
-pub use added::Added;
-pub use align::Align;
-pub use aspect_ratio_box::AspectRatioBox;
-pub use button::Button;
-pub use checkbox::Checkbox;
-pub use click::Click;
-pub use clip_box::{ClipBox, Viewport};
-pub use common::FillStrat;
-pub use container::Container;
-pub use controller::{Controller, ControllerHost};
-pub use disable_if::DisabledIf;
-pub use either::Either;
-pub use env_scope::EnvScope;
-pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
-pub use identity_wrapper::IdentityWrapper;
-pub use label::{Label, LabelText, LineBreaking, RawLabel};
-pub use lens_wrap::LensWrap;
-pub use list::{List, ListIter};
-pub use maybe::Maybe;
-pub use padding::Padding;
-pub use painter::{BackgroundBrush, Painter};
-pub use parse::Parse;
-pub use progress_bar::ProgressBar;
-pub use radio::{Radio, RadioGroup};
-pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
-pub use scroll::Scroll;
-pub use sized_box::SizedBox;
-pub use slider::Slider;
-pub use spinner::Spinner;
-pub use split::Split;
-pub use stepper::Stepper;
-#[cfg(feature = "svg")]
-pub use svg::{Svg, SvgData};
-pub use switch::Switch;
-pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
-pub use textbox::TextBox;
-pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
-pub use view_switcher::ViewSwitcher;
-#[doc(hidden)]
-pub use widget::{Widget, WidgetId};
-#[doc(hidden)]
-pub use widget_ext::WidgetExt;
-pub use widget_wrapper::WidgetWrapper;
-
-pub use self::image::Image;
-
 // First as it defines macros
 #[macro_use]
 mod widget_wrapper;
@@ -108,6 +62,51 @@ mod view_switcher;
 #[allow(clippy::module_inception)]
 mod widget;
 mod widget_ext;
+
+pub use self::image::Image;
+pub use added::Added;
+pub use align::Align;
+pub use aspect_ratio_box::AspectRatioBox;
+pub use button::Button;
+pub use checkbox::Checkbox;
+pub use click::Click;
+pub use clip_box::{ClipBox, Viewport};
+pub use common::FillStrat;
+pub use container::Container;
+pub use controller::{Controller, ControllerHost};
+pub use disable_if::DisabledIf;
+pub use either::Either;
+pub use env_scope::EnvScope;
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use identity_wrapper::IdentityWrapper;
+pub use label::{Label, LabelText, LineBreaking, RawLabel};
+pub use lens_wrap::LensWrap;
+pub use list::{List, ListIter};
+pub use maybe::Maybe;
+pub use padding::Padding;
+pub use painter::{BackgroundBrush, Painter};
+pub use parse::Parse;
+pub use progress_bar::ProgressBar;
+pub use radio::{Radio, RadioGroup};
+pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
+pub use scroll::Scroll;
+pub use sized_box::SizedBox;
+pub use slider::Slider;
+pub use spinner::Spinner;
+pub use split::Split;
+pub use stepper::Stepper;
+#[cfg(feature = "svg")]
+pub use svg::{Svg, SvgData};
+pub use switch::Switch;
+pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
+pub use textbox::TextBox;
+pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
+pub use view_switcher::ViewSwitcher;
+#[doc(hidden)]
+pub use widget::{Widget, WidgetId};
+#[doc(hidden)]
+pub use widget_ext::WidgetExt;
+pub use widget_wrapper::WidgetWrapper;
 
 /// The types required to implement a `Widget`.
 ///

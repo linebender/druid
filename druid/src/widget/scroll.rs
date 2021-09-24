@@ -14,13 +14,12 @@
 
 //! A container that scrolls its contents.
 
-use tracing::{instrument, trace};
-
 use crate::commands::SCROLL_TO_VIEW;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
+use tracing::{instrument, trace};
 
 /// A container that scrolls its contents.
 ///
