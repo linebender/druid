@@ -1377,7 +1377,6 @@ impl CursorChange {
 mod tests {
     use super::*;
     use crate::ext_event::ExtEventHost;
-    use crate::tests::helpers::widget_ids;
     use crate::text::ParseFormatter;
     use crate::widget::{Button, Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
@@ -1467,7 +1466,7 @@ mod tests {
             is_root: false,
         };
 
-        let ids: [WidgetId; 4] = widget_ids();
+        let ids = [WidgetId::next(), WidgetId::next(), WidgetId::next(), WidgetId::next()];
 
         let env = Env::with_default_i10n();
 
@@ -1477,7 +1476,7 @@ mod tests {
             notification.clone().into_notification(ids[0]),
             notification.clone().into_notification(ids[1]),
             notification.clone().into_notification(ids[2]),
-            notification.clone().into_notification(ids[3]),
+            notification.into_notification(ids[3]),
         ]);
 
         widget.send_notifications(&mut ctx, &mut notifictions, &mut (), &env);
