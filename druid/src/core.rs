@@ -976,7 +976,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if let Some(change) = this_changed {
                         self.state.has_focus = change;
                         extra_event = Some(LifeCycle::FocusChanged(change));
-
                     } else {
                         self.state.has_focus = false;
                     }
