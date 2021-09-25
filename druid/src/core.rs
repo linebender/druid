@@ -1466,7 +1466,12 @@ mod tests {
             is_root: false,
         };
 
-        let ids = [WidgetId::next(), WidgetId::next(), WidgetId::next(), WidgetId::next()];
+        let ids = [
+            WidgetId::next(),
+            WidgetId::next(),
+            WidgetId::next(),
+            WidgetId::next(),
+        ];
 
         let env = Env::with_default_i10n();
 
