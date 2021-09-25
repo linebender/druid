@@ -495,7 +495,7 @@ impl_context_method!(
         /// request with the event.
         pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
             trace!("request_timer deadline={:?}", deadline);
-            self.state.request_timer(&mut self.widget_state, deadline)
+            self.state.request_timer(self.widget_state.id, deadline)
         }
     }
 );
@@ -916,10 +916,10 @@ impl<'a> ContextState<'a> {
             .push_back(command.default_to(self.window_id.into()));
     }
 
-    fn request_timer(&mut self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
+    fn request_timer(&mut self, widget_id: WidgetId, deadline: Duration) -> TimerToken {
         trace!("request_timer deadline={:?}", deadline);
         let timer_token = self.window.request_timer(deadline);
-        self.timers.insert(timer_token, widget_state.id);
+        self.timers.insert(timer_token, widget_id);
         timer_token
     }
 }
