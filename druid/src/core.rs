@@ -903,7 +903,9 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     inner_ctx.is_handled = false;
                 } else if let Event::Notification(notification) = event {
                     // we will try again with the next parent
-                    inner_ctx.notifications.push_back(notification);
+                    inner_ctx
+                        .notifications
+                        .push_back(notification.with_route(self_id));
                 } else {
                     // could be unchecked but we avoid unsafe in druid :shrug:
                     unreachable!()
@@ -1376,7 +1378,7 @@ mod tests {
     use super::*;
     use crate::ext_event::ExtEventHost;
     use crate::text::ParseFormatter;
-    use crate::widget::{Flex, Scroll, Split, TextBox};
+    use crate::widget::{Button, Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
     use test_env_log::test;
 
@@ -1437,5 +1439,61 @@ mod tests {
         assert!(ctx.widget_state.children.may_contain(&ID_3));
         // A textbox is composed of three components with distinct ids
         assert_eq!(ctx.widget_state.children.entry_count(), 15);
+    }
+
+    #[test]
+    fn send_notifications() {
+        let mut widget = WidgetPod::new(Button::new("test".to_owned())).boxed();
+
+        let mut command_queue: CommandQueue = VecDeque::new();
+        let mut widget_state = WidgetState::new(WidgetId::next(), None);
+        let window = WindowHandle::default();
+        let ext_host = ExtEventHost::default();
+        let ext_handle = ext_host.make_sink();
+        let mut state = ContextState::new::<Option<u32>>(
+            &mut command_queue,
+            &ext_handle,
+            &window,
+            WindowId::next(),
+            None,
+        );
+
+        let mut ctx = EventCtx {
+            widget_state: &mut widget_state,
+            notifications: &mut Default::default(),
+            is_handled: false,
+            state: &mut state,
+            is_root: false,
+        };
+
+        let ids = [
+            WidgetId::next(),
+            WidgetId::next(),
+            WidgetId::next(),
+            WidgetId::next(),
+        ];
+
+        let env = Env::with_default_i10n();
+
+        let notification = Command::new(druid::command::sys::CLOSE_WINDOW, (), Target::Global);
+
+        let mut notifictions = VecDeque::from(vec![
+            notification.clone().into_notification(ids[0]),
+            notification.clone().into_notification(ids[1]),
+            notification.clone().into_notification(ids[2]),
+            notification.into_notification(ids[3]),
+        ]);
+
+        widget.send_notifications(&mut ctx, &mut notifictions, &mut (), &env);
+
+        assert_eq!(ctx.notifications.len(), 4);
+        assert_eq!(ctx.notifications[0].source(), ids[0]);
+        assert_eq!(ctx.notifications[0].route(), widget.id());
+        assert_eq!(ctx.notifications[1].source(), ids[1]);
+        assert_eq!(ctx.notifications[1].route(), widget.id());
+        assert_eq!(ctx.notifications[2].source(), ids[2]);
+        assert_eq!(ctx.notifications[2].route(), widget.id());
+        assert_eq!(ctx.notifications[3].source(), ids[3]);
+        assert_eq!(ctx.notifications[3].route(), widget.id());
     }
 }

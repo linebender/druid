@@ -103,6 +103,7 @@ pub struct Notification {
     symbol: SelectorSymbol,
     payload: Arc<dyn Any>,
     source: WidgetId,
+    route: WidgetId,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -407,6 +408,7 @@ impl Command {
             symbol: self.symbol,
             payload: self.payload,
             source,
+            route: source,
         }
     }
 
@@ -527,6 +529,34 @@ impl Notification {
     /// [`Widget`]: crate::Widget
     pub fn source(&self) -> WidgetId {
         self.source
+    }
+
+    /// Change the route id
+    pub(crate) fn with_route(mut self, widget_id: WidgetId) -> Self {
+        self.route = widget_id;
+        self
+    }
+
+    /// The [`WidgetId`] of the last [`Widget`] that this [`Notification`] was passed through.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut (), env: &Env) {
+    ///     if let Event::Notification(notification) = event {
+    ///         if notification.route() == self.widget1.id() {
+    ///             // the notification came from inside of widget1
+    ///         }
+    ///         if notification.route() == self.widget2.id() {
+    ///             // the notification came from inside of widget2
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// [`Widget`]: crate::Widget
+    pub fn route(&self) -> WidgetId {
+        self.route
     }
 }
 
