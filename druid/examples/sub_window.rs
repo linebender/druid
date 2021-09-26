@@ -144,16 +144,12 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                         let tooltip_position_in_window_coordinates =
                             (position_in_window_coordinates.to_vec2() + cursor_size.to_vec2())
                                 .to_point();
-                        let tooltip_position_in_screen_coordinates = ctx
-                            .window_coordinates_to_screen_coordinates(
-                                tooltip_position_in_window_coordinates,
-                            );
                         let win_id = ctx.new_sub_window(
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .window_size_policy(WindowSizePolicy::Content)
                                 .set_level(WindowLevel::Tooltip(ctx.window().clone()))
-                                .set_position(tooltip_position_in_screen_coordinates),
+                                .set_position(tooltip_position_in_window_coordinates),
                             Label::<()>::new(self.tip.clone()),
                             (),
                             env.clone(),

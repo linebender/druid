@@ -1387,12 +1387,18 @@ impl WindowBuilder {
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
-                        let scaled_sub_window_point = WindowBuilder::scale_sub_window_position(
-                            self.position,
-                            parent_window_handle.get_scale(),
-                        );
-                        pos_x = scaled_sub_window_point.x as i32;
-                        pos_y = scaled_sub_window_point.y as i32;
+                        if let Some(point_in_window_coord) = self.position {
+                            let screen_point = parent_window_handle.get_position()
+                                + point_in_window_coord.to_vec2();
+                            let scaled_tooltip_point = WindowBuilder::scale_sub_window_position(
+                                Some(screen_point),
+                                parent_window_handle.get_scale(),
+                            );
+                            pos_x = scaled_tooltip_point.x as i32;
+                            pos_y = scaled_tooltip_point.y as i32;
+                        } else {
+                            warn!("No position provided for tooltip!");
+                        }
                     }
                     WindowLevel::DropDown(_) => {
                         dwStyle = WS_CHILD;
