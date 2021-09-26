@@ -1440,12 +1440,16 @@ mod tests {
         let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
+        let mut timers = Vec::new();
+        let mut text_registrations = HashMap::new();
         let mut state = ContextState::new::<Option<u32>>(
             &mut command_queue,
             &ext_handle,
             &window,
             WindowId::next(),
             None,
+            &mut text_registrations,
+            &mut timers,
         );
 
         let mut ctx = EventCtx {
