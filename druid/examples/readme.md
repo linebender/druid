@@ -3,7 +3,7 @@
 There are several different kind of examples, some demonstrate one particular
 Druid concept, some are tools used for testing and debugging, and
 others are more complete examples of how to tie everything together.
-The latter are listed separately under [showcases](##Showcases).
+The latter are listed separately under [showcases](#Showcases).
 
 ## Anim
 ```
@@ -15,21 +15,21 @@ This example shows how to make a simple animation using `Event::AnimFrame`.
 ```
 cargo run --example async_event
 ```
-Demonstrates receiving data from some outside source, and updating the UI in response. This is similar to [blocking function](##Blocking Function) but here the data source is fully independent, and runs for the lifetime of the program.
+Demonstrates receiving data from some outside source, and updating the UI in response. This is similar to [blocking function](#Blocking Function) but here the data source is fully independent, and runs for the lifetime of the program.
 
-## Blocking Functions
+## Blocking Function
 ```
-cargo run --example blocking_functions
+cargo run --example blocking_function
 ```
 Sometimes you need to fetch some data from disk or from the internet,
 but you should never block the UI thread with long running operations!
 Instead you should run this task in a separate thread, and have it send
-you the data as it arrives. This is very similar to [async event](##Async Event)
+you the data as it arrives. This is very similar to [async event](#Async Event)
  except the event is initiated by the main thread.
 
 ## Cursor
 ```
-cargo run --example cursor
+cargo run --example cursor --features="image png"
 ```
 This example demonstrates how to set the cursor icon, and how to use a custom cursor.
 
@@ -55,11 +55,30 @@ cargo run --example hello
 This shows some of the basics of druid. If you need a start of how to build an application with a text-box and some labels this is where to start.
 
 ## Hello_web
+Not working, browser is blank after going to http://localhost:8000?
+
+For more info and prerequistes see [druid/examples/hello_web/README.md](druid/examples/hello_web/README.md).
 ```
 cd druid/examples/hello_web
 wasm-pack build --out-dir pkg --out-name hello_web
+http
 ```
+[View at http://localhost:8000](http://localhost:8000].
+
 This is an example of how to get almost any druid application can be used on the web. This is just the hello_world example but should work for all of them.
+
+## Web
+Not working, browser is blank after going to http://localhost:8000?
+
+For more info and prerequistes see [druid/examples/web/README.md](druid/examples/web/README.md).
+```
+cd druid/examples/web
+wasm-pack build --out-dir pkg --out-name web
+http
+```
+[View at http://localhost:8000](http://localhost:8000].
+
+Simple web app.
 
 ## Identity
 ```
@@ -91,6 +110,12 @@ cargo run --example list --features="im"
 ```
 This shows you how you could, for example, add items to lists and delete them. 
 
+## Markdown Preview
+```
+cargo run --example markdown_preview
+```
+An example of markdown preview on the left side and editable text on the right side.
+
 ## Multiple Windows
 ```
 cargo run --example multiwin
@@ -107,7 +132,7 @@ Opening and saving files is crucial for a lot of applications. This shows you ho
 ```
 cargo run --example panels
 ```
-Very similar to [layout](##Layout) but it splits the screen into 2 segments
+Very similar to [layout](#Layout) but it splits the screen into 2 segments
 
 ## Value Formatting
 
@@ -138,17 +163,12 @@ cargo run --example split_demo
 An example of how to split a widget in 2 in various ways. This also includes having the user drag the border!! 
 
 ## Sub Window
+Not working, no sub-window seen?
 ```
 cargo run --example sub_window
 ```
 
 This shows you how to make a completely new window with shared state.
-
-## Styled_text
-```
-cargo run --example styled_text
-```
-Not all text should look the same. You are able to change a lot of things, color, size, and monospace. This example shows how to change these propperties.
 
 ## Svg
 ```
@@ -164,13 +184,25 @@ Switches are useful in many ways, this example shows how to use the druid built-
 
 ## Tabs
 ```
-cargo run --example tabs
+cargo run --example tabs --features="im"
 ```
-Tabs allow you to seperate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](##View Switcher) but with with a different purpose.
+Tabs allow you to seperate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](#View Switcher) but with with a different purpose.
 
-## Timers
+## Text
 ```
-cargo run --example timers
+cargo run --example text
+```
+Text shows the effects of TextAlignment and LineBreaker types.
+
+## TextBox
+```
+cargo run --example textbox
+```
+Textbox demostrates some of the possible configuraitons of the TextBox widget.
+
+## Timer
+```
+cargo run --example timer
 ```
 Timers allow you to send events to your widgets at a certain points inthe future. This example shows how to use them.
 
@@ -184,7 +216,7 @@ This shows you how to make the window transparent, so the rest of the desktop sh
 ```
 cargo run --example view_switcher
 ```
-Very similar to [tabs](##Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
+Very similar to [tabs](#Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
 
 # Showcases
 
@@ -223,7 +255,7 @@ A simple implementation of Conway's game of life. You can change the evolution s
 
 ## Image
 ```
-cargo run --example image
+cargo run --example image --features "image png"
 ```
 
 Image shows off all the knobs you can turn on images. You can play with them with real time results, which you to figure out what settings are best for you.
@@ -242,11 +274,12 @@ This is a showcase is scrolling through an image gradient square. The square is 
 cargo run --example styled_text
 ```
 
-In druid you can change all kinds of styling aspects of text. This shows off some of them.
+In druid you can change all kinds of styling aspects of text as not all text should look
+the same. This showcases some of those things such as, color, size, and monospace.
 
 ## Widget Gallery
 ```
-cargo run --example widget_gallery
+cargo run --example widget_gallery --features="svg im image png"
 ```
 
 This is a showcase of some simple widgets with their default styling. These are interactive, but you cannot change any of their styling.
