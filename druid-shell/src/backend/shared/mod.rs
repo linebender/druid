@@ -21,8 +21,8 @@ cfg_if::cfg_if! {
     }
 }
 cfg_if::cfg_if! {
-    if #[cfg(any(feature = "x11", feature = "wayland"))] {
+    if #[cfg(all(target_os = "linux", any(feature = "x11", feature = "wayland")))] {
         mod timer;
-        pub use timer::*;
+        pub(crate) use timer::*;
     }
 }

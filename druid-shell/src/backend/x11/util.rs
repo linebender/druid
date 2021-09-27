@@ -14,9 +14,7 @@
 
 //! Miscellaneous utility functions for working with X11.
 
-use std::cmp::Ordering;
 use std::rc::Rc;
-use std::time::Instant;
 
 use anyhow::{anyhow, Error};
 use x11rb::connection::RequestConnection;
@@ -25,8 +23,6 @@ use x11rb::protocol::randr::{ConnectionExt, ModeFlag};
 use x11rb::protocol::render::{self, ConnectionExt as _};
 use x11rb::protocol::xproto::{Screen, Visualid, Visualtype, Window};
 use x11rb::xcb_ffi::XCBConnection;
-
-use crate::window::TimerToken;
 
 // See: https://github.com/rtbo/rust-xcb/blob/master/examples/randr_screen_modes.rs
 pub fn refresh_rate(conn: &Rc<XCBConnection>, window_id: Window) -> Option<f64> {
