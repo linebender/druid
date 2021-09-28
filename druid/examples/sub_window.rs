@@ -352,7 +352,6 @@ fn build_root_widget() -> impl Widget<HelloState> {
                 WindowConfig::default()
                     .show_titlebar(false)
                     .window_size(Size::new(100., 100.))
-                    .set_position(Point::new(1000.0, 500.0))
                     .set_level(WindowLevel::AppWindow),
                 col,
                 data.clone(),
