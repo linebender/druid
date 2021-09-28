@@ -61,7 +61,6 @@ For more info and prerequistes see [druid/examples/hello_web/README.md](druid/ex
 ```
 cd druid/examples/hello_web
 wasm-pack build --out-dir pkg --out-name hello_web
-http
 ```
 [View at http://localhost:8000](http://localhost:8000].
 
@@ -74,7 +73,6 @@ For more info and prerequistes see [druid/examples/web/README.md](druid/examples
 ```
 cd druid/examples/web
 wasm-pack build --out-dir pkg --out-name web
-http
 ```
 [View at http://localhost:8000](http://localhost:8000].
 
