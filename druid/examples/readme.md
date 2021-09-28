@@ -55,8 +55,6 @@ cargo run --example hello
 This shows some of the basics of druid. If you need a start of how to build an application with a text-box and some labels this is where to start.
 
 ## Hello_web
-Not working, browser is blank after going to http://localhost:8000?
-
 For more info and prerequistes see [druid/examples/hello_web/README.md](druid/examples/hello_web/README.md).
 ```
 cd druid/examples/hello_web
@@ -67,8 +65,6 @@ wasm-pack build --out-dir pkg --out-name hello_web
 This is an example of how to get almost any druid application can be used on the web. This is just the hello_world example but should work for all of them.
 
 ## Web
-Not working, browser is blank after going to http://localhost:8000?
-
 For more info and prerequistes see [druid/examples/web/README.md](druid/examples/web/README.md).
 ```
 cd druid/examples/web
