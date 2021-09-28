@@ -14,7 +14,7 @@
 
 //! The fundamental druid types.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use tracing::{info_span, trace, warn};
 
 use crate::bloom::Bloom;
@@ -22,12 +22,10 @@ use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PA
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
-use crate::text::TextFieldRegistration;
-use crate::util::ExtendDrain;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Notification, PaintCtx, Region,
-    RenderContext, Target, TextLayout, TimerToken, UpdateCtx, Widget, WidgetId, WindowId,
+    RenderContext, Target, TextLayout, UpdateCtx, Widget, WidgetId, WindowId,
 };
 
 /// Our queue type
@@ -149,8 +147,6 @@ pub struct WidgetState {
     pub(crate) request_focus: Option<FocusChange>,
     pub(crate) children: Bloom<WidgetId>,
     pub(crate) children_changed: bool,
-    /// Associate timers with widgets that requested them.
-    pub(crate) timers: HashMap<TimerToken, WidgetId>,
     /// The cursor that was set using one of the context methods.
     pub(crate) cursor_change: CursorChange,
     /// The result of merging up children cursors. This gets cleared when merging state up (unlike
@@ -159,8 +155,6 @@ pub struct WidgetState {
 
     // Port -> Host
     pub(crate) sub_window_hosts: Vec<(WindowId, WidgetId)>,
-
-    pub(crate) text_registrations: Vec<TextFieldRegistration>,
 }
 
 /// Methods by which a widget can attempt to change focus state.
@@ -1246,12 +1240,10 @@ impl WidgetState {
             focus_chain: Vec::new(),
             children: Bloom::new(),
             children_changed: false,
-            timers: HashMap::new(),
             cursor_change: CursorChange::Default,
             cursor: None,
             sub_window_hosts: Vec::new(),
             is_explicitly_disabled_new: false,
-            text_registrations: Vec::new(),
             update_focus_chain: false,
         }
     }
@@ -1263,10 +1255,6 @@ impl WidgetState {
     pub(crate) fn tree_disabled_changed(&self) -> bool {
         self.children_disabled_changed
             || self.is_explicitly_disabled != self.is_explicitly_disabled_new
-    }
-
-    pub(crate) fn add_timer(&mut self, timer_token: TimerToken) {
-        self.timers.insert(timer_token, self.id);
     }
 
     /// Update to incorporate state changes from a child.
@@ -1308,9 +1296,6 @@ impl WidgetState {
         self.children_changed |= child_state.children_changed;
         self.request_update |= child_state.request_update;
         self.request_focus = child_state.request_focus.take().or(self.request_focus);
-        self.timers.extend_drain(&mut child_state.timers);
-        self.text_registrations
-            .append(&mut child_state.text_registrations);
         self.update_focus_chain |= child_state.update_focus_chain;
 
         // We reset `child_state.cursor` no matter what, so that on the every pass through the tree,
@@ -1380,6 +1365,7 @@ mod tests {
     use crate::text::ParseFormatter;
     use crate::widget::{Button, Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
+    use std::collections::HashMap;
     use test_env_log::test;
 
     const ID_1: WidgetId = WidgetId::reserved(0);
@@ -1418,12 +1404,16 @@ mod tests {
         let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
+        let mut timers = Vec::new();
+        let mut text_registrations = HashMap::new();
         let mut state = ContextState::new::<Option<u32>>(
             &mut command_queue,
             &ext_handle,
             &window,
             WindowId::next(),
             None,
+            &mut text_registrations,
+            &mut timers,
         );
 
         let mut ctx = LifeCycleCtx {
@@ -1450,12 +1440,16 @@ mod tests {
         let window = WindowHandle::default();
         let ext_host = ExtEventHost::default();
         let ext_handle = ext_host.make_sink();
+        let mut timers = Vec::new();
+        let mut text_registrations = HashMap::new();
         let mut state = ContextState::new::<Option<u32>>(
             &mut command_queue,
             &ext_handle,
             &window,
             WindowId::next(),
             None,
+            &mut text_registrations,
+            &mut timers,
         );
 
         let mut ctx = EventCtx {

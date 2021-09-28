@@ -16,7 +16,7 @@
 
 use std::{
     any::{Any, TypeId},
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     ops::{Deref, DerefMut},
     rc::Rc,
     time::Duration,
@@ -60,6 +60,8 @@ pub(crate) struct ContextState<'a> {
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
+    pub(crate) timers: &'a mut HashMap<TimerToken, WidgetId>,
+    pub(crate) text_registrations: &'a mut Vec<TextFieldRegistration>,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -493,7 +495,7 @@ impl_context_method!(
         /// request with the event.
         pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
             trace!("request_timer deadline={:?}", deadline);
-            self.state.request_timer(&mut self.widget_state, deadline)
+            self.state.request_timer(self.widget_state.id, deadline)
         }
     }
 );
@@ -758,7 +760,7 @@ impl LifeCycleCtx<'_, '_> {
             document: Rc::new(document),
             widget_id: self.widget_id(),
         };
-        self.widget_state.text_registrations.push(registration);
+        self.state.text_registrations.push(registration);
     }
 }
 
@@ -892,6 +894,8 @@ impl<'a> ContextState<'a> {
         window: &'a WindowHandle,
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
+        timers: &'a mut HashMap<TimerToken, WidgetId>,
+        text_registrations: &'a mut Vec<TextFieldRegistration>,
     ) -> Self {
         ContextState {
             command_queue,
@@ -899,6 +903,8 @@ impl<'a> ContextState<'a> {
             window,
             window_id,
             focus_widget,
+            timers,
+            text_registrations,
             text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
@@ -910,10 +916,10 @@ impl<'a> ContextState<'a> {
             .push_back(command.default_to(self.window_id.into()));
     }
 
-    fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
+    fn request_timer(&mut self, widget_id: WidgetId, deadline: Duration) -> TimerToken {
         trace!("request_timer deadline={:?}", deadline);
         let timer_token = self.window.request_timer(deadline);
-        widget_state.add_timer(timer_token);
+        self.timers.insert(timer_token, widget_id);
         timer_token
     }
 }
