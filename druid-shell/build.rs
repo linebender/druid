@@ -7,7 +7,9 @@ fn main() {
     use std::env;
     use std::path::PathBuf;
 
-    if env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux" {
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux"
+        || env::var("CARGO_CFG_TARGET_OS").unwrap() != "openbsd"
+    {
         return;
     }
 

@@ -24,6 +24,12 @@ sudo dnf install gtk3-devel glib2-devel
 
 See [GTK installation page] for more installation instructions.
 
+### OpenBSD
+On OpenBSD, Druid requires gtk+3;  install from packages:
+```no_compile
+pkg_add gtk+3
+```
+
 ## Starting a project
 Starting a project is as easy as creating an empty application with
 ```no_compile

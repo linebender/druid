@@ -94,6 +94,12 @@ druid = { git = "https://github.com/linebender/druid.git" }
 On Linux, Druid requires gtk+3; see [GTK installation page].
 (On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
 
+#### OpenBSD
+
+On OpenBSD, Druid requires gtk+3;  install from packages:
+```sh
+pkg_add gtk+3
+```
 
 Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
@@ -152,7 +158,7 @@ Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D gra
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
 `piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
 In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
-Linux uses `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
+Linux and OpenBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
 use druid::kurbo::{BezPath, Point, Rect};
