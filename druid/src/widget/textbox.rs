@@ -33,7 +33,11 @@ use crate::{
 use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
-const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
+const MAC_OR_LINUX_OR_OBSD: bool = cfg!(any(
+    target_os = "macos",
+    target_os = "linux",
+    target_os = "openbsd"
+));
 
 /// When we scroll after editing or movement, we show a little extra of the document.
 const SCROLL_TO_INSETS: Insets = Insets::uniform_xy(40.0, 0.0);
@@ -513,7 +517,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 ctx.request_paint();
             }
             LifeCycle::FocusChanged(false) => {
-                if self.text().can_write() && MAC_OR_LINUX && !self.multiline {
+                if self.text().can_write() && MAC_OR_LINUX_OR_OBSD && !self.multiline {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);

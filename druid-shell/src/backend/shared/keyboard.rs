@@ -17,7 +17,10 @@
 #[allow(unused)]
 use keyboard_types::{Code, Location};
 
-#[cfg(any(all(feature = "x11", target_os = "linux"), target_os = "macos"))]
+#[cfg(any(
+    all(feature = "x11", any(target_os = "linux", target_os = "openbsd")),
+    target_os = "macos"
+))]
 /// Map key code to location.
 ///
 /// The logic for this is adapted from InitKeyEvent in TextInputHandler (in the Mozilla
@@ -51,7 +54,7 @@ pub fn code_to_location(code: Code) -> Location {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "openbsd"))]
 /// Map hardware keycode to code.
 ///
 /// In theory, the hardware keycode is device dependent, but in

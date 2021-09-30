@@ -199,7 +199,7 @@ fn make_menu(_: Option<WindowId>, state: &State, _: &Env) -> Menu<State> {
     {
         base = druid::platform_menus::mac::menu_bar();
     }
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
     {
         base = base.entry(druid::platform_menus::win::file::default());
     }

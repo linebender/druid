@@ -59,6 +59,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: detect keyboard layout ([#1779] by [@Maan2003])
 - WindowDesc::with_config ([#1929] by [@Maan2003])
 - `Notification::route` ([#1978] by [@xarvic])
+- Build on OpenBSD ([#1993] by [@klemensn])
 
 ### Changed
 
@@ -521,6 +522,7 @@ Last release without a changelog :(
 [@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
+[@klemensn]: https://github.com/klemensn
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -797,6 +799,7 @@ Last release without a changelog :(
 [#1953]: https://github.com/linebender/druid/pull/1953
 [#1967]: https://github.com/linebender/druid/pull/1967
 [#1978]: https://github.com/linebender/druid/pull/1978
+[#1993]: https://github.com/linebender/druid/pull/1993
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
