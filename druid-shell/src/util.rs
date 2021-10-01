@@ -27,23 +27,6 @@ fn current_thread_id() -> u64 {
     unsafe { mem::transmute(thread::current().id()) }
 }
 
-/// Assert that the current thread is the registered main thread.
-///
-/// # Panics
-///
-/// Panics when called from a non-main thread.
-#[allow(dead_code)]
-pub fn assert_main_thread() {
-    let thread_id = current_thread_id();
-    let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
-    if thread_id != main_thread_id {
-        panic!(
-            "Main thread assertion failed {} != {}",
-            thread_id, main_thread_id
-        );
-    }
-}
-
 /// Assert that the current thread is the registered main thread or main thread is not claimed.
 ///
 /// # Panics
