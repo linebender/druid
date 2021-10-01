@@ -32,10 +32,27 @@ fn current_thread_id() -> u64 {
 /// # Panics
 ///
 /// Panics when called from a non-main thread.
+#[allow(dead_code)]
 pub fn assert_main_thread() {
     let thread_id = current_thread_id();
     let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
     if thread_id != main_thread_id {
+        panic!(
+            "Main thread assertion failed {} != {}",
+            thread_id, main_thread_id
+        );
+    }
+}
+
+/// Assert that the current thread is the registered main thread or main thread is not claimed.
+///
+/// # Panics
+///
+/// Panics when called from a non-main thread and main thread is claimed.
+pub fn assert_main_thread_or_main_unclaimed() {
+    let thread_id = current_thread_id();
+    let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
+    if thread_id != main_thread_id && main_thread_id != 0 {
         panic!(
             "Main thread assertion failed {} != {}",
             thread_id, main_thread_id

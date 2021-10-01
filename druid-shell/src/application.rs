@@ -121,7 +121,7 @@ impl Application {
     /// [`new`]: #method.new
     /// [`run`]: #method.run
     pub fn try_global() -> Option<Application> {
-        util::assert_main_thread();
+        util::assert_main_thread_or_main_unclaimed();
         GLOBAL_APP.with(|global_app| global_app.borrow().clone())
     }
 

@@ -108,6 +108,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
 - GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
 - `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
+- Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
 
 ### Visual
 
@@ -802,6 +803,7 @@ Last release without a changelog :(
 [#1976]: https://github.com/linebender/druid/pull/1976
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
+[#1996]: https://github.com/linebender/druid/pull/1996
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
