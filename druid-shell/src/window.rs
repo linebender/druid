@@ -480,8 +480,11 @@ impl WindowBuilder {
 
     /// Sets the initial window position in [display points], relative to the origin of the
     /// virtual screen.
+    /// For sub-windows like [tooltips] and [dropdowns], this position must be in window co-ordinates.
     ///
     /// [display points]: crate::Scale
+    /// [tooltips]: crate::WindowLevel::Tooltip
+    /// [dropdowns]: crate::WindowLevel::DropDown
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }

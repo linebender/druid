@@ -1391,7 +1391,7 @@ impl WindowBuilder {
                             let screen_point = parent_window_handle.get_position()
                                 + point_in_window_coord.to_vec2();
                             let scaled_tooltip_point = WindowBuilder::scale_sub_window_position(
-                                Some(screen_point),
+                                screen_point,
                                 parent_window_handle.get_scale(),
                             );
                             pos_x = scaled_tooltip_point.x as i32;
@@ -1517,22 +1517,13 @@ impl WindowBuilder {
     /// When creating a sub-window, we need to scale its position with respect to its parent.
     /// If there is any error while scaling, log it as a warn and show sub-window in top left corner of screen/window.
     fn scale_sub_window_position(
-        un_scaled_sub_window_position: Option<Point>,
+        un_scaled_sub_window_position: Point,
         parent_window_scale: Result<Scale, crate::Error>,
     ) -> Point {
-        match (un_scaled_sub_window_position, parent_window_scale) {
-            (Some(point), Ok(s)) => point.to_px(s),
-            (None, Ok(_)) => {
-                warn!("No position");
-                Point::new(0., 0.)
-            }
-            (Some(_), Err(r)) => {
-                warn!("Error with scale: {:?}", r);
-                Point::new(0., 0.)
-            }
-            (None, Err(r)) => {
-                warn!("No position");
-                warn!("Error with scale: {:?}", r);
+        match parent_window_scale {
+            Ok(s) => un_scaled_sub_window_position.to_px(s),
+            Err(e) => {
+                warn!("Error with scale: {:?}", e);
                 Point::new(0., 0.)
             }
         }
