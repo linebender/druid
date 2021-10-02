@@ -126,13 +126,13 @@ impl HotKey {
 pub enum SysMods {
     None,
     Shift,
-    /// Command on macOS, and Ctrl on windows/linux
+    /// Command on macOS, and Ctrl on windows/linux/OpenBSD
     Cmd,
-    /// Command + Alt on macOS, Ctrl + Alt on windows/linux
+    /// Command + Alt on macOS, Ctrl + Alt on windows/linux/OpenBSD
     AltCmd,
-    /// Command + Shift on macOS, Ctrl + Shift on windows/linux
+    /// Command + Shift on macOS, Ctrl + Shift on windows/linux/OpenBSD
     CmdShift,
-    /// Command + Alt + Shift on macOS, Ctrl + Alt + Shift on windows/linux
+    /// Command + Alt + Shift on macOS, Ctrl + Alt + Shift on windows/linux/OpenBSD
     AltCmdShift,
 }
 

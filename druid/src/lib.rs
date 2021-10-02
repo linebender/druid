@@ -15,7 +15,7 @@
 //! Simple data-oriented GUI.
 //!
 //! Druid lets you build simple interactive graphical applications that
-//! can be deployed on Windows, macOS, Linux, and the web.
+//! can be deployed on Windows, macOS, Linux, OpenBSD and the web.
 //!
 //! Druid is built on top of [`druid-shell`], which implements all of the
 //! lower-level, platform-specific code, providing a common abstraction
@@ -97,7 +97,7 @@
 //!          which is made available via the [`im` module].
 //! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
 //! * `image` - Bitmap image support using the [`image` crate].
-//! * `x11` - Work-in-progress X11 Linux backend instead of GTK.
+//! * `x11` - Work-in-progress X11 for Linux and OpenBSD backend instead of GTK.
 //!
 //! Features can be added with `cargo`. For example, in your `Cargo.toml`:
 //! ```no_compile

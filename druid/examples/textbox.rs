@@ -98,7 +98,7 @@ fn make_menu<T: Data>(_window: Option<WindowId>, _data: &AppState, _env: &Env) -
     {
         base = base.entry(druid::platform_menus::mac::application::default())
     }
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
     {
         base = base.entry(druid::platform_menus::win::file::default());
     }
