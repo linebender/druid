@@ -58,6 +58,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
 - X11: detect keyboard layout ([#1779] by [@Maan2003])
 - WindowDesc::with_config ([#1929] by [@Maan2003])
+- `scroll_to_view` and `scroll_area_to_view` methods on `UpdateCtx`, `LifecycleCtx` and `EventCtx` ([#1976] by [@xarvic])
 - `Notification::route` ([#1978] by [@xarvic])
 - Build on OpenBSD ([#1993] by [@klemensn])
 
@@ -798,6 +799,7 @@ Last release without a changelog :(
 [#1947]: https://github.com/linebender/druid/pull/1947
 [#1953]: https://github.com/linebender/druid/pull/1953
 [#1967]: https://github.com/linebender/druid/pull/1967
+[#1976]: https://github.com/linebender/druid/pull/1976
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
 

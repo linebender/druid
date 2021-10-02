@@ -23,6 +23,7 @@ use std::{
 };
 use tracing::{error, trace, warn};
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::menu::ContextMenu;
@@ -455,6 +456,20 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.submit_command(commands::NEW_SUB_WINDOW.with(SingleUse::new(req)));
         window_id
     }
+
+    /// Scrolls this widget into view.
+    ///
+    /// If this widget is only partially visible or not visible at all because of [`Scroll`]s
+    /// it is wrapped in, they will do the minimum amount of scrolling necessary to bring this
+    /// widget fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_to_view(&mut self) {
+        self.scroll_area_to_view(self.size().to_rect())
+    }
 });
 
 // methods on everyone but paintctx
@@ -688,6 +703,21 @@ impl EventCtx<'_, '_> {
         trace!("request_update");
         self.widget_state.request_update = true;
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_notification(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
+    }
 }
 
 impl UpdateCtx<'_, '_> {
@@ -727,6 +757,25 @@ impl UpdateCtx<'_, '_> {
             None => false,
         }
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(Command::new(
+            SCROLL_TO_VIEW,
+            area + self.window_origin().to_vec2(),
+            self.widget_id(),
+        ));
+    }
 }
 
 impl LifeCycleCtx<'_, '_> {
@@ -761,6 +810,25 @@ impl LifeCycleCtx<'_, '_> {
             widget_id: self.widget_id(),
         };
         self.state.text_registrations.push(registration);
+    }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(
+            SCROLL_TO_VIEW
+                .with(area + self.window_origin().to_vec2())
+                .to(self.widget_id()),
+        );
     }
 }
 

@@ -515,6 +515,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
                 ctx.request_paint();
+                ctx.scroll_to_view();
             }
             LifeCycle::FocusChanged(false) => {
                 if self.text().can_write() && MAC_OR_LINUX_OR_OBSD && !self.multiline {

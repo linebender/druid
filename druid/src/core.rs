@@ -19,6 +19,7 @@ use tracing::{info_span, trace, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
+use crate::commands::SCROLL_TO_VIEW;
 use crate::contexts::ContextState;
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
 use crate::sub_window::SubWindowUpdate;
@@ -842,6 +843,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         *data = (*update).clone();
                     }
                     ctx.is_handled = true
+                }
+                Event::Command(cmd) if cmd.is(SCROLL_TO_VIEW) => {
+                    // Submit the SCROLL_TO notification if it was used from a update or lifecycle
+                    // call.
+                    let rect = cmd.get_unchecked(SCROLL_TO_VIEW);
+                    inner_ctx.submit_notification(SCROLL_TO_VIEW.with(*rect));
+                    ctx.is_handled = true;
                 }
                 _ => {
                     self.inner.event(&mut inner_ctx, inner_event, data, env);
