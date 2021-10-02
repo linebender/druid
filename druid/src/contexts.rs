@@ -822,11 +822,11 @@ impl LifeCycleCtx<'_, '_> {
     /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_command(Command::new(
-            SCROLL_TO_VIEW,
-            area + self.window_origin().to_vec2(),
-            self.widget_id(),
-        ));
+        self.submit_command(
+            SCROLL_TO_VIEW
+                .with(area + self.window_origin().to_vec2())
+                .to(self.widget_id())
+        );
     }
 }
 
