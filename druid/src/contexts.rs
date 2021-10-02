@@ -827,7 +827,7 @@ impl LifeCycleCtx<'_, '_> {
         self.submit_command(
             SCROLL_TO_VIEW
                 .with(area + self.window_origin().to_vec2())
-                .to(self.widget_id())
+                .to(self.widget_id()),
         );
     }
 }
