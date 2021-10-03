@@ -478,13 +478,12 @@ impl WindowBuilder {
         self.0.set_transparent(transparent)
     }
 
-    /// Sets the initial window position in [display points], relative to the origin of the
-    /// virtual screen.
-    /// For sub-windows like [tooltips] and [dropdowns], this position must be in window co-ordinates.
+    /// Sets the initial window position in display points.
+    /// For windows with a parent, the position is relative to the parent.
+    /// For windows without a parent, it is relative to the origin of the virtual screen.
+    /// See also [set_level]
     ///
-    /// [display points]: crate::Scale
-    /// [tooltips]: crate::WindowLevel::Tooltip
-    /// [dropdowns]: crate::WindowLevel::DropDown
+    /// [set_level]: crate::WindowBuilder::set_level
     pub fn set_position(&mut self, position: Point) {
         self.0.set_position(position);
     }
