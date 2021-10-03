@@ -14,18 +14,16 @@
 
 //! Common types for representing pointer events and pointer state.
 //!
-//! This module is based on the [W3C Pointer Events recommendation](w3c).
+//! This module is based on the [W3C Pointer Events recommendation].
 //!
-//! [w3c]: https://www.w3.org/TR/pointerevents/
+//! [W3C Pointer Events recommendation]: https://www.w3.org/TR/pointerevents/
 
 use crate::backend;
 use crate::kurbo::{Point, Size, Vec2};
 use crate::Modifiers;
 
 /// An unique identifier for a pointer.
-// FIXME: make this platform-dependent. On gtk, it's much more convenient to use (Device,
-// EventSequence) to identify a pointer.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct PointerId(pub(crate) backend::pointer::PointerId);
 
 /// An event caused by a pointer.

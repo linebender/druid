@@ -41,7 +41,8 @@ use crate::error::Error as ShellError;
 use crate::scale::{Scale, ScaledArea};
 
 use crate::keyboard::{KeyState, Modifiers};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc};
+use crate::pointer::{Button, PointerEvent};
 use crate::region::Region;
 use crate::text::{simulate_input, Event};
 use crate::window;
@@ -192,20 +193,13 @@ fn setup_mouse_down_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_canvas_event_listener(ws, "mousedown", move |event: web_sys::MouseEvent| {
         if let Some(button) = mouse_button(event.button()) {
-            let pos = Point::new(event.offset_x() as f64, event.offset_y() as f64);
-            let count = state.click_counter.count_for_click(pos);
+            let mut ev = PointerEvent::from_web(&event);
+            let count = state.click_counter.count_for_click(ev.pos);
 
-            let buttons = mouse_buttons(event.buttons());
-            let event = MouseEvent {
-                pos,
-                buttons,
-                mods: get_modifiers!(event),
-                count,
-                focus: false,
-                button,
-                wheel_delta: Vec2::ZERO,
-            };
-            state.handler.borrow_mut().mouse_down(&event);
+            ev.count = count;
+            ev.button = button;
+            ev.mods = get_modifiers!(event);
+            state.handler.borrow_mut().pointer_down(&ev);
         }
     });
 }
@@ -214,17 +208,10 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_canvas_event_listener(ws, "mouseup", move |event: web_sys::MouseEvent| {
         if let Some(button) = mouse_button(event.button()) {
-            let buttons = mouse_buttons(event.buttons());
-            let event = MouseEvent {
-                pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
-                buttons,
-                mods: get_modifiers!(event),
-                count: 0,
-                focus: false,
-                button,
-                wheel_delta: Vec2::ZERO,
-            };
-            state.handler.borrow_mut().mouse_up(&event);
+            let mut ev = PointerEvent::from_web(&event);
+            ev.button = button;
+            ev.mods = get_modifiers!(event);
+            state.handler.borrow_mut().pointer_up(&ev);
         }
     });
 }
@@ -232,17 +219,9 @@ fn setup_mouse_up_callback(ws: &Rc<WindowState>) {
 fn setup_mouse_move_callback(ws: &Rc<WindowState>) {
     let state = ws.clone();
     register_canvas_event_listener(ws, "mousemove", move |event: web_sys::MouseEvent| {
-        let buttons = mouse_buttons(event.buttons());
-        let event = MouseEvent {
-            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
-            buttons,
-            mods: get_modifiers!(event),
-            count: 0,
-            focus: false,
-            button: MouseButton::None,
-            wheel_delta: Vec2::ZERO,
-        };
-        state.handler.borrow_mut().mouse_move(&event);
+        let mut ev = PointerEvent::from_web(&event);
+        ev.mods = get_modifiers!(event);
+        state.handler.borrow_mut().pointer_move(&ev);
     });
 }
 
@@ -268,16 +247,10 @@ fn setup_scroll_callback(ws: &Rc<WindowState>) {
             }
         };
 
-        let event = MouseEvent {
-            pos: Point::new(event.offset_x() as f64, event.offset_y() as f64),
-            buttons: mouse_buttons(event.buttons()),
-            mods: get_modifiers!(event),
-            count: 0,
-            focus: false,
-            button: MouseButton::None,
-            wheel_delta,
-        };
-        state.handler.borrow_mut().wheel(&event);
+        let mut ev = PointerEvent::from_web(event.as_ref());
+        ev.mods = get_modifiers!(event);
+        ev.wheel_delta = wheel_delta;
+        state.handler.borrow_mut().wheel(&ev);
     });
 }
 
@@ -727,35 +700,15 @@ impl IdleHandle {
     }
 }
 
-fn mouse_button(button: i16) -> Option<MouseButton> {
+fn mouse_button(button: i16) -> Option<Button> {
     match button {
-        0 => Some(MouseButton::Left),
-        1 => Some(MouseButton::Middle),
-        2 => Some(MouseButton::Right),
-        3 => Some(MouseButton::X1),
-        4 => Some(MouseButton::X2),
+        0 => Some(Button::Left),
+        1 => Some(Button::Middle),
+        2 => Some(Button::Right),
+        3 => Some(Button::X1),
+        4 => Some(Button::X2),
         _ => None,
     }
-}
-
-fn mouse_buttons(mask: u16) -> MouseButtons {
-    let mut buttons = MouseButtons::new();
-    if mask & 1 != 0 {
-        buttons.insert(MouseButton::Left);
-    }
-    if mask & 1 << 1 != 0 {
-        buttons.insert(MouseButton::Right);
-    }
-    if mask & 1 << 2 != 0 {
-        buttons.insert(MouseButton::Middle);
-    }
-    if mask & 1 << 3 != 0 {
-        buttons.insert(MouseButton::X1);
-    }
-    if mask & 1 << 4 != 0 {
-        buttons.insert(MouseButton::X2);
-    }
-    buttons
 }
 
 fn set_cursor(canvas: &web_sys::HtmlCanvasElement, cursor: &Cursor) {

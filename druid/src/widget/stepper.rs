@@ -224,7 +224,7 @@ impl Widget<f64> for Stepper {
         let height = env.get(theme::BORDERED_WIDGET_HEIGHT);
 
         match event {
-            Event::PointerDown(mouse) => {
+            Event::MouseDown(mouse) => {
                 if !ctx.is_disabled() {
                     ctx.set_active(true);
 
@@ -241,7 +241,7 @@ impl Widget<f64> for Stepper {
                     ctx.request_paint();
                 }
             }
-            Event::PointerUp(_) => {
+            Event::MouseUp(_) => {
                 ctx.set_active(false);
 
                 self.decrease_active = false;

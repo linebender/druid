@@ -15,9 +15,10 @@
 //! The pointy bits
 
 use druid_shell::kurbo::Vec2;
+use druid_shell::Cursor;
 
 use crate::kurbo::{Point, Size};
-use crate::{Modifiers, PointerButton, PointerButtons, PointerId, PointerType};
+use crate::{Data, Event, Modifiers, PointerButton, PointerButtons, PointerId, PointerType};
 
 /// An event caused by a pointer.
 ///
@@ -81,6 +82,11 @@ pub struct PointerEvent {
     /// Indicates whether this is the primary pointer of its type. For example, the first finger
     /// to come down in a multi-touch event is the primary one.
     pub is_primary: bool,
+    /// Indicates whether this event should be treated as coming from the system's single emulated
+    /// mouse. See [Event] for more details.
+    ///
+    /// [Event]: crate::Event#The emulated mouse pointer
+    pub is_emulated_mouse: bool,
     /// The number of mouse clicks associated with this event. This will always
     /// be `0` for pointer-up and pointer-move events.
     pub count: u8,
@@ -115,9 +121,82 @@ impl From<druid_shell::PointerEvent> for PointerEvent {
             buttons: src.buttons,
             pointer_type: src.pointer_type,
             is_primary: src.is_primary,
+            is_emulated_mouse: false,
             count: src.count,
             focus: src.focus,
             wheel_delta: src.wheel_delta,
         }
+    }
+}
+
+impl PointerEvent {
+    pub(crate) fn translate(&self, offset: Vec2) -> PointerEvent {
+        let mut ev = self.clone();
+        ev.pos += offset;
+        ev
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct ActivePointerState {
+    pen_active: bool,
+}
+
+impl ActivePointerState {
+    fn is_emulated_mouse(&self, ptr: PointerType) -> bool {
+        match ptr {
+            PointerType::Mouse => true,
+            PointerType::Pen => true,
+            PointerType::Touch => !self.pen_active,
+            PointerType::Eraser => false,
+        }
+    }
+
+    pub fn pointer_down(&mut self, event: &druid_shell::PointerEvent) -> Event {
+        if event.is_primary && event.pointer_type == PointerType::Pen {
+            self.pen_active = true;
+        }
+        let mut event = PointerEvent::from(event.clone());
+        if event.is_primary && self.is_emulated_mouse(event.pointer_type) {
+            event.is_emulated_mouse = true;
+            Event::MouseDown(event)
+        } else {
+            event.is_emulated_mouse = false;
+            Event::PointerDown(event)
+        }
+    }
+
+    pub fn pointer_up(&mut self, event: &druid_shell::PointerEvent) -> Event {
+        if event.is_primary && event.pointer_type == PointerType::Pen {
+            self.pen_active = false;
+        }
+        let mut event = PointerEvent::from(event.clone());
+        if event.is_primary && self.is_emulated_mouse(event.pointer_type) {
+            event.is_emulated_mouse = true;
+            Event::MouseUp(event)
+        } else {
+            event.is_emulated_mouse = false;
+            Event::PointerUp(event)
+        }
+    }
+
+    pub fn pointer_move(&mut self, event: &druid_shell::PointerEvent) -> Event {
+        if event.is_primary && event.pointer_type == PointerType::Pen {
+            self.pen_active = false;
+        }
+        let mut event = PointerEvent::from(event.clone());
+        if event.is_primary && self.is_emulated_mouse(event.pointer_type) {
+            event.is_emulated_mouse = true;
+            Event::MouseMove(event)
+        } else {
+            event.is_emulated_mouse = false;
+            Event::PointerMove(event)
+        }
+    }
+}
+
+impl Data for Cursor {
+    fn same(&self, other: &Cursor) -> bool {
+        self == other
     }
 }

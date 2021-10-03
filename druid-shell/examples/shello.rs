@@ -19,7 +19,7 @@ use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, FileDialogOptions, FileDialogToken, FileInfo, FileSpec, HotKey, KeyEvent,
-    Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
+    Menu, PointerEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
@@ -87,21 +87,21 @@ impl WinHandler for HelloState {
         println!("keyup: {:?}", event);
     }
 
-    fn wheel(&mut self, event: &MouseEvent) {
+    fn wheel(&mut self, event: &PointerEvent) {
         println!("mouse_wheel {:?}", event);
     }
 
-    fn mouse_move(&mut self, event: &MouseEvent) {
+    fn pointer_move(&mut self, event: &PointerEvent) {
         self.handle.set_cursor(&Cursor::Arrow);
-        println!("mouse_move {:?}", event);
+        println!("pointer_move {:?}", event);
     }
 
-    fn mouse_down(&mut self, event: &MouseEvent) {
-        println!("mouse_down {:?}", event);
+    fn pointer_down(&mut self, event: &PointerEvent) {
+        println!("pointer_down {:?}", event);
     }
 
-    fn mouse_up(&mut self, event: &MouseEvent) {
-        println!("mouse_up {:?}", event);
+    fn pointer_up(&mut self, event: &PointerEvent) {
+        println!("pointer_up {:?}", event);
     }
 
     fn timer(&mut self, id: TimerToken) {

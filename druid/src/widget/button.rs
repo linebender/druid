@@ -115,14 +115,14 @@ impl<T: Data> Widget<T> for Button<T> {
     #[instrument(name = "Button", level = "trace", skip(self, ctx, event, _data, _env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, _env: &Env) {
         match event {
-            Event::PointerDown(_) => {
+            Event::MouseDown(_) => {
                 if !ctx.is_disabled() {
                     ctx.set_active(true);
                     ctx.request_paint();
                     trace!("Button {:?} pressed", ctx.widget_id());
                 }
             }
-            Event::PointerUp(_) => {
+            Event::MouseUp(_) => {
                 if ctx.is_active() && !ctx.is_disabled() {
                     ctx.request_paint();
                     trace!("Button {:?} released", ctx.widget_id());

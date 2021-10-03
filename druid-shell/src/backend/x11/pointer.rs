@@ -23,7 +23,7 @@ use crate::{PointerEvent, Scale};
 use super::util::key_mods;
 
 // TODO: support non-mouse pointers
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub(crate) struct PointerId {}
 
 impl PointerEvent {

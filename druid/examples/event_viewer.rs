@@ -22,7 +22,7 @@ use druid::widget::prelude::*;
 use druid::widget::{Controller, CrossAxisAlignment, Flex, Label, List, Scroll, SizedBox, TextBox};
 use druid::{
     theme, AppLauncher, Color, Data, FontDescriptor, KeyEvent, Lens, Location, Modifiers,
-    PointerButton, MouseEvent, WidgetExt, WindowDesc,
+    PointerButton, PointerEvent, WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
@@ -97,7 +97,7 @@ struct LoggedEvent {
     // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
     // https://docs.rs/druid/0.6.0/druid/trait.Data.html
     #[data(ignore)]
-    mouse: Option<MouseEvent>,
+    mouse: Option<PointerEvent>,
     #[data(ignore)]
     key: Option<KeyEvent>,
 }

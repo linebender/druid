@@ -431,14 +431,6 @@ impl WindowBuilder {
         win_state.drawing_area.set_can_focus(true);
         win_state.drawing_area.grab_focus();
 
-        win_state
-            .drawing_area
-            .connect_enter_notify_event(|widget, _| {
-                widget.grab_focus();
-
-                Inhibit(true)
-            });
-
         // Set the minimum size
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
@@ -668,6 +660,22 @@ impl WindowBuilder {
                         }
                     }
                 }
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_enter_notify_event(clone!(handle => move |widget, event| {
+                widget.grab_focus();
+
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let mut pointer_event = PointerEvent::from_gdk(event, scale);
+                    pointer_event.button = Button::None;
+
+                    state.with_handler(|h| h.pointer_enter(&pointer_event));
+                }
+
                 Inhibit(true)
             }));
 

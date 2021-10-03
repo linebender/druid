@@ -217,7 +217,7 @@ impl WindowHandle {
     /// Informs the system that the current location of the mouse should be treated as part of the
     /// window's titlebar. This can be used to implement a custom titlebar widget. Note that
     /// because this refers to the current location of the mouse, you should probably call this
-    /// function in response to every relevant [`WinHandler::mouse_move`].
+    /// function in response to every relevant [`WinHandler::pointer_move`].
     ///
     /// This is currently only implemented on Windows.
     pub fn handle_titlebar(&self, val: bool) {
@@ -661,8 +661,16 @@ pub trait WinHandler {
     fn pointer_up(&mut self, event: &PointerEvent) {}
 
     /// Called when a pointer leaves the window.
+    ///
+    /// This includes the case that a hovering pen was lifted.
     #[allow(unused_variables)]
     fn pointer_leave(&mut self, event: &PointerEvent) {}
+
+    /// Called when a pointer enters the window.
+    ///
+    /// This includes the case that a pen starts hovering over the window.
+    #[allow(unused_variables)]
+    fn pointer_enter(&mut self, event: &PointerEvent) {}
 
     /// Called when a pointer is cancelled, for example because a touch-related pointer was
     /// determined to be making a gesture.

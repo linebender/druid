@@ -132,7 +132,7 @@ impl Widget<f64> for Slider {
         let slider_width = ctx.size().width;
 
         match event {
-            Event::PointerDown(mouse) if mouse.is_primary => {
+            Event::MouseDown(mouse) => {
                 if !ctx.is_disabled() {
                     ctx.set_active(true);
                     if self.knob_hit_test(knob_size, mouse.pos) {
@@ -144,14 +144,15 @@ impl Widget<f64> for Slider {
                     ctx.request_paint();
                 }
             }
-            Event::PointerUp(mouse) if mouse.is_primary => {
+            Event::MouseUp(mouse) => {
                 if ctx.is_active() && !ctx.is_disabled() {
                     *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);
                     ctx.request_paint();
                 }
                 ctx.set_active(false);
             }
-            Event::PointerMove(mouse) if mouse.is_primary => {
+            Event::MouseMove(mouse) => {
+                dbg!(mouse);
                 if !ctx.is_disabled() {
                     if ctx.is_active() {
                         *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);

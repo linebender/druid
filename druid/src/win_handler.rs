@@ -30,6 +30,7 @@ use crate::app_delegate::{AppDelegate, DelegateCtx};
 use crate::core::CommandQueue;
 use crate::ext_event::{ExtEventHost, ExtEventSink};
 use crate::menu::{ContextMenu, MenuItemId, MenuManager};
+use crate::pointer::ActivePointerState;
 use crate::window::{ImeUpdateFn, Window};
 use crate::{
     Command, Data, Env, Event, Handled, InternalEvent, KeyEvent, PlatformError, Selector, Target,
@@ -98,6 +99,9 @@ struct InnerAppState<T> {
     /// is the window that's currently in charge of the app menu.
     #[allow(unused)]
     menu_window: Option<WindowId>,
+    /// Keeps track of the state of various pointers, allowing us to decide which one to treat as
+    /// the primary mouse.
+    pointer_state: ActivePointerState,
     pub(crate) env: Env,
     pub(crate) data: T,
     ime_focus_change: Option<Box<dyn Fn()>>,
@@ -168,6 +172,7 @@ impl<T> AppState<T> {
             ext_event_host,
             data,
             env,
+            pointer_state: Default::default(),
             windows: Windows::default(),
             ime_focus_change: None,
         }));
@@ -933,23 +938,53 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.handle_dialog_response(token, file_info);
     }
 
+    fn pointer_enter(&mut self, event: &druid_shell::PointerEvent) {
+        self.app_state
+            .inner
+            .borrow_mut()
+            .pointer_state
+            .pointer_down(event);
+    }
+
     fn pointer_down(&mut self, event: &druid_shell::PointerEvent) {
-        let event = Event::PointerDown(event.clone().into());
+        let event = self
+            .app_state
+            .inner
+            .borrow_mut()
+            .pointer_state
+            .pointer_down(event);
+        dbg!(&event);
         self.app_state.do_window_event(event, self.window_id);
     }
 
     fn pointer_up(&mut self, event: &druid_shell::PointerEvent) {
-        let event = Event::PointerUp(event.clone().into());
+        let event = self
+            .app_state
+            .inner
+            .borrow_mut()
+            .pointer_state
+            .pointer_up(event);
         self.app_state.do_window_event(event, self.window_id);
     }
 
     fn pointer_move(&mut self, event: &druid_shell::PointerEvent) {
-        let event = Event::PointerMove(event.clone().into());
+        let event = self
+            .app_state
+            .inner
+            .borrow_mut()
+            .pointer_state
+            .pointer_move(event);
         self.app_state.do_window_event(event, self.window_id);
     }
 
     fn pointer_leave(&mut self, event: &druid_shell::PointerEvent) {
-        if event.is_primary {
+        let event = self
+            .app_state
+            .inner
+            .borrow_mut()
+            .pointer_state
+            .pointer_up(event);
+        if let Event::MouseUp(_) = event {
             self.app_state
                 .do_window_event(Event::Internal(InternalEvent::MouseLeave), self.window_id);
         }

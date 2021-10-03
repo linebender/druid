@@ -45,8 +45,23 @@ use crate::{Command, Notification, PointerEvent, WidgetId};
 /// This enum is expected to grow considerably, as there are many, many
 /// different kinds of events that are relevant in a GUI.
 ///
-/// [`event`]: trait.Widget.html#tymethod.event
-/// [`WidgetPod`]: struct.WidgetPod.html
+/// ## The emulated mouse pointer
+///
+/// Computers can have many different pointing devices (touchscreens, pens, erasers, mice).  Some
+/// widgets care about the distinction between these devices, but others do not. In order to make
+/// the second kind of widget convenient to create, Druid maintains a kind of "emulated mouse
+/// pointer:" we divide events into those that affect the emulated mouse pointer, and events that
+/// do not. The former events are dispatched using the [`Event::MouseUp`], [`Event::MouseDown`], and
+/// [`Event::MouseMove`] variants, so widgets that are interested in traditional mouse interactions should
+/// listen for those events. The other pointer events are dispatched using the [`Event::PointerUp`],
+/// [`Event::PointerDown`], [`Event::PointerMove`],  and [`Event::PointerCancel`] variants. For convenience, Druid
+/// also supplies an `is_emulated_mouse` field in [`PointerEvent`]: this field is always
+/// true for events in the `MouseXXX` variants, and always false for events in the `PointerXXX`
+/// variants.
+///
+/// [`event`]: crate::Widget::event
+/// [`WidgetPod`]: crate::WidgetPod
+/// [`PointerEvent`]: crate::PointerEvent
 #[derive(Debug, Clone)]
 pub enum Event {
     /// Sent to all widgets in a given window when that window is first instantiated.
@@ -80,13 +95,17 @@ pub enum Event {
     /// in the WindowPod, but after that it might be considered better
     /// to just handle it in `layout`.
     WindowSize(Size),
-    /// DOCME
+    /// Called when a pointer is cancelled, for example because the device was disconnected or
+    /// because the system recognized a gesture and wants us to ignore the pointer motion that led
+    /// to that gesture.
     PointerCancel(PointerEvent),
-    /// Called when a pointer goes down, for example because a mouse button is pressed or a pen
-    /// touches the screen.
+    /// Called when a pointer goes down, for example because a finger touches the touchscreen. This
+    /// event is created only for events that are not considered to belong to the emulated mouse
+    /// pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
     PointerDown(PointerEvent),
-    /// Called when a pointer goes up, for example because a mouse button is released or a pen is
-    /// lifted off the screen.
+    /// Called when a pointer goes down, for example because a finger lifts off the touchscreen. This
+    /// event is created only for events that are not considered to belong to the emulated mouse
+    /// pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
     PointerUp(PointerEvent),
     /// Called when a pointer is moved.
     ///
@@ -101,8 +120,37 @@ pub enum Event {
     /// [`set_cursor`] in the PointerMove handler, as `PointerMove` is only
     /// propagated to active or hot widgets.
     ///
+    /// This event is created only for events that are not considered to belong to the emulated
+    /// mouse pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
+    ///
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
     PointerMove(PointerEvent),
+    /// Called when a pointer goes up, for example because a pen is lifted from a tablet, or a mouse
+    /// button is released. This event is created only for events that belong to the emulated mouse
+    /// pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
+    MouseUp(PointerEvent),
+    /// Called when a pointer goes down, for example because a pen touches a tablet, or a mouse
+    /// button is pressed. This event is created only for events that belong to the emulated mouse
+    /// pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
+    MouseDown(PointerEvent),
+    /// Called when a pointer is moved.
+    ///
+    /// The `PointerMove` event is propagated to the active widget, if
+    /// there is one, otherwise to hot widgets (see `HotChanged`).
+    /// If a widget loses its hot status due to `PointerMove` then that specific
+    /// `PointerMove` event is also still sent to that widget.
+    ///
+    /// The `PointerMove` event is also the primary mechanism for widgets
+    /// to set a cursor, for example to an I-bar inside a text widget. A
+    /// simple tactic is for the widget to unconditionally call
+    /// [`set_cursor`] in the PointerMove handler, as `PointerMove` is only
+    /// propagated to active or hot widgets.
+    ///
+    /// This event is created only for events that belong to the emulated mouse
+    /// pointer; see [The emulated mouse pointer](Event#The emulated mouse pointer).
+    ///
+    /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
+    MouseMove(PointerEvent),
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(PointerEvent),
     /// Called when a key is pressed.
@@ -372,43 +420,79 @@ impl Event {
     /// or hot.
     pub fn transform_scroll(&self, offset: Vec2, viewport: Rect, force: bool) -> Option<Event> {
         match self {
+            Event::MouseDown(mouse_event) => {
+                if force || viewport.winding(mouse_event.pos) != 0 {
+                    Some(Event::MouseDown(mouse_event.translate(offset)))
+                } else {
+                    None
+                }
+            }
+            Event::MouseUp(mouse_event) => {
+                if force || viewport.winding(mouse_event.pos) != 0 {
+                    Some(Event::MouseUp(mouse_event.translate(offset)))
+                } else {
+                    None
+                }
+            }
+            Event::MouseMove(mouse_event) => {
+                if force || viewport.winding(mouse_event.pos) != 0 {
+                    Some(Event::MouseMove(mouse_event.translate(offset)))
+                } else {
+                    None
+                }
+            }
             Event::PointerDown(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::PointerDown(mouse_event))
+                    Some(Event::PointerDown(mouse_event.translate(offset)))
                 } else {
                     None
                 }
             }
             Event::PointerUp(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::PointerUp(mouse_event))
+                    Some(Event::PointerUp(mouse_event.translate(offset)))
                 } else {
                     None
                 }
             }
             Event::PointerMove(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::PointerMove(mouse_event))
+                    Some(Event::PointerMove(mouse_event.translate(offset)))
+                } else {
+                    None
+                }
+            }
+            Event::PointerCancel(mouse_event) => {
+                if force || viewport.winding(mouse_event.pos) != 0 {
+                    Some(Event::PointerCancel(mouse_event.translate(offset)))
                 } else {
                     None
                 }
             }
             Event::Wheel(mouse_event) => {
                 if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::Wheel(mouse_event))
+                    Some(Event::Wheel(mouse_event.translate(offset)))
                 } else {
                     None
                 }
             }
             _ => Some(self.clone()),
+        }
+    }
+
+    /// Translate a mouse or pointer event by an offset.
+    ///
+    /// Other kinds of events are unchanged.
+    pub fn translate(&self, offset: Vec2) -> Event {
+        match self {
+            Event::PointerDown(ev) => Event::PointerDown(ev.translate(offset)),
+            Event::PointerUp(ev) => Event::PointerUp(ev.translate(offset)),
+            Event::PointerMove(ev) => Event::PointerMove(ev.translate(offset)),
+            Event::PointerCancel(ev) => Event::PointerCancel(ev.translate(offset)),
+            Event::MouseDown(ev) => Event::MouseDown(ev.translate(offset)),
+            Event::MouseUp(ev) => Event::MouseUp(ev.translate(offset)),
+            Event::MouseMove(ev) => Event::MouseMove(ev.translate(offset)),
+            _ => self.clone(),
         }
     }
 
@@ -444,6 +528,9 @@ impl Event {
             | Event::PointerDown(_)
             | Event::PointerUp(_)
             | Event::PointerMove(_)
+            | Event::MouseDown(_)
+            | Event::MouseUp(_)
+            | Event::MouseMove(_)
             | Event::Wheel(_)
             | Event::KeyDown(_)
             | Event::KeyUp(_)
