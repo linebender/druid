@@ -1353,6 +1353,8 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
+            // TODO: pos_x and pos_y are only scaled for windows with parents. But they need to be
+            // scaled for windows without parents too.
             let (mut pos_x, mut pos_y) = match self.position {
                 Some(pos) => (pos.x as i32, pos.y as i32),
                 None => (CW_USEDEFAULT, CW_USEDEFAULT),
