@@ -244,8 +244,8 @@ impl<T: Data> Window<T> {
 
         let event = match event {
             Event::Timer(token) => {
-                if let Some(widget_id) = self.timers.get(&token) {
-                    Event::Internal(InternalEvent::RouteTimer(token, *widget_id))
+                if let Some(widget_id) = self.timers.remove(&token) {
+                    Event::Internal(InternalEvent::RouteTimer(token, widget_id))
                 } else {
                     error!("No widget found for timer {:?}", token);
                     return Handled::No;
@@ -298,12 +298,6 @@ impl<T: Data> Window<T> {
             }
             Handled::from(ctx.is_handled)
         };
-
-        // Clean up the timer token and do it immediately after the event handling
-        // because the token may be reused and re-added in a lifecycle pass below.
-        if let Event::Internal(InternalEvent::RouteTimer(token, _)) = event {
-            self.timers.remove(&token);
-        }
 
         if let Some(cursor) = &widget_state.cursor {
             self.handle.set_cursor(cursor);
