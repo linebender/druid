@@ -116,6 +116,10 @@ pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
 /// scrollbar's primary axis.
 pub const SCROLLBAR_MIN_SIZE: Key<f64> = Key::new("org.linebender.theme.scrollbar_min_size");
 
+// can be used to globally replace the default svg stroke color.
+pub const SVG_DEFAULT_STROKE_COLOR: Key<Color> =
+    Key::new("org.linebender.druid.theme.svg.stroke_color_default");
+
 /// An initial theme.
 pub(crate) fn add_to_env(env: Env) -> Env {
     env.adding(WINDOW_BACKGROUND_COLOR, Color::rgb8(0x29, 0x29, 0x29))

@@ -20,6 +20,7 @@ use tracing::{instrument, trace};
 use crate::{
     kurbo::BezPath,
     piet::{self, GradientStop, LineCap, LineJoin, LinearGradient, RadialGradient, StrokeStyle},
+    theme,
     widget::common::FillStrat,
     widget::prelude::*,
     Affine, Color, Data, Rect, UnitPoint,
@@ -29,6 +30,7 @@ use crate::{
 pub struct Svg {
     svg_data: SvgData,
     fill: FillStrat,
+    default_color: Option<Color>,
 }
 
 impl Svg {
@@ -39,12 +41,19 @@ impl Svg {
         Svg {
             svg_data,
             fill: FillStrat::default(),
+            default_color: None,
         }
     }
 
     /// Builder-style method for specifying the fill strategy.
     pub fn fill_mode(mut self, mode: FillStrat) -> Self {
         self.fill = mode;
+        self
+    }
+
+    /// Builder-style method for specifying the default stroke color.
+    pub fn default_stroke_color(mut self, color: Color) -> Self {
+        self.default_color = Some(color);
         self
     }
 
@@ -93,8 +102,14 @@ impl<T: Data> Widget<T> for Svg {
         constrained_size
     }
 
-    #[instrument(name = "Svg", level = "trace", skip(self, ctx, _data, _env))]
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+    #[instrument(name = "Svg", level = "trace", skip(self, ctx, _data, env))]
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
+        let default_stroke_color: Color = match &self.default_color {
+            Some(c) => c.clone(),
+            None => env
+                .try_get(theme::SVG_DEFAULT_STROKE_COLOR)
+                .unwrap_or(Color::BLACK),
+        };
         let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.svg_data.size());
 
         let clip_rect = Rect::ZERO.with_size(ctx.size());
@@ -102,7 +117,8 @@ impl<T: Data> Widget<T> for Svg {
         // The SvgData's to_piet function does not clip to the svg's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
         ctx.clip(clip_rect);
-        self.svg_data.to_piet(offset_matrix, ctx);
+        self.svg_data
+            .to_piet(offset_matrix, ctx, &default_stroke_color);
     }
 }
 
@@ -134,8 +150,9 @@ impl SvgData {
     }
 
     /// Convert SvgData into Piet draw instructions
-    pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
-        let mut state = SvgRenderer::new(offset_matrix * self.inner_affine());
+    pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx, default_color: &Color) {
+        let mut state =
+            SvgRenderer::new(offset_matrix * self.inner_affine(), default_color.clone());
         // I actually made `SvgRenderer` able to handle a stack of `<defs>`, but I'm gonna see if
         // resvg always puts them at the top.
         let root = self.tree.root();
@@ -225,13 +242,15 @@ impl FromStr for SvgData {
 struct SvgRenderer {
     offset_matrix: Affine,
     defs: Defs,
+    default_color: Color,
 }
 
 impl SvgRenderer {
-    fn new(offset_matrix: Affine) -> Self {
+    fn new(offset_matrix: Affine, default_color: Color) -> Self {
         Self {
             offset_matrix,
             defs: Defs::new(),
+            default_color,
         }
     }
 
@@ -350,7 +369,7 @@ impl SvgRenderer {
             .iter()
             .map(|stop| GradientStop {
                 pos: stop.offset.value() as f32,
-                color: color_from_svg(stop.color, stop.opacity),
+                color: color_from_svg(stop.color, stop.opacity, &self.default_color),
             })
             .collect();
 
@@ -368,7 +387,7 @@ impl SvgRenderer {
             .iter()
             .map(|stop| GradientStop {
                 pos: stop.offset.value() as f32,
-                color: color_from_svg(stop.color, stop.opacity),
+                color: color_from_svg(stop.color, stop.opacity, &self.default_color),
             })
             .collect();
 
@@ -383,7 +402,7 @@ impl SvgRenderer {
         match paint {
             usvg::Paint::Color(c) => {
                 // TODO I'm going to assume here that not retaining colors is OK.
-                let color = color_from_svg(*c, opacity);
+                let color = color_from_svg(*c, opacity, &self.default_color);
                 Rc::new(piet::PaintBrush::Color(color))
             }
             usvg::Paint::Link(id) => match self.defs.find(id) {
@@ -427,8 +446,13 @@ fn transform_to_affine(t: usvg::Transform) -> Affine {
     Affine::new([t.a, t.b, t.c, t.d, t.e, t.f])
 }
 
-fn color_from_svg(c: usvg::Color, opacity: usvg::Opacity) -> Color {
-    Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value())
+fn color_from_svg(c: usvg::Color, opacity: usvg::Opacity, default: &Color) -> Color {
+    let computed = Color::rgb8(c.red, c.green, c.blue);
+    match computed {
+        Color::BLACK => default.clone(), // usvg uses black as its default.
+        c => c,
+    }
+    .with_alpha(opacity.value())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
