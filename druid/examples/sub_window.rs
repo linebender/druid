@@ -74,7 +74,7 @@ enum TooltipState {
         last_move: Instant,
         timer_expire: Instant,
         token: TimerToken,
-        window_pos: Point,
+        position_in_window_coordinates: Point,
     },
     Fresh,
 }
@@ -105,7 +105,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                     last_move: now,
                     timer_expire: now + wait_duration,
                     token: ctx.request_timer(wait_duration),
-                    window_pos: me.window_pos,
+                    position_in_window_coordinates: me.window_pos,
                 }),
                 _ => None,
             },
@@ -113,7 +113,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                 last_move,
                 timer_expire,
                 token,
-                window_pos,
+                position_in_window_coordinates,
             } => match event {
                 Event::MouseMove(me) if ctx.is_hot() => {
                     let (cur_token, cur_expire) = if *timer_expire - now < resched_dur {
@@ -125,7 +125,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                         last_move: now,
                         timer_expire: cur_expire,
                         token: cur_token,
-                        window_pos: me.window_pos,
+                        position_in_window_coordinates: me.window_pos,
                     })
                 }
                 Event::Timer(tok) if tok == token => {
@@ -138,17 +138,18 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                             last_move: *last_move,
                             timer_expire: deadline,
                             token: ctx.request_timer(wait_for),
-                            window_pos: *window_pos,
+                            position_in_window_coordinates: *position_in_window_coordinates,
                         })
                     } else {
+                        let tooltip_position_in_window_coordinates =
+                            (position_in_window_coordinates.to_vec2() + cursor_size.to_vec2())
+                                .to_point();
                         let win_id = ctx.new_sub_window(
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .window_size_policy(WindowSizePolicy::Content)
                                 .set_level(WindowLevel::Tooltip(ctx.window().clone()))
-                                .set_position(
-                                    (window_pos.to_vec2() + cursor_size.to_vec2()).to_point(),
-                                ),
+                                .set_position(tooltip_position_in_window_coordinates),
                             Label::<()>::new(self.tip.clone()),
                             (),
                             env.clone(),
@@ -168,7 +169,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                             last_move: now,
                             timer_expire: now + wait_duration,
                             token: ctx.request_timer(wait_duration),
-                            window_pos: me.window_pos,
+                            position_in_window_coordinates: me.window_pos,
                         })
                     }
                     _ => None,
