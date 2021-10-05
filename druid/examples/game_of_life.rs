@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
 use druid::{
-    AppLauncher, Color, Data, Lens, PointerButton, Point, Rect, TimerToken, WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, Lens, Point, PointerButton, Rect, TimerToken, WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
