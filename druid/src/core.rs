@@ -397,12 +397,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             Some(pos) => rect.winding(pos) != 0,
             None => false,
         };
-        trace!(
-            "Widget {:?}: set hot state to {}",
-            child_state.id,
-            child_state.is_hot
-        );
         if had_hot != child_state.is_hot {
+            trace!(
+                "Widget {:?}: set hot state to {}",
+                child_state.id,
+                child_state.is_hot
+            );
+
             let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
             let mut child_ctx = LifeCycleCtx {
                 state,
@@ -861,8 +862,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
 
             // we try to handle the notifications that occured below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
-        } else {
-            trace!("event wasn't propagated to {:?}", self.state.id);
         }
 
         // Always merge even if not needed, because merging is idempotent and gives us simpler code.
@@ -1271,11 +1270,6 @@ impl WidgetState {
     ///
     /// This method is idempotent and can be called multiple times.
     fn merge_up(&mut self, child_state: &mut WidgetState) {
-        trace!(
-            "merge_up self.id={:?} child.id={:?}",
-            self.id,
-            child_state.id
-        );
         let clip = self
             .layout_rect()
             .with_origin(Point::ORIGIN)
