@@ -103,7 +103,7 @@ impl PointerEvent {
     // This is the "general purpose" conversion from gdk events to PointerEvents. For some specific
     // events, some of the PointerEvent fields might have better values.
     pub(crate) fn from_gdk(ev: &gdk::Event, scale: Scale) -> PointerEvent {
-        let button_state = ev.state().unwrap_or(ModifierType::empty());
+        let button_state = ev.state().unwrap_or_else(ModifierType::empty);
         let pressure = ev
             .axis(AxisUse::Pressure)
             .unwrap_or(if button_state.is_empty() { 0.0 } else { 0.5 });
