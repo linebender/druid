@@ -284,7 +284,21 @@ impl WindowBuilder {
                 .colormap(colormap);
         };
 
-        let pos = self.position.unwrap_or_default().to_px(scale);
+        let (parent, parent_origin) = match &self.level {
+            WindowLevel::AppWindow => (Weak::new(), Vec2::ZERO),
+            WindowLevel::Tooltip(parent)
+            | WindowLevel::DropDown(parent)
+            | WindowLevel::Modal(parent) => {
+                let handle = parent.0.window.clone();
+                let origin = handle
+                    .upgrade()
+                    .map(|x| x.get_position())
+                    .unwrap_or_default()
+                    .to_vec2();
+                (handle, origin)
+            }
+        };
+        let pos = (self.position.unwrap_or_default() + parent_origin).to_px(scale);
 
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
@@ -470,6 +484,7 @@ impl WindowBuilder {
             present_data: RefCell::new(present_data),
             buffers,
             active_text_field: Cell::new(None),
+            parent,
         });
 
         window.set_title(&self.title);
@@ -588,6 +603,7 @@ pub(crate) struct Window {
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
     active_text_field: Cell<Option<TextFieldToken>>,
+    parent: Weak<Window>,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -852,6 +868,14 @@ impl Window {
         warn!("Window::show_titlebar is currently unimplemented for X11 backend.");
     }
 
+    fn parent_origin(&self) -> Vec2 {
+        self.parent
+            .upgrade()
+            .map(|x| x.get_position())
+            .unwrap_or_default()
+            .to_vec2()
+    }
+
     fn get_position(&self) -> Point {
         fn _get_position(window: &Window) -> Result<Point, Error> {
             let conn = window.app.connection();
@@ -864,13 +888,14 @@ impl Window {
         }
         let pos = _get_position(self);
         log_x11!(&pos);
-        pos.unwrap_or_default()
+        pos.map(|pos| pos - self.parent_origin())
+            .unwrap_or_default()
     }
 
     fn set_position(&self, pos: Point) {
         let conn = self.app.connection();
         let scale = self.scale.get();
-        let pos = pos.to_px(scale).expand();
+        let pos = (pos + self.parent_origin()).to_px(scale).expand();
         log_x11!(conn.configure_window(
             self.id,
             &ConfigureWindowAux::new().x(pos.x as i32).y(pos.y as i32),
