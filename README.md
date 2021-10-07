@@ -65,9 +65,9 @@ Druid's existing functionality and widgets. Check [druid_widget_nursery](https:/
 
 ## Screenshots
 
-[![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
-[![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
-[![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
+[![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](/druid/examples/calc.rs)
+[![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](/druid/examples/flex.rs)
+[![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](/druid/examples/custom_widget.rs)
 
 ## Using Druid
 
@@ -298,17 +298,17 @@ The main authors are Raph Levien and Colin Rofls, with much support from an
 active and friendly community.
 
 [Runebender]: https://github.com/linebender/runebender
-[the examples folder]: ./druid/examples
+[the examples folder]: /druid/examples
 [Piet library]: https://github.com/linebender/piet
-[custom_widget]: ./druid/examples/custom_widget.rs
-[basic utility and layout widgets]: ./druid/src/widget
+[custom_widget]: /druid/examples/custom_widget.rs
+[basic utility and layout widgets]: /druid/src/widget
 [Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
 [GTK installation page]: https://www.gtk.org/docs/installations/linux/
 [Rust-native GUI experiments]: https://areweguiyet.com
-[CONTRIBUTING.md]: ./CONTRIBUTING.md
+[CONTRIBUTING.md]: /CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
-[non-`druid` examples]: ./druid-shell/examples/shello.rs
+[non-`druid` examples]: /druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.7.0/druid/struct.EventCtx.html
 [LifeCycleCtx]: https://docs.rs/druid/0.7.0/druid/struct.LifeCycleCtx.html
