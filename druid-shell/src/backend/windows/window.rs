@@ -95,6 +95,7 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     size: Option<Size>,
     transparent: bool,
+    topmost: bool,
     min_size: Option<Size>,
     position: Option<Point>,
     level: Option<WindowLevel>,
@@ -1270,6 +1271,7 @@ impl WindowBuilder {
             resizable: true,
             show_titlebar: true,
             transparent: false,
+            topmost: false,
             present_strategy: Default::default(),
             size: None,
             min_size: None,
@@ -1311,6 +1313,10 @@ impl WindowBuilder {
                 tracing::warn!("Transparency requires Windows 8 or newer");
             }
         }
+    }
+
+    pub fn set_topmost(&mut self, topmost: bool) {
+        self.topmost = topmost;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
@@ -1411,6 +1417,10 @@ impl WindowBuilder {
                         dwExStyle = WS_EX_TOPMOST;
                     }
                 }
+            }
+
+            if self.topmost {
+                dwExStyle = WS_EX_TOPMOST;
             }
 
             let window = WindowState {

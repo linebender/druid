@@ -61,6 +61,7 @@ pub struct WindowConfig {
     pub(crate) position: Option<Point>,
     pub(crate) resizable: Option<bool>,
     pub(crate) transparent: Option<bool>,
+    pub(crate) topmost: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
     pub(crate) state: Option<WindowState>,
@@ -279,6 +280,7 @@ impl Default for WindowConfig {
             resizable: None,
             show_titlebar: None,
             transparent: None,
+            topmost: None,
             level: None,
             state: None,
         }
@@ -381,6 +383,12 @@ impl WindowConfig {
         self
     }
 
+    /// Set whether the window is topmost
+    pub fn topmost(mut self, topmost: bool) -> Self {
+        self.topmost = Some(topmost);
+        self
+    }
+
     /// Apply this window configuration to the passed in WindowBuilder
     pub fn apply_to_builder(&self, builder: &mut WindowBuilder) {
         if let Some(resizable) = self.resizable {
@@ -403,6 +411,10 @@ impl WindowConfig {
 
         if let Some(transparent) = self.transparent {
             builder.set_transparent(transparent);
+        }
+
+        if let Some(topmost) = self.topmost {
+            builder.set_topmost(topmost);
         }
 
         if let Some(level) = self.level.clone() {
@@ -557,6 +569,12 @@ impl<T: Data> WindowDesc<T> {
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.config = self.config.transparent(transparent);
         self.pending = self.pending.transparent(transparent);
+        self
+    }
+
+    /// Build-style method to set whether this window is topmost
+    pub fn topmost(mut self, topmost: bool) -> Self {
+        self.config = self.config.topmost(topmost);
         self
     }
 

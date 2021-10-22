@@ -478,6 +478,11 @@ impl WindowBuilder {
         self.0.set_transparent(transparent)
     }
 
+    /// Set whether the window is topmost
+    pub fn set_topmost(&mut self, topmost: bool) {
+        self.0.set_topmost(topmost)
+    }
+
     /// Sets the initial window position in display points.
     /// For windows with a parent, the position is relative to the parent.
     /// For windows without a parent, it is relative to the origin of the virtual screen.
