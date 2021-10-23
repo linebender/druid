@@ -198,19 +198,14 @@ impl<T: Data> Widget<T> for Image {
         bc.debug_check("Image");
 
         // If either the width or height is constrained calculate a value so that the image fits
-        // in the size exactly. If it is unconstrained by both width and height take the size of
-        // the image.
+        // in the size exactly. If it is unconstrained by both width and height then use the fill
+        // strategy to determine the size.
         let max = bc.max();
         let image_size = self.image_size();
-        let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
-            let ratio = max.width / image_size.width;
-            Size::new(max.width, ratio * image_size.height)
-        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
-            let ratio = max.height / image_size.height;
-            Size::new(ratio * image_size.width, max.height)
-        } else {
-            bc.constrain(image_size)
-        };
+        let affine = self.fill.affine_to_fill(max, image_size).as_coeffs();
+        // The first and forth elements of the affine are the x and y scale factor.
+        // So just multiply them by the original size to get the ideal area based on `self.fill`.
+        let size = Size::new(affine[0] * image_size.width, affine[3] * image_size.height);
         trace!("Computed size: {}", size);
         size
     }
@@ -367,20 +362,18 @@ mod tests {
 
                 // A middle row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
                     vec![255, 255, 255, 255].repeat(200),
                     vec![0, 0, 0, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    vec![41, 41, 41, 255].repeat(200),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[199 * 600 * 4..200 * 600 * 4], expecting[..]);
 
                 // The final row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
                     vec![0, 0, 0, 255].repeat(200),
                     vec![255, 255, 255, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    vec![41, 41, 41, 255].repeat(200),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[399 * 600 * 4..400 * 600 * 4], expecting[..]);
