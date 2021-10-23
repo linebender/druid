@@ -157,6 +157,7 @@ enum DeferredOp {
     Open(FileDialogOptions, FileDialogToken),
     ContextMenu(Menu, Point),
     ShowTitlebar(bool),
+    Topmost(bool),
     SetPosition(Point),
     SetSize(Size),
     SetResizable(bool),
@@ -231,6 +232,7 @@ struct WindowState {
     deferred_queue: RefCell<Vec<DeferredOp>>,
     has_titlebar: Cell<bool>,
     is_transparent: Cell<bool>,
+    is_topmost: Cell<bool>,
     // For resizable borders, window can still be resized with code.
     is_resizable: Cell<bool>,
     handle_titlebar: Cell<bool>,
@@ -372,6 +374,28 @@ fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
         let client_rect = client_rect.assume_init();
         let mouse_point = POINT { x, y };
         PtInRect(&client_rect, mouse_point) != FALSE
+    }
+}
+
+fn set_topmost(hwnd: HWND, topmost: bool) {
+    unsafe {
+        let hwnd_insert_after = if topmost { HWND_TOPMOST } else { HWND_NOTOPMOST };
+
+        if SetWindowPos(
+            hwnd,
+            hwnd_insert_after,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOMOVE,
+        ) == 0
+        {
+            warn!(
+                "failed to update window style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        };
     }
 }
 
@@ -599,6 +623,10 @@ impl MyWndProc {
                 DeferredOp::ShowTitlebar(titlebar) => {
                     self.with_window_state(|s| s.has_titlebar.set(titlebar));
                     set_style(hwnd, self.resizable(), titlebar);
+                }
+                DeferredOp::Topmost(topmost) => {
+                    self.with_window_state(|s| s.is_topmost.set(topmost));
+                    set_topmost(hwnd, topmost);
                 }
                 DeferredOp::SetResizable(resizable) => {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
@@ -1436,6 +1464,7 @@ impl WindowBuilder {
                 has_titlebar: Cell::new(self.show_titlebar),
                 is_resizable: Cell::new(self.resizable),
                 is_transparent: Cell::new(self.transparent),
+                is_topmost: Cell::new(self.topmost),
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
@@ -1879,6 +1908,10 @@ impl WindowHandle {
 
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
+    }
+
+    pub fn topmost(&self, topmost: bool) {
+        self.defer(DeferredOp::Topmost(topmost));
     }
 
     // Sets the position of the window in virtual screen coordinates

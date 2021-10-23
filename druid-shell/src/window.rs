@@ -216,6 +216,11 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
+    /// Set whether the window is topmost.
+    pub fn topmost(&self, topmost: bool) {
+        self.0.topmost(topmost)
+    }
+
     /// Sets the position of the window in [display points](crate::Scale), relative to the origin of the
     /// virtual screen.
     pub fn set_position(&self, position: impl Into<Point>) {
