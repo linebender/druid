@@ -61,6 +61,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `scroll_to_view` and `scroll_area_to_view` methods on `UpdateCtx`, `LifecycleCtx` and `EventCtx` ([#1976] by [@xarvic])
 - `Notification::route` ([#1978] by [@xarvic])
 - Build on OpenBSD ([#1993] by [@klemensn])
+- `druid::app::topmost` and `druid_shell::window::topmost` methods for window topmost. ([#2017] by [@zemelLeong])
 
 ### Changed
 
@@ -525,6 +526,7 @@ Last release without a changelog :(
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
 [@klemensn]: https://github.com/klemensn
+[@zemelLeong]: https://github.com/zemelLeong
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -804,6 +806,7 @@ Last release without a changelog :(
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
 [#1996]: https://github.com/linebender/druid/pull/1996
+[#2017]: https://github.com/linebender/druid/pull/2017
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
