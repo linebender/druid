@@ -205,7 +205,13 @@ impl<T: Data> Widget<T> for Image {
         let affine = self.fill.affine_to_fill(max, image_size).as_coeffs();
         // The first and forth elements of the affine are the x and y scale factor.
         // So just multiply them by the original size to get the ideal area based on `self.fill`.
-        let size = Size::new(affine[0] * image_size.width, affine[3] * image_size.height);
+        let mut width = affine[0] * image_size.width;
+        let mut height = affine[3] * image_size.height;
+        // We are using the image scale properties so if one dimension
+        // would be over scaled to keep AR fixed then we just clip back to the `bc.max()`
+        width = width.min(max.width);
+        height = height.min(max.height);
+        let size = Size::new(width, height);
         trace!("Computed size: {}", size);
         size
     }
