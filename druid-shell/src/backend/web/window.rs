@@ -385,6 +385,10 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_topmost(&mut self, _topmost: bool) {
+        // Ignored
+    }
+
     pub fn set_position(&mut self, _position: Point) {
         // Ignored
     }
@@ -483,6 +487,10 @@ impl WindowHandle {
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
         warn!("show_titlebar unimplemented for web");
+    }
+
+    pub fn topmost(&self, _show_titlebar: bool) {
+        warn!("topmost unimplemented for web");
     }
 
     pub fn set_position(&self, _position: Point) {
