@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! GTK platform errors.
+//! wayland platform errors.
 
 use std::{error::Error as StdError, fmt, sync::Arc};
 use wayland_client as wl;
@@ -30,6 +30,8 @@ pub enum Error {
     /// An unexpected error occurred. It's not handled by druid-shell/wayland, so you should
     /// terminate the app.
     Fatal(Arc<dyn StdError + 'static>),
+    String(ErrorString),
+    InvalidParent(u32),
 }
 
 impl Error {
@@ -44,22 +46,24 @@ impl Error {
             inner: Arc::new(inner),
         }
     }
+
+    pub fn string(s: impl Into<String>) -> Self {
+        Error::String(ErrorString::from(s))
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Self::Connect(e) => f.write_str("could not connect to the wayland server"),
-            Self::Global {
-                name,
-                version,
-                inner,
-            } => write!(
+            Self::Connect(e) => write!(f, "could not connect to the wayland server: {:?}", e),
+            Self::Global { name, version, .. } => write!(
                 f,
                 "a required wayland global ({}@{}) was unavailable",
                 name, version
             ),
-            Self::Fatal(e) => f.write_str("an unhandled error occurred"),
+            Self::Fatal(e) => write!(f, "an unhandled error occurred: {:?}", e),
+            Self::String(e) => e.fmt(f),
+            Self::InvalidParent(id) => write!(f, "invalid parent window for popup: {:?}", id),
         }
     }
 }
@@ -68,12 +72,10 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::Connect(e) => Some(&**e),
-            Self::Global {
-                name,
-                version,
-                inner,
-            } => Some(&**inner),
+            Self::Global { inner, .. } => Some(&**inner),
             Self::Fatal(e) => Some(&**e),
+            Self::String(e) => Some(e),
+            Self::InvalidParent(_) => None,
         }
     }
 }
@@ -81,5 +83,28 @@ impl std::error::Error for Error {
 impl From<wl::ConnectError> for Error {
     fn from(err: wl::ConnectError) -> Self {
         Self::Connect(Arc::new(err))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorString {
+    details: String,
+}
+
+impl ErrorString {
+    pub fn from(s: impl Into<String>) -> Self {
+        Self { details: s.into() }
+    }
+}
+
+impl std::fmt::Display for ErrorString {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl std::error::Error for ErrorString {
+    fn description(&self) -> &str {
+        &self.details
     }
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Interactions with the system pasteboard on GTK+.
+//! Interactions with the system pasteboard on wayland compositors.
 
 use crate::clipboard::{ClipboardFormat, FormatId};
 
@@ -20,6 +20,7 @@ use crate::clipboard::{ClipboardFormat, FormatId};
 #[derive(Debug, Clone)]
 pub struct Clipboard;
 
+#[allow(unused)]
 impl Clipboard {
     /// Put a string onto the system clipboard.
     pub fn put_string(&mut self, s: impl AsRef<str>) {
