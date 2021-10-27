@@ -13,205 +13,157 @@
 
 #![allow(clippy::single_match)]
 
-use std::{
-    any::Any,
-    cell::{Cell, RefCell},
-    collections::{HashSet, VecDeque},
-    rc::{Rc, Weak as WeakRc},
-    time::{Duration, Instant},
-};
-use wayland_client::{
-    self as wl,
-    protocol::{
-        wl_callback,
-        wl_pointer::WlPointer,
-        wl_surface::{self, WlSurface},
-    },
-};
-use wayland_cursor::CursorImageBuffer;
-use wayland_protocols::{
-    unstable::xdg_decoration::v1::client::zxdg_toplevel_decoration_v1::{
-        Event as ZxdgToplevelDecorationV1Event, Mode as DecorationMode, ZxdgToplevelDecorationV1,
-    },
-    xdg_shell::client::{
-        xdg_surface::{Event as XdgSurfaceEvent, XdgSurface},
-        xdg_toplevel::{Event as XdgTopLevelEvent, XdgToplevel},
-    },
-};
+use tracing;
 
 use super::{
-    application::{Application, ApplicationData},
-    buffer::{Buffers, RawRect, RawSize},
+    application::{Application, ApplicationData, Timer},
+    error,
     menu::Menu,
-    pointer::{MouseEvtKind, Pointer},
-    Changed, NUM_FRAMES, PIXEL_WIDTH,
+    surfaces,
 };
+
 use crate::{
-    backend::shared::Timer,
     dialog::FileDialogOptions,
     error::Error as ShellError,
     kurbo::{Insets, Point, Rect, Size},
     mouse::{Cursor, CursorDesc},
-    piet::{Piet, PietText, RenderContext},
-    region::Region,
+    piet::PietText,
     scale::Scale,
     text::Event,
-    window::{self, FileDialogToken, IdleToken, TimerToken, WinHandler, WindowLevel},
+    window::{self, FileDialogToken, TimerToken, WinHandler, WindowLevel},
     TextFieldToken,
 };
 
-//TODO we flash the old window size before adjusting to the new size. This seems to leave some
-//artifact on another monitor if the image would have spread across. The todo is investigate if we
-//can avoid this. I think it might be something to do with telling the compositor about our new
-//geometry?
-//
-// I think this bit of debug output might be useful (from GTK, which doesn't suffer from this
-// problem). UPDATE I'm using the unstable window decoration protocol. GTK doesn't use this, since
-// there is some arcane thing to do with `set_opaque_region` to make it backwards compatible. Let's
-// ignore this for now.
-//[2566306.298] xdg_toplevel@32.configure(580, 450, array)
-//[2566306.344] xdg_surface@22.configure(74094)
-//[2566306.359]  -> wl_buffer@36.destroy()
-//[2566306.366]  -> wl_shm_pool@37.destroy()
-//[2566306.728]  -> wl_surface@26.set_buffer_scale(2)
-//[2566306.752]  -> xdg_surface@22.ack_configure(74094)
-//[2566307.207]  -> wl_shm@4.create_pool(new id wl_shm_pool@40, fd 31, 4176000)
-//[2566307.229]  -> wl_shm_pool@40.create_buffer(new id wl_buffer@41, 0, 1160, 900, 4640, 0)
-//[2566315.088]  -> wl_surface@26.attach(wl_buffer@41, 0, 0)
-//[2566315.111]  -> wl_surface@26.set_buffer_scale(2)
-//[2566315.116]  -> wl_surface@26.damage(0, 0, 580, 450)
-//[2566315.137]  -> xdg_toplevel@32.set_min_size(400, 427)
-//[2566315.153]  -> xdg_toplevel@32.set_max_size(0, 0)
-//[2566315.160]  -> xdg_surface@22.set_window_geometry(0, 0, 580, 450)
-//[2566315.170]  -> wl_compositor@6.create_region(new id wl_region@42)
-//[2566315.176]  -> wl_region@42.add(0, 0, 580, 450)
-//[2566315.190]  -> wl_surface@26.set_opaque_region(wl_region@42)
-//[2566315.195]  -> wl_region@42.destroy()
-//[2566315.237]  -> wl_surface@26.frame(new id wl_callback@43)
-//[2566315.256]  -> wl_surface@26.commit()
+pub use surfaces::idle::Handle as IdleHandle;
 
-// In cairo and Wayland, alpha is pre-multiplied. Yay.
-
-#[derive(Default, Clone)]
-pub struct WindowHandle {
-    // holding a weak reference to the window is copied from the windows backend.
-    pub(crate) data: WeakRc<WindowData>,
+// holds references to the various components for a window implementation.
+struct Inner {
+    pub(super) decor: Box<dyn surfaces::Decor>,
+    pub(super) surface: Box<dyn surfaces::Handle>,
+    pub(super) appdata: std::sync::Weak<ApplicationData>,
 }
 
-impl PartialEq for WindowHandle {
-    fn eq(&self, other: &Self) -> bool {
-        self.data.ptr_eq(&other.data)
-    }
+#[derive(Clone)]
+pub struct WindowHandle {
+    inner: std::sync::Arc<Inner>,
 }
 
 impl WindowHandle {
-    pub fn show(&self) {}
-
-    pub fn resizable(&self, resizable: bool) {
-        //todo!()
-    }
-
-    pub fn show_titlebar(&self, show_titlebar: bool) {
-        //todo!()
-    }
-
-    pub fn set_position(&self, position: Point) {
-        //todo!()
-    }
-
-    pub fn get_position(&self) -> Point {
-        todo!()
-    }
-
-    pub fn content_insets(&self) -> Insets {
-        // TODO
-        Insets::from(0.)
-    }
-
-    pub fn set_level(&self, level: WindowLevel) {
-        tracing::warn!("level is unsupported on wayland");
-    }
-
-    pub fn set_size(&self, size: Size) {
-        tracing::warn!("setting the size dynamically is unsupported on wayland");
-    }
-
-    pub fn get_size(&self) -> Size {
-        if let Some(data) = self.data.upgrade() {
-            // size in pixels, so we must apply scale
-            // TODO check the logic here.
-            let logical_size = data.logical_size.get();
-            let scale = data.scale.get() as f64;
-            Size::new(
-                logical_size.width as f64 * scale,
-                logical_size.height as f64 * scale,
-            )
-        } else {
-            // TODO panic?
-            Size::ZERO
+    pub(super) fn new(
+        decor: impl Into<Box<dyn surfaces::Decor>>,
+        surface: impl Into<Box<dyn surfaces::Handle>>,
+        appdata: impl Into<std::sync::Weak<ApplicationData>>,
+    ) -> Self {
+        Self {
+            inner: std::sync::Arc::new(Inner {
+                decor: decor.into(),
+                surface: surface.into(),
+                appdata: appdata.into(),
+            }),
         }
     }
 
-    pub fn set_window_state(&mut self, size_state: window::WindowState) {
-        //todo!()
+    pub fn show(&self) {
+        tracing::info!("show initiated");
+    }
+
+    pub fn resizable(&self, resizable: bool) {
+        tracing::info!("resizable initiated {:?}", resizable);
+        todo!()
+    }
+
+    pub fn show_titlebar(&self, _show_titlebar: bool) {
+        tracing::info!("show_titlebar initiated");
+        todo!()
+    }
+
+    pub fn set_position(&self, _position: Point) {
+        tracing::info!("set_position initiated");
+        todo!()
+    }
+
+    pub fn get_position(&self) -> Point {
+        tracing::info!("get_position initiated");
+        Point::ZERO
+    }
+
+    pub fn content_insets(&self) -> Insets {
+        Insets::from(0.)
+    }
+
+    pub fn set_level(&self, _level: WindowLevel) {
+        log::warn!("level is unsupported on wayland");
+    }
+
+    pub fn set_size(&self, size: Size) {
+        self.inner.surface.set_size(size);
+    }
+
+    pub fn get_size(&self) -> Size {
+        return self.inner.surface.get_size();
+    }
+
+    pub fn set_window_state(&mut self, _current_state: window::WindowState) {
+        tracing::warn!("unimplemented set_window_state initiated");
+        todo!();
     }
 
     pub fn get_window_state(&self) -> window::WindowState {
-        todo!()
+        tracing::warn!("unimplemented get_window_state initiated");
+        window::WindowState::Maximized
     }
 
     pub fn handle_titlebar(&self, _val: bool) {
-        todo!()
+        tracing::warn!("unimplemented handle_titlebar initiated");
+        todo!();
     }
 
     /// Close the window.
     pub fn close(&self) {
-        if let Some(data) = self.data.upgrade() {
-            // TODO destroy resources
-            if let Some(app_data) = data.app_data.upgrade() {
-                app_data.shutdown.set(true);
-            }
+        if let Some(appdata) = self.inner.appdata.upgrade() {
+            tracing::trace!(
+                "closing window initiated {:?}",
+                appdata.active_surface_id.borrow()
+            );
+            appdata
+                .handles
+                .borrow_mut()
+                .remove(&self.inner.surface.wayland_surface_id());
+            appdata.active_surface_id.borrow_mut().pop_front();
+            self.inner.surface.release();
+            tracing::trace!(
+                "closing window completed {:?}",
+                appdata.active_surface_id.borrow()
+            );
         }
     }
 
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        //todo!()
+        tracing::warn!("unimplemented bring_to_front_and_focus initiated");
+        todo!()
     }
 
     /// Request a new paint, but without invalidating anything.
     pub fn request_anim_frame(&self) {
-        if let Some(data) = self.data.upgrade() {
-            if !data.anim_frame_requested.get() {
-                let cb = data.wl_surface.frame();
-                let handle = self.clone();
-                cb.quick_assign(with_cloned!(data; move |_, event, _| match event {
-                    wl_callback::Event::Done { callback_data } => {
-                        data.anim_frame_requested.set(false);
-                        data.buffers.request_paint();
-                    }
-                    _ => panic!("done is the only event"),
-                }));
-                data.anim_frame_requested.set(true);
-            }
-        }
+        tracing::trace!("request_anim_frame initiated");
+        self.inner.surface.request_anim_frame();
+        tracing::trace!("request_anim_frame completed");
     }
 
     /// Request invalidation of the entire window contents.
     pub fn invalidate(&self) {
-        // This is one of 2 methods the user can use to schedule a repaint, the other is
-        // `invalidate_rect`.
-        if let Some(data) = self.data.upgrade() {
-            data.invalidate()
-        }
+        tracing::trace!("invalidate initiated");
+        self.inner.surface.invalidate();
+        tracing::trace!("invalidate completed");
     }
 
     /// Request invalidation of one rectangle, which is given in display points relative to the
     /// drawing area.
     pub fn invalidate_rect(&self, rect: Rect) {
-        if let Some(data) = self.data.upgrade() {
-            data.invalidate_rect(rect)
-        }
+        tracing::trace!("invalidate_rect initiated");
+        self.inner.surface.invalidate_rect(rect);
+        tracing::trace!("invalidate_rect completed");
     }
 
     pub fn text(&self) -> PietText {
@@ -223,402 +175,141 @@ impl WindowHandle {
     }
 
     pub fn remove_text_field(&self, token: TextFieldToken) {
-        if let Some(data) = self.data.upgrade() {
-            if data.active_text_field.get() == Some(token) {
-                data.active_text_field.set(None)
-            }
-        }
+        tracing::trace!("remove_text_field initiated");
+        self.inner.surface.remove_text_field(token);
+        tracing::trace!("remove_text_field completed");
     }
 
     pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
-        if let Some(data) = self.data.upgrade() {
-            data.active_text_field.set(active_field);
-        }
+        tracing::trace!("set_focused_text_field initiated");
+        self.inner.surface.set_focused_text_field(active_field);
+        tracing::trace!("set_focused_text_field completed");
     }
 
     pub fn update_text_field(&self, _token: TextFieldToken, _update: Event) {
         // noop until we get a real text input implementation
     }
 
-    pub fn request_timer(&self, deadline: Instant) -> TimerToken {
-        if let Some(data) = self.data.upgrade() {
-            if let Some(app_data) = data.app_data.upgrade() {
-                //println!("Timer requested");
-                let now = instant::Instant::now();
-                let mut timers = app_data.timers.borrow_mut();
-                let sooner = timers
-                    .peek()
-                    .map(|timer| deadline < timer.deadline())
-                    .unwrap_or(true);
-                let timer = Timer::new(deadline, data.id());
-                timers.push(timer);
-                // It is possible that the deadline has passed since it was set.
-                // TODO replace `Duration::new(0, 0)` with `Duration::ZERO` when it is stable.
-                let timeout = if deadline < now {
-                    Duration::new(0, 0)
-                } else {
-                    deadline - now
-                };
-                if sooner {
-                    app_data.timer_handle.cancel_all_timeouts();
-                    app_data.timer_handle.add_timeout(timeout, timer.token());
-                }
-                return timer.token();
-            }
+    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+        tracing::trace!("request_timer initiated");
+        let appdata = match self.inner.appdata.upgrade() {
+            Some(d) => d,
+            None => panic!("requested timer on a window that was destroyed"),
+        };
+
+        let sid = self.inner.surface.wayland_surface_id();
+
+        let now = instant::Instant::now();
+        let mut timers = appdata.timers.borrow_mut();
+        let sooner = timers
+            .peek()
+            .map(|timer| deadline < timer.deadline())
+            .unwrap_or(true);
+
+        let timer = Timer::new(sid, deadline);
+        timers.push(timer);
+
+        // It is possible that the deadline has passed since it was set.
+        let timeout = if deadline < now {
+            std::time::Duration::ZERO
+        } else {
+            deadline - now
+        };
+
+        if sooner {
+            appdata.timer_handle.cancel_all_timeouts();
+            appdata.timer_handle.add_timeout(timeout, timer.token());
         }
-        panic!("requested timer on a window that was destroyed");
+
+        return timer.token();
     }
 
     pub fn set_cursor(&mut self, cursor: &Cursor) {
-        if let Some(data) = self.data.upgrade() {
-            let mut _pointer = data.pointer.borrow_mut();
-            let pointer = _pointer.as_mut().unwrap();
-            // Setting a new cursor involves communicating with the server, so don't do it if we
-            // don't have to.
-            if matches!(&pointer.current_cursor, Some(c) if c == cursor) {
-                return;
-            }
-            pointer.current_cursor = Some(cursor.clone());
+        tracing::trace!("set_cursor initiated");
+        if let Some(appdata) = self.inner.appdata.upgrade() {
+            appdata.set_cursor(cursor);
         }
+        tracing::trace!("set_cursor completed");
     }
 
-    pub fn make_cursor(&self, desc: &CursorDesc) -> Option<Cursor> {
+    pub fn make_cursor(&self, _desc: &CursorDesc) -> Option<Cursor> {
+        tracing::warn!("unimplemented make_cursor initiated");
+        None
+    }
+
+    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        tracing::info!("open_file initiated");
         todo!()
     }
 
-    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-        todo!()
-    }
-
-    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        tracing::info!("save_as initiated");
         todo!()
     }
 
     /// Get a handle that can be used to schedule an idle task.
     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-        None
+        tracing::trace!("get_idle_handle initiated");
+        Some(self.inner.surface.get_idle_handle())
     }
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, ShellError> {
-        if let Some(data) = self.data.upgrade() {
-            let scale = data.scale.get() as f64;
-            Ok(Scale::new(scale, scale))
-        } else {
-            Err(ShellError::WindowDropped)
-        }
+        tracing::info!("get_scale initiated");
+        Ok(self.inner.surface.get_scale())
     }
 
-    pub fn set_menu(&self, menu: Menu) {
+    pub fn set_menu(&self, _menu: Menu) {
+        tracing::info!("set_menu initiated");
         todo!()
     }
 
-    pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
+    pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
+        tracing::info!("show_context_menu initiated");
         todo!()
     }
 
     pub fn set_title(&self, title: impl Into<String>) {
-        if let Some(data) = self.data.upgrade() {
-            data.xdg_toplevel.set_title(title.into());
+        self.inner.decor.set_title(title);
+    }
+
+    pub(super) fn run_idle(&self) {
+        self.inner.surface.run_idle();
+    }
+
+    pub(super) fn popup<'a>(&self, s: &'a surfaces::popup::Surface) -> Result<(), error::Error> {
+        self.inner.surface.popup(s)
+    }
+
+    pub(super) fn data(&self) -> Option<std::sync::Arc<surfaces::surface::Data>> {
+        self.inner.surface.data()
+    }
+}
+
+impl std::cmp::PartialEq for WindowHandle {
+    fn eq(&self, _rhs: &Self) -> bool {
+        todo!()
+    }
+}
+
+impl std::default::Default for WindowHandle {
+    fn default() -> WindowHandle {
+        WindowHandle {
+            inner: std::sync::Arc::new(Inner {
+                decor: Box::new(surfaces::surface::Dead::default()),
+                surface: Box::new(surfaces::surface::Dead::default()),
+                appdata: std::sync::Weak::new(),
+            }),
         }
     }
 }
 
-pub struct WindowData {
-    pub(crate) app_data: WeakRc<ApplicationData>,
-    pub(crate) wl_surface: wl::Main<WlSurface>,
-    pub(crate) xdg_surface: wl::Main<XdgSurface>,
-    pub(crate) xdg_toplevel: wl::Main<XdgToplevel>,
-    pub(crate) zxdg_toplevel_decoration_v1: wl::Main<ZxdgToplevelDecorationV1>,
-    /// The outputs that our surface is present on (we should get the first enter event early).
-    pub(crate) outputs: RefCell<HashSet<u32>>,
-    /// Buffers in our shared memory.
-    // Buffers sometimes need to move references to themselves into closures, so must be behind a
-    // reference counter.
-    pub(crate) buffers: Rc<Buffers<{ NUM_FRAMES as usize }>>,
-    /// The logical size of the next frame.
-    pub(crate) logical_size: Cell<Size>,
-    /// The scale we are rendering to (defaults to 1)
-    pub(crate) scale: Cell<i32>,
-    /// Whether we've currently got keyboard focus.
-    pub(crate) keyboard_focus: Cell<bool>,
-    /// If we've currently got pointer focus, this object tracks pointer state.
-    pub(crate) pointer: RefCell<Option<Pointer>>,
-    /// Whether we have requested an animation frame. This stops us requesting more than 1.
-    anim_frame_requested: Cell<bool>,
-    /// Contains the callbacks from user code.
-    pub(crate) handler: RefCell<Box<dyn WinHandler>>,
-    /// Rects of the image that are damaged and need repainting in the logical coordinate space.
-    ///
-    /// This lives outside `data` because they can be borrowed concurrently without re-entrancy.
-    damaged_region: RefCell<Region>,
-    /// Tasks that were requested in user code.
-    ///
-    /// These call back into user code, and so should only be run after all user code has returned,
-    /// to avoid possible re-entrancy.
-    deferred_tasks: RefCell<VecDeque<DeferredTask>>,
-    pub(crate) active_text_field: Cell<Option<TextFieldToken>>,
-}
-
-pub enum DeferredTask {
-    Paint,
-}
-
-impl WindowData {
-    /// Sets the physical size.
-    ///
-    /// Up to the caller to make sure `buffers.size`, `logical_size` and `scale` are consistent.
-    fn set_physical_size(&self, new_size: RawSize) {
-        self.buffers.set_size(new_size)
-    }
-
-    /// Assert that the physical size = logical size * scale
-    #[allow(unused)]
-    fn assert_size(&self) {
-        assert_eq!(
-            self.buffers.size(),
-            RawSize::from(self.logical_size.get()).scale(self.scale.get()),
-            "phy {:?} == logic {:?} * {}",
-            self.buffers.size(),
-            self.logical_size.get(),
-            self.scale.get()
-        );
-    }
-
-    /// Recompute the scale to use (the maximum of all the scales for the different outputs this
-    /// screen is drawn to).
-    fn recompute_scale(&self) -> i32 {
-        if let Some(app_data) = self.app_data.upgrade() {
-            let mut scale = 0;
-            for id in self.outputs.borrow().iter() {
-                if let Some(output) = app_data.outputs.borrow().get(&id) {
-                    scale = scale.max(output.scale);
-                } else {
-                    tracing::warn!(
-                        "we still have a reference to an output that's gone away. The output had id {}",
-                        id
-                    );
-                }
-            }
-            if scale == 0 {
-                tracing::warn!("wayland never reported which output we are drawing to");
-                1
-            } else {
-                scale
-            }
-        } else {
-            panic!("should never recompute scale of window that has been dropped");
-        }
-    }
-
-    fn set_cursor(&self, buf: &CursorImageBuffer) {
-        let (hotspot_x, hotspot_y) = buf.hotspot();
-        let _pointer = self.pointer.borrow();
-        let pointer = _pointer.as_ref().unwrap();
-        pointer.wl_pointer.set_cursor(
-            pointer.enter_serial,
-            Some(&pointer.cursor_surface),
-            hotspot_x as i32,
-            hotspot_y as i32,
-        );
-        pointer.cursor_surface.attach(Some(&*buf), 0, 0);
-        pointer
-            .cursor_surface
-            .damage_buffer(0, 0, i32::MAX, i32::MAX);
-        pointer.cursor_surface.commit();
-    }
-
-    /// Get the wayland object id for the `wl_surface` associated with this window.
-    ///
-    /// We use this as the key for the window.
-    pub(crate) fn id(&self) -> u32 {
-        wl::Proxy::from(self.wl_surface.detach()).id()
-    }
-
-    /// Sets the scale
-    ///
-    /// Up to the caller to make sure `physical_size`, `logical_size` and `scale` are consistent.
-    fn set_scale(&self, new_scale: i32) -> Changed {
-        if self.scale.get() != new_scale {
-            self.scale.set(new_scale);
-            // (re-entrancy) Report change to client
-            let druid_scale = Scale::new(new_scale as f64, new_scale as f64);
-            self.handler.borrow_mut().scale(druid_scale);
-            Changed::Changed
-        } else {
-            Changed::Unchanged
-        }
-    }
-
-    /// Paint the next frame.
-    ///
-    /// The buffers object is responsible for calling this function after we called
-    /// `request_paint`.
-    ///
-    /// - `buf` is what we draw the frame into
-    /// - `size` is the physical size in pixels we are drawing.
-    /// - `force` means draw the whole frame, even if it wasn't all invalidated.
-    pub(crate) fn paint(&self, size: RawSize, buf: &mut [u8], force: bool) {
-        self.handler.borrow_mut().prepare_paint();
-        //tracing::trace!("Paint call");
-        //self.data.borrow().assert_size();
-        if force {
-            self.invalidate();
-        } else {
-            let damaged_region = self.damaged_region.borrow_mut();
-            for rect in damaged_region.rects() {
-                // Convert it to physical coordinate space.
-                let rect = RawRect::from(*rect).scale(self.scale.get());
-                self.wl_surface.damage_buffer(
-                    rect.x0,
-                    rect.y0,
-                    rect.x1 - rect.x0,
-                    rect.y1 - rect.y0,
-                );
-            }
-            if damaged_region.is_empty() {
-                // Nothing to draw, so we can finish here!
-                return;
-            }
-        }
-
-        // create cairo context (safety: we must drop the buffer before we commit the frame)
-        // TODO: Cairo is native-endian while wayland is little-endian, which is a pain. Currently
-        // will give incorrect results on big-endian architectures.
-        // TODO cairo might use a different stride than the width of the format. Since we always
-        // use argb32 which is 32-bit aligned we should be ok, but strictly speaking cairo might
-        // choose a wider stride and read past the end of our buffer (UB). Fixing this would
-        // require a fair bit of effort.
-        unsafe {
-            let physical_size = self.buffers.size();
-            // We're going to lie about the lifetime of our buffer here. This is (I think) ok,
-            // becuase the Rust wrapper for cairo is overly pessimistic: the buffer only has to
-            // last as long as the `ImageSurface` (which we know this buffer will).
-            let buf: &'static mut [u8] = &mut *(buf as *mut _);
-            let cairo_surface = cairo::ImageSurface::create_for_data(
-                buf,
-                cairo::Format::ARgb32,
-                physical_size.width,
-                physical_size.height,
-                physical_size.width * PIXEL_WIDTH,
-            )
-            .unwrap();
-            // we can't do much if we can't create cairo context
-            let ctx = cairo::Context::new(&cairo_surface).unwrap();
-            // Apply scaling
-            let scale = self.scale.get() as f64;
-            ctx.scale(scale, scale);
-            // TODO we don't clip cairo stuff not in the damaged region. This might be a perf win?
-            let mut piet = Piet::new(&ctx);
-            // Actually paint the new frame
-            let region = self.damaged_region.borrow();
-            // The handler must not be already borrowed. This may mean deferring this call.
-            self.handler.borrow_mut().paint(&mut piet, &*region);
-        }
-        // reset damage ready for next frame.
-        self.damaged_region.borrow_mut().clear();
-
-        self.buffers.attach();
-        self.wl_surface.commit();
-    }
-
-    /// Request invalidation of the entire window contents.
-    fn invalidate(&self) {
-        // This is one of 2 methods the user can use to schedule a repaint, the other is
-        // `invalidate_rect`.
-        let window_rect = self.logical_size.get().to_rect();
-        self.damaged_region.borrow_mut().add_rect(window_rect);
-        self.schedule_deferred_task(DeferredTask::Paint);
-    }
-
-    /// Request invalidation of one rectangle, which is given in display points relative to the
-    /// drawing area.
-    fn invalidate_rect(&self, rect: Rect) {
-        // Quick check to see if we can skip the rect entirely (if it is outside the visible
-        // screen).
-        if rect.intersect(self.logical_size.get().to_rect()).is_empty() {
-            return;
-        }
-        /* this would be useful for debugging over-keen invalidation by clients.
-        println!(
-            "{:?} {:?}",
-            rect,
-            self.with_data(|data| data.logical_size.to_rect())
-        );
-        */
-        self.damaged_region.borrow_mut().add_rect(rect);
-        self.schedule_deferred_task(DeferredTask::Paint);
-    }
-
-    /// If there are any pending pointer events, get the next one.
-    pub(crate) fn pop_pointer_event(&self) -> Option<MouseEvtKind> {
-        self.pointer.borrow_mut().as_mut()?.next()
-    }
-
-    /// Initialize the pointer struct, and return the surface used for the cursor.
-    pub(crate) fn init_pointer(&self, pointer: WlPointer, serial: u32) {
-        if let Some(app_data) = self.app_data.upgrade() {
-            let cursor = app_data.wl_compositor.create_surface();
-            // TODO for now we've hard-coded 2x scale. This should be dynamic.
-            //cursor.set_buffer_scale(2);
-            // ignore all events
-            cursor.quick_assign(|_, _, _| ());
-            *self.pointer.borrow_mut() = Some(Pointer::new(cursor, pointer, serial));
-        }
-    }
-
-    fn set_system_cursor(&mut self, cursor: Cursor) {
-        if let Some(app_data) = self.app_data.upgrade() {
-            #[allow(deprecated)]
-            let cursor = match cursor {
-                // TODO check these are all correct
-                Cursor::Arrow => "left_ptr",
-                Cursor::IBeam => "xterm",
-                Cursor::Crosshair => "cross",
-                Cursor::OpenHand => "openhand",
-                Cursor::NotAllowed => "X_cursor",
-                Cursor::ResizeLeftRight => "row-resize",
-                Cursor::ResizeUpDown => "col-resize",
-                // TODO custom cursors
-                _ => "left_ptr",
-            };
-            let mut theme = app_data.cursor_theme.borrow_mut();
-            let cursor = theme.get_cursor(cursor).unwrap();
-            // Just use the first image, people using animated cursors have already made bad life
-            // choices and shouldn't expect it to work.
-            let buf = &cursor[cursor.frame_and_duration(0).frame_index];
-            self.set_cursor(buf);
-        }
-    }
-
-    // Deferred tasks
-
-    pub fn schedule_deferred_task(&self, task: DeferredTask) {
-        self.deferred_tasks.borrow_mut().push_back(task);
-    }
-
-    pub fn run_deferred_tasks(&self) {
-        while let Some(task) = self.next_deferred_task() {
-            self.run_deferred_task(task);
-        }
-    }
-
-    fn next_deferred_task(&self) -> Option<DeferredTask> {
-        self.deferred_tasks.borrow_mut().pop_front()
-    }
-
-    fn run_deferred_task(&self, task: DeferredTask) {
-        match task {
-            DeferredTask::Paint => {
-                self.buffers.request_paint();
-            }
-        }
-    }
-}
+#[derive(Clone, PartialEq)]
+pub struct CustomCursor;
 
 /// Builder abstraction for creating new windows
 pub(crate) struct WindowBuilder {
-    app_data: WeakRc<ApplicationData>,
+    app_data: std::sync::Weak<ApplicationData>,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
@@ -632,20 +323,14 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
 }
 
-#[derive(Clone)]
-pub struct IdleHandle;
-
-#[derive(Clone, PartialEq)]
-pub struct CustomCursor;
-
 impl WindowBuilder {
     pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder {
-            app_data: Rc::downgrade(&app.data),
+            app_data: std::sync::Arc::downgrade(&app.data),
             handler: None,
             title: String::new(),
             menu: None,
-            size: Size::new(500.0, 400.0),
+            size: Size::new(0.0, 0.0),
             position: None,
             level: None,
             state: None,
@@ -675,8 +360,10 @@ impl WindowBuilder {
         self.show_titlebar = show_titlebar;
     }
 
-    pub fn set_transparent(&mut self, transparent: bool) {
-        todo!()
+    pub fn set_transparent(&mut self, _transparent: bool) {
+        tracing::warn!(
+            "set_transparent unimplemented for wayland, it allows transparency by default"
+        );
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -701,176 +388,204 @@ impl WindowBuilder {
 
     pub fn build(self) -> Result<WindowHandle, ShellError> {
         if matches!(self.menu, Some(_)) {
-            //panic!("menu unsupported");
+            tracing::error!("menus unimplemented");
         }
-        let app_data = match self.app_data.upgrade() {
-            Some(app_data) => app_data,
+
+        let appdata = match self.app_data.upgrade() {
+            Some(d) => d,
             None => return Err(ShellError::ApplicationDropped),
         };
         let handler = self.handler.expect("must set a window handler");
+        // compute the initial window size.
+        let initial_size = appdata.initial_window_size(self.size);
 
-        let wl_surface = app_data.wl_compositor.create_surface();
+        let surface =
+            surfaces::toplevel::Surface::new(appdata.clone(), handler, initial_size, self.min_size);
 
-        let xdg_surface = app_data.xdg_base.get_xdg_surface(&wl_surface);
-        let xdg_toplevel = xdg_surface.get_toplevel();
-        let zxdg_toplevel_decoration_v1 = app_data
-            .zxdg_decoration_manager_v1
-            .get_toplevel_decoration(&xdg_toplevel);
-        zxdg_toplevel_decoration_v1.set_mode(DecorationMode::ServerSide);
-        xdg_toplevel.set_title(self.title);
-        if let Some(size) = self.min_size {
-            // for sanity
-            assert!(size.width >= 0. && size.height >= 0.);
-            xdg_toplevel.set_min_size(size.width as i32, size.height as i32);
-        }
+        (&surface as &dyn surfaces::Decor).set_title(self.title);
 
-        let data = Rc::new(WindowData {
-            app_data: Rc::downgrade(&app_data),
-            wl_surface,
-            xdg_surface,
-            xdg_toplevel,
-            zxdg_toplevel_decoration_v1,
-            outputs: RefCell::new(HashSet::new()),
-            buffers: Buffers::new(app_data.wl_shm.clone(), self.size.into()),
-            logical_size: Cell::new(self.size),
-            scale: Cell::new(1),
-            keyboard_focus: Cell::new(false),
-            pointer: RefCell::new(None),
-            anim_frame_requested: Cell::new(false),
-            handler: RefCell::new(handler),
-            damaged_region: RefCell::new(Region::EMPTY),
-            deferred_tasks: RefCell::new(VecDeque::new()),
-            active_text_field: Cell::new(None),
-        });
+        let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
+            Some(u) => u,
+            None => panic!("surface id must be non-zero"),
+        };
 
-        let weak_data = Rc::downgrade(&data);
-        // Hook up the child -> parent weak pointer.
-        unsafe {
-            // Safety: No Rust references exist during the life of this reference (satisfies many
-            // read-only xor 1 mutable references).
-            let buffers: &mut Buffers<{ NUM_FRAMES as usize }> =
-                &mut *(Rc::as_ptr(&data.buffers) as *mut _);
-            buffers.set_window_data(weak_data);
-        }
+        let handle = WindowHandle::new(surface.clone(), surface.clone(), self.app_data.clone());
 
-        // Insert a reference to us in the application. This is the main strong reference to the
-        // app.
-        if let Some(old_data) = app_data
-            .surfaces
+        if let Some(_) = appdata
+            .handles
             .borrow_mut()
-            .insert(data.id(), data.clone())
+            .insert(sid.get(), handle.clone())
         {
             panic!("wayland should use unique object IDs");
         }
+        appdata.active_surface_id.borrow_mut().push_front(sid);
 
-        // event handlers
-        data.xdg_toplevel.quick_assign(with_cloned!(
-            data;
-            move |xdg_toplevel, event, _| match event {
-                XdgTopLevelEvent::Configure {
-                    width,
-                    height,
-                    states,
-                } => {
-                    // Only change the size if the passed width/height is non-zero - otherwise we
-                    // choose.
-                    if width != 0 && height != 0 {
-                        // The size here is the logical size
-                        let scale = data.scale.get();
-                        let raw_logical_size = RawSize { width, height };
-                        let logical_size = Size::from(raw_logical_size);
-                        if data.logical_size.get() != logical_size {
-                            data.logical_size.set(logical_size);
-                            data.buffers.set_size(raw_logical_size.scale(scale));
-                            // (re-entrancy) Report change to client
-                            data.handler.borrow_mut().size(logical_size);
-                        }
-                        // Check if the client requested a repaint.
-                        data.run_deferred_tasks();
-                    }
-                }
-                XdgTopLevelEvent::Close => {
-                    data.handler.borrow_mut().request_close();
-                }
-                _ => (),
-            }
-        ));
-
-        data.zxdg_toplevel_decoration_v1.quick_assign(with_cloned!(
-            data;
-            move |zxdg_toplevel_decoration_v1, event, _| match event {
-                ZxdgToplevelDecorationV1Event::Configure { mode } => {
-                    // do nothing for now
-                    tracing::debug!("{:?}", mode);
-                }
-                _ => (),
-            }
-        ));
-
-        data.xdg_surface.quick_assign(
-            with_cloned!(data; move |xdg_surface, event, _| match event {
-                XdgSurfaceEvent::Configure { serial } => {
-                    xdg_surface.ack_configure(serial);
-                    data.buffers.request_paint(); // will also rebuild buffers if needed.
-                }
-                _ => (),
-            }),
-        );
-
-        data.wl_surface
-            .quick_assign(with_cloned!(data; move |_, event, _| {
-                match event {
-                    wl_surface::Event::Enter { output } => {
-                        data
-                            .outputs
-                            .borrow_mut()
-                            .insert(wl::Proxy::from(output).id());
-                    }
-                    wl_surface::Event::Leave { output } => {
-                        data
-                            .outputs
-                            .borrow_mut()
-                            .remove(&wl::Proxy::from(output).id());
-                    }
-                    _ => (),
-                }
-                let new_scale = data.recompute_scale();
-                if data.set_scale(new_scale).is_changed() {
-                    data.wl_surface.set_buffer_scale(new_scale);
-                    // We also need to change the physical size to match the new scale
-                    data.set_physical_size(RawSize::from(data.logical_size.get()).scale(new_scale));
-                    // always repaint, because the scale changed.
-                    data.schedule_deferred_task(DeferredTask::Paint);
-                }
-            }));
-
-        // Notify wayland that we've finished setting up.
-        data.wl_surface.commit();
-
-        let handle = WindowHandle {
-            data: Rc::downgrade(&data),
-        };
-        data.handler.borrow_mut().connect(&handle.clone().into());
+        surface.with_handler({
+            let handle = handle.clone();
+            move |winhandle| winhandle.connect(&handle.into())
+        });
 
         Ok(handle)
     }
 }
 
-impl IdleHandle {
-    /// Add an idle handler, which is called (once) when the message loop
-    /// is empty. The idle handler will be run from the main UI thread, and
-    /// won't be scheduled if the associated view has been dropped.
-    ///
-    /// Note: the name "idle" suggests that it will be scheduled with a lower
-    /// priority than other UI events, but that's not necessarily the case.
-    pub fn add_idle_callback<F>(&self, callback: F)
-    where
-        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
-    {
-        todo!()
+pub mod layershell {
+    use crate::error::Error as ShellError;
+    use crate::window::WinHandler;
+
+    use super::WindowHandle;
+    use crate::backend::wayland::application::{Application, ApplicationData};
+    use crate::backend::wayland::error::Error;
+    use crate::backend::wayland::surfaces;
+
+    /// Builder abstraction for creating new windows
+    pub(crate) struct Builder {
+        appdata: std::sync::Weak<ApplicationData>,
+        winhandle: Option<Box<dyn WinHandler>>,
+        pub(crate) config: surfaces::layershell::Config,
     }
 
-    pub fn add_idle_token(&self, token: IdleToken) {
-        todo!()
+    impl Builder {
+        pub fn new(app: Application) -> Builder {
+            Builder {
+                appdata: std::sync::Arc::downgrade(&app.data),
+                config: surfaces::layershell::Config::default(),
+                winhandle: None,
+            }
+        }
+
+        pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+            self.winhandle = Some(handler);
+        }
+
+        pub fn build(self) -> Result<WindowHandle, ShellError> {
+            let appdata = match self.appdata.upgrade() {
+                Some(d) => d,
+                None => return Err(ShellError::ApplicationDropped),
+            };
+            let winhandle = match self.winhandle {
+                Some(winhandle) => winhandle,
+                None => {
+                    return Err(ShellError::Platform(Error::string(
+                        "window handler required",
+                    )))
+                }
+            };
+
+            // compute the initial window size.
+            let mut updated = self.config.clone();
+            updated.initial_size = appdata.initial_window_size(self.config.initial_size);
+
+            let surface = surfaces::layershell::Surface::new(appdata.clone(), winhandle, updated);
+
+            let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
+                Some(u) => u,
+                None => panic!("surface id must be non-zero"),
+            };
+
+            let handle = WindowHandle::new(
+                surfaces::surface::Dead::default(),
+                surface.clone(),
+                self.appdata.clone(),
+            );
+
+            if let Some(_) = appdata
+                .handles
+                .borrow_mut()
+                .insert(sid.get(), handle.clone())
+            {
+                panic!("wayland should use unique object IDs");
+            }
+            appdata.active_surface_id.borrow_mut().push_front(sid);
+
+            surface.with_handler({
+                let handle = handle.clone();
+                move |winhandle| winhandle.connect(&handle.into())
+            });
+
+            Ok(handle)
+        }
+    }
+}
+
+pub mod popup {
+    use crate::error::Error as ShellError;
+    use crate::window::WinHandler;
+
+    use super::WindowHandle;
+    use crate::backend::wayland::application::{Application, ApplicationData};
+    use crate::backend::wayland::error::Error;
+    use crate::backend::wayland::surfaces;
+
+    /// Builder abstraction for creating new windows
+    pub(crate) struct Builder {
+        appdata: std::sync::Weak<ApplicationData>,
+        winhandle: Option<Box<dyn WinHandler>>,
+        pub(crate) config: surfaces::popup::Config,
+    }
+
+    impl Builder {
+        pub fn new(app: Application) -> Self {
+            Self {
+                appdata: std::sync::Arc::downgrade(&app.data),
+                config: surfaces::popup::Config::default(),
+                winhandle: None,
+            }
+        }
+
+        pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+            self.winhandle = Some(handler);
+        }
+
+        pub fn build(self) -> Result<WindowHandle, ShellError> {
+            let appdata = match self.appdata.upgrade() {
+                Some(d) => d,
+                None => return Err(ShellError::ApplicationDropped),
+            };
+            let winhandle = match self.winhandle {
+                Some(winhandle) => winhandle,
+                None => {
+                    return Err(ShellError::Platform(Error::string(
+                        "window handler required",
+                    )))
+                }
+            };
+
+            // compute the initial window size.
+            let updated = self.config.clone();
+
+            let surface = surfaces::popup::Surface::new(appdata.clone(), winhandle, updated, None);
+
+            if let Err(cause) = appdata.popup(&surface) {
+                return Err(ShellError::Platform(cause));
+            }
+
+            let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
+                Some(u) => u,
+                None => panic!("surface id must be non-zero"),
+            };
+
+            let handle = WindowHandle::new(
+                surfaces::surface::Dead::default(),
+                surface.clone(),
+                self.appdata.clone(),
+            );
+
+            if let Some(_) = appdata
+                .handles
+                .borrow_mut()
+                .insert(sid.get(), handle.clone())
+            {
+                panic!("wayland should use unique object IDs");
+            }
+            appdata.active_surface_id.borrow_mut().push_front(sid);
+
+            surface.with_handler({
+                let handle = handle.clone();
+                move |winhandle| winhandle.connect(&handle.into())
+            });
+
+            Ok(handle)
+        }
     }
 }

@@ -8,7 +8,47 @@ use crate::{
 };
 use keyboard_types::{Code, Key};
 use std::{convert::TryFrom, ptr};
+use wayland_client::protocol::wl_keyboard as wlkeyboard;
 use xkbcommon_sys::*;
+
+struct ModMap(u32, Modifiers);
+
+impl ModMap {
+    fn merge(self, m: Modifiers, mods: u32, locked: u32) -> Modifiers {
+        if self.0 & mods == 0 && self.0 & locked == 0 {
+            return m;
+        }
+
+        return m | self.1;
+    }
+}
+
+const MOD_SHIFT: ModMap = ModMap(1, Modifiers::SHIFT);
+const MOD_CAP_LOCK: ModMap = ModMap(2, Modifiers::CAPS_LOCK);
+const MOD_CTRL: ModMap = ModMap(4, Modifiers::CONTROL);
+const MOD_ALT: ModMap = ModMap(8, Modifiers::ALT);
+const MOD_NUM_LOCK: ModMap = ModMap(16, Modifiers::NUM_LOCK);
+const MOD_META: ModMap = ModMap(64, Modifiers::META);
+
+pub fn event_to_mods(event: wlkeyboard::Event) -> Modifiers {
+    match event {
+        wlkeyboard::Event::Modifiers {
+            mods_depressed,
+            mods_locked,
+            ..
+        } => {
+            let mods = Modifiers::empty();
+            let mods = MOD_SHIFT.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_CAP_LOCK.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_CTRL.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_ALT.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_NUM_LOCK.merge(mods, mods_depressed, mods_locked);
+            let mods = MOD_META.merge(mods, mods_depressed, mods_locked);
+            return mods;
+        }
+        _ => return Modifiers::empty(),
+    }
+}
 
 //const MAX_KEY_LEN: usize = 32;
 
@@ -52,24 +92,6 @@ impl Context {
             );
             assert!(!keymap.is_null());
             Keymap::new(keymap)
-        }
-    }
-
-    /// Set the log level using `log` levels.
-    ///
-    /// Becuase `xkb` has a `critical` error, each rust error maps to 1 above (e.g. error ->
-    /// critical, warn -> error etc.)
-    pub fn set_log_level(&self, level: log::Level) {
-        use log::Level;
-        let level = match level {
-            Level::Error => XKB_LOG_LEVEL_CRITICAL,
-            Level::Warn => XKB_LOG_LEVEL_ERROR,
-            Level::Info => XKB_LOG_LEVEL_WARNING,
-            Level::Debug => XKB_LOG_LEVEL_INFO,
-            Level::Trace => XKB_LOG_LEVEL_DEBUG,
-        };
-        unsafe {
-            xkb_context_set_log_level(self.inner, level);
         }
     }
 }
@@ -137,8 +159,7 @@ impl State {
         Self { inner }
     }
 
-    pub fn key_event(&self, scancode: u32, state: KeyState) -> KeyEvent {
-        // TODO make sure this adjustment is correct
+    pub fn key_event(&self, scancode: u32, state: KeyState, mods: Modifiers) -> KeyEvent {
         let scancode = scancode + 8;
         let code = u16::try_from(scancode)
             .map(hardware_keycode_to_code)
@@ -147,7 +168,6 @@ impl State {
         // TODO this is lazy - really should use xkb i.e. augment the get_logical_key method.
         let location = code_to_location(code);
         // TODO rest are unimplemented
-        let mods = Modifiers::empty();
         let repeat = false;
         // TODO we get the information for this from a wayland event
         let is_composing = false;
@@ -228,7 +248,6 @@ impl Drop for State {
 }
 
 /// Map from an xkb_common key code to a key, if possible.
-// I couldn't find the commented out keys
 fn map_key(keysym: u32) -> Key {
     use Key::*;
     match keysym {
@@ -236,6 +255,7 @@ fn map_key(keysym: u32) -> Key {
         XKB_KEY_Alt_R => AltGraph,
         XKB_KEY_Caps_Lock => CapsLock,
         XKB_KEY_Control_L | XKB_KEY_Control_R => Control,
+        XKB_KEY_Escape => Escape,
         XKB_KEY_function => Fn,
         // FnLock, - can't find in xkb
         XKB_KEY_Meta_L | XKB_KEY_Meta_R => Meta,
@@ -248,6 +268,7 @@ fn map_key(keysym: u32) -> Key {
         XKB_KEY_Super_L | XKB_KEY_Super_R => Super,
         XKB_KEY_Return => Enter,
         XKB_KEY_Tab => Tab,
+        XKB_KEY_ISO_Left_Tab => Tab,
         XKB_KEY_Down => ArrowDown,
         XKB_KEY_Left => ArrowLeft,
         XKB_KEY_Right => ArrowRight,
@@ -274,7 +295,6 @@ fn map_key(keysym: u32) -> Key {
         Attn,
         Cancel,
         ContextMenu,
-        Escape,
         Execute,
         Find,
         Help,
