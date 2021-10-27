@@ -144,22 +144,8 @@ impl SvgData {
         }
     }
 
-    /// Calculates the transform that should be applied first to the svg path data, to convert from
-    /// image coordinates to piet coordinates.
-    fn inner_affine(&self) -> Affine {
-        let viewbox = self.viewbox();
-        let size = self.size();
-        // we want to move the viewbox top left to (0,0) and then scale it from viewbox size to
-        // size.
-        // TODO respect preserveAspectRatio
-        let t = Affine::translate((viewbox.min_x(), viewbox.min_y()));
-        let scale =
-            Affine::scale_non_uniform(size.width / viewbox.width(), size.height / viewbox.height());
-        scale * t
-    }
-
     /// Get the viewbox for the svg. This is the area that should be drawn.
-    fn viewbox(&self) -> Rect {
+    pub fn viewbox(&self) -> Rect {
         let root = self.tree.root();
         let rect = match *root.borrow() {
             usvg::NodeKind::Svg(svg) => {
@@ -178,7 +164,7 @@ impl SvgData {
 
     /// Get the size of the svg. This is the size that the svg requests to be drawn. If it is
     /// different from the viewbox size, then scaling will be required.
-    fn size(&self) -> Size {
+    pub fn size(&self) -> Size {
         let root = self.tree.root();
         let rect = match *root.borrow() {
             usvg::NodeKind::Svg(svg) => {
@@ -193,6 +179,20 @@ impl SvgData {
             }
         };
         rect
+    }
+
+    /// Calculates the transform that should be applied first to the svg path data, to convert from
+    /// image coordinates to piet coordinates.
+    fn inner_affine(&self) -> Affine {
+        let viewbox = self.viewbox();
+        let size = self.size();
+        // we want to move the viewbox top left to (0,0) and then scale it from viewbox size to
+        // size.
+        // TODO respect preserveAspectRatio
+        let t = Affine::translate((viewbox.min_x(), viewbox.min_y()));
+        let scale =
+            Affine::scale_non_uniform(size.width / viewbox.width(), size.height / viewbox.height());
+        scale * t
     }
 }
 
