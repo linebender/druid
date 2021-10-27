@@ -12,17 +12,22 @@ use calloop::{
 use std::{cell::RefCell, io, rc::Rc};
 use wayland_client::EventQueue;
 
+use super::{application, window};
+
 /// A wrapper around the wayland event queue that calloop knows how to select.
-pub struct WaylandSource {
+pub(crate) struct WaylandSource {
+    appdata: std::sync::Arc<application::ApplicationData>,
     queue: Rc<RefCell<EventQueue>>,
     fd: Generic<Fd>,
 }
 
 impl WaylandSource {
     /// Wrap an `EventQueue` as a `WaylandSource`.
-    pub fn new(queue: Rc<RefCell<EventQueue>>) -> WaylandSource {
+    pub fn new(appdata: std::sync::Arc<application::ApplicationData>) -> WaylandSource {
+        let queue = appdata.event_queue.clone();
         let fd = queue.borrow().display().get_connection_fd();
         WaylandSource {
+            appdata,
             queue,
             fd: Generic::from_fd(fd, Interest::READ, Mode::Level),
         }
@@ -31,38 +36,56 @@ impl WaylandSource {
     /// Get a dispatcher that we can insert into our event loop.
     pub fn into_dispatcher(
         self,
-    ) -> Dispatcher<Self, impl FnMut((), &mut Rc<RefCell<EventQueue>>, &mut ()) -> io::Result<u32>>
-    {
-        Dispatcher::new(self, |(), queue, &mut ()| {
+    ) -> Dispatcher<
+        Self,
+        impl FnMut(
+            window::WindowHandle,
+            &mut Rc<RefCell<EventQueue>>,
+            &mut std::sync::Arc<application::ApplicationData>,
+        ) -> io::Result<u32>,
+    > {
+        Dispatcher::new(self, |_winhandle, queue, appdata| {
             queue
                 .borrow_mut()
-                .dispatch_pending(&mut (), |event, object, _| {
-                    panic!(
-                        "[druid-shell] Encountered an orphan event: {}@{} : {}\n\
-                            All events should be handled: please raise an issue",
+                .dispatch_pending(appdata, |event, object, _| {
+                    tracing::error!(
+                        "[druid-shell] Encountered an orphan event: {}@{} : {}",
                         event.interface,
                         object.as_ref().id(),
                         event.name
                     );
+                    tracing::error!("all events should be handled: please raise an issue");
                 })
         })
     }
 }
 
 impl EventSource for WaylandSource {
-    type Event = ();
+    type Event = window::WindowHandle;
     type Metadata = Rc<RefCell<EventQueue>>;
     type Ret = io::Result<u32>;
 
     fn process_events<F>(
         &mut self,
-        _: calloop::Readiness,
-        _: calloop::Token,
+        ready: calloop::Readiness,
+        token: calloop::Token,
         mut callback: F,
     ) -> std::io::Result<()>
     where
-        F: FnMut((), &mut Rc<RefCell<EventQueue>>) -> Self::Ret,
+        F: FnMut(window::WindowHandle, &mut Rc<RefCell<EventQueue>>) -> Self::Ret,
     {
+        tracing::trace!("processing events invoked {:?} {:?}", ready, token);
+
+        self.appdata.display_flushed.replace(false);
+
+        let winhandle = match self.appdata.acquire_current_window() {
+            Some(winhandle) => winhandle,
+            None => {
+                tracing::error!("unable to acquire current window");
+                return Ok(());
+            }
+        };
+
         // in case of readiness of the wayland socket we do the following in a loop, until nothing
         // more can be read:
         loop {
@@ -75,9 +98,11 @@ impl EventSource for WaylandSource {
                     }
                 }
             }
+            tracing::trace!("processing events initiated");
             // 2. dispatch any pending event in the queue
             // propagate orphan events to the user
-            let ret = callback((), &mut self.queue);
+            let ret = callback(winhandle.clone(), &mut self.queue);
+            tracing::trace!("processing events completed {:?}", ret);
             match ret {
                 Ok(0) => {
                     // no events were dispatched even after reading the socket,
@@ -91,16 +116,24 @@ impl EventSource for WaylandSource {
                 }
             }
         }
+
+        tracing::trace!("dispatching completed, flushing");
         // 3. Once dispatching is finished, flush the responses to the compositor
         if let Err(e) = self.queue.borrow().display().flush() {
             if e.kind() != io::ErrorKind::WouldBlock {
                 // in case of error, forward it and fast-exit
                 return Err(e);
             }
+
             // WouldBlock error means the compositor could not process all our messages
             // quickly. Either it is slowed down or we are a spammer.
-            // Should not really happen, if it does we do nothing and will flush again later
+            // Should not really happen, if it does we do nothing and will flush again later.
+            tracing::warn!("unable to flush display: {:?}", e);
+        } else {
+            self.appdata.display_flushed.replace(true);
         }
+
+        tracing::trace!("event queue completed");
         Ok(())
     }
 

@@ -15,69 +15,94 @@
 #![allow(clippy::single_match)]
 
 use super::{
-    buffer::Mmap,
-    clipboard::Clipboard,
-    error::Error,
-    events::WaylandSource,
-    pointer::{MouseEvtKind, PointerEvent},
-    window::WindowData,
-    xkb,
-};
-use crate::text::simulate_input;
-use crate::{
-    application::AppHandler, backend::shared::Timer, keyboard_types::KeyState, kurbo::Point,
-    TimerToken, WinHandler,
+    clipboard::Clipboard, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
+    window::WindowHandle,
 };
 
-use calloop::{
-    timer::{Timer as CalloopTimer, TimerHandle},
-    EventLoop,
-};
+use crate::{application::AppHandler, backend, kurbo, mouse, TimerToken};
+
+use calloop;
+
 use std::{
     cell::{Cell, RefCell},
     collections::{BTreeMap, BinaryHeap},
-    convert::TryInto,
-    num::NonZeroI32,
+    num::NonZeroU32,
     rc::Rc,
     time::{Duration, Instant},
 };
+
+use wayland_client::protocol::wl_keyboard::WlKeyboard;
 use wayland_client::{
     self as wl,
     protocol::{
         wl_compositor::WlCompositor,
-        wl_keyboard::{self, WlKeyboard},
         wl_output::{self, Subpixel, Transform, WlOutput},
-        wl_pointer::{self, WlPointer},
+        wl_pointer::WlPointer,
         wl_seat::{self, WlSeat},
         wl_shm::{self, WlShm},
+        wl_surface::WlSurface,
     },
     Proxy,
 };
 use wayland_cursor::CursorTheme;
-use wayland_protocols::{
-    unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1,
-    xdg_shell::client::xdg_wm_base::{self, XdgWmBase},
-};
+use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
+use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
+use wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner;
+use wayland_protocols::xdg_shell::client::xdg_surface;
+use wayland_protocols::xdg_shell::client::xdg_wm_base::{self, XdgWmBase};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Timer(backend::shared::Timer<u32>);
+
+impl Timer {
+    pub(crate) fn new(id: u32, deadline: Instant) -> Self {
+        Self(backend::shared::Timer::new(deadline, id))
+    }
+
+    pub(crate) fn id(self) -> u32 {
+        self.0.data
+    }
+
+    pub(crate) fn deadline(&self) -> Instant {
+        self.0.deadline()
+    }
+
+    pub fn token(&self) -> TimerToken {
+        self.0.token()
+    }
+}
+
+impl std::cmp::Ord for Timer {
+    /// Ordering is so that earliest deadline sorts first
+    // "Earliest deadline first" that a std::collections::BinaryHeap will have the earliest timer
+    // at its head, which is just what is needed for timer management.
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.deadline().cmp(&other.0.deadline()).reverse()
+    }
+}
+
+impl std::cmp::PartialOrd for Timer {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[derive(Clone)]
 pub struct Application {
-    pub(crate) data: Rc<ApplicationData>,
+    pub(super) data: std::sync::Arc<ApplicationData>,
 }
 
+#[allow(dead_code)]
 pub(crate) struct ApplicationData {
-    pub(crate) xkb_context: xkb::Context,
-    pub(crate) xkb_keymap: RefCell<Option<xkb::Keymap>>,
-    // TODO should this be per-surface??
-    pub(crate) xkb_state: RefCell<Option<xkb::State>>,
-    pub(crate) wl_server: wl::Display,
-    pub(crate) event_queue: Rc<RefCell<wl::EventQueue>>,
+    pub(super) wl_server: wl::Display,
+    pub(super) event_queue: Rc<RefCell<wl::EventQueue>>,
     // Wayland globals
-    pub(crate) globals: wl::GlobalManager,
-    pub(crate) xdg_base: wl::Main<XdgWmBase>,
-    pub(crate) zxdg_decoration_manager_v1: wl::Main<ZxdgDecorationManagerV1>,
-    pub(crate) wl_compositor: wl::Main<WlCompositor>,
-    pub(crate) wl_shm: wl::Main<WlShm>,
-    pub(crate) cursor_theme: RefCell<CursorTheme>,
+    pub(super) globals: wl::GlobalManager,
+    pub(super) xdg_base: wl::Main<XdgWmBase>,
+    pub(super) zxdg_decoration_manager_v1: wl::Main<ZxdgDecorationManagerV1>,
+    pub(super) zwlr_layershell_v1: wl::Main<ZwlrLayerShellV1>,
+    pub(super) wl_compositor: wl::Main<WlCompositor>,
+    pub(super) wl_shm: wl::Main<WlShm>,
     /// A map of wayland object IDs to outputs.
     ///
     /// Wayland will update this if the output change. Keep a record of the `Instant` you last
@@ -85,32 +110,46 @@ pub(crate) struct ApplicationData {
     ///
     /// It's a BTreeMap so the ordering is consistent when enumerating outputs (not sure if this is
     /// necessary, but it negligable cost).
-    pub(crate) outputs: Rc<RefCell<BTreeMap<u32, Output>>>,
-    pub(crate) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
+    pub(super) outputs: Rc<RefCell<BTreeMap<u32, Output>>>,
+    pub(super) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
     /// Handles to any surfaces that have been created.
     ///
     /// This is where the window data is owned. Other handles should be weak.
-    pub(crate) surfaces: RefCell<im::OrdMap<u32, Rc<WindowData>>>,
+    // pub(super) surfaces: RefCell<im::OrdMap<u32, std::sync::Arc<surfaces::surface::Data>>>,
+
+    /// Handles to any surfaces that have been created.
+    pub(super) handles: RefCell<im::OrdMap<u32, WindowHandle>>,
 
     /// Available pixel formats
-    pub(crate) formats: RefCell<Vec<wl_shm::Format>>,
+    pub(super) formats: RefCell<Vec<wl_shm::Format>>,
     /// Close flag
-    pub(crate) shutdown: Cell<bool>,
+    pub(super) shutdown: Cell<bool>,
     /// The currently active surface, if any (by wayland object ID)
-    pub(crate) active_surface_id: Cell<Option<NonZeroI32>>,
+    pub(super) active_surface_id: RefCell<std::collections::VecDeque<NonZeroU32>>,
     // Stuff for timers
     /// A calloop event source for timers. We always set it to fire at the next set timer, if any.
-    pub(crate) timer_handle: TimerHandle<TimerToken>,
+    pub(super) timer_handle: calloop::timer::TimerHandle<TimerToken>,
     /// We stuff this here until the event loop, then `take` it and use it.
-    timer_source: RefCell<Option<CalloopTimer<TimerToken>>>,
+    timer_source: RefCell<Option<calloop::timer::Timer<TimerToken>>>,
     /// Currently pending timers
     ///
     /// The extra data is the surface this timer is for.
-    pub(crate) timers: RefCell<BinaryHeap<Timer<u32>>>,
+    pub(super) timers: RefCell<BinaryHeap<Timer>>,
+
+    pub(super) roundtrip_requested: RefCell<bool>,
+
+    /// track if the display was flushed during the event loop.
+    /// prevents double flushing unnecessarily.
+    pub(super) display_flushed: RefCell<bool>,
+    /// reference to the pointer events manager.
+    pub(super) pointer: pointers::Pointer,
+    /// reference to the keyboard events manager.
+    keyboard: keyboard::Manager,
 }
 
 impl Application {
     pub fn new() -> Result<Self, Error> {
+        tracing::info!("wayland application initiated");
         // connect to the server. Internally an `Arc`, so cloning is cheap. Must be kept alive for
         // the duration of the app.
         let wl_server = wl::Display::connect_to_env()?;
@@ -129,6 +168,7 @@ impl Application {
         let outputs: Rc<RefCell<BTreeMap<u32, Output>>> = Rc::new(RefCell::new(BTreeMap::new()));
         let seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>> =
             Rc::new(RefCell::new(BTreeMap::new()));
+
         // This object will create a container for the global wayland objects, and request that
         // it is populated by the server. Doesn't take ownership of the registry, we are
         // responsible for keeping it alive.
@@ -142,23 +182,21 @@ impl Application {
                     interface,
                     version,
                 } => {
-                    //println!("{}@{} - {}", interface, version, id);
+                    tracing::trace!("invalidate_rect initiated");
                     if interface.as_str() == "wl_output" && version >= 3 {
                         let output = registry.bind::<WlOutput>(3, id);
-
                         let output = Output::new(output);
                         let output_id = output.id();
                         output.wl_output.quick_assign(with_cloned!(weak_outputs; move |_, event, _| {
-                                weak_outputs
-                                .upgrade()
-                                .unwrap()
-                                .borrow_mut()
-                                .get_mut(&output_id)
-                                .expect(
-                                    "internal: wayland sent an event for an output that doesn't exist",
-                                )
-                                .process_event(event)
-                            }));
+                            match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&output_id) {
+                                Some(o) => o.process_event(event),
+                                None => tracing::warn!(
+                                    "wayland sent an event for an output that doesn't exist {:?} {:?}",
+                                    &output_id,
+                                    &event,
+                                ),
+                            }
+                        }));
                         let prev_output = weak_outputs
                             .upgrade()
                             .unwrap()
@@ -185,13 +223,12 @@ impl Application {
                     }
                 }
                 wl::GlobalEvent::Removed { id, interface } if interface.as_str() == "wl_output" => {
-                    let removed = weak_outputs
-                        .upgrade()
-                        .unwrap()
-                        .borrow_mut()
-                        .remove(&id)
-                        .expect("internal: wayland removed an output that doesn't exist");
-                    removed.wl_output.release();
+                    match weak_outputs.upgrade().unwrap().borrow_mut().remove(&id) {
+                        Some(removed) => removed.wl_output.release(),
+                        None => tracing::warn!(
+                            "wayland sent a remove event for an output that doesn't exist"
+                        ),
+                    }
                 }
                 _ => (), // ignore other interfaces
             },
@@ -206,8 +243,9 @@ impl Application {
         globals_list.sort_by(|(_, name1, version1), (_, name2, version2)| {
             name1.cmp(name2).then(version1.cmp(version2))
         });
+
         for (id, name, version) in globals_list.into_iter() {
-            //println!("{}@{} - {}", name, version, id);
+            tracing::trace!("{:?}@{:?} - {:?}", name, version, id);
         }
 
         let xdg_base = globals
@@ -216,6 +254,9 @@ impl Application {
         let zxdg_decoration_manager_v1 = globals
             .instantiate_exact::<ZxdgDecorationManagerV1>(1)
             .map_err(|e| Error::global("zxdg_decoration_manager_v1", 1, e))?;
+        let zwlr_layershell_v1 = globals
+            .instantiate_exact::<ZwlrLayerShellV1>(1)
+            .map_err(|e| Error::global("zwlr_layershell_v1", 1, e))?;
         let wl_compositor = globals
             .instantiate_exact::<WlCompositor>(4)
             .map_err(|e| Error::global("wl_compositor", 4, e))?;
@@ -229,60 +270,64 @@ impl Application {
         // your app's connection. Move *everything* to another thread, including e.g. file i/o,
         // computation, network, ... This is good practice for all back-ends: it will improve
         // responsiveness.
-        xdg_base.quick_assign(|xdg_base, event, _| match event {
-            xdg_wm_base::Event::Ping { serial } => xdg_base.pong(serial),
-            _ => (),
+        xdg_base.quick_assign(|xdg_base, event, d3| {
+            tracing::info!("xdg_base events {:?} {:?} {:?}", xdg_base, event, d3);
+            match event {
+                xdg_wm_base::Event::Ping { serial } => xdg_base.pong(serial),
+                _ => (),
+            }
         });
 
-        let xkb_context = xkb::Context::new();
-        //xkb_context.set_log_level(log::Level::Trace);
-
-        let timer_source = CalloopTimer::new().unwrap();
+        let timer_source = calloop::timer::Timer::new().unwrap();
         let timer_handle = timer_source.handle();
 
-        // TODO the choice of size needs more refinement, it should probably be the size needed to
+        // TODO the cursor theme size needs more refinement, it should probably be the size needed to
         // draw sharp cursors on the largest scaled monitor.
-        let cursor_theme = CursorTheme::load(64, &wl_shm);
+        let pointer = pointers::Pointer::new(
+            CursorTheme::load(64, &wl_shm),
+            wl_compositor.create_surface(),
+        );
 
         // We need to have keyboard events set up for our seats before the next roundtrip.
-        let app_data = Rc::new(ApplicationData {
-            xkb_context,
-            xkb_keymap: RefCell::new(None),
-            xkb_state: RefCell::new(None),
+        let app_data = std::sync::Arc::new(ApplicationData {
             wl_server,
             event_queue: Rc::new(RefCell::new(event_queue)),
             globals,
             xdg_base,
             zxdg_decoration_manager_v1,
+            zwlr_layershell_v1,
             wl_compositor,
             wl_shm: wl_shm.clone(),
-            cursor_theme: RefCell::new(cursor_theme),
             outputs,
             seats,
-            surfaces: RefCell::new(im::OrdMap::new()),
+            handles: RefCell::new(im::OrdMap::new()),
             formats: RefCell::new(vec![]),
             shutdown: Cell::new(false),
-            active_surface_id: Cell::new(None),
+            active_surface_id: RefCell::new(std::collections::VecDeque::with_capacity(20)),
             timer_handle,
             timer_source: RefCell::new(Some(timer_source)),
             timers: RefCell::new(BinaryHeap::new()),
+            display_flushed: RefCell::new(false),
+            pointer,
+            keyboard: keyboard::Manager::default(),
+            roundtrip_requested: RefCell::new(false),
         });
 
         // Collect the supported image formats.
-        wl_shm.quick_assign(with_cloned!(app_data; move |_, event, _| {
+        wl_shm.quick_assign(with_cloned!(app_data; move |d1, event, d3| {
+            tracing::info!("shared memory events {:?} {:?} {:?}", d1, event, d3);
             match event {
                 wl_shm::Event::Format { format } => app_data.formats.borrow_mut().push(format),
                 _ => (), // ignore other messages
             }
         }));
 
-        //println!("{:?}", app_data.seats.borrow());
-
         // Setup seat event listeners with our application
         for (id, seat) in app_data.seats.borrow().iter() {
             let id = *id; // move into closure.
             let wl_seat = seat.borrow().wl_seat.clone();
-            wl_seat.quick_assign(with_cloned!(seat, app_data; move |_, event, _| {
+            wl_seat.quick_assign(with_cloned!(seat, app_data; move |d1, event, d3| {
+                tracing::info!("seat events {:?} {:?} {:?}", d1, event, d3);
                 let mut seat = seat.borrow_mut();
                 match event {
                     wl_seat::Event::Capabilities { capabilities } => {
@@ -290,41 +335,31 @@ impl Application {
                         if capabilities.contains(wl_seat::Capability::Keyboard)
                             && seat.keyboard.is_none()
                         {
-                            let keyboard = seat.wl_seat.get_keyboard();
-                            let app = app_data.clone();
-                            keyboard.quick_assign(move |_, event, _| {
-                                app.handle_keyboard_event(id, event);
-                            });
-                            seat.keyboard = Some(keyboard);
+                            seat.keyboard = Some(app_data.keyboard.attach(app_data.clone(), id, seat.wl_seat.clone()));
                         }
                         if capabilities.contains(wl_seat::Capability::Pointer)
                             && seat.pointer.is_none()
                         {
                             let pointer = seat.wl_seat.get_pointer();
-                            let app = app_data.clone();
-                            let pointer_clone = pointer.detach();
-                            pointer.quick_assign(move |_, event, _| {
-                                let pointer_clone = pointer_clone.clone();
-                                app.handle_pointer_event(pointer_clone, event);
+                            app_data.pointer.attach(pointer.detach());
+                            pointer.quick_assign({
+                                let app = app_data.clone();
+                                move |pointer, event, _| {
+                                    pointers::Pointer::consume(app.clone(), pointer.detach(), event);
+                                }
                             });
                             seat.pointer = Some(pointer);
                         }
                         // Dont worry if they go away - we will just stop receiving events. If the
                         // capability comes back we will start getting events again.
-                        seat.last_update = Instant::now();
                     }
                     wl_seat::Event::Name { name } => {
                         seat.name = name;
-                        seat.last_update = Instant::now();
                     }
-                    _ => (), // ignore future events
+                    _ => tracing::info!("seat quick assign unknown event {:?}", event), // ignore future events
                 }
             }));
         }
-        /*
-        new_seat.quick_assign(move |_, event, _| {
-        });
-        */
 
         // Let wayland finish setup before we allow the client to start creating windows etc.
         app_data.sync()?;
@@ -333,30 +368,42 @@ impl Application {
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+        tracing::info!("run initiated");
         // NOTE if we want to call this function more than once, we will need to put the timer
         // source back.
         let timer_source = self.data.timer_source.borrow_mut().take().unwrap();
         // flush pending events (otherwise anything we submitted since sync will never be sent)
         self.data.wl_server.flush().unwrap();
         // Use calloop so we can epoll both wayland events and others (e.g. timers)
-        let mut event_loop = EventLoop::try_new().expect("failed to initialize calloop event loop");
+        let mut event_loop = calloop::EventLoop::try_new().unwrap();
         let handle = event_loop.handle();
-        let wayland_dispatcher =
-            WaylandSource::new(self.data.event_queue.clone()).into_dispatcher();
+
+        let wayland_dispatcher = WaylandSource::new(self.data.clone()).into_dispatcher();
+
         handle.register_dispatcher(wayland_dispatcher).unwrap();
-        let app_data = self.data.clone();
+
         handle
-            .insert_source(timer_source, move |token, handle, &mut ()| {
-                app_data.handle_timer_event(token);
+            .insert_source(timer_source, move |token, _metadata, appdata| {
+                tracing::trace!("timer source {:?}", token);
+                appdata.handle_timer_event(token);
             })
             .unwrap();
+
         let signal = event_loop.get_signal();
+        let handle = handle.clone();
+
         event_loop
-            .run(Duration::from_millis(20), &mut (), move |&mut ()| {
-                if self.data.shutdown.get() {
-                    signal.stop();
-                }
-            })
+            .run(
+                Duration::from_millis(20),
+                &mut self.data.clone(),
+                move |appdata| {
+                    if appdata.shutdown.get() {
+                        signal.stop();
+                    }
+
+                    ApplicationData::idle_repaint(handle.clone());
+                },
+            )
             .unwrap();
     }
 
@@ -369,12 +416,49 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        //TODO
+        tracing::warn!("get_locale unimplemented");
         "en_US".into()
     }
 }
 
+impl surfaces::Compositor for ApplicationData {
+    fn output(&self, id: &u32) -> Option<Output> {
+        match self.outputs.borrow().get(id) {
+            None => None,
+            Some(o) => Some(o.clone()),
+        }
+    }
+
+    fn create_surface(&self) -> wl::Main<WlSurface> {
+        self.wl_compositor.create_surface()
+    }
+
+    fn shared_mem(&self) -> wl::Main<WlShm> {
+        self.wl_shm.clone()
+    }
+
+    fn get_xdg_positioner(&self) -> wl::Main<XdgPositioner> {
+        self.xdg_base.create_positioner()
+    }
+
+    fn get_xdg_surface(&self, s: &wl::Main<WlSurface>) -> wl::Main<xdg_surface::XdgSurface> {
+        self.xdg_base.get_xdg_surface(s)
+    }
+
+    fn zxdg_decoration_manager_v1(&self) -> wl::Main<ZxdgDecorationManagerV1> {
+        self.zxdg_decoration_manager_v1.clone()
+    }
+
+    fn zwlr_layershell_v1(&self) -> wl::Main<ZwlrLayerShellV1> {
+        self.zwlr_layershell_v1.clone()
+    }
+}
+
 impl ApplicationData {
+    pub(crate) fn set_cursor(&self, cursor: &mouse::Cursor) {
+        self.pointer.replace(&cursor);
+    }
+
     /// Send all pending messages and process all received messages.
     ///
     /// Don't use this once the event loop has started.
@@ -388,200 +472,48 @@ impl ApplicationData {
         Ok(())
     }
 
-    fn handle_keyboard_event(&self, seat_id: u32, event: wl_keyboard::Event) {
-        use wl_keyboard::{Event, KeyState as WlKeyState, KeymapFormat};
-        // TODO need to keep the serial around for certain requests.
-        match event {
-            Event::Keymap { format, fd, size } => {
-                if !matches!(format, KeymapFormat::XkbV1) {
-                    panic!("only xkb keymap supported for now");
-                }
-                // TODO to test memory ownership we copy the memory. That way we can deallocate it
-                // and see if we get a segfault.
-                let keymap_data = unsafe {
-                    Mmap::from_raw_private(
-                        fd,
-                        size.try_into().unwrap(),
-                        0,
-                        size.try_into().unwrap(),
-                    )
-                    .unwrap()
-                    .as_ref()
-                    .to_vec()
-                };
-                // keymap data is '\0' terminated.
-                let keymap = self.xkb_context.keymap_from_slice(&keymap_data);
-                let state = keymap.state();
-                *self.xkb_keymap.borrow_mut() = Some(keymap);
-                *self.xkb_state.borrow_mut() = Some(state);
-            }
-            Event::Enter {
-                serial,
-                surface,
-                keys,
-            } => {
-                let data = self
-                    .find_surface(Proxy::from(surface).id())
-                    .expect("received a pointer event for a non-existant surface");
-                data.keyboard_focus.set(true);
-                // (re-entrancy) call user code
-                data.handler.borrow_mut().got_focus();
-
-                data.run_deferred_tasks();
-            }
-            Event::Leave { serial, surface } => {
-                let data = self
-                    .find_surface(Proxy::from(surface).id())
-                    .expect("received a pointer event for a non-existant surface");
-                data.keyboard_focus.set(false);
-                // (re-entrancy) call user code
-                data.handler.borrow_mut().lost_focus();
-                data.run_deferred_tasks();
-            }
-            Event::Key {
-                serial,
-                time,
-                key,
-                state,
-            } => {
-                let event = self.xkb_state.borrow().as_ref().unwrap().key_event(
-                    key,
-                    match state {
-                        WlKeyState::Released => KeyState::Up,
-                        WlKeyState::Pressed => KeyState::Down,
-                        _ => panic!("unrecognised key event"),
-                    },
-                );
-                // This clone is necessary because user methods might add more surfaces, which
-                // would then be inserted here which would be 1 mut 1 immut borrows which is not
-                // allowed.
-                for (_, data) in self.surfaces_iter() {
-                    if data.keyboard_focus.get() {
-                        match event.state {
-                            KeyState::Down => {
-                                // TODO what do I do if the key event is handled? Do I not update
-                                // the xkb state?
-                                simulate_input(
-                                    &mut **data.handler.borrow_mut(),
-                                    data.active_text_field.get(),
-                                    event.clone(),
-                                );
-                            }
-                            KeyState::Up => data.handler.borrow_mut().key_up(event.clone()),
-                        }
-                    }
-                    data.run_deferred_tasks();
-                }
-            }
-            Event::Modifiers {
-                serial,
-                mods_depressed,
-                mods_latched,
-                mods_locked,
-                group,
-            } => {
-                // Ignore this event for now and handle modifiers in user code. This might be
-                // suboptimal and need revisiting in the future.
-                //surface.check_for_scheduled_paint();
-            }
-            Event::RepeatInfo { rate, delay } => {
-                // TODO actually store/use this info
-                println!("Requested repeat rate={} delay={}", rate, delay);
-            }
-            evt => {
-                tracing::warn!("Unhandled keybaord event: {:?}", evt);
-            }
+    fn current_window_id(&self) -> u32 {
+        match self.active_surface_id.borrow().get(0) {
+            Some(u) => u.get(),
+            None => 0,
         }
     }
 
-    /// `seat_id` is the object ID for the seat.
-    fn handle_pointer_event(&self, wl_pointer: WlPointer, event: wl_pointer::Event) {
-        use wl_pointer::Event;
-        match event {
-            Event::Enter {
-                serial,
-                surface,
-                surface_x,
-                surface_y,
-            } => {
-                let data = self
-                    .find_surface(Proxy::from(surface).id())
-                    .expect("received a pointer event for a non-existant surface");
-                // TODO some investigation will be needed to deduce the space `surface_x` and
-                // `surface_y` are relative to.
-                data.init_pointer(wl_pointer, serial);
-                // cannot fail (we just set it to Some)
-                let mut _pointer = data.pointer.borrow_mut();
-                let pointer = _pointer.as_mut().unwrap();
-                // No mouse enter event, but we know the position so we can issue a mouse move.
-                let pos = Point::new(surface_x, surface_y);
-                pointer.push(PointerEvent::Motion(pos));
-            }
-            Event::Leave { serial, surface } => {
-                let data = self
-                    .find_surface(Proxy::from(surface).id())
-                    .expect("received a pointer event for a non-existant surface");
-                if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
-                    pointer.push(PointerEvent::Leave);
-                };
-            }
-            Event::Motion {
-                time,
-                surface_x,
-                surface_y,
-            } => {
-                let pos = Point::new(surface_x, surface_y);
-                for (_, data) in self.surfaces_iter() {
-                    if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
-                        pointer.push(PointerEvent::Motion(pos));
-                    }
-                }
-            }
-            Event::Button {
-                serial,
-                time,
-                button,
-                state,
-            } => {
-                for (_, data) in self.surfaces_iter() {
-                    if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
-                        pointer.push(PointerEvent::Button { button, state });
-                    }
-                }
-            }
-            Event::Axis { time, axis, value } => {
-                for (_, data) in self.surfaces_iter() {
-                    if let Some(pointer) = data.pointer.borrow_mut().as_mut() {
-                        pointer.push(PointerEvent::Axis { axis, value });
-                    }
-                }
-            }
-            Event::Frame => {
-                for (_, data) in self.surfaces_iter() {
-                    // Wait until we're outside the loop, then drop the pointer state.
-                    let mut have_left = false;
-                    while let Some(event) = data.pop_pointer_event() {
-                        // (re-entrancy)
-                        match event {
-                            MouseEvtKind::Move(evt) => data.handler.borrow_mut().mouse_move(&evt),
-                            MouseEvtKind::Up(evt) => data.handler.borrow_mut().mouse_up(&evt),
-                            MouseEvtKind::Down(evt) => data.handler.borrow_mut().mouse_down(&evt),
-                            MouseEvtKind::Leave => {
-                                have_left = true;
-                                data.handler.borrow_mut().mouse_leave();
-                            }
-                            MouseEvtKind::Wheel(evt) => data.handler.borrow_mut().wheel(&evt),
-                        }
-                    }
-                    if have_left {
-                        *data.pointer.borrow_mut() = None;
-                    }
-                    data.run_deferred_tasks();
-                }
-            }
-            evt => {
-                tracing::warn!("Unhandled pointer event: {:?}", evt);
-            }
+    pub(super) fn initial_window_size(&self, defaults: kurbo::Size) -> kurbo::Size {
+        // compute the initial window size.
+        let initialwidth = if defaults.width == 0.0 {
+            f64::INFINITY
+        } else {
+            defaults.width
+        };
+        let initialheight = if defaults.height == 0.0 {
+            f64::INFINITY
+        } else {
+            defaults.height
+        };
+        return self.outputs.borrow().iter().fold(
+            kurbo::Size::from((initialwidth, initialheight)),
+            |computed, entry| match &entry.1.current_mode {
+                None => computed,
+                Some(mode) => kurbo::Size::new(
+                    computed.width.min(mode.width.into()),
+                    computed.height.min(mode.height.into()),
+                ),
+            },
+        );
+    }
+
+    pub(super) fn acquire_current_window(&self) -> Option<WindowHandle> {
+        match self.handles.borrow().get(&self.current_window_id()) {
+            None => None,
+            Some(w) => Some(w.clone()),
+        }
+    }
+
+    pub(super) fn popup<'a>(&self, surface: &'a surfaces::popup::Surface) -> Result<(), Error> {
+        match self.acquire_current_window() {
+            None => return Err(Error::string("parent window does not exist")),
+            Some(winhandle) => winhandle.popup(surface),
         }
     }
 
@@ -598,21 +530,24 @@ impl ApplicationData {
             expired_timers.push(timers.pop().unwrap());
         }
         drop(timers);
-        for timer in expired_timers {
-            let surface = match self.surfaces.borrow().get(&timer.data).cloned() {
+        for expired in expired_timers {
+            let win = match self.handles.borrow().get(&expired.id()).cloned() {
                 Some(s) => s,
                 None => {
                     // NOTE this might be expected
-                    tracing::warn!("Received event for surface that doesn't exist any more");
+                    log::warn!("Received event for surface that doesn't exist any more");
                     continue;
                 }
             };
             // re-entrancy
-            surface.handler.borrow_mut().timer(timer.token());
+            win.data()
+                .map(|data| data.handler.borrow_mut().timer(expired.token()));
         }
-        for (_, data) in self.surfaces_iter() {
-            data.run_deferred_tasks();
+
+        for (_, win) in self.handles_iter() {
+            win.data().map(|data| data.run_deferred_tasks());
         }
+
         // Get the deadline soonest and queue it.
         if let Some(timer) = self.timers.borrow().peek() {
             self.timer_handle
@@ -623,18 +558,55 @@ impl ApplicationData {
         self.wl_server.flush().unwrap();
     }
 
-    fn find_surface(&self, id: u32) -> Option<Rc<WindowData>> {
-        self.surfaces.borrow().get(&id).cloned()
+    /// Shallow clones surfaces so we can modify it during iteration.
+    fn handles_iter(&self) -> impl Iterator<Item = (u32, WindowHandle)> {
+        self.handles.borrow().clone().into_iter()
+        // make sure the borrow gets dropped.
+        // let surfaces = {
+        //     let surfaces = self.surfaces.borrow();
+        //     surfaces.clone()
+        // };
+        // surfaces.into_iter()
     }
 
-    /// Shallow clones surfaces so we can modify it during iteration.
-    fn surfaces_iter(&self) -> impl Iterator<Item = (u32, Rc<WindowData>)> {
-        // make sure the borrow gets dropped.
-        let surfaces = {
-            let surfaces = self.surfaces.borrow();
-            surfaces.clone()
-        };
-        surfaces.into_iter()
+    fn idle_repaint<'a>(loophandle: calloop::LoopHandle<'a, std::sync::Arc<ApplicationData>>) {
+        loophandle.insert_idle({
+            move |appdata| {
+                match appdata.acquire_current_window() {
+                    Some(winhandle) => {
+                        tracing::trace!("idle processing initiated");
+                        winhandle.request_anim_frame();
+                        winhandle.run_idle();
+
+                        // if we already flushed this cycle don't flush again.
+                        if *appdata.display_flushed.borrow() {
+                            tracing::trace!("idle repaint flushing display initiated");
+                            if let Err(cause) = appdata.event_queue.borrow().display().flush() {
+                                tracing::warn!("unable to flush display: {:?}", cause);
+                            }
+                        }
+                        tracing::trace!("idle processing completed");
+                    }
+                    None => tracing::error!(
+                        "unable to acquire current window, skipping idle processing"
+                    ),
+                };
+            }
+        });
+    }
+}
+
+impl From<Application> for surfaces::CompositorHandle {
+    fn from(app: Application) -> surfaces::CompositorHandle {
+        surfaces::CompositorHandle::from(app.data)
+    }
+}
+
+impl From<std::sync::Arc<ApplicationData>> for surfaces::CompositorHandle {
+    fn from(data: std::sync::Arc<ApplicationData>) -> surfaces::CompositorHandle {
+        surfaces::CompositorHandle::direct(
+            std::sync::Arc::downgrade(&data) as std::sync::Weak<dyn surfaces::Compositor>
+        )
     }
 }
 
@@ -658,6 +630,7 @@ pub struct Output {
     last_update: Instant,
 }
 
+#[allow(unused)]
 impl Output {
     // All the stuff before `current_mode` will be filled out immediately after creation, so these
     // dummy values will never be observed.
@@ -689,6 +662,7 @@ impl Output {
 
     /// Incorporate update data from the server for this output.
     fn process_event(&mut self, evt: wl_output::Event) {
+        tracing::trace!("processing wayland output event {:?}", evt);
         match evt {
             wl_output::Event::Geometry {
                 x,
@@ -708,7 +682,6 @@ impl Output {
                 self.make = make;
                 self.model = model;
                 self.transform = transform;
-
                 self.update_in_progress = true;
             }
             wl_output::Event::Mode {
@@ -755,9 +728,9 @@ impl Output {
 
 #[derive(Debug, Clone)]
 pub struct Mode {
-    width: i32,
-    height: i32,
-    refresh: i32,
+    pub width: i32,
+    pub height: i32,
+    pub refresh: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -767,9 +740,6 @@ pub struct Seat {
     capabilities: wl_seat::Capability,
     keyboard: Option<wl::Main<WlKeyboard>>,
     pointer: Option<wl::Main<WlPointer>>,
-    // TODO touch
-    /// Lets us work out if things have changed since we last observed the output.
-    last_update: Instant,
 }
 
 impl Seat {
@@ -778,7 +748,6 @@ impl Seat {
             wl_seat,
             name: "".into(),
             capabilities: wl_seat::Capability::empty(),
-            last_update: Instant::now(),
             keyboard: None,
             pointer: None,
         }

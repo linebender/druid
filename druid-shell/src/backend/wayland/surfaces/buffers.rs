@@ -28,7 +28,12 @@ use wayland_client::{
     },
 };
 
-use super::{window::WindowData, PIXEL_WIDTH};
+use super::surface;
+
+/// Number of bytes for a pixel (argb = 4)
+pub(super) const PIXEL_WIDTH: i32 = 4;
+/// Number of frames we need (2 for double buffering)
+pub(super) const NUM_FRAMES: i32 = 2;
 
 /// A collection of buffers that can change size.
 ///
@@ -41,7 +46,7 @@ pub struct Buffers<const N: usize> {
     pending: Cell<usize>,
     /// The physical size of the buffers.
     ///
-    /// This will be different from the buffers' actual size if `recrate_buffers` is true.
+    /// This will be different from the buffers' actual size if `recreate_buffers` is true.
     // NOTE: This really should support fractional scaling, use unstable protocol.
     size: Cell<RawSize>,
     /// Do we need to rebuild the framebuffers (size changed).
@@ -52,11 +57,12 @@ pub struct Buffers<const N: usize> {
     /// This flag allows us to check that we only hand out a mutable ref to the buffer data once.
     /// Otherwise providing mutable access to the data would be unsafe.
     pending_buffer_borrowed: Cell<bool>,
-    /// A handle to the `WindowData`, so we can run the paint method.
+
+    /// A handle to the `Surface`, so we can run the paint method.
     ///
     /// Weak handle because logically we are owned by the `WindowData`. If ownership went in both
     /// directions we would leak memory.
-    window: WeakRc<WindowData>,
+    window: std::sync::Weak<surface::Data>,
     /// Shared memory to allocate buffers in
     shm: RefCell<Shm>,
 }
@@ -64,10 +70,8 @@ pub struct Buffers<const N: usize> {
 impl<const N: usize> Buffers<N> {
     /// Create a new `Buffers` object.
     ///
-    /// The initial size should have non-zero area.
     pub fn new(wl_shm: wl::Main<WlShm>, size: RawSize) -> Rc<Self> {
         assert!(N >= 2, "must be at least 2 buffers");
-        assert!(!size.is_empty(), "window size must not be empty");
         Rc::new(Self {
             buffers: Cell::new(None),
             pending: Cell::new(0),
@@ -75,12 +79,12 @@ impl<const N: usize> Buffers<N> {
             recreate_buffers: Cell::new(true),
             deferred_paint: Cell::new(false),
             pending_buffer_borrowed: Cell::new(false),
-            window: WeakRc::new(),
+            window: std::sync::Weak::new(),
             shm: RefCell::new(Shm::new(wl_shm).expect("error allocating shared memory")),
         })
     }
 
-    pub fn set_window_data(&mut self, data: WeakRc<WindowData>) {
+    pub fn set_window_data(&mut self, data: std::sync::Weak<surface::Data>) {
         self.window = data;
     }
 
@@ -107,7 +111,13 @@ impl<const N: usize> Buffers<N> {
     /// available we will set a flag, so that when one becomes available we immediately paint and
     /// present. This includes if we need to resize.
     pub fn request_paint(self: &Rc<Self>) {
-        //println!("request paint");
+        tracing::trace!("buffer.request_paint {:?}", self.size.get());
+
+        // if our size is empty there is nothing to do.
+        if self.size.get().is_empty() {
+            return;
+        }
+
         if self.pending_buffer_borrowed.get() {
             panic!("called request_paint during painting");
         }
@@ -119,7 +129,7 @@ impl<const N: usize> Buffers<N> {
         if self.recreate_buffers.get() {
             // If all buffers are free, destroy and recreate them
             if self.all_buffers_released() {
-                //tracing::debug!("all buffers released, recreating");
+                //log::debug!("all buffers released, recreating");
                 self.deferred_paint.set(false);
                 self.recreate_buffers_unchecked();
                 self.paint_unchecked();
@@ -130,7 +140,7 @@ impl<const N: usize> Buffers<N> {
             // If the next buffer is free, draw & present. If buffers have not been initialized it
             // is a bug in this code.
             if self.pending_buffer_released() {
-                //tracing::debug!("next frame has been released: draw and present");
+                //log::debug!("next frame has been released: draw and present");
                 self.deferred_paint.set(false);
                 self.paint_unchecked();
             } else {
@@ -140,11 +150,8 @@ impl<const N: usize> Buffers<N> {
     }
 
     /// Paint the next frame, without checking if the buffer is free.
-    ///
-    /// TODO call `handler.prepare_paint` before setting up cairo & invalidating regions.
     fn paint_unchecked(self: &Rc<Self>) {
-        //println!("paint unchecked");
-        debug_assert!(!self.size.get().is_empty());
+        tracing::trace!("buffer.paint_unchecked");
         let mut buf_data = self.pending_buffer_data().unwrap();
         debug_assert!(
             self.pending_buffer_released(),
@@ -153,13 +160,13 @@ impl<const N: usize> Buffers<N> {
         if let Some(data) = self.window.upgrade() {
             data.paint(self.size.get(), &mut *buf_data, self.recreate_buffers.get());
         }
+
         self.recreate_buffers.set(false);
     }
 
     /// Destroy the current buffers, resize the shared memory pool if necessary, and create new
     /// buffers. Does not check if all buffers are free.
     fn recreate_buffers_unchecked(&self) {
-        //println!("recreate buffers unchecked");
         debug_assert!(
             self.all_buffers_released(),
             "recreate buffers: some buffer still in use"
@@ -181,13 +188,7 @@ impl<const N: usize> Buffers<N> {
 
             let size = self.size.get();
             for i in 0..N {
-                buffers.push(Buffer::create(
-                    &pool,
-                    self.window.clone(),
-                    i,
-                    size.width,
-                    size.height,
-                ));
+                buffers.push(Buffer::create(&pool, i, size.width, size.height));
             }
             Some(buffers.try_into().unwrap())
         });
@@ -275,28 +276,20 @@ impl Buffer {
     /// Create a new buffer using the given backing storage. It is the responsibility of the caller
     /// to ensure buffers don't overlap, and the backing storage has enough space.
     // Window handle is needed for the callback.
-    pub fn create(
-        pool: &wl::Main<WlShmPool>,
-        window: WeakRc<WindowData>,
-        idx: usize,
-        width: i32,
-        height: i32,
-    ) -> Self {
-        // TODO overflow
+    pub fn create(pool: &wl::Main<WlShmPool>, idx: usize, width: i32, height: i32) -> Self {
         let offset = i32::try_from(idx).unwrap() * width * height * PIXEL_WIDTH;
         let stride = width * PIXEL_WIDTH;
         let inner = pool.create_buffer(offset, width, height, stride, wl_shm::Format::Argb8888);
         let in_use = Rc::new(Cell::new(false));
 
-        inner.quick_assign(with_cloned!(in_use; move |_, event, _| match event {
-            wl_buffer::Event::Release => {
-                in_use.set(false);
-                // TODO look at this. We should only paint if it has been requested.
-                if let Some(data) = window.upgrade() {
-                    data.buffers.request_paint();
+        inner.quick_assign(with_cloned!(in_use; move |b, event, _dispatchdata| {
+            tracing::trace!("buffer event: {:?} {:?}", b, event);
+            match event {
+                wl_buffer::Event::Release => {
+                    in_use.set(false);
                 }
+                _ => tracing::warn!("unhandled wayland buffer event: {:?} {:?}", b, event),
             }
-            _ => (), // panic!("release is the only event"),
         }));
 
         Buffer { inner, in_use }
@@ -361,6 +354,7 @@ pub struct Shm {
     wl_shm: wl::Main<WlShm>,
 }
 
+#[allow(unused)]
 impl Shm {
     /// Create a new shared memory object. Will be empty until resized.
     pub fn new(wl_shm: wl::Main<WlShm>) -> Result<Self, nix::Error> {
@@ -551,7 +545,7 @@ impl Drop for Mmap {
     fn drop(&mut self) {
         unsafe {
             if let Err(e) = munmap(self.ptr.as_ptr(), self.size) {
-                tracing::warn!("Error unmapping memory: {}", e);
+                log::warn!("Error unmapping memory: {}", e);
             }
         }
     }
