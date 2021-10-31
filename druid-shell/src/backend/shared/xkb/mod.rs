@@ -22,15 +22,15 @@ use crate::{
 };
 use keyboard_types::{Code, Key};
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::c_char;
 use std::ptr;
-use xkbcommon_sys::*;
 use xkbcommon_sys::*;
 
 #[cfg(feature = "x11")]
 use x11rb::xcb_ffi::XCBConnection;
 
-pub struct DeviceId(c_int);
+#[cfg(feature = "x11")]
+pub struct DeviceId(std::os::raw::c_int);
 
 /// A global xkb context object.
 ///
