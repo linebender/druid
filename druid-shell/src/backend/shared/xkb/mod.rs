@@ -79,6 +79,7 @@ impl Context {
     /// Create a keymap from some given data.
     ///
     /// Uses `xkb_keymap_new_from_buffer` under the hood.
+    #[cfg(feature = "wayland")]
     pub fn keymap_from_slice(&self, buffer: &[u8]) -> Keymap {
         // TODO we hope that the keymap doesn't borrow the underlying data. If it does' we need to
         // use Rc. We'll find out soon enough if we get a segfault.
