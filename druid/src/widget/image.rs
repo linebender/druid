@@ -438,7 +438,7 @@ mod tests {
         );
 
         let image_widget =
-            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).vertical();
+            Scroll::new(Container::new(Image::new(image_data).fill_mode(FillStrat::Fill)).with_id(id_1)).vertical();
 
         Harness::create_simple(true, image_widget, |harness| {
             harness.send_initial_events();
@@ -466,7 +466,7 @@ mod tests {
         );
 
         let image_widget =
-            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
+            Scroll::new(Container::new(Image::new(image_data).fill_mode(FillStrat::Fill)).with_id(id_1)).horizontal();
 
         Harness::create_simple(true, image_widget, |harness| {
             harness.send_initial_events();
