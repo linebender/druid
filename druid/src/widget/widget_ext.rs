@@ -19,7 +19,7 @@ use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
 };
-use crate::widget::{DisabledIf, Scroll, Flex, Label};
+use crate::widget::{DisabledIf, Flex, Label, Scroll};
 use crate::{
     Color, Data, Env, EventCtx, Insets, KeyOrValue, Lens, LifeCycleCtx, UnitPoint, Widget,
 };
