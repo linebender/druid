@@ -288,28 +288,28 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Wrap a [`Label`] widget left to this widget.
     ///
-    /// For more flexible layout, wrap [`Lable`] with [`Flex`] directly
+    /// For more flexible layout, wrap [`Label`] with [`Flex`] directly
     fn label_left(self, label: impl Into<Label<T>>) -> Flex<T> {
         Flex::row().with_child(label.into()).with_child(self)
     }
 
     /// Wrap a [`Label`] widget right to this widget.
     ///
-    /// For more flexible layout, wrap [`Lable`] with [`Flex`] directly
+    /// For more flexible layout, wrap [`Label`] with [`Flex`] directly
     fn label_right(self, label: impl Into<Label<T>>) -> Flex<T> {
         Flex::row().with_child(self).with_child(label.into())
     }
 
     /// Wrap a [`Label`] widget up to this widget.
     ///
-    /// For more flexible layout, wrap [`Lable`] with [`Flex`] directly
+    /// For more flexible layout, wrap [`Label`] with [`Flex`] directly
     fn label_up(self, label: impl Into<Label<T>>) -> Flex<T> {
         Flex::column().with_child(label.into()).with_child(self)
     }
 
     /// Wrap a [`Label`] widget down to this widget.
     ///
-    /// For more flexible layout, wrap [`Lable`] with [`Flex`] directly
+    /// For more flexible layout, wrap [`Label`] with [`Flex`] directly
     fn label_down(self, label: impl Into<Label<T>>) -> Flex<T> {
         Flex::column().with_child(self).with_child(label.into())
     }
