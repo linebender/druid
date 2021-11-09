@@ -19,6 +19,8 @@ pub mod popup;
 pub mod surface;
 pub mod toplevel;
 
+pub const GLOBAL_ID: crate::Counter = crate::Counter::new();
+
 pub trait Compositor {
     fn output(&self, id: &u32) -> Option<application::Output>;
     fn create_surface(&self) -> wlc::Main<WlSurface>;
@@ -56,7 +58,6 @@ impl PopupHandle {
 
 // handle on given surface.
 pub trait Handle {
-    fn wayland_surface_id(&self) -> u32;
     fn get_size(&self) -> kurbo::Size;
     fn set_size(&self, dim: kurbo::Size);
     fn request_anim_frame(&self);
@@ -159,17 +160,6 @@ impl Compositor for CompositorHandle {
         }
     }
 
-    // fn get_xdg_popup(
-    //     &self,
-    //     pos: &wlc::Main<xdg_positioner::XdgPositioner>,
-    //     parent: Option<&xdg_surface::XdgSurface>,
-    // ) -> wlc::Main<xdg_popup::XdgPopup> {
-    //     match self.inner.upgrade() {
-    //         None => panic!("unable to acquire underyling compositor to acquire xdg popup surface"),
-    //         Some(c) => c.get_xdg_popup(pos, parent),
-    //     }
-    // }
-
     fn zxdg_decoration_manager_v1(&self) -> wlc::Main<ZxdgDecorationManagerV1> {
         match self.inner.upgrade() {
             None => {
@@ -187,8 +177,4 @@ impl Compositor for CompositorHandle {
             Some(c) => c.zwlr_layershell_v1(),
         }
     }
-}
-
-pub fn id(s: impl Into<u32>) -> u32 {
-    s.into()
 }
