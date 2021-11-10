@@ -104,6 +104,7 @@ impl Context {
     ///
     /// Because `xkb` has a `critical` error, each rust error maps to 1 above (e.g. error ->
     /// critical, warn -> error etc.)
+    #[allow(unused)]
     pub fn set_log_level(&self, level: tracing::Level) {
         use tracing::Level;
         let level = match level {

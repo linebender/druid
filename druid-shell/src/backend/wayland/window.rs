@@ -38,6 +38,7 @@ pub use surfaces::idle::Handle as IdleHandle;
 
 // holds references to the various components for a window implementation.
 struct Inner {
+    pub(super) id: u64,
     pub(super) decor: Box<dyn surfaces::Decor>,
     pub(super) surface: Box<dyn surfaces::Handle>,
     pub(super) appdata: std::sync::Weak<ApplicationData>,
@@ -56,11 +57,16 @@ impl WindowHandle {
     ) -> Self {
         Self {
             inner: std::sync::Arc::new(Inner {
+                id: surfaces::GLOBAL_ID.next(),
                 decor: decor.into(),
                 surface: surface.into(),
                 appdata: appdata.into(),
             }),
         }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.inner.id
     }
 
     pub fn show(&self) {
@@ -125,10 +131,7 @@ impl WindowHandle {
                 "closing window initiated {:?}",
                 appdata.active_surface_id.borrow()
             );
-            appdata
-                .handles
-                .borrow_mut()
-                .remove(&self.inner.surface.wayland_surface_id());
+            appdata.handles.borrow_mut().remove(&self.id());
             appdata.active_surface_id.borrow_mut().pop_front();
             self.inner.surface.release();
             tracing::trace!(
@@ -197,8 +200,6 @@ impl WindowHandle {
             None => panic!("requested timer on a window that was destroyed"),
         };
 
-        let sid = self.inner.surface.wayland_surface_id();
-
         let now = instant::Instant::now();
         let mut timers = appdata.timers.borrow_mut();
         let sooner = timers
@@ -206,7 +207,7 @@ impl WindowHandle {
             .map(|timer| deadline < timer.deadline())
             .unwrap_or(true);
 
-        let timer = Timer::new(sid, deadline);
+        let timer = Timer::new(self.id(), deadline);
         timers.push(timer);
 
         // It is possible that the deadline has passed since it was set.
@@ -277,6 +278,7 @@ impl WindowHandle {
         self.inner.surface.run_idle();
     }
 
+    #[allow(unused)]
     pub(super) fn popup<'a>(&self, s: &'a surfaces::popup::Surface) -> Result<(), error::Error> {
         self.inner.surface.popup(s)
     }
@@ -296,6 +298,7 @@ impl std::default::Default for WindowHandle {
     fn default() -> WindowHandle {
         WindowHandle {
             inner: std::sync::Arc::new(Inner {
+                id: surfaces::GLOBAL_ID.next(),
                 decor: Box::new(surfaces::surface::Dead::default()),
                 surface: Box::new(surfaces::surface::Dead::default()),
                 appdata: std::sync::Weak::new(),
@@ -404,21 +407,19 @@ impl WindowBuilder {
 
         (&surface as &dyn surfaces::Decor).set_title(self.title);
 
-        let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
-            Some(u) => u,
-            None => panic!("surface id must be non-zero"),
-        };
-
         let handle = WindowHandle::new(surface.clone(), surface.clone(), self.app_data.clone());
 
         if let Some(_) = appdata
             .handles
             .borrow_mut()
-            .insert(sid.get(), handle.clone())
+            .insert(handle.id(), handle.clone())
         {
             panic!("wayland should use unique object IDs");
         }
-        appdata.active_surface_id.borrow_mut().push_front(sid);
+        appdata
+            .active_surface_id
+            .borrow_mut()
+            .push_front(handle.id());
 
         surface.with_handler({
             let handle = handle.clone();
@@ -429,6 +430,7 @@ impl WindowBuilder {
     }
 }
 
+#[allow(unused)]
 pub mod layershell {
     use crate::error::Error as ShellError;
     use crate::window::WinHandler;
@@ -478,11 +480,6 @@ pub mod layershell {
 
             let surface = surfaces::layershell::Surface::new(appdata.clone(), winhandle, updated);
 
-            let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
-                Some(u) => u,
-                None => panic!("surface id must be non-zero"),
-            };
-
             let handle = WindowHandle::new(
                 surfaces::surface::Dead::default(),
                 surface.clone(),
@@ -492,11 +489,14 @@ pub mod layershell {
             if let Some(_) = appdata
                 .handles
                 .borrow_mut()
-                .insert(sid.get(), handle.clone())
+                .insert(handle.id(), handle.clone())
             {
                 panic!("wayland should use unique object IDs");
             }
-            appdata.active_surface_id.borrow_mut().push_front(sid);
+            appdata
+                .active_surface_id
+                .borrow_mut()
+                .push_front(handle.id());
 
             surface.with_handler({
                 let handle = handle.clone();
@@ -508,6 +508,7 @@ pub mod layershell {
     }
 }
 
+#[allow(unused)]
 pub mod popup {
     use crate::error::Error as ShellError;
     use crate::window::WinHandler;
@@ -560,11 +561,6 @@ pub mod popup {
                 return Err(ShellError::Platform(cause));
             }
 
-            let sid = match std::num::NonZeroU32::new(surfaces::id(&surface)) {
-                Some(u) => u,
-                None => panic!("surface id must be non-zero"),
-            };
-
             let handle = WindowHandle::new(
                 surfaces::surface::Dead::default(),
                 surface.clone(),
@@ -574,11 +570,14 @@ pub mod popup {
             if let Some(_) = appdata
                 .handles
                 .borrow_mut()
-                .insert(sid.get(), handle.clone())
+                .insert(handle.id(), handle.clone())
             {
                 panic!("wayland should use unique object IDs");
             }
-            appdata.active_surface_id.borrow_mut().push_front(sid);
+            appdata
+                .active_surface_id
+                .borrow_mut()
+                .push_front(handle.id());
 
             surface.with_handler({
                 let handle = handle.clone();
