@@ -53,15 +53,6 @@ impl Handle {
             popup_impl: RefCell::new(None),
         });
 
-        // Hook up the child -> parent weak pointer.
-        unsafe {
-            // Safety: No Rust references exist during the life of this reference (satisfies many
-            // read-only xor 1 mutable references).
-            let bufs: &mut buffers::Buffers<{ buffers::NUM_FRAMES as usize }> =
-                &mut *(std::rc::Rc::as_ptr(&current.buffers) as *mut _);
-            bufs.set_window_data(std::sync::Arc::downgrade(&current));
-        }
-
         // register to receive wl_surface events.
         current.wl_surface.quick_assign({
             let current = current.clone();
@@ -415,7 +406,7 @@ impl Data {
         // reset damage ready for next frame.
         self.damaged_region.borrow_mut().clear();
 
-        self.buffers.attach();
+        self.buffers.attach(&self);
         self.wl_surface.commit();
     }
 
@@ -468,7 +459,7 @@ impl Data {
     fn run_deferred_task(&self, task: DeferredTask) {
         match task {
             DeferredTask::Paint => {
-                self.buffers.request_paint();
+                self.buffers.request_paint(&self);
             }
             DeferredTask::AnimationClear => {
                 self.anim_frame_requested.set(false);
