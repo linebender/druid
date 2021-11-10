@@ -218,7 +218,12 @@ impl Surface {
                         .inner
                         .wl_surface
                         .update_dimensions(dim.width as u32, dim.height as u32);
-                    handle.inner.wl_surface.inner.buffers.request_paint();
+                    handle
+                        .inner
+                        .wl_surface
+                        .inner
+                        .buffers
+                        .request_paint(&handle.inner.wl_surface.inner);
                 }
                 _ => tracing::info!("unimplemented event {:?} {:?} {:?}", a1, event, a2),
             }

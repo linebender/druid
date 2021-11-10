@@ -96,7 +96,7 @@ impl Surface {
                     xdg_surface.ack_configure(serial);
                     let dim = wl_surface.inner.logical_size.get();
                     wl_surface.inner.handler.borrow_mut().size(dim);
-                    wl_surface.inner.buffers.request_paint();
+                    wl_surface.inner.buffers.request_paint(&wl_surface.inner);
                 }
                 _ => tracing::warn!("unhandled xdg_surface event {:?}", event),
             }

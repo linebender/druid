@@ -58,11 +58,6 @@ pub struct Buffers<const N: usize> {
     /// Otherwise providing mutable access to the data would be unsafe.
     pending_buffer_borrowed: Cell<bool>,
 
-    /// A handle to the `Surface`, so we can run the paint method.
-    ///
-    /// Weak handle because logically we are owned by the `WindowData`. If ownership went in both
-    /// directions we would leak memory.
-    window: std::sync::Weak<surface::Data>,
     /// Shared memory to allocate buffers in
     shm: RefCell<Shm>,
 }
@@ -79,13 +74,8 @@ impl<const N: usize> Buffers<N> {
             recreate_buffers: Cell::new(true),
             deferred_paint: Cell::new(false),
             pending_buffer_borrowed: Cell::new(false),
-            window: std::sync::Weak::new(),
             shm: RefCell::new(Shm::new(wl_shm).expect("error allocating shared memory")),
         })
-    }
-
-    pub fn set_window_data(&mut self, data: std::sync::Weak<surface::Data>) {
-        self.window = data;
     }
 
     /// Get the physical size of the buffer.
@@ -94,12 +84,10 @@ impl<const N: usize> Buffers<N> {
     }
 
     /// Request that the size of the buffer is changed.
-    pub fn set_size(&self, new_size: RawSize) {
-        assert!(!new_size.is_empty(), "window size must not be empty");
-        if self.size.get() != new_size {
-            self.size.set(new_size);
-            self.recreate_buffers.set(true);
-        }
+    pub fn set_size(&self, updated: RawSize) {
+        assert!(!updated.is_empty(), "window size must not be empty");
+        let old = self.size.replace(updated);
+        self.recreate_buffers.set(old != updated);
     }
 
     /// Request painting the next frame.
@@ -110,7 +98,7 @@ impl<const N: usize> Buffers<N> {
     /// We will call into `WindowData` to paint the frame, and present it. If no buffers are
     /// available we will set a flag, so that when one becomes available we immediately paint and
     /// present. This includes if we need to resize.
-    pub fn request_paint(self: &Rc<Self>) {
+    pub fn request_paint(self: &Rc<Self>, window: &surface::Data) {
         tracing::trace!("buffer.request_paint {:?}", self.size.get());
 
         // if our size is empty there is nothing to do.
@@ -132,7 +120,7 @@ impl<const N: usize> Buffers<N> {
                 //log::debug!("all buffers released, recreating");
                 self.deferred_paint.set(false);
                 self.recreate_buffers_unchecked();
-                self.paint_unchecked();
+                self.paint_unchecked(window);
             } else {
                 self.deferred_paint.set(true);
             }
@@ -142,7 +130,7 @@ impl<const N: usize> Buffers<N> {
             if self.pending_buffer_released() {
                 //log::debug!("next frame has been released: draw and present");
                 self.deferred_paint.set(false);
-                self.paint_unchecked();
+                self.paint_unchecked(window);
             } else {
                 self.deferred_paint.set(true);
             }
@@ -150,17 +138,14 @@ impl<const N: usize> Buffers<N> {
     }
 
     /// Paint the next frame, without checking if the buffer is free.
-    fn paint_unchecked(self: &Rc<Self>) {
+    fn paint_unchecked(self: &Rc<Self>, window: &surface::Data) {
         tracing::trace!("buffer.paint_unchecked");
         let mut buf_data = self.pending_buffer_data().unwrap();
         debug_assert!(
             self.pending_buffer_released(),
             "buffer in use/not initialized"
         );
-        if let Some(data) = self.window.upgrade() {
-            data.paint(self.size.get(), &mut *buf_data, self.recreate_buffers.get());
-        }
-
+        window.paint(self.size.get(), &mut *buf_data, self.recreate_buffers.get());
         self.recreate_buffers.set(false);
     }
 
@@ -248,11 +233,9 @@ impl<const N: usize> Buffers<N> {
 
     /// Signal to wayland that the pending buffer is ready to be presented, and switch the next
     /// buffer to be the pending one.
-    pub(crate) fn attach(&self) {
-        if let Some(data) = self.window.upgrade() {
-            self.with_pending_buffer(|buf| buf.unwrap().attach(&data.wl_surface));
-            self.pending.set((self.pending.get() + 1) % N);
-        }
+    pub(crate) fn attach(&self, window: &surface::Data) {
+        self.with_pending_buffer(|buf| buf.unwrap().attach(&window.wl_surface));
+        self.pending.set((self.pending.get() + 1) % N);
     }
 
     fn frame_len(&self) -> usize {

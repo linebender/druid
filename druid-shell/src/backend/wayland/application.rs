@@ -16,12 +16,10 @@
 
 use super::{
     clipboard::Clipboard, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
-    surfaces::buffers::Mmap, window::WindowHandle,
+    window::WindowHandle,
 };
 
-use crate::{
-    backend, backend::shared::xkb, keyboard_types::KeyState, kurbo, mouse, AppHandler, TimerToken,
-};
+use crate::{backend, kurbo, mouse, AppHandler, TimerToken};
 
 use calloop;
 
