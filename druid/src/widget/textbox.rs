@@ -470,6 +470,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     .borrow_mut()
                     .set_selection(Selection::new(0, data.as_str().len()))
                 {
+                    ctx.request_paint();
                     ctx.invalidate_text_input(inval);
                 }
                 ctx.set_handled();
