@@ -104,10 +104,6 @@ impl Handle {
 }
 
 impl SurfaceHandle for Handle {
-    fn wayland_surface_id(&self) -> u32 {
-        self.inner.wayland_surface_id()
-    }
-
     fn get_size(&self) -> kurbo::Size {
         self.inner.get_size()
     }
@@ -574,11 +570,6 @@ impl Decor for Dead {
 }
 
 impl SurfaceHandle for Dead {
-    fn wayland_surface_id(&self) -> u32 {
-        tracing::warn!("wayland_surface_id invoked on a dead surface");
-        0
-    }
-
     fn get_size(&self) -> kurbo::Size {
         kurbo::Size::ZERO
     }

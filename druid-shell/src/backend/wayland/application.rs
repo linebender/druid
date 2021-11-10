@@ -26,7 +26,6 @@ use calloop;
 use std::{
     cell::{Cell, RefCell},
     collections::{BTreeMap, BinaryHeap},
-    num::NonZeroU32,
     rc::Rc,
     time::{Duration, Instant},
 };
@@ -52,14 +51,14 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use wayland_protocols::xdg_shell::client::xdg_wm_base::{self, XdgWmBase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Timer(backend::shared::Timer<u32>);
+pub(crate) struct Timer(backend::shared::Timer<u64>);
 
 impl Timer {
-    pub(crate) fn new(id: u32, deadline: Instant) -> Self {
+    pub(crate) fn new(id: u64, deadline: Instant) -> Self {
         Self(backend::shared::Timer::new(deadline, id))
     }
 
-    pub(crate) fn id(self) -> u32 {
+    pub(crate) fn id(self) -> u64 {
         self.0.data
     }
 
@@ -118,14 +117,14 @@ pub(crate) struct ApplicationData {
     // pub(super) surfaces: RefCell<im::OrdMap<u32, std::sync::Arc<surfaces::surface::Data>>>,
 
     /// Handles to any surfaces that have been created.
-    pub(super) handles: RefCell<im::OrdMap<u32, WindowHandle>>,
+    pub(super) handles: RefCell<im::OrdMap<u64, WindowHandle>>,
 
     /// Available pixel formats
     pub(super) formats: RefCell<Vec<wl_shm::Format>>,
     /// Close flag
     pub(super) shutdown: Cell<bool>,
     /// The currently active surface, if any (by wayland object ID)
-    pub(super) active_surface_id: RefCell<std::collections::VecDeque<NonZeroU32>>,
+    pub(super) active_surface_id: RefCell<std::collections::VecDeque<u64>>,
     // Stuff for timers
     /// A calloop event source for timers. We always set it to fire at the next set timer, if any.
     pub(super) timer_handle: calloop::timer::TimerHandle<TimerToken>,
@@ -472,11 +471,13 @@ impl ApplicationData {
         Ok(())
     }
 
-    fn current_window_id(&self) -> u32 {
-        match self.active_surface_id.borrow().get(0) {
-            Some(u) => u.get(),
-            None => 0,
-        }
+    fn current_window_id(&self) -> u64 {
+        static DEFAULT: u64 = 0 as u64;
+        self.active_surface_id
+            .borrow()
+            .get(0)
+            .unwrap_or_else(|| &DEFAULT)
+            .clone()
     }
 
     pub(super) fn initial_window_size(&self, defaults: kurbo::Size) -> kurbo::Size {
@@ -559,14 +560,8 @@ impl ApplicationData {
     }
 
     /// Shallow clones surfaces so we can modify it during iteration.
-    fn handles_iter(&self) -> impl Iterator<Item = (u32, WindowHandle)> {
+    fn handles_iter(&self) -> impl Iterator<Item = (u64, WindowHandle)> {
         self.handles.borrow().clone().into_iter()
-        // make sure the borrow gets dropped.
-        // let surfaces = {
-        //     let surfaces = self.surfaces.borrow();
-        //     surfaces.clone()
-        // };
-        // surfaces.into_iter()
     }
 
     fn idle_repaint<'a>(loophandle: calloop::LoopHandle<'a, std::sync::Arc<ApplicationData>>) {
