@@ -92,6 +92,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Fixed
 
+- Centre checkmark in checkbox ([#2036] by [@agentsim])
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
