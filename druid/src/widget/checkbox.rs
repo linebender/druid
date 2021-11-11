@@ -139,10 +139,12 @@ impl Widget<bool> for Checkbox {
 
         if *data {
             // Paint the checkmark
+            let x_offset = (rect.width() - 10.0) / 2.0;
+            let y_offset = (rect.height() - 8.0) / 2.0;
             let mut path = BezPath::new();
-            path.move_to((4.0, 9.0));
-            path.line_to((8.0, 13.0));
-            path.line_to((14.0, 5.0));
+            path.move_to((x_offset, y_offset + 4.0));
+            path.line_to((x_offset + 4.0, y_offset + 8.0));
+            path.line_to((x_offset + 10.0, y_offset));
 
             let style = StrokeStyle::new()
                 .line_cap(LineCap::Round)
