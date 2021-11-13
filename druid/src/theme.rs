@@ -50,7 +50,8 @@ pub const DISABLED_BUTTON_DARK: Key<Color> =
     Key::new("org.linebender.druid.theme.disabled_button_dark");
 pub const DISABLED_BUTTON_LIGHT: Key<Color> =
     Key::new("org.linebender.druid.theme.disabled_button_light");
-pub const BUTTON_BORDER_RADIUS: Key<RoundedRectRadii> = Key::new("org.linebender.druid.theme.button_radius");
+pub const BUTTON_BORDER_RADIUS: Key<RoundedRectRadii> =
+    Key::new("org.linebender.druid.theme.button_radius");
 pub const BUTTON_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.button_border_width");
 pub const BORDER_DARK: Key<Color> = Key::new("org.linebender.druid.theme.border_dark");

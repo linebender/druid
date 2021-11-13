@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
-use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size, RoundedRectRadii};
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, RoundedRectRadii, Size};
 
 /// An environment passed down through all widget traversals.
 ///
