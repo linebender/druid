@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
-use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size, RoundedRectRadii};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -107,6 +107,7 @@ pub enum Value {
     UnsignedInt(u64),
     String(ArcStr),
     Font(FontDescriptor),
+    RoundedRectRadii(RoundedRectRadii),
     Other(Arc<dyn Any + Send + Sync>),
 }
 // ANCHOR_END: value_type
@@ -453,6 +454,7 @@ impl Value {
                 | (UnsignedInt(_), UnsignedInt(_))
                 | (String(_), String(_))
                 | (Font(_), Font(_))
+                | (RoundedRectRadii(_), RoundedRectRadii(_))
         )
     }
 }
@@ -470,6 +472,7 @@ impl Debug for Value {
             Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
             Value::String(s) => write!(f, "String {:?}", s),
             Value::Font(font) => write!(f, "Font {:?}", font),
+            Value::RoundedRectRadii(radius) => write!(f, "RoundedRectRadii {:?}", radius),
             Value::Other(other) => write!(f, "{:?}", other),
         }
     }
@@ -613,6 +616,7 @@ impl_value_type!(Size, Size);
 impl_value_type!(Insets, Insets);
 impl_value_type!(ArcStr, String);
 impl_value_type!(FontDescriptor, Font);
+impl_value_type!(RoundedRectRadii, RoundedRectRadii);
 
 impl<T: 'static + Send + Sync> From<Arc<T>> for Value {
     fn from(this: Arc<T>) -> Value {
