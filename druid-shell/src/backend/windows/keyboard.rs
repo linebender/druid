@@ -89,11 +89,14 @@ const SCAN_MASK: LPARAM = 0x1ff_0000;
 /// When this function returns `false`, there is another message in the queue
 /// with a matching scan code, therefore it is reasonable to stash the data
 /// from this message and defer til later to actually produce the event.
-unsafe fn is_last_message(hwnd: HWND, msg: UINT, lparam: LPARAM) -> bool {
+pub(super) unsafe fn is_last_message(hwnd: HWND, msg: UINT, lparam: LPARAM) -> bool {
     let expected_msg = match msg {
         WM_KEYDOWN | WM_CHAR => WM_CHAR,
         WM_SYSKEYDOWN | WM_SYSCHAR => WM_SYSCHAR,
-        _ => unreachable!(),
+        _ => {
+            // Not applicable, but don't require the caller to know that.
+            return false;
+        }
     };
     let mut msg = mem::zeroed();
     let avail = PeekMessageW(&mut msg, hwnd, expected_msg, expected_msg, PM_NOREMOVE);
@@ -547,17 +550,17 @@ impl KeyboardState {
     /// is likely low, though.
     pub(crate) unsafe fn process_message(
         &mut self,
-        hwnd: HWND,
         msg: UINT,
         wparam: WPARAM,
         lparam: LPARAM,
+        is_last: bool,
     ) -> Option<KeyEvent> {
         match msg {
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 //println!("keydown wparam {:x} lparam {:x}", wparam, lparam);
                 let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;
                 let vk = self.refine_vk(wparam as u8, scan_code);
-                if is_last_message(hwnd, msg, lparam) {
+                if is_last {
                     let mods = self.get_modifiers();
                     let code = scan_to_code(scan_code);
                     let key = vk_to_key(vk).unwrap_or_else(|| self.get_base_key(vk, mods));
@@ -603,7 +606,7 @@ impl KeyboardState {
             }
             WM_CHAR | WM_SYSCHAR => {
                 //println!("char wparam {:x} lparam {:x}", wparam, lparam);
-                if is_last_message(hwnd, msg, lparam) {
+                if is_last {
                     let stash_vk = self.stash_vk.take();
                     let mods = self.get_modifiers();
                     let scan_code = ((lparam & SCAN_MASK) >> 16) as u32;

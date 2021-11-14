@@ -18,6 +18,7 @@ edition = "2018"
 features = ["im"]
 rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 
 [features]
 default = ["gtk"]

@@ -71,13 +71,13 @@ struct Name {
 struct NameLens;
 
 impl Lens<Container2, Name> for NameLens {
-    fn with<F: FnOnce(&Name)>(&self, data: &Container, f: F) {
+    fn with<F: FnOnce(&Name)>(&self, data: &Container2, f: F) {
         let first = data.first_name.clone();
         let last = data.last_name.clone();
         f(&Name { first, last });
     }
 
-    fn with_mut<F: FnOnce(&mut Name)>(&self, data: &mut Container, f: F) {
+    fn with_mut<F: FnOnce(&mut Name)>(&self, data: &mut Container2, f: F) {
         let first = data.first_name.clone();
         let last = data.last_name.clone();
         let mut name = Name { first, last };

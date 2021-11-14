@@ -60,7 +60,7 @@ use super::application::Application;
 use super::dcomp::D3D11Device;
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
-use super::keyboard::KeyboardState;
+use super::keyboard::{self, KeyboardState};
 use super::menu::Menu;
 use super::paint;
 use super::timers::TimerSlots;
@@ -984,9 +984,20 @@ impl WndProc for MyWndProc {
             WM_CHAR | WM_SYSCHAR | WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP
             | WM_INPUTLANGCHANGE => {
                 unsafe {
+                    // We must call keyboard::is_last_message outside of the
+                    // WndState borrow below, because is_last_message
+                    // calls PeekMessageW, which can make reentrant calls
+                    // to our window procedure. There is one known real-world
+                    // example of this problem: when Narrator is running
+                    // and the user presses Alt+Tab, Narrator's keyboard event
+                    // preprocessing withholds the key-down event for Alt
+                    // until the user presses Tab, so we receive
+                    // WM_KILLFOCUS while we're processing WM_KEYDOWN.
+                    let is_last = keyboard::is_last_message(hwnd, msg, lparam);
                     let handled = self.with_wnd_state(|s| {
-                        if let Some(event) =
-                            s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
+                        if let Some(event) = s
+                            .keyboard_state
+                            .process_message(msg, wparam, lparam, is_last)
                         {
                             // If the window doesn't have a menu, then we need to suppress ALT/F10.
                             // Otherwise we will stop getting mouse events for no gain.
