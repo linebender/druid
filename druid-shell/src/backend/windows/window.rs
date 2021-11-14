@@ -1342,7 +1342,9 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) => self.level = Some(level),
+            WindowLevel::AppWindow | WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) => {
+                self.level = Some(level)
+            }
             _ => {
                 warn!("WindowLevel::Modal is currently unimplemented for Windows backend.");
             }
