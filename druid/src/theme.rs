@@ -34,7 +34,7 @@ pub const PLACEHOLDER_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.p
 
 pub const PRIMARY_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.primary_light");
 pub const PRIMARY_DARK: Key<Color> = Key::new("org.linebender.druid.theme.primary_dark");
-pub const PROGRESS_BAR_RADIUS: Key<f64> =
+pub const PROGRESS_BAR_RADIUS: Key<RoundedRectRadii> =
     Key::new("org.linebender.druid.theme.progress_bar_radius");
 pub const BACKGROUND_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.background_light");
 pub const BACKGROUND_DARK: Key<Color> = Key::new("org.linebender.druid.theme.background_dark");
@@ -86,7 +86,7 @@ pub const WIDE_WIDGET_WIDTH: Key<f64> = Key::new("org.linebender.druid.theme.lon
 pub const BORDERED_WIDGET_HEIGHT: Key<f64> =
     Key::new("org.linebender.druid.theme.bordered_widget_height");
 
-pub const TEXTBOX_BORDER_RADIUS: Key<f64> =
+pub const TEXTBOX_BORDER_RADIUS: Key<RoundedRectRadii> =
     Key::new("org.linebender.druid.theme.textbox_border_radius");
 pub const TEXTBOX_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.textbox_border_width");
@@ -112,7 +112,8 @@ pub const SCROLLBAR_FADE_DELAY: Key<u64> =
     Key::new("org.linebender.druid.theme.scrollbar_fade_time");
 pub const SCROLLBAR_WIDTH: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_width");
 pub const SCROLLBAR_PAD: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_pad");
-pub const SCROLLBAR_RADIUS: Key<f64> = Key::new("org.linebender.druid.theme.scrollbar_radius");
+pub const SCROLLBAR_RADIUS: Key<RoundedRectRadii> =
+    Key::new("org.linebender.druid.theme.scrollbar_radius");
 pub const SCROLLBAR_EDGE_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.scrollbar_edge_width");
 /// Minimum length for any scrollbar to be when measured on that
