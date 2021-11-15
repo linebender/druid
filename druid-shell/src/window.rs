@@ -21,6 +21,7 @@ use crate::application::Application;
 use crate::backend::window as backend;
 use crate::common_util::Counter;
 use crate::dialog::{FileDialogOptions, FileInfo};
+use crate::dnd::{DragDropToken, DropContext};
 use crate::error::Error;
 use crate::keyboard::KeyEvent;
 use crate::kurbo::{Insets, Point, Rect, Size};
@@ -29,6 +30,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
+use crate::{DragData, DragDropAction};
 use piet_common::PietText;
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -410,6 +412,14 @@ impl WindowHandle {
     pub fn get_scale(&self) -> Result<Scale, Error> {
         self.0.get_scale().map_err(Into::into)
     }
+
+    pub fn drop_context(&self) -> Option<DropContext> {
+        self.0.drop_context().map(DropContext)
+    }
+
+    pub fn drag_start(&self, data: DragData, position: Point) -> DragDropToken {
+        self.0.drag_start(data, position)
+    }
 }
 
 #[cfg(feature = "raw-win-handle")]
@@ -667,6 +677,24 @@ pub trait WinHandler {
     /// Called when this window stops being the focused window.
     #[allow(unused_variables)]
     fn lost_focus(&mut self) {}
+
+    /// Called when a drop enter the window.
+    fn drop_enter(&mut self) {}
+
+    #[allow(unused_variables)]
+    fn drop_moved(&mut self, event: &MouseEvent) {}
+
+    /// Called when a drop leaves the window.
+    fn drop_leave(&mut self) {}
+
+    /// Called when a drop is droped.
+    fn drop_droped(&mut self) {}
+
+    /// Called when a drag session ends
+    ///
+    /// action is None if drag got canceled
+    #[allow(unused_variables)]
+    fn drag_end(&mut self, id: DragDropToken, action: Option<DragDropAction>);
 
     /// Called when the shell requests to close the window, for example because the user clicked
     /// the little "X" in the titlebar.

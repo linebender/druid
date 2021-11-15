@@ -51,6 +51,7 @@ cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
 keyboard-types = { version = "0.5.0", default_features = false }
+bitflags = "1.2.1"
 
 # Optional dependencies
 image = { version = "0.23.12", optional = true, default_features = false }
@@ -73,7 +74,6 @@ cocoa = "0.24.0"
 objc = "0.2.7"
 core-graphics = "0.22.0"
 foreign-types = "0.3.2"
-bitflags = "1.2.1"
 
 [target.'cfg(any(target_os="linux", target_os="openbsd"))'.dependencies]
 # TODO(x11/dependencies): only use feature "xcb" if using X11
