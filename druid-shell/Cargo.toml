@@ -50,7 +50,7 @@ time = "0.3.0"
 cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
-keyboard-types = { version = "0.5.0", default_features = false }
+keyboard-types = { version = "0.6.2", default_features = false }
 
 # Optional dependencies
 image = { version = "0.23.12", optional = true, default_features = false }

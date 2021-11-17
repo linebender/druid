@@ -143,14 +143,14 @@ impl HotKey {
             KbKey::F10 => "\u{F70D}",
             KbKey::F11 => "\u{F70E}",
             KbKey::F12 => "\u{F70F}",
-            //KbKey::F13            => "\u{F710}",
-            //KbKey::F14            => "\u{F711}",
-            //KbKey::F15            => "\u{F712}",
-            //KbKey::F16            => "\u{F713}",
-            //KbKey::F17            => "\u{F714}",
-            //KbKey::F18            => "\u{F715}",
-            //KbKey::F19            => "\u{F716}",
-            //KbKey::F20            => "\u{F717}",
+            KbKey::F13 => "\u{F710}",
+            KbKey::F14 => "\u{F711}",
+            KbKey::F15 => "\u{F712}",
+            KbKey::F16 => "\u{F713}",
+            KbKey::F17 => "\u{F714}",
+            KbKey::F18 => "\u{F715}",
+            KbKey::F19 => "\u{F716}",
+            KbKey::F20 => "\u{F717}",
             _ => {
                 eprintln!("no key equivalent for {:?}", self);
                 ""
