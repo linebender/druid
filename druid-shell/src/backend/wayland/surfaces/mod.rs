@@ -19,8 +19,7 @@ pub mod popup;
 pub mod surface;
 pub mod toplevel;
 
-pub const GLOBAL_ID: crate::Counter = crate::Counter::new();
-
+pub static GLOBAL_ID: crate::Counter = crate::Counter::new();
 pub trait Compositor {
     fn output(&self, id: &u32) -> Option<application::Output>;
     fn create_surface(&self) -> wlc::Main<WlSurface>;
