@@ -178,25 +178,36 @@ impl Application {
         let (outputsremovedtx, outputsremovedrx) = calloop::channel::channel::<Output>();
         let (outputsaddedtx, outputsaddedrx) = calloop::channel::channel::<Output>();
 
-        let globals = wl::GlobalManager::new_with_cb(
-            &attached_server, {
-                move |event, registry, data| {
-                    tracing::debug!("global manager event received {:?}\n{:?}\n{:?}", event, registry, data);
-                    match event {
-                        wl::GlobalEvent::New {
-                            id,
-                            interface,
-                            version,
-                        } => {
-                            if interface.as_str() == "wl_output" && version >= 3 {
-                                let output = registry.bind::<WlOutput>(3, id);
-                                let output = Output::new(id, output);
-                                let oid = output.id();
-                                let gid = output.gid;
-                                let previous = weak_outputs.upgrade().unwrap().borrow_mut().insert(oid, output.clone());
-                                assert!(previous.is_none(), "internal: wayland should always use new IDs");
-                                tracing::trace!("output added {:?} {:?}", gid, oid);
-                                output.wl_output.quick_assign(with_cloned!(weak_outputs, gid, oid, outputsaddedtx; move |a, event, b| {
+        let globals = wl::GlobalManager::new_with_cb(&attached_server, {
+            move |event, registry, data| {
+                tracing::debug!(
+                    "global manager event received {:?}\n{:?}\n{:?}",
+                    event,
+                    registry,
+                    data
+                );
+                match event {
+                    wl::GlobalEvent::New {
+                        id,
+                        interface,
+                        version,
+                    } => {
+                        if interface.as_str() == "wl_output" && version >= 3 {
+                            let output = registry.bind::<WlOutput>(3, id);
+                            let output = Output::new(id, output);
+                            let oid = output.id();
+                            let gid = output.gid;
+                            let previous = weak_outputs
+                                .upgrade()
+                                .unwrap()
+                                .borrow_mut()
+                                .insert(oid, output.clone());
+                            assert!(
+                                previous.is_none(),
+                                "internal: wayland should always use new IDs"
+                            );
+                            tracing::trace!("output added {:?} {:?}", gid, oid);
+                            output.wl_output.quick_assign(with_cloned!(weak_outputs, gid, oid, outputsaddedtx; move |a, event, b| {
                                     tracing::trace!("output event {:?} {:?} {:?}", a, event, b);
                                     match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&oid) {
                                         Some(o) => o.process_event(event, &outputsaddedtx),
@@ -208,47 +219,49 @@ impl Application {
                                         ),
                                     }
                                 }));
-                            } else if interface.as_str() == "wl_seat" && version >= 7 {
-                                let new_seat = registry.bind::<WlSeat>(7, id);
-                                let prev_seat = weak_seats
-                                    .upgrade()
-                                    .unwrap()
-                                    .borrow_mut()
-                                    .insert(id, Rc::new(RefCell::new(Seat::new(new_seat))));
-                                assert!(
-                                    prev_seat.is_none(),
-                                    "internal: wayland should always use new IDs"
-                                );
-                                // Defer setting up the pointer/keyboard event handling until we've
-                                // finished constructing the `Application`. That way we can pass it as a
-                                // parameter.
-                            }
+                        } else if interface.as_str() == "wl_seat" && version >= 7 {
+                            let new_seat = registry.bind::<WlSeat>(7, id);
+                            let prev_seat = weak_seats
+                                .upgrade()
+                                .unwrap()
+                                .borrow_mut()
+                                .insert(id, Rc::new(RefCell::new(Seat::new(new_seat))));
+                            assert!(
+                                prev_seat.is_none(),
+                                "internal: wayland should always use new IDs"
+                            );
+                            // Defer setting up the pointer/keyboard event handling until we've
+                            // finished constructing the `Application`. That way we can pass it as a
+                            // parameter.
                         }
-                        wl::GlobalEvent::Removed { id, interface } if interface.as_str() == "wl_output" => {
-                            let boutputs = weak_outputs.upgrade().unwrap();
-                            let mut outputs = boutputs.borrow_mut();
-                            let removed = outputs.iter()
-                                .find(|(_pid, o)| o.gid == id)
-                                .map(|(pid, _)| pid.clone())
-                                .and_then(|id| outputs.remove(&id));
+                    }
+                    wl::GlobalEvent::Removed { id, interface }
+                        if interface.as_str() == "wl_output" =>
+                    {
+                        let boutputs = weak_outputs.upgrade().unwrap();
+                        let mut outputs = boutputs.borrow_mut();
+                        let removed = outputs
+                            .iter()
+                            .find(|(_pid, o)| o.gid == id)
+                            .map(|(pid, _)| pid.clone())
+                            .and_then(|id| outputs.remove(&id));
 
-                            let result = match removed {
-                                None => return,
-                                Some(removed) => outputsremovedtx.send(removed),
-                            };
+                        let result = match removed {
+                            None => return,
+                            Some(removed) => outputsremovedtx.send(removed),
+                        };
 
-                            match result {
-                                Ok(_) => tracing::debug!("outputs remaining {:?}...", outputs.len()),
-                                Err(cause) => tracing::error!("failed to remove output {:?}", cause),
-                            }
+                        match result {
+                            Ok(_) => tracing::debug!("outputs remaining {:?}...", outputs.len()),
+                            Err(cause) => tracing::error!("failed to remove output {:?}", cause),
                         }
-                        _ => {
-                            tracing::debug!("unhandled global manager event received {:?}", event);
-                        },
+                    }
+                    _ => {
+                        tracing::debug!("unhandled global manager event received {:?}", event);
                     }
                 }
-            },
-        );
+            }
+        });
 
         // do a round trip to make sure we have all the globals
         event_queue
@@ -399,30 +412,33 @@ impl Application {
         let wayland_dispatcher = WaylandSource::new(self.data.clone()).into_dispatcher();
 
         handle.register_dispatcher(wayland_dispatcher).unwrap();
-        handle.insert_source(self.data.outputs_added.borrow_mut().take().unwrap(), {
-            move |evt, _ignored, appdata| {
-                match evt {
+        handle
+            .insert_source(self.data.outputs_added.borrow_mut().take().unwrap(), {
+                move |evt, _ignored, appdata| match evt {
                     calloop::channel::Event::Closed => return,
                     calloop::channel::Event::Msg(output) => {
                         tracing::debug!("output added {:?} {:?}", output.gid, output.id());
                         for (_, win) in appdata.handles_iter() {
                             surfaces::Outputs::inserted(&win, &output);
                         }
-                    },
+                    }
                 }
-            }
-        }).unwrap();
-        handle.insert_source(self.data.outputs_removed.borrow_mut().take().unwrap(), |evt, _ignored, appdata| {
-            match evt {
-                calloop::channel::Event::Closed => return,
-                calloop::channel::Event::Msg(output) => {
-                    tracing::trace!("output removed {:?} {:?}", output.gid, output.id());
-                    for (_, win) in appdata.handles_iter() {
-                        surfaces::Outputs::removed(&win, &output);
+            })
+            .unwrap();
+        handle
+            .insert_source(
+                self.data.outputs_removed.borrow_mut().take().unwrap(),
+                |evt, _ignored, appdata| match evt {
+                    calloop::channel::Event::Closed => return,
+                    calloop::channel::Event::Msg(output) => {
+                        tracing::trace!("output removed {:?} {:?}", output.gid, output.id());
+                        for (_, win) in appdata.handles_iter() {
+                            surfaces::Outputs::removed(&win, &output);
+                        }
                     }
                 },
-            }
-        }).unwrap();
+            )
+            .unwrap();
 
         handle
             .insert_source(timer_source, move |token, _metadata, appdata| {
@@ -434,7 +450,8 @@ impl Application {
         let signal = eventloop.get_signal();
         let handle = handle.clone();
 
-        eventloop.run(
+        eventloop
+            .run(
                 Duration::from_millis(20),
                 &mut self.data.clone(),
                 move |appdata| {
@@ -579,7 +596,11 @@ impl ApplicationData {
                 Some(s) => s,
                 None => {
                     // NOTE this might be expected
-                    log::warn!("received event for surface that doesn't exist any more {:?} {:?}", expired, expired.id());
+                    log::warn!(
+                        "received event for surface that doesn't exist any more {:?} {:?}",
+                        expired,
+                        expired.id()
+                    );
                     continue;
                 }
             };
@@ -728,7 +749,7 @@ impl Output {
                     wl_output::Transform::Flipped270 | wl_output::Transform::_270 => {
                         self.physical_width = physical_height;
                         self.physical_height = physical_width;
-                    },
+                    }
                     _ => {
                         self.physical_width = physical_width;
                         self.physical_height = physical_height;
