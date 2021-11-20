@@ -4,21 +4,22 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client as layershell;
 use crate::kurbo;
 use crate::window;
 
+use super::super::application::Output;
 use super::super::error;
-use super::super::application::{Output};
-use super::Outputs;
 use super::popup;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Handle;
+use super::Outputs;
 use super::Popup;
 use super::PopupHandle;
 
 struct Inner {
     config: Config,
     wl_surface: std::cell::RefCell<surface::Surface>,
-    ls_surface: std::cell::RefCell<wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>>,
+    ls_surface:
+        std::cell::RefCell<wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>>,
     requires_initialization: std::cell::RefCell<bool>,
     available: std::cell::RefCell<bool>,
 }
@@ -202,18 +203,28 @@ impl Surface {
             .ls_surface
             .borrow()
             .set_size(dim.width as u32, dim.height as u32);
-        self.inner.wl_surface.borrow().inner.handler.borrow_mut().size(dim);
+        self.inner
+            .wl_surface
+            .borrow()
+            .inner
+            .handler
+            .borrow_mut()
+            .size(dim);
     }
 
     fn initialize(handle: &Surface) {
         if !handle.inner.requires_initialization.replace(false) {
-            return
+            return;
         }
 
         tracing::info!("attempting to initialize layershell");
-        handle.inner.wl_surface.borrow().set_popup_impl(PopupHandle {
-            inner: handle.inner.clone(),
-        });
+        handle
+            .inner
+            .wl_surface
+            .borrow()
+            .set_popup_impl(PopupHandle {
+                inner: handle.inner.clone(),
+            });
 
         handle.inner.ls_surface.borrow().quick_assign({
             let handle = handle.clone();
@@ -227,7 +238,12 @@ impl Surface {
         handle.inner.wl_surface.borrow().commit();
     }
 
-    fn consume_layershell_event(handle: &Surface, a1: &wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>, event: &layershell::zwlr_layer_surface_v1::Event, data: &wlc::DispatchData) {
+    fn consume_layershell_event(
+        handle: &Surface,
+        a1: &wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>,
+        event: &layershell::zwlr_layer_surface_v1::Event,
+        data: &wlc::DispatchData,
+    ) {
         match *event {
             layershell::zwlr_layer_surface_v1::Event::Configure {
                 serial,
@@ -265,20 +281,35 @@ impl Outputs for Surface {
 
     fn inserted(&self, o: &Output) {
         if !self.inner.requires_initialization.borrow().clone() {
-            tracing::debug!("skipping reinitialization output for layershell {:?} {:?}", o.gid, o.id());
-            return
+            tracing::debug!(
+                "skipping reinitialization output for layershell {:?} {:?}",
+                o.gid,
+                o.id()
+            );
+            return;
         }
 
-        tracing::debug!("reinitializing output for layershell {:?} {:?} {:?}", o.gid, o.id(), o);
+        tracing::debug!(
+            "reinitializing output for layershell {:?} {:?} {:?}",
+            o.gid,
+            o.id(),
+            o
+        );
         let sdata = self.inner.wl_surface.borrow().inner.clone();
-        let replacedsurface = self.inner.wl_surface.replace(surface::Surface::replace(&sdata));
+        let replacedsurface = self
+            .inner
+            .wl_surface
+            .replace(surface::Surface::replace(&sdata));
         let sdata = self.inner.wl_surface.borrow().inner.clone();
-        let replacedlayershell = self.inner.ls_surface.replace(sdata.compositor.zwlr_layershell_v1().get_layer_surface(
-            &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
-            None,
-            self.inner.config.layer,
-            self.inner.config.namespace.to_string(),
-        ));
+        let replacedlayershell =
+            self.inner
+                .ls_surface
+                .replace(sdata.compositor.zwlr_layershell_v1().get_layer_surface(
+                    &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
+                    None,
+                    self.inner.config.layer,
+                    self.inner.config.namespace.to_string(),
+                ));
         Surface::initialize(&self);
 
         tracing::debug!("replaced surface {:p}", &replacedsurface);
@@ -316,7 +347,11 @@ impl Handle for Surface {
     }
 
     fn set_focused_text_field(&self, active_field: Option<crate::TextFieldToken>) {
-        return self.inner.wl_surface.borrow().set_focused_text_field(active_field);
+        return self
+            .inner
+            .wl_surface
+            .borrow()
+            .set_focused_text_field(active_field);
     }
 
     fn get_idle_handle(&self) -> super::idle::Handle {

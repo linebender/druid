@@ -3,7 +3,7 @@ use std::rc::Rc;
 use wayland_client as wlc;
 use wayland_client::protocol::wl_surface;
 
-use crate::backend::application::{Output};
+use crate::backend::application::Output;
 use crate::kurbo;
 use crate::window;
 use crate::{piet::Piet, region::Region, scale::Scale, TextFieldToken};
@@ -14,7 +14,7 @@ use super::buffers;
 use super::error;
 use super::idle;
 use super::popup;
-use super::{Compositor, CompositorHandle, Decor, Handle, PopupHandle, Outputs};
+use super::{Compositor, CompositorHandle, Decor, Handle, Outputs, PopupHandle};
 
 pub enum DeferredTask {
     Paint,
@@ -28,9 +28,7 @@ pub struct Surface {
 
 impl From<std::sync::Arc<Data>> for Surface {
     fn from(d: std::sync::Arc<Data>) -> Self {
-        Self {
-            inner: d,
-        }
+        Self { inner: d }
     }
 }
 
@@ -89,10 +87,12 @@ impl Surface {
     }
 
     pub(super) fn replace(current: &std::sync::Arc<Data>) -> Surface {
-        current.wl_surface.replace(match current.compositor.create_surface() {
-            None => panic!("unable to create surface"),
-            Some(v) => v,
-        });
+        current
+            .wl_surface
+            .replace(match current.compositor.create_surface() {
+                None => panic!("unable to create surface"),
+                Some(v) => v,
+            });
         Surface::initsurface(&current);
         Self {
             inner: current.clone(),
@@ -109,16 +109,18 @@ impl Surface {
         });
     }
 
-    pub(super) fn consume_surface_event(current: &std::sync::Arc<Data>, surface: &wlc::Main<wlc::protocol::wl_surface::WlSurface>, event: &wlc::protocol::wl_surface::Event, data: &wlc::DispatchData) {
+    pub(super) fn consume_surface_event(
+        current: &std::sync::Arc<Data>,
+        surface: &wlc::Main<wlc::protocol::wl_surface::WlSurface>,
+        event: &wlc::protocol::wl_surface::Event,
+        data: &wlc::DispatchData,
+    ) {
         tracing::info!("wl_surface event {:?} {:?} {:?}", surface, event, data);
         match event {
             wl_surface::Event::Enter { output } => {
                 let proxy = wlc::Proxy::from(output.clone());
-                current
-                .outputs
-                .borrow_mut()
-                .insert(proxy.id());
-            },
+                current.outputs.borrow_mut().insert(proxy.id());
+            }
             wl_surface::Event::Leave { output } => {
                 current
                     .outputs
@@ -132,9 +134,9 @@ impl Surface {
         if current.set_scale(new_scale).is_changed() {
             current.wl_surface.borrow().set_buffer_scale(new_scale);
             // We also need to change the physical size to match the new scale
-            current.buffers.set_size(
-                buffers::RawSize::from(current.logical_size.get()).scale(new_scale),
-            );
+            current
+                .buffers
+                .set_size(buffers::RawSize::from(current.logical_size.get()).scale(new_scale));
             // always repaint, because the scale changed.
             current.schedule_deferred_task(DeferredTask::Paint);
         }
@@ -513,7 +515,7 @@ impl Data {
 
     pub(super) fn request_anim_frame(&self) {
         if self.anim_frame_requested.replace(true) {
-            return
+            return;
         }
 
         let idle = self.get_idle_handle();

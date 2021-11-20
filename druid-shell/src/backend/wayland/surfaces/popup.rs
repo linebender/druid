@@ -6,11 +6,11 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use crate::kurbo;
 use crate::window;
 
-use super::Outputs;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Handle;
+use super::Outputs;
 
 struct Inner {
     wl_surface: surface::Surface,
