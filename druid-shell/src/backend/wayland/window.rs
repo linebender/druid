@@ -16,7 +16,7 @@
 use tracing;
 
 use super::{
-    application::{Application, ApplicationData, Timer, Output},
+    application::{Application, ApplicationData, Output, Timer},
     error,
     menu::Menu,
     surfaces,
