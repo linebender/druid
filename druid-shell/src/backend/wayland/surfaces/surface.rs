@@ -3,6 +3,7 @@ use std::rc::Rc;
 use wayland_client as wlc;
 use wayland_client::protocol::wl_surface;
 
+use crate::backend::application::{Output};
 use crate::kurbo;
 use crate::window;
 use crate::{piet::Piet, region::Region, scale::Scale, TextFieldToken};
@@ -13,7 +14,7 @@ use super::buffers;
 use super::error;
 use super::idle;
 use super::popup;
-use super::{Compositor, CompositorHandle, Decor, Handle as SurfaceHandle, PopupHandle};
+use super::{Compositor, CompositorHandle, Decor, Handle, PopupHandle, Outputs};
 
 pub enum DeferredTask {
     Paint,
@@ -21,11 +22,19 @@ pub enum DeferredTask {
 }
 
 #[derive(Clone)]
-pub struct Handle {
+pub struct Surface {
     pub(super) inner: std::sync::Arc<Data>,
 }
 
-impl Handle {
+impl From<std::sync::Arc<Data>> for Surface {
+    fn from(d: std::sync::Arc<Data>) -> Self {
+        Self {
+            inner: d,
+        }
+    }
+}
+
+impl Surface {
     pub fn new(
         c: impl Into<CompositorHandle>,
         handler: Box<dyn window::WinHandler>,
@@ -39,7 +48,7 @@ impl Handle {
 
         let current = std::sync::Arc::new(Data {
             compositor: compositor.clone(),
-            wl_surface,
+            wl_surface: RefCell::new(wl_surface),
             outputs: RefCell::new(std::collections::HashSet::new()),
             buffers: buffers::Buffers::new(compositor.shared_mem(), initial_size.into()),
             logical_size: Cell::new(initial_size),
@@ -54,44 +63,21 @@ impl Handle {
         });
 
         // register to receive wl_surface events.
-        current.wl_surface.quick_assign({
-            let current = current.clone();
-            move |_, event, _| {
-                tracing::info!("wl_surface event {:?}", event);
-                match event {
-                    wl_surface::Event::Enter { output } => {
-                        current
-                            .outputs
-                            .borrow_mut()
-                            .insert(wlc::Proxy::from(output).id());
-                    }
-                    wl_surface::Event::Leave { output } => {
-                        current
-                            .outputs
-                            .borrow_mut()
-                            .remove(&wlc::Proxy::from(output).id());
-                    }
-                    _ => tracing::warn!("unhandled wayland surface event {:?}", event),
-                }
-
-                let new_scale = current.recompute_scale();
-                if current.set_scale(new_scale).is_changed() {
-                    current.wl_surface.set_buffer_scale(new_scale);
-                    // We also need to change the physical size to match the new scale
-                    current.buffers.set_size(
-                        buffers::RawSize::from(current.logical_size.get()).scale(new_scale),
-                    );
-                    // always repaint, because the scale changed.
-                    current.schedule_deferred_task(DeferredTask::Paint);
-                }
-            }
-        });
+        Surface::initsurface(&current);
 
         return Self { inner: current };
     }
 
-    pub(super) fn update_dimensions(&self, width: u32, height: u32) -> kurbo::Size {
-        self.inner.update_dimensions(width, height)
+    pub(super) fn request_paint(&self) {
+        self.inner.buffers.request_paint(&self.inner);
+    }
+
+    pub(super) fn update_dimensions(&self, dim: impl Into<kurbo::Size>) -> kurbo::Size {
+        self.inner.update_dimensions(dim)
+    }
+
+    pub(super) fn resize(&self, dim: kurbo::Size) -> kurbo::Size {
+        self.inner.resize(dim)
     }
 
     pub(super) fn set_popup_impl(&self, imp: PopupHandle) {
@@ -99,11 +85,73 @@ impl Handle {
     }
 
     pub(super) fn commit(&self) {
-        self.inner.wl_surface.commit()
+        self.inner.wl_surface.borrow().commit()
+    }
+
+    pub(super) fn replace(current: &std::sync::Arc<Data>) -> Surface {
+        current.wl_surface.replace(match current.compositor.create_surface() {
+            None => panic!("unable to create surface"),
+            Some(v) => v,
+        });
+        Surface::initsurface(&current);
+        Self {
+            inner: current.clone(),
+        }
+    }
+
+    fn initsurface(current: &std::sync::Arc<Data>) {
+        current.wl_surface.borrow().quick_assign({
+            let current = current.clone();
+            move |a, event, b| {
+                tracing::info!("wl_surface event {:?} {:?} {:?}", a, event, b);
+                Surface::consume_surface_event(&current, &a, &event, &b);
+            }
+        });
+    }
+
+    pub(super) fn consume_surface_event(current: &std::sync::Arc<Data>, surface: &wlc::Main<wlc::protocol::wl_surface::WlSurface>, event: &wlc::protocol::wl_surface::Event, data: &wlc::DispatchData) {
+        tracing::info!("wl_surface event {:?} {:?} {:?}", surface, event, data);
+        match event {
+            wl_surface::Event::Enter { output } => {
+                let proxy = wlc::Proxy::from(output.clone());
+                current
+                .outputs
+                .borrow_mut()
+                .insert(proxy.id());
+            },
+            wl_surface::Event::Leave { output } => {
+                current
+                    .outputs
+                    .borrow_mut()
+                    .remove(&wlc::Proxy::from(output.clone()).id());
+            }
+            _ => tracing::warn!("unhandled wayland surface event {:?}", event),
+        }
+
+        let new_scale = current.recompute_scale();
+        if current.set_scale(new_scale).is_changed() {
+            current.wl_surface.borrow().set_buffer_scale(new_scale);
+            // We also need to change the physical size to match the new scale
+            current.buffers.set_size(
+                buffers::RawSize::from(current.logical_size.get()).scale(new_scale),
+            );
+            // always repaint, because the scale changed.
+            current.schedule_deferred_task(DeferredTask::Paint);
+        }
     }
 }
 
-impl SurfaceHandle for Handle {
+impl Outputs for Surface {
+    fn removed(&self, o: &Output) {
+        self.inner.outputs.borrow_mut().remove(&o.id());
+    }
+
+    fn inserted(&self, _: &Output) {
+        // nothing to do here.
+    }
+}
+
+impl Handle for Surface {
     fn get_size(&self) -> kurbo::Size {
         self.inner.get_size()
     }
@@ -157,35 +205,21 @@ impl SurfaceHandle for Handle {
     }
 }
 
-impl From<Handle> for u32 {
-    fn from(s: Handle) -> u32 {
-        use std::ops::Deref;
-        u32::from(s.inner.deref())
-    }
-}
-
-impl From<&Handle> for u32 {
-    fn from(s: &Handle) -> u32 {
-        use std::ops::Deref;
-        u32::from(s.inner.deref())
-    }
-}
-
-impl From<Handle> for std::sync::Arc<Data> {
-    fn from(s: Handle) -> std::sync::Arc<Data> {
+impl From<Surface> for std::sync::Arc<Data> {
+    fn from(s: Surface) -> std::sync::Arc<Data> {
         std::sync::Arc::<Data>::from(s.inner.clone())
     }
 }
 
-impl From<&Handle> for std::sync::Arc<Data> {
-    fn from(s: &Handle) -> std::sync::Arc<Data> {
+impl From<&Surface> for std::sync::Arc<Data> {
+    fn from(s: &Surface) -> std::sync::Arc<Data> {
         std::sync::Arc::<Data>::from(s.inner.clone())
     }
 }
 
 pub struct Data {
     pub(super) compositor: CompositorHandle,
-    pub(super) wl_surface: wlc::Main<wl_surface::WlSurface>,
+    pub(super) wl_surface: RefCell<wlc::Main<wl_surface::WlSurface>>,
 
     /// The outputs that our surface is present on (we should get the first enter event early).
     pub(super) outputs: RefCell<std::collections::HashSet<u32>>,
@@ -251,8 +285,9 @@ impl Data {
         }
     }
 
-    pub(super) fn update_dimensions(&self, width: u32, height: u32) -> kurbo::Size {
-        let dim = kurbo::Size::from((width as f64, height as f64));
+    pub(super) fn update_dimensions(&self, dim: impl Into<kurbo::Size>) -> kurbo::Size {
+        // let dim = kurbo::Size::from((width as f64, height as f64));
+        let dim = dim.into();
         if self.logical_size.get() != self.resize(dim) {
             match self.handler.try_borrow_mut() {
                 Ok(mut handler) => handler.size(dim),
@@ -340,7 +375,7 @@ impl Data {
             for rect in damaged_region.rects() {
                 // Convert it to physical coordinate space.
                 let rect = buffers::RawRect::from(*rect).scale(self.scale.get());
-                self.wl_surface.damage_buffer(
+                self.wl_surface.borrow().damage_buffer(
                     rect.x0,
                     rect.y0,
                     rect.x1 - rect.x0,
@@ -398,12 +433,11 @@ impl Data {
             // The handler must not be already borrowed. This may mean deferring this call.
             self.handler.borrow_mut().paint(&mut piet, &*region);
         }
-
         // reset damage ready for next frame.
         self.damaged_region.borrow_mut().clear();
 
-        self.buffers.attach(&self);
-        self.wl_surface.commit();
+        self.buffers.attach(self);
+        self.wl_surface.borrow().commit();
     }
 
     /// Request invalidation of the entire window contents.
@@ -464,7 +498,7 @@ impl Data {
     }
 
     pub(super) fn wayland_surface_id(&self) -> u32 {
-        u32::from(self)
+        wlc::Proxy::from(self.wl_surface.borrow().detach()).id()
     }
 
     pub(super) fn get_size(&self) -> kurbo::Size {
@@ -478,15 +512,15 @@ impl Data {
     }
 
     pub(super) fn request_anim_frame(&self) {
-        let idle = self.get_idle_handle();
-
-        if !self.anim_frame_requested.get() {
-            self.anim_frame_requested.set(true);
-            idle.add_idle_callback(move |winhandle| {
-                winhandle.prepare_paint();
-            });
-            self.schedule_deferred_task(DeferredTask::AnimationClear);
+        if self.anim_frame_requested.replace(true) {
+            return
         }
+
+        let idle = self.get_idle_handle();
+        idle.add_idle_callback(move |winhandle| {
+            winhandle.prepare_paint();
+        });
+        self.schedule_deferred_task(DeferredTask::AnimationClear);
     }
 
     pub(super) fn remove_text_field(&self, token: TextFieldToken) {
@@ -527,25 +561,7 @@ impl Data {
     }
 
     pub(super) fn release(&self) {
-        self.wl_surface.destroy()
-    }
-}
-
-impl From<Data> for u32 {
-    fn from(s: Data) -> u32 {
-        wlc::Proxy::from(s.wl_surface.detach()).id()
-    }
-}
-
-impl From<&Data> for u32 {
-    fn from(s: &Data) -> u32 {
-        wlc::Proxy::from(s.wl_surface.detach()).id()
-    }
-}
-
-impl From<std::sync::Arc<Data>> for Handle {
-    fn from(d: std::sync::Arc<Data>) -> Handle {
-        Handle { inner: d.clone() }
+        self.wl_surface.borrow().destroy();
     }
 }
 
@@ -563,13 +579,25 @@ impl From<Dead> for Box<dyn Decor> {
     }
 }
 
+impl From<Dead> for Box<dyn Outputs> {
+    fn from(d: Dead) -> Box<dyn Outputs> {
+        Box::new(d) as Box<dyn Outputs>
+    }
+}
+
 impl Decor for Dead {
     fn inner_set_title(&self, title: String) {
         tracing::warn!("set_title not implemented for this surface: {:?}", title);
     }
 }
 
-impl SurfaceHandle for Dead {
+impl Outputs for Dead {
+    fn removed(&self, _: &Output) {}
+
+    fn inserted(&self, _: &Output) {}
+}
+
+impl Handle for Dead {
     fn get_size(&self) -> kurbo::Size {
         kurbo::Size::ZERO
     }

@@ -234,7 +234,7 @@ impl<const N: usize> Buffers<N> {
     /// Signal to wayland that the pending buffer is ready to be presented, and switch the next
     /// buffer to be the pending one.
     pub(crate) fn attach(&self, window: &surface::Data) {
-        self.with_pending_buffer(|buf| buf.unwrap().attach(&window.wl_surface));
+        self.with_pending_buffer(|buf| buf.unwrap().attach(&window.wl_surface.borrow()));
         self.pending.set((self.pending.get() + 1) % N);
     }
 

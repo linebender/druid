@@ -6,6 +6,7 @@ use wayland_protocols::xdg_shell::client::xdg_toplevel;
 use crate::kurbo;
 use crate::window;
 
+use super::Outputs;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
@@ -13,19 +14,13 @@ use super::Decor;
 use super::Handle;
 
 struct Inner {
-    wl_surface: surface::Handle,
+    wl_surface: surface::Surface,
     #[allow(unused)]
     pub(super) xdg_surface: wlc::Main<xdg_surface::XdgSurface>,
     pub(super) xdg_toplevel: wlc::Main<xdg_toplevel::XdgToplevel>,
     #[allow(unused)]
     pub(super) zxdg_toplevel_decoration_v1:
         wlc::Main<toplevel_decorations::ZxdgToplevelDecorationV1>,
-}
-
-impl From<Inner> for u32 {
-    fn from(s: Inner) -> u32 {
-        u32::from(s.wl_surface)
-    }
 }
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
@@ -47,8 +42,8 @@ impl Surface {
         min_size: Option<kurbo::Size>,
     ) -> Self {
         let compositor = CompositorHandle::new(c);
-        let wl_surface = surface::Handle::new(compositor.clone(), handler, kurbo::Size::ZERO);
-        let xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface);
+        let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
+        let xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
         let xdg_toplevel = xdg_surface.get_toplevel();
         let zxdg_toplevel_decoration_v1 = compositor
             .zxdg_decoration_manager_v1()
@@ -62,15 +57,13 @@ impl Surface {
                 match event {
                     xdg_surface::Event::Configure { serial } => {
                         xdg_surface.ack_configure(serial);
-                        let dim = wl_surface.inner.logical_size.get();
-                        wl_surface.inner.handler.borrow_mut().size(dim);
-                        wl_surface.inner.buffers.request_paint(&wl_surface.inner);
+                        wl_surface.resize(wl_surface.get_size());
+                        wl_surface.request_paint();
                     }
                     _ => tracing::warn!("unhandled xdg_surface event {:?}", event),
                 }
             }
         });
-
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
             let mut dim = initial_size.clone();
@@ -92,7 +85,7 @@ impl Surface {
                     if width != 0 && height != 0 {
                         dim = kurbo::Size::new(width as f64, height as f64);
                     }
-                    wl_surface.update_dimensions(dim.width as u32, dim.height as u32);
+                    wl_surface.update_dimensions(dim);
                 }
                 xdg_toplevel::Event::Close => {
                     tracing::info!("xdg close event {:?}", event);
@@ -150,18 +143,6 @@ impl Decor for Surface {
     }
 }
 
-impl From<Surface> for u32 {
-    fn from(s: Surface) -> u32 {
-        u32::from(s.inner.wl_surface.clone())
-    }
-}
-
-impl From<&Surface> for u32 {
-    fn from(s: &Surface) -> u32 {
-        u32::from(s.inner.wl_surface.clone())
-    }
-}
-
 impl From<&Surface> for std::sync::Arc<surface::Data> {
     fn from(s: &Surface) -> std::sync::Arc<surface::Data> {
         std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.clone())
@@ -183,5 +164,11 @@ impl From<Surface> for Box<dyn Handle> {
 impl From<Surface> for Box<dyn Decor> {
     fn from(s: Surface) -> Box<dyn Decor> {
         Box::new(s.clone()) as Box<dyn Decor>
+    }
+}
+
+impl From<Surface> for Box<dyn Outputs> {
+    fn from(s: Surface) -> Box<dyn Outputs> {
+        Box::new(s.inner.wl_surface.clone()) as Box<dyn Outputs>
     }
 }
