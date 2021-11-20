@@ -16,7 +16,7 @@
 use tracing;
 
 use super::{
-    application::{Application, ApplicationData, Timer},
+    application::{Application, ApplicationData, Timer, Output},
     error,
     menu::Menu,
     surfaces,
@@ -41,6 +41,7 @@ struct Inner {
     pub(super) id: u64,
     pub(super) decor: Box<dyn surfaces::Decor>,
     pub(super) surface: Box<dyn surfaces::Handle>,
+    pub(super) outputs: Box<dyn surfaces::Outputs>,
     pub(super) appdata: std::sync::Weak<ApplicationData>,
 }
 
@@ -49,8 +50,19 @@ pub struct WindowHandle {
     inner: std::sync::Arc<Inner>,
 }
 
+impl surfaces::Outputs for WindowHandle {
+    fn removed(&self, o: &Output) {
+        self.inner.outputs.removed(o)
+    }
+
+    fn inserted(&self, o: &Output) {
+        self.inner.outputs.inserted(o)
+    }
+}
+
 impl WindowHandle {
     pub(super) fn new(
+        outputs: impl Into<Box<dyn surfaces::Outputs>>,
         decor: impl Into<Box<dyn surfaces::Decor>>,
         surface: impl Into<Box<dyn surfaces::Handle>>,
         appdata: impl Into<std::sync::Weak<ApplicationData>>,
@@ -58,6 +70,7 @@ impl WindowHandle {
         Self {
             inner: std::sync::Arc::new(Inner {
                 id: surfaces::GLOBAL_ID.next(),
+                outputs: outputs.into(),
                 decor: decor.into(),
                 surface: surface.into(),
                 appdata: appdata.into(),
@@ -299,6 +312,7 @@ impl std::default::Default for WindowHandle {
         WindowHandle {
             inner: std::sync::Arc::new(Inner {
                 id: surfaces::GLOBAL_ID.next(),
+                outputs: Box::new(surfaces::surface::Dead::default()),
                 decor: Box::new(surfaces::surface::Dead::default()),
                 surface: Box::new(surfaces::surface::Dead::default()),
                 appdata: std::sync::Weak::new(),
@@ -407,7 +421,12 @@ impl WindowBuilder {
 
         (&surface as &dyn surfaces::Decor).set_title(self.title);
 
-        let handle = WindowHandle::new(surface.clone(), surface.clone(), self.app_data.clone());
+        let handle = WindowHandle::new(
+            surface.clone(),
+            surface.clone(),
+            surface.clone(),
+            self.app_data.clone(),
+        );
 
         if let Some(_) = appdata
             .handles
@@ -481,6 +500,7 @@ pub mod layershell {
             let surface = surfaces::layershell::Surface::new(appdata.clone(), winhandle, updated);
 
             let handle = WindowHandle::new(
+                surface.clone(),
                 surfaces::surface::Dead::default(),
                 surface.clone(),
                 self.appdata.clone(),
@@ -562,6 +582,7 @@ pub mod popup {
             }
 
             let handle = WindowHandle::new(
+                surface.clone(),
                 surfaces::surface::Dead::default(),
                 surface.clone(),
                 self.appdata.clone(),

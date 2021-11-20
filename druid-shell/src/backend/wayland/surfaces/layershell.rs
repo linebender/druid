@@ -5,6 +5,8 @@ use crate::kurbo;
 use crate::window;
 
 use super::super::error;
+use super::super::application::{Output};
+use super::Outputs;
 use super::popup;
 use super::surface;
 use super::Compositor;
@@ -14,34 +16,30 @@ use super::Popup;
 use super::PopupHandle;
 
 struct Inner {
-    wl_surface: surface::Handle,
-    ls_surface: wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>,
+    config: Config,
+    wl_surface: std::cell::RefCell<surface::Surface>,
+    ls_surface: std::cell::RefCell<wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>>,
+    requires_initialization: std::cell::RefCell<bool>,
+    available: std::cell::RefCell<bool>,
 }
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        self.ls_surface.destroy();
+        self.ls_surface.borrow().destroy();
     }
 }
 
 impl Popup for Inner {
     fn popup_impl(&self, p: &popup::Surface) -> Result<(), error::Error> {
-        tracing::info!("layershell get popup initiated");
-        self.ls_surface.get_popup(&p.get_xdg_popup());
+        self.ls_surface.borrow().get_popup(&p.get_xdg_popup());
         p.commit();
         Ok(())
     }
 }
 
-impl From<Inner> for u32 {
-    fn from(s: Inner) -> u32 {
-        u32::from(s.wl_surface.clone())
-    }
-}
-
 impl From<Inner> for std::sync::Arc<surface::Data> {
     fn from(s: Inner) -> std::sync::Arc<surface::Data> {
-        std::sync::Arc::<surface::Data>::from(s.wl_surface.clone())
+        std::sync::Arc::<surface::Data>::from(s.wl_surface.borrow().clone())
     }
 }
 
@@ -128,18 +126,13 @@ impl Config {
         self
     }
 
-    fn apply(self, surface: &Surface) {
+    fn apply(&self, surface: &Surface) {
         surface.initialize_dimensions(self.initial_size);
-        surface
-            .inner
-            .ls_surface
-            .set_exclusive_zone(self.exclusive_zone);
-        surface.inner.ls_surface.set_anchor(self.anchor);
-        surface
-            .inner
-            .ls_surface
-            .set_keyboard_interactivity(self.keyboard_interactivity);
-        surface.inner.ls_surface.set_margin(
+        let ls = surface.inner.ls_surface.borrow();
+        ls.set_exclusive_zone(self.exclusive_zone);
+        ls.set_anchor(self.anchor);
+        ls.set_keyboard_interactivity(self.keyboard_interactivity);
+        ls.set_margin(
             self.margin.top,
             self.margin.right,
             self.margin.bottom,
@@ -175,9 +168,9 @@ impl Surface {
         config: Config,
     ) -> Self {
         let compositor = CompositorHandle::new(c);
-        let wl_surface = surface::Handle::new(compositor.clone(), handler, kurbo::Size::ZERO);
+        let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
         let ls_surface = compositor.zwlr_layershell_v1().get_layer_surface(
-            &wl_surface.inner.wl_surface,
+            &wl_surface.inner.wl_surface.borrow(),
             None,
             config.layer,
             config.namespace.to_string(),
@@ -185,53 +178,15 @@ impl Surface {
 
         let handle = Self {
             inner: std::sync::Arc::new(Inner {
-                wl_surface,
-                ls_surface,
+                config: config.clone(),
+                wl_surface: std::cell::RefCell::new(wl_surface),
+                ls_surface: std::cell::RefCell::new(ls_surface),
+                requires_initialization: std::cell::RefCell::new(true),
+                available: std::cell::RefCell::new(false),
             }),
         };
 
-        handle.inner.wl_surface.set_popup_impl(PopupHandle {
-            inner: handle.inner.clone(),
-        });
-        handle.inner.ls_surface.quick_assign({
-            let handle = handle.clone();
-            let mut dim = config.initial_size.clone();
-            move |a1, event, a2| match event {
-                layershell::zwlr_layer_surface_v1::Event::Configure {
-                    serial,
-                    width,
-                    height,
-                } => {
-                    tracing::info!("event {:?} {:?} {:?}", a1, event, a2);
-                    // compositor is deferring to the client for determining the size
-                    // when values are zero.
-                    if width != 0 && height != 0 {
-                        dim = kurbo::Size::new(width as f64, height as f64);
-                    }
-
-                    handle.inner.ls_surface.ack_configure(serial);
-                    handle
-                        .inner
-                        .ls_surface
-                        .set_size(dim.width as u32, dim.height as u32);
-                    handle
-                        .inner
-                        .wl_surface
-                        .update_dimensions(dim.width as u32, dim.height as u32);
-                    handle
-                        .inner
-                        .wl_surface
-                        .inner
-                        .buffers
-                        .request_paint(&handle.inner.wl_surface.inner);
-                }
-                _ => tracing::info!("unimplemented event {:?} {:?} {:?}", a1, event, a2),
-            }
-        });
-
-        config.apply(&handle);
-        handle.inner.wl_surface.commit();
-
+        Surface::initialize(&handle);
         handle
     }
 
@@ -245,37 +200,172 @@ impl Surface {
     fn initialize_dimensions(&self, dim: kurbo::Size) {
         self.inner
             .ls_surface
+            .borrow()
             .set_size(dim.width as u32, dim.height as u32);
-        self.inner.wl_surface.inner.handler.borrow_mut().size(dim);
+        self.inner.wl_surface.borrow().inner.handler.borrow_mut().size(dim);
+    }
+
+    fn initialize(handle: &Surface) {
+        if !handle.inner.requires_initialization.replace(false) {
+            return
+        }
+
+        tracing::info!("attempting to initialize layershell");
+        handle.inner.wl_surface.borrow().set_popup_impl(PopupHandle {
+            inner: handle.inner.clone(),
+        });
+
+        handle.inner.ls_surface.borrow().quick_assign({
+            let handle = handle.clone();
+            move |a1, event, a2| {
+                tracing::debug!("consuming event {:?} {:?} {:?}", a1, event, a2);
+                Surface::consume_layershell_event(&handle, &a1, &event, &a2);
+            }
+        });
+
+        handle.inner.config.apply(&handle);
+        handle.inner.wl_surface.borrow().commit();
+    }
+
+    fn consume_layershell_event(handle: &Surface, a1: &wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>, event: &layershell::zwlr_layer_surface_v1::Event, data: &wlc::DispatchData) {
+        match *event {
+            layershell::zwlr_layer_surface_v1::Event::Configure {
+                serial,
+                width,
+                height,
+            } => {
+                let mut dim = handle.inner.config.initial_size.clone();
+                // compositor is deferring to the client for determining the size
+                // when values are zero.
+                if width != 0 && height != 0 {
+                    dim = kurbo::Size::new(width as f64, height as f64);
+                }
+
+                let ls = handle.inner.ls_surface.borrow();
+                ls.ack_configure(serial);
+                ls.set_size(dim.width as u32, dim.height as u32);
+                handle.inner.wl_surface.borrow().update_dimensions(dim);
+                handle.inner.wl_surface.borrow().request_paint();
+                handle.inner.available.replace(true);
+            }
+            layershell::zwlr_layer_surface_v1::Event::Closed => {
+                handle.inner.ls_surface.borrow().destroy();
+                handle.inner.available.replace(false);
+                handle.inner.requires_initialization.replace(true);
+            }
+            _ => tracing::warn!("unimplemented event {:?} {:?} {:?}", a1, event, data),
+        }
     }
 }
 
-impl From<Surface> for u32 {
-    fn from(s: Surface) -> u32 {
-        u32::from(&s.inner.wl_surface)
+impl Outputs for Surface {
+    fn removed(&self, o: &Output) {
+        self.inner.wl_surface.borrow().removed(o);
+    }
+
+    fn inserted(&self, o: &Output) {
+        if !self.inner.requires_initialization.borrow().clone() {
+            tracing::debug!("skipping reinitialization output for layershell {:?} {:?}", o.gid, o.id());
+            return
+        }
+
+        tracing::debug!("reinitializing output for layershell {:?} {:?} {:?}", o.gid, o.id(), o);
+        let sdata = self.inner.wl_surface.borrow().inner.clone();
+        let replacedsurface = self.inner.wl_surface.replace(surface::Surface::replace(&sdata));
+        let sdata = self.inner.wl_surface.borrow().inner.clone();
+        let replacedlayershell = self.inner.ls_surface.replace(sdata.compositor.zwlr_layershell_v1().get_layer_surface(
+            &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
+            None,
+            self.inner.config.layer,
+            self.inner.config.namespace.to_string(),
+        ));
+        Surface::initialize(&self);
+
+        tracing::debug!("replaced surface {:p}", &replacedsurface);
+        tracing::debug!("current surface {:p}", &self.inner.wl_surface.borrow());
+        tracing::debug!("replaced layershell {:p}", &replacedlayershell);
+        tracing::debug!("current layershell {:p}", &self.inner.ls_surface.borrow());
     }
 }
 
-impl From<&Surface> for u32 {
-    fn from(s: &Surface) -> u32 {
-        u32::from(&s.inner.wl_surface)
+impl Handle for Surface {
+    fn get_size(&self) -> kurbo::Size {
+        return self.inner.wl_surface.borrow().get_size();
+    }
+
+    fn set_size(&self, dim: kurbo::Size) {
+        return self.inner.wl_surface.borrow().set_size(dim);
+    }
+
+    fn request_anim_frame(&self) {
+        if *self.inner.available.borrow() {
+            self.inner.wl_surface.borrow().request_anim_frame()
+        }
+    }
+
+    fn invalidate(&self) {
+        return self.inner.wl_surface.borrow().invalidate();
+    }
+
+    fn invalidate_rect(&self, rect: kurbo::Rect) {
+        return self.inner.wl_surface.borrow().invalidate_rect(rect);
+    }
+
+    fn remove_text_field(&self, token: crate::TextFieldToken) {
+        return self.inner.wl_surface.borrow().remove_text_field(token);
+    }
+
+    fn set_focused_text_field(&self, active_field: Option<crate::TextFieldToken>) {
+        return self.inner.wl_surface.borrow().set_focused_text_field(active_field);
+    }
+
+    fn get_idle_handle(&self) -> super::idle::Handle {
+        return self.inner.wl_surface.borrow().get_idle_handle();
+    }
+
+    fn get_scale(&self) -> crate::Scale {
+        return self.inner.wl_surface.borrow().get_scale();
+    }
+
+    fn run_idle(&self) {
+        if *self.inner.available.borrow() {
+            self.inner.wl_surface.borrow().run_idle();
+        }
+    }
+
+    fn popup(&self, popup: &popup::Surface) -> Result<(), error::Error> {
+        return self.inner.wl_surface.borrow().popup(popup);
+    }
+
+    fn release(&self) {
+        return self.inner.wl_surface.borrow().release();
+    }
+
+    fn data(&self) -> Option<std::sync::Arc<surface::Data>> {
+        return self.inner.wl_surface.borrow().data();
     }
 }
 
 impl From<&Surface> for std::sync::Arc<surface::Data> {
     fn from(s: &Surface) -> std::sync::Arc<surface::Data> {
-        std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.clone())
+        std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.borrow().clone())
     }
 }
 
 impl From<Surface> for std::sync::Arc<surface::Data> {
     fn from(s: Surface) -> std::sync::Arc<surface::Data> {
-        std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.clone())
+        std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.borrow().clone())
     }
 }
 
 impl From<Surface> for Box<dyn Handle> {
     fn from(s: Surface) -> Box<dyn Handle> {
-        Box::new(s.inner.wl_surface.clone()) as Box<dyn Handle>
+        Box::new(s) as Box<dyn Handle>
+    }
+}
+
+impl From<Surface> for Box<dyn Outputs> {
+    fn from(s: Surface) -> Box<dyn Outputs> {
+        Box::new(s) as Box<dyn Outputs>
     }
 }

@@ -20,6 +20,7 @@ pub mod surface;
 pub mod toplevel;
 
 pub static GLOBAL_ID: crate::Counter = crate::Counter::new();
+
 pub trait Compositor {
     fn output(&self, id: &u32) -> Option<application::Output>;
     fn create_surface(&self) -> wlc::Main<WlSurface>;
@@ -53,6 +54,11 @@ impl PopupHandle {
     fn popup(&self, p: &popup::Surface) -> Result<(), error::Error> {
         self.inner.popup_impl(p)
     }
+}
+
+pub(super) trait Outputs {
+    fn removed(&self, o: &application::Output);
+    fn inserted(&self, o: &application::Output);
 }
 
 // handle on given surface.
@@ -99,8 +105,9 @@ impl CompositorHandle {
             Some(c) => c,
             None => panic!("should never recompute scale of window that has been dropped"),
         };
-
+        tracing::debug!("computing scale using {:?} outputs", outputs.len());
         let scale = outputs.iter().fold(0, |scale, id| {
+            tracing::debug!("recomputing scale using output {:?}", id);
             match compositor.output(id) {
                 None => {
                     tracing::warn!(

@@ -6,20 +6,15 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use crate::kurbo;
 use crate::window;
 
+use super::Outputs;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Handle;
 
 struct Inner {
-    wl_surface: surface::Handle,
+    wl_surface: surface::Surface,
     wl_xdg_popup: wlc::Main<xdg_popup::XdgPopup>,
-}
-
-impl From<Inner> for u32 {
-    fn from(s: Inner) -> u32 {
-        u32::from(s.wl_surface.clone())
-    }
 }
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
@@ -85,8 +80,8 @@ impl Surface {
         parent: Option<&xdg_surface::XdgSurface>,
     ) -> Self {
         let compositor = CompositorHandle::new(c);
-        let wl_surface = surface::Handle::new(compositor.clone(), handler, kurbo::Size::ZERO);
-        let wl_xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface);
+        let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
+        let wl_xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
 
         // register to receive xdg_surface events.
         wl_xdg_surface.quick_assign({
@@ -96,7 +91,7 @@ impl Surface {
                     xdg_surface.ack_configure(serial);
                     let dim = wl_surface.inner.logical_size.get();
                     wl_surface.inner.handler.borrow_mut().size(dim);
-                    wl_surface.inner.buffers.request_paint(&wl_surface.inner);
+                    wl_surface.request_paint();
                 }
                 _ => tracing::warn!("unhandled xdg_surface event {:?}", event),
             }
@@ -125,7 +120,7 @@ impl Surface {
                             width,
                             height
                         );
-                        wl_surface.update_dimensions(width as u32, height as u32);
+                        wl_surface.update_dimensions((width as f64, height as f64));
                     }
                     _ => tracing::warn!("unhandled xdg_popup event configure {:?}", event),
                 };
@@ -159,15 +154,9 @@ impl Surface {
     }
 }
 
-impl From<Surface> for u32 {
-    fn from(s: Surface) -> u32 {
-        u32::from(&s.inner.wl_surface)
-    }
-}
-
-impl From<&Surface> for u32 {
-    fn from(s: &Surface) -> u32 {
-        u32::from(&s.inner.wl_surface)
+impl From<Surface> for Box<dyn Outputs> {
+    fn from(s: Surface) -> Box<dyn Outputs> {
+        Box::new(s.inner.wl_surface.clone()) as Box<dyn Outputs>
     }
 }
 
