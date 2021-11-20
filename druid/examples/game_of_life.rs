@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 use druid::widget::prelude::*;
 use druid::widget::{Button, Flex, Label, Slider};
 use druid::{
-    AppLauncher, Color, Data, Lens, MouseButton, Point, Rect, TimerToken, WidgetExt, WindowDesc,
+    AppLauncher, Color, Data, Lens, Point, PointerButton, Rect, TimerToken, WidgetExt, WindowDesc,
 };
 use std::sync::Arc;
 
@@ -233,8 +233,8 @@ impl Widget<AppData> for GameOfLifeWidget {
                     self.timer_id = ctx.request_timer(deadline);
                 }
             }
-            Event::MouseDown(e) => {
-                if e.button == MouseButton::Left {
+            Event::PointerDown(e) => {
+                if e.button == PointerButton::Left {
                     data.drawing = true;
                     let grid_pos_opt = self.grid_pos(e.pos);
                     grid_pos_opt
@@ -242,12 +242,12 @@ impl Widget<AppData> for GameOfLifeWidget {
                         .for_each(|pos| data.grid[*pos] = !data.grid[*pos]);
                 }
             }
-            Event::MouseUp(e) => {
-                if e.button == MouseButton::Left {
+            Event::PointerUp(e) => {
+                if e.button == PointerButton::Left {
                     data.drawing = false;
                 }
             }
-            Event::MouseMove(e) => {
+            Event::PointerMove(e) => {
                 if data.drawing {
                     if let Some(grid_pos_opt) = self.grid_pos(e.pos) {
                         data.grid[grid_pos_opt] = true

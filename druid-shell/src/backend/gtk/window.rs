@@ -15,6 +15,7 @@
 //! GTK window creation and management.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::ffi::c_void;
 use std::os::raw::{c_int, c_uint};
@@ -37,7 +38,7 @@ use gdk_sys::GdkKeymapKey;
 use anyhow::anyhow;
 use cairo::Surface;
 use gtk::gdk::{
-    EventKey, EventMask, EventType, ModifierType, ScrollDirection, Window, WindowTypeHint,
+    self, EventKey, EventMask, EventType, ModifierType, ScrollDirection, Window, WindowTypeHint,
 };
 
 use instant::Duration;
@@ -53,8 +54,9 @@ use crate::common_util::{ClickCounter, IdleCallback};
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyEvent, KeyState, Modifiers};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc};
 use crate::piet::ImageFormat;
+use crate::pointer::{Button, PointerEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
@@ -199,6 +201,10 @@ pub(crate) struct WindowState {
     click_counter: ClickCounter,
     active_text_input: Cell<Option<TextFieldToken>>,
     deferred_queue: RefCell<Vec<DeferredOp>>,
+    // The active touch sequences.
+    touch_seqs: RefCell<HashSet<gdk::EventSequence>>,
+    // The primary touch, if it is currently active.
+    primary_touch: Cell<Option<gdk::EventSequence>>,
 
     request_animation: Cell<bool>,
     in_draw: Cell<bool>,
@@ -372,6 +378,8 @@ impl WindowBuilder {
             click_counter: ClickCounter::default(),
             active_text_input: Cell::new(None),
             deferred_queue: RefCell::new(Vec::new()),
+            touch_seqs: RefCell::new(HashSet::new()),
+            primary_touch: Cell::new(None),
             request_animation: Cell::new(false),
             in_draw: Cell::new(false),
             parent,
@@ -416,19 +424,12 @@ impl WindowBuilder {
                 | EventMask::KEY_RELEASE_MASK
                 | EventMask::SCROLL_MASK
                 | EventMask::SMOOTH_SCROLL_MASK
+                | EventMask::TOUCH_MASK
                 | EventMask::FOCUS_CHANGE_MASK,
         );
 
         win_state.drawing_area.set_can_focus(true);
         win_state.drawing_area.grab_focus();
-
-        win_state
-            .drawing_area
-            .connect_enter_notify_event(|widget, _| {
-                widget.grab_focus();
-
-                Inhibit(true)
-            });
 
         // Set the minimum size
         if let Some(min_size_dp) = self.min_size {
@@ -556,112 +557,141 @@ impl WindowBuilder {
             }),
         );
 
-        win_state.drawing_area.connect_button_press_event(clone!(handle => move |_widget, event| {
-            if let Some(state) = handle.state.upgrade() {
-                state.with_handler(|handler| {
-                    if let Some(button) = get_mouse_button(event.button()) {
+        win_state
+            .drawing_area
+            .connect_button_press_event(clone!(handle => move |_widget, event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|handler| {
                         let scale = state.scale.get();
-                        let button_state = event.state();
-                        let gtk_count = get_mouse_click_count(event.event_type());
-                        let pos: Point =  event.position().into();
-                        let count = if gtk_count == 1 {
-                            let settings = state.drawing_area.settings().unwrap();
-                            let thresh_dist = settings.gtk_double_click_distance();
-                            state.click_counter.set_distance(thresh_dist.into());
-                            if let Ok(ms) = settings.gtk_double_click_time().try_into() {
-                                state.click_counter.set_interval_ms(ms);
+                       let mut pointer_event = PointerEvent::from_gdk(event, scale);
+                        if pointer_event.button != crate::pointer::Button::None {
+                            let pos: Point =  event.position().into();
+                            let gtk_count = get_mouse_click_count(event.event_type());
+                            let count = if gtk_count == 1 {
+                                state.update_click_settings();
+                                state.click_counter.count_for_click(pos)
+                            } else {
+                                0
+                            };
+                             if gtk_count == 0 || gtk_count == 1 {
+                                 pointer_event.count = count;
+                                handler.pointer_down(&pointer_event);
                             }
-                            state.click_counter.count_for_click(pos)
-                        } else {
-                            0
-                        };
-                        if gtk_count == 0 || gtk_count == 1 {
-                            handler.mouse_down(
-                                &MouseEvent {
-                                    pos: pos.to_dp(scale),
-                                    buttons: get_mouse_buttons_from_modifiers(button_state).with(button),
-                                    mods: get_modifiers(button_state),
-                                    count,
-                                    focus: false,
-                                    button,
-                                    wheel_delta: Vec2::ZERO
-                                },
-                            );
                         }
-                    }
-                });
-            }
+                    });
+                }
 
-            Inhibit(true)
-        }));
+                Inhibit(true)
+            }));
 
-        win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
-            if let Some(state) = handle.state.upgrade() {
-                state.with_handler(|handler| {
-                    if let Some(button) = get_mouse_button(event.button()) {
+        win_state.drawing_area.connect_button_release_event(
+            clone!(handle => move |_widget, event| {
+                if let Some(state) = handle.state.upgrade() {
+                    state.with_handler(|handler| {
                         let scale = state.scale.get();
-                        let button_state = event.state();
-                        handler.mouse_up(
-                            &MouseEvent {
-                                pos: Point::from(event.position()).to_dp(scale),
-                                buttons: get_mouse_buttons_from_modifiers(button_state).without(button),
-                                mods: get_modifiers(button_state),
-                                count: 0,
-                                focus: false,
-                                button,
-                                wheel_delta: Vec2::ZERO
-                            },
-                        );
-                    }
-                });
-            }
+                        let pointer_event = PointerEvent::from_gdk(event, scale);
+                        if pointer_event.button != crate::pointer::Button::None {
+                            handler.pointer_up(&pointer_event);
+                        }
+                    });
+                }
 
-            Inhibit(true)
-        }));
+                Inhibit(true)
+            }),
+        );
 
         win_state.drawing_area.connect_motion_notify_event(
-            clone!(handle => move |_widget, motion| {
+            clone!(handle => move |_widget, event| {
                 if let Some(state) = handle.state.upgrade() {
                     let scale = state.scale.get();
-                    let motion_state = motion.state();
-                    let mouse_event = MouseEvent {
-                        pos: Point::from(motion.position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(motion_state),
-                        mods: get_modifiers(motion_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
+                    let pointer_event = PointerEvent::from_gdk(event, scale);
 
-                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                    state.with_handler(|h| h.pointer_move(&pointer_event));
                 }
 
                 Inhibit(true)
             }),
         );
 
-        win_state.drawing_area.connect_leave_notify_event(
-            clone!(handle => move |_widget, crossing| {
+        win_state
+            .drawing_area
+            .connect_touch_event(clone!(handle => move |_widget, event| {
                 if let Some(state) = handle.state.upgrade() {
                     let scale = state.scale.get();
-                    let crossing_state = crossing.state();
-                    let mouse_event = MouseEvent {
-                        pos: Point::from(crossing.position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                        mods: get_modifiers(crossing_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
+                    let mut pointer_event = PointerEvent::from_gdk(event, scale);
+                    match event.event_type() {
+                        gdk::EventType::TouchBegin => {
+                            if let Some(seq) = event.event_sequence() {
+                                pointer_event.is_primary = state.add_touch_seq(&seq);
+                            } else {
+                                pointer_event.is_primary = false;
+                            }
+                            pointer_event.count =
+                            if pointer_event.is_primary {
+                                // TODO: For touch specifically, I find the distance threshold way
+                                // too small. Maybe we should have different mouse/touch
+                                // thresholds? GTK doesn't seem to.
+                                state.update_click_settings();
+                                let pos = event.coords().unwrap_or((0., 0.)).into();
+                                state.click_counter.count_for_click(pos)
+                            } else {
+                                1
+                            };
 
-                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                            state.with_handler(|h| h.pointer_down(&pointer_event));
+                        }
+                        gdk::EventType::TouchUpdate => {
+                            state.with_handler(|h| h.pointer_move(&pointer_event));
+                        }
+                        gdk::EventType::TouchEnd => {
+                            if let Some(seq) = event.event_sequence() {
+                                state.remove_touch_seq(&seq);
+                            }
+                            state.with_handler(|h| h.pointer_up(&pointer_event));
+                        }
+                        gdk::EventType::TouchCancel => {
+                            if let Some(seq) = event.event_sequence() {
+                                state.remove_touch_seq(&seq);
+                            }
+                            state.with_handler(|h| h.pointer_cancel(&pointer_event));
+                        }
+                        t => {
+                            warn!("unexpected touch event type {:?}", t);
+                        }
+                    }
+                }
+                Inhibit(true)
+            }));
+
+        win_state
+            .drawing_area
+            .connect_enter_notify_event(clone!(handle => move |widget, event| {
+                widget.grab_focus();
+
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let mut pointer_event = PointerEvent::from_gdk(event, scale);
+                    pointer_event.button = Button::None;
+
+                    state.with_handler(|h| h.pointer_enter(&pointer_event));
                 }
 
                 Inhibit(true)
-            }),
-        );
+            }));
+
+        win_state
+            .drawing_area
+            .connect_leave_notify_event(clone!(handle => move |_widget, event| {
+                if let Some(state) = handle.state.upgrade() {
+                    let scale = state.scale.get();
+                    let mut pointer_event = PointerEvent::from_gdk(event, scale);
+                    pointer_event.button = Button::None;
+
+                    state.with_handler(|h| h.pointer_leave(&pointer_event));
+                }
+
+                Inhibit(true)
+            }));
 
         win_state
             .drawing_area
@@ -701,17 +731,11 @@ impl WindowBuilder {
                     };
 
                     if let Some(wheel_delta) = wheel_delta {
-                        let mouse_event = MouseEvent {
-                            pos: Point::from(scroll.position()).to_dp(scale),
-                            buttons: get_mouse_buttons_from_modifiers(scroll.state()),
-                            mods,
-                            count: 0,
-                            focus: false,
-                            button: MouseButton::None,
-                            wheel_delta
-                        };
+                        let mut pointer_event = PointerEvent::from_gdk(scroll, scale);
+                        pointer_event.button = Button::None;
+                        pointer_event.wheel_delta = wheel_delta;
 
-                        state.with_handler(|h| h.wheel(&mouse_event));
+                        state.with_handler(|h| h.wheel(&pointer_event));
                     }
                 }
 
@@ -835,6 +859,39 @@ impl WindowState {
                 error!("failed to borrow WinHandler at {}", Location::caller());
                 None
             }
+        }
+    }
+
+    /// Adds an event sequence to the collection of active sequences, and return `true` if it is
+    /// the primary sequence.
+    fn add_touch_seq(&self, seq: &gdk::EventSequence) -> bool {
+        let mut seqs = self.touch_seqs.borrow_mut();
+
+        if seqs.is_empty() {
+            self.primary_touch.set(Some(seq.clone()));
+        }
+
+        seqs.insert(seq.clone());
+        let primary = self.primary_touch.take();
+        let is_primary = primary.as_ref() == Some(seq);
+        self.primary_touch.set(primary);
+        is_primary
+    }
+
+    fn remove_touch_seq(&self, seq: &gdk::EventSequence) {
+        self.touch_seqs.borrow_mut().remove(seq);
+        let primary = self.primary_touch.take();
+        if primary.as_ref() != Some(seq) {
+            self.primary_touch.set(primary);
+        }
+    }
+
+    fn update_click_settings(&self) {
+        let settings = self.drawing_area.settings().unwrap();
+        let thresh_dist = settings.gtk_double_click_distance();
+        self.click_counter.set_distance(thresh_dist.into());
+        if let Ok(ms) = settings.gtk_double_click_time().try_into() {
+            self.click_counter.set_interval_ms(ms);
         }
     }
 
@@ -1355,41 +1412,6 @@ fn make_gdk_cursor(cursor: &Cursor, gdk_window: &Window) -> Option<gtk::gdk::Cur
             },
         )
     }
-}
-
-fn get_mouse_button(button: u32) -> Option<MouseButton> {
-    match button {
-        1 => Some(MouseButton::Left),
-        2 => Some(MouseButton::Middle),
-        3 => Some(MouseButton::Right),
-        // GDK X backend interprets button press events for button 4-7 as scroll events
-        8 => Some(MouseButton::X1),
-        9 => Some(MouseButton::X2),
-        _ => None,
-    }
-}
-
-fn get_mouse_buttons_from_modifiers(modifiers: ModifierType) -> MouseButtons {
-    let mut buttons = MouseButtons::new();
-    if modifiers.contains(ModifierType::BUTTON1_MASK) {
-        buttons.insert(MouseButton::Left);
-    }
-    if modifiers.contains(ModifierType::BUTTON2_MASK) {
-        buttons.insert(MouseButton::Middle);
-    }
-    if modifiers.contains(ModifierType::BUTTON3_MASK) {
-        buttons.insert(MouseButton::Right);
-    }
-    // TODO: Determine X1/X2 state (do caching ourselves if needed)
-    //       Checking for BUTTON4_MASK/BUTTON5_MASK does not work with GDK X,
-    //       because those are wheel events instead.
-    if modifiers.contains(ModifierType::BUTTON4_MASK) {
-        buttons.insert(MouseButton::X1);
-    }
-    if modifiers.contains(ModifierType::BUTTON5_MASK) {
-        buttons.insert(MouseButton::X2);
-    }
-    buttons
 }
 
 fn get_mouse_click_count(event_type: EventType) -> u8 {

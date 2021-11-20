@@ -68,7 +68,7 @@ const RADIUS: f64 = 25.0;
 
 impl Widget<Vector<Circle>> for CircleView {
     fn event(&mut self, ctx: &mut EventCtx, ev: &Event, data: &mut Vector<Circle>, _env: &Env) {
-        if let Event::MouseDown(ev) = ev {
+        if let Event::PointerDown(ev) = ev {
             if ev.mods.shift() {
                 data.push_back(Circle {
                     pos: ev.pos,

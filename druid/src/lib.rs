@@ -172,7 +172,7 @@ mod event;
 mod ext_event;
 mod localization;
 pub mod menu;
-mod mouse;
+mod pointer;
 pub mod scroll_component;
 mod sub_window;
 #[cfg(not(target_arch = "wasm32"))]
@@ -192,10 +192,10 @@ pub use piet::{Color, ImageBuf, LinearGradient, RadialGradient, RenderContext, U
 pub use shell::image;
 pub use shell::keyboard_types;
 pub use shell::{
-    Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
-    FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers, Monitor,
-    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
-    WindowHandle, WindowLevel, WindowState,
+    Application, Button as PointerButton, Buttons as PointerButtons, Clipboard, ClipboardFormat,
+    Code, Cursor, CursorDesc, Error as PlatformError, FileInfo, FileSpec, FormatId, HotKey, KbKey,
+    KeyEvent, Location, Modifiers, Monitor, PointerId, PointerType, RawMods, Region, Scalable,
+    Scale, Screen, SysMods, TimerToken, WindowHandle, WindowLevel, WindowState,
 };
 
 #[cfg(feature = "raw-win-handle")]
@@ -215,7 +215,7 @@ pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
 pub use menu::{sys as platform_menus, Menu, MenuItem};
-pub use mouse::MouseEvent;
+pub use pointer::PointerEvent;
 pub use util::Handled;
 pub use widget::{Widget, WidgetExt, WidgetId};
 pub use win_handler::DruidHandler;

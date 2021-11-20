@@ -37,7 +37,7 @@ struct AnimWidget {
 impl Widget<()> for AnimWidget {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut (), _env: &Env) {
         match event {
-            Event::MouseDown(_) => {
+            Event::PointerDown(_) => {
                 self.t = 0.0;
                 ctx.request_anim_frame();
             }

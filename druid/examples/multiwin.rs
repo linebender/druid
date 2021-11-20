@@ -139,7 +139,7 @@ impl<W: Widget<State>> Controller<State, W> for ContextMenuController {
         env: &Env,
     ) {
         match event {
-            Event::MouseDown(ref mouse) if mouse.button.is_right() => {
+            Event::PointerDown(ref mouse) if mouse.button.is_right() => {
                 ctx.show_context_menu(make_context_menu(), mouse.pos);
             }
             _ => child.event(ctx, event, data, env),

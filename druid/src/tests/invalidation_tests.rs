@@ -36,14 +36,14 @@ fn invalidate_union() {
         harness.just_layout();
         let child1_rect = harness.get_state(id_child1).layout_rect();
         let child2_rect = harness.get_state(id_child2).layout_rect();
-        harness.event(Event::MouseMove(move_mouse((10., 10.))));
+        harness.event(Event::PointerMove(move_mouse((10., 10.))));
         assert_eq!(harness.window().invalid().rects(), &[child1_rect]);
 
         // This resets the invalid region.
         harness.paint_invalid();
         assert!(harness.window().invalid().is_empty());
 
-        harness.event(Event::MouseMove(move_mouse((210., 10.))));
+        harness.event(Event::PointerMove(move_mouse((210., 10.))));
         assert_eq!(
             harness.window().invalid().rects(),
             // TODO: this is probably too fragile, because is there any guarantee on the order?
@@ -95,7 +95,7 @@ fn invalidate_scroll() {
         harness.just_layout();
 
         // Sending an event should cause RECT to get invalidated.
-        harness.event(Event::MouseMove(move_mouse((10., 10.))));
+        harness.event(Event::PointerMove(move_mouse((10., 10.))));
         assert_eq!(harness.window().invalid().rects(), &[RECT]);
 
         // This resets the invalid region, and our widget checks to make sure it sees the right
@@ -112,7 +112,7 @@ fn invalidate_scroll() {
         harness.window_mut().invalid_mut().clear();
 
         // After the scroll, the window should see the translated invalid regions...
-        harness.event(Event::MouseMove(move_mouse((10., 10.))));
+        harness.event(Event::PointerMove(move_mouse((10., 10.))));
         assert_eq!(
             harness.window().invalid().rects(),
             &[RECT - Vec2::new(7.0, 9.0)]

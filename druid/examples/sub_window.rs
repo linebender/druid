@@ -101,7 +101,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
         let now = Instant::now();
         let new_state = match &self.state {
             TooltipState::Fresh => match event {
-                Event::MouseMove(me) if ctx.is_hot() => Some(TooltipState::Waiting {
+                Event::PointerMove(me) if ctx.is_hot() => Some(TooltipState::Waiting {
                     last_move: now,
                     timer_expire: now + wait_duration,
                     token: ctx.request_timer(wait_duration),
@@ -115,7 +115,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                 token,
                 position_in_window_coordinates,
             } => match event {
-                Event::MouseMove(me) if ctx.is_hot() => {
+                Event::PointerMove(me) if ctx.is_hot() => {
                     let (cur_token, cur_expire) = if *timer_expire - now < resched_dur {
                         (ctx.request_timer(wait_duration), now + wait_duration)
                     } else {
@@ -161,7 +161,7 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
             },
             TooltipState::Showing(win_id) => {
                 match event {
-                    Event::MouseMove(me) if !ctx.is_hot() => {
+                    Event::PointerMove(me) if !ctx.is_hot() => {
                         // TODO another timer on leaving
                         tracing::info!("Sending close window for {:?}", win_id);
                         ctx.submit_command(CLOSE_WINDOW.to(*win_id));
@@ -218,11 +218,11 @@ impl DragWindowController {
 impl<T, W: Widget<T>> Controller<T, W> for DragWindowController {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
-            Event::MouseDown(me) if me.buttons.has_left() => {
+            Event::PointerDown(me) if me.buttons.has_left() => {
                 ctx.set_active(true);
                 self.init_pos = Some(me.window_pos)
             }
-            Event::MouseMove(me) if ctx.is_active() && me.buttons.has_left() => {
+            Event::PointerMove(me) if ctx.is_active() && me.buttons.has_left() => {
                 if let Some(init_pos) = self.init_pos {
                     let within_window_change = me.window_pos.to_vec2() - init_pos.to_vec2();
                     let old_pos = ctx.window().get_position();
@@ -240,7 +240,7 @@ impl<T, W: Widget<T>> Controller<T, W> for DragWindowController {
                     ctx.window().set_position(new_pos)
                 }
             }
-            Event::MouseUp(_me) if ctx.is_active() => {
+            Event::PointerUp(_me) if ctx.is_active() => {
                 self.init_pos = None;
                 ctx.set_active(false)
             }

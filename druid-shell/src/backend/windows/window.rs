@@ -70,7 +70,8 @@ use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType, FileInfo};
 use crate::error::Error as ShellError;
 use crate::keyboard::{KbKey, KeyState};
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc};
+use crate::pointer::{Button, Buttons, PointerEvent};
 use crate::region::Region;
 use crate::scale::{Scalable, Scale, ScaledArea};
 use crate::text::{simulate_input, Event};
@@ -279,7 +280,7 @@ struct WndState {
     // Stores a set of all mouse buttons that are currently holding mouse
     // capture. When the first mouse button is down on our window we enter
     // capture, and we hold it until the last mouse button is up.
-    captured_mouse_buttons: MouseButtons,
+    captured_mouse_buttons: Buttons,
     transparent: bool,
     // Is this window the topmost window under the mouse cursor
     has_mouse_focus: bool,
@@ -335,27 +336,6 @@ impl Default for PresentStrategy {
     fn default() -> PresentStrategy {
         PresentStrategy::Sequential
     }
-}
-
-/// Extract the buttons that are being held down from wparam in mouse events.
-fn get_buttons(wparam: WPARAM) -> MouseButtons {
-    let mut buttons = MouseButtons::new();
-    if wparam & MK_LBUTTON != 0 {
-        buttons.insert(MouseButton::Left);
-    }
-    if wparam & MK_RBUTTON != 0 {
-        buttons.insert(MouseButton::Right);
-    }
-    if wparam & MK_MBUTTON != 0 {
-        buttons.insert(MouseButton::Middle);
-    }
-    if wparam & MK_XBUTTON1 != 0 {
-        buttons.insert(MouseButton::X1);
-    }
-    if wparam & MK_XBUTTON2 != 0 {
-        buttons.insert(MouseButton::X2);
-    }
-    buttons
 }
 
 fn is_point_in_client_rect(hwnd: HWND, x: i32, y: i32) -> bool {
@@ -463,7 +443,7 @@ impl WndState {
         }
     }
 
-    fn enter_mouse_capture(&mut self, hwnd: HWND, button: MouseButton) {
+    fn enter_mouse_capture(&mut self, hwnd: HWND, button: Button) {
         if self.captured_mouse_buttons.is_empty() {
             unsafe {
                 SetCapture(hwnd);
@@ -472,7 +452,7 @@ impl WndState {
         self.captured_mouse_buttons.insert(button);
     }
 
-    fn exit_mouse_capture(&mut self, button: MouseButton) -> bool {
+    fn exit_mouse_capture(&mut self, button: Button) -> bool {
         self.captured_mouse_buttons.remove(button);
         self.captured_mouse_buttons.is_empty()
     }
@@ -1034,18 +1014,17 @@ impl WndProc for MyWndProc {
                     }
                 }
             }
-            WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
+            WM_POINTERWHEEL | WM_POINTERHWHEEL => {
                 // TODO: apply mouse sensitivity based on
                 // SPI_GETWHEELSCROLLLINES setting.
                 let handled = self.with_wnd_state(|s| {
                     let system_delta = HIWORD(wparam as u32) as i16 as f64;
-                    let down_state = LOWORD(wparam as u32) as usize;
                     let mods = s.keyboard_state.get_modifiers();
                     let is_shift = mods.shift();
                     let wheel_delta = match msg {
-                        WM_MOUSEWHEEL if is_shift => Vec2::new(-system_delta, 0.),
-                        WM_MOUSEWHEEL => Vec2::new(0., -system_delta),
-                        WM_MOUSEHWHEEL => Vec2::new(system_delta, 0.),
+                        WM_POINTERWHEEL if is_shift => Vec2::new(-system_delta, 0.),
+                        WM_POINTERWHEEL => Vec2::new(0., -system_delta),
+                        WM_POINTERHWHEEL => Vec2::new(system_delta, 0.),
                         _ => unreachable!(),
                     };
 
@@ -1063,17 +1042,12 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = Point::new(p.x as f64, p.y as f64).to_dp(self.scale());
-                    let buttons = get_buttons(down_state);
-                    let event = MouseEvent {
-                        pos,
-                        buttons,
-                        mods,
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta,
-                    };
+                    let mut event = PointerEvent::from_win(wparam, lparam, self.scale());
+                    event.wheel_delta = wheel_delta;
+                    event.mods = mods;
+                    // I think that "primary" is not defined for wheel events, because the flag is
+                    // in HIWORD(wparam), which is also used for the scroll delta.
+                    event.is_primary = true;
                     s.handler.wheel(&event);
                     true
                 });
@@ -1083,13 +1057,14 @@ impl WndProc for MyWndProc {
                     Some(0)
                 }
             }
-            WM_MOUSEMOVE => {
+            // FIXME: *maybe* this is the pointer version of mousemove?
+            WM_POINTERUPDATE => {
                 self.with_wnd_state(|s| {
                     let x = LOWORD(lparam as u32) as i16 as i32;
                     let y = HIWORD(lparam as u32) as i16 as i32;
 
                     // When the mouse first enters the window client rect we need to register for the
-                    // WM_MOUSELEAVE event. Note that WM_MOUSEMOVE is also called even when the
+                    // WM_POINTERLEAVE event. Note that WM_POINTERMOVE is also called even when the
                     // window under the cursor changes without moving the mouse, for example when
                     // our window is first opened under the mouse cursor.
                     if !s.has_mouse_focus && is_point_in_client_rect(hwnd, x, y) {
@@ -1111,26 +1086,17 @@ impl WndProc for MyWndProc {
                         }
                     }
 
-                    let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
-                    let mods = s.keyboard_state.get_modifiers();
-                    let buttons = get_buttons(wparam);
-                    let event = MouseEvent {
-                        pos,
-                        buttons,
-                        mods,
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO,
-                    };
-                    s.handler.mouse_move(&event);
+                    let mut event = PointerEvent::from_win(wparam, lparam, self.scale());
+                    event.mods = s.keyboard_state.get_modifiers();
+                    s.handler.pointer_move(&event);
                 });
                 Some(0)
             }
-            WM_MOUSELEAVE => {
+            WM_POINTERLEAVE => {
                 self.with_wnd_state(|s| {
                     s.has_mouse_focus = false;
-                    s.handler.mouse_leave();
+                    s.handler
+                        .pointer_leave(&PointerEvent::from_win(wparam, lparam, self.scale()));
                 });
                 Some(0)
             }
@@ -1142,13 +1108,13 @@ impl WndProc for MyWndProc {
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
                 if let Some(button) = match msg {
-                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(MouseButton::Left),
-                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(MouseButton::Right),
-                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => Some(MouseButton::Middle),
+                    WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(Button::Left),
+                    WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(Button::Right),
+                    WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP => Some(Button::Middle),
                     WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
                         match HIWORD(wparam as u32) {
-                            XBUTTON1 => Some(MouseButton::X1),
-                            XBUTTON2 => Some(MouseButton::X2),
+                            XBUTTON1 => Some(Button::X1),
+                            XBUTTON2 => Some(Button::X2),
                             w => {
                                 // Should never happen with current Windows
                                 warn!("Received an unknown XBUTTON event ({})", w);
@@ -1172,9 +1138,6 @@ impl WndProc for MyWndProc {
                         );
                         let x = LOWORD(lparam as u32) as i16 as i32;
                         let y = HIWORD(lparam as u32) as i16 as i32;
-                        let pos = Point::new(x as f64, y as f64).to_dp(self.scale());
-                        let mods = s.keyboard_state.get_modifiers();
-                        let buttons = get_buttons(wparam);
                         let dct = unsafe { GetDoubleClickTime() };
                         let count = if down {
                             // TODO: it may be more precise to use the timestamp from the event.
@@ -1194,20 +1157,14 @@ impl WndProc for MyWndProc {
                         } else {
                             0
                         };
-                        let event = MouseEvent {
-                            pos,
-                            buttons,
-                            mods,
-                            count,
-                            focus: false,
-                            button,
-                            wheel_delta: Vec2::ZERO,
-                        };
+                        let mut event = PointerEvent::from_win(wparam, lparam, self.scale());
+                        event.button = button;
+                        event.mods = s.keyboard_state.get_modifiers();
                         if count > 0 {
                             s.enter_mouse_capture(hwnd, button);
-                            s.handler.mouse_down(&event);
+                            s.handler.pointer_down(&event);
                         } else {
-                            s.handler.mouse_up(&event);
+                            s.handler.pointer_up(&event);
                             if s.exit_mouse_capture(button) {
                                 self.handle.borrow().defer(DeferredOp::ReleaseMouseCapture);
                             }
@@ -1453,7 +1410,7 @@ impl WindowBuilder {
                 dxgi_state: None,
                 min_size: self.min_size,
                 keyboard_state: KeyboardState::new(),
-                captured_mouse_buttons: MouseButtons::new(),
+                captured_mouse_buttons: Buttons::new(),
                 has_mouse_focus: false,
                 transparent: self.transparent,
                 last_click_time: Instant::now(),

@@ -37,32 +37,52 @@ use helpers::*;
 use kurbo::Vec2;
 
 /// Helper function to construct a "move to this position" mouse event.
-pub fn move_mouse(p: impl Into<Point>) -> MouseEvent {
+pub fn move_mouse(p: impl Into<Point>) -> PointerEvent {
     let pos = p.into();
-    MouseEvent {
+    PointerEvent {
         pos,
         window_pos: pos,
-        buttons: MouseButtons::default(),
+        buttons: PointerButtons::default(),
         mods: Modifiers::default(),
         count: 0,
         focus: false,
-        button: MouseButton::None,
+        button: PointerButton::None,
         wheel_delta: Vec2::ZERO,
+        pointer_id: Default::default(),
+        size: (1., 1.).into(),
+        pressure: 0.0,
+        tangential_pressure: 0.0,
+        tilt_x: 0.0,
+        tilt_y: 0.0,
+        twist: 0,
+        pointer_type: PointerType::Mouse,
+        is_primary: true,
+        is_emulated_mouse: true,
     }
 }
 
 /// Helper function to construct a "scroll by n ticks" mouse event.
-pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
+pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> PointerEvent {
     let pos = p.into();
-    MouseEvent {
+    PointerEvent {
         pos,
         window_pos: pos,
-        buttons: MouseButtons::default(),
+        buttons: PointerButtons::default(),
         mods: Modifiers::default(),
         count: 0,
         focus: false,
-        button: MouseButton::None,
+        button: PointerButton::None,
         wheel_delta: delta.into(),
+        pointer_id: Default::default(),
+        size: (1., 1.).into(),
+        pressure: 0.0,
+        tangential_pressure: 0.0,
+        tilt_x: 0.0,
+        tilt_y: 0.0,
+        twist: 0,
+        pointer_type: PointerType::Mouse,
+        is_primary: true,
+        is_emulated_mouse: true,
     }
 }
 
@@ -126,7 +146,7 @@ fn propagate_hot() {
         // and verifying both the widget's `is_hot` status and also that
         // each widget received the expected HotChanged messages.
 
-        harness.event(Event::MouseMove(move_mouse((10., 10.))));
+        harness.event(Event::PointerMove(move_mouse((10., 10.))));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(pad).is_hot);
@@ -135,56 +155,71 @@ fn propagate_hot() {
             root_rec.next(),
             Record::L(LifeCycle::HotChanged(true))
         ));
-        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(root_rec.next(), Record::E(Event::PointerMove(_))));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse((210., 10.))));
+        harness.event(Event::PointerMove(move_mouse((210., 10.))));
 
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(root_rec.next(), Record::E(Event::PointerMove(_))));
         assert!(matches!(
             padding_rec.next(),
             Record::L(LifeCycle::HotChanged(true))
         ));
-        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            padding_rec.next(),
+            Record::E(Event::PointerMove(_))
+        ));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse((260., 60.))));
+        harness.event(Event::PointerMove(move_mouse((260., 60.))));
         assert!(harness.get_state(root).is_hot);
         assert!(!harness.get_state(empty).is_hot);
         assert!(harness.get_state(button).is_hot);
         assert!(harness.get_state(pad).is_hot);
 
-        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
-        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(root_rec.next(), Record::E(Event::PointerMove(_))));
+        assert!(matches!(
+            padding_rec.next(),
+            Record::E(Event::PointerMove(_))
+        ));
         assert!(matches!(
             button_rec.next(),
             Record::L(LifeCycle::HotChanged(true))
         ));
-        assert!(matches!(button_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            button_rec.next(),
+            Record::E(Event::PointerMove(_))
+        ));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
 
-        harness.event(Event::MouseMove(move_mouse((10., 10.))));
+        harness.event(Event::PointerMove(move_mouse((10., 10.))));
         assert!(harness.get_state(root).is_hot);
         assert!(harness.get_state(empty).is_hot);
         assert!(!harness.get_state(button).is_hot);
         assert!(!harness.get_state(pad).is_hot);
 
-        assert!(matches!(root_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(root_rec.next(), Record::E(Event::PointerMove(_))));
         assert!(matches!(
             padding_rec.next(),
             Record::L(LifeCycle::HotChanged(false))
         ));
-        assert!(matches!(padding_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            padding_rec.next(),
+            Record::E(Event::PointerMove(_))
+        ));
         assert!(matches!(
             button_rec.next(),
             Record::L(LifeCycle::HotChanged(false))
         ));
-        assert!(matches!(button_rec.next(), Record::E(Event::MouseMove(_))));
+        assert!(matches!(
+            button_rec.next(),
+            Record::E(Event::PointerMove(_))
+        ));
         assert!(root_rec.is_empty() && padding_rec.is_empty() && button_rec.is_empty());
     });
 }

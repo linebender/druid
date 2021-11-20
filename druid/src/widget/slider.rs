@@ -152,6 +152,7 @@ impl Widget<f64> for Slider {
                 ctx.set_active(false);
             }
             Event::MouseMove(mouse) => {
+                dbg!(mouse);
                 if !ctx.is_disabled() {
                     if ctx.is_active() {
                         *data = self.calculate_value(mouse.pos.x, knob_size, slider_width);

@@ -646,6 +646,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             return;
         }
 
+        if let Event::PointerMove(ev) = event {
+            if ev.is_emulated_mouse {
+                dbg!(event);
+            }
+        }
+
         // log if we seem not to be laid out when we should be
         if self.state.is_expecting_set_origin_call && !event.should_propagate_to_hidden() {
             warn!(
@@ -729,80 +735,55 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 self.state.needs_layout = true;
                 ctx.is_root
             }
-            Event::MouseDown(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
-                    ctx.state,
-                    rect,
-                    Some(mouse_event.pos),
-                    data,
-                    env,
-                );
-                if had_active || self.state.is_hot {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos -= rect.origin().to_vec2();
-                    modified_event = Some(Event::MouseDown(mouse_event));
+            Event::PointerCancel(_) => had_active,
+            Event::PointerDown(mouse_event)
+            | Event::MouseDown(mouse_event)
+            | Event::PointerUp(mouse_event)
+            | Event::MouseUp(mouse_event)
+            | Event::Wheel(mouse_event) => {
+                if mouse_event.is_emulated_mouse {
+                    WidgetPod::set_hot_state(
+                        &mut self.inner,
+                        &mut self.state,
+                        ctx.state,
+                        rect,
+                        Some(mouse_event.pos),
+                        data,
+                        env,
+                    );
+                }
+
+                // The "hot state" just follows the emulated mouse pointer: we don't use it for
+                // determining whether to propagate, because otherwise other pointers would behave
+                // strangely.
+                let is_hot = rect.contains(mouse_event.pos);
+                if had_active || is_hot {
+                    modified_event = Some(event.translate(-rect.origin().to_vec2()));
                     true
                 } else {
                     false
                 }
             }
-            Event::MouseUp(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
-                    ctx.state,
-                    rect,
-                    Some(mouse_event.pos),
-                    data,
-                    env,
-                );
-                if had_active || self.state.is_hot {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos -= rect.origin().to_vec2();
-                    modified_event = Some(Event::MouseUp(mouse_event));
-                    true
+            Event::PointerMove(mouse_event) | Event::MouseMove(mouse_event) => {
+                let hot_changed = if mouse_event.is_emulated_mouse {
+                    WidgetPod::set_hot_state(
+                        &mut self.inner,
+                        &mut self.state,
+                        ctx.state,
+                        rect,
+                        Some(mouse_event.pos),
+                        data,
+                        env,
+                    )
                 } else {
                     false
-                }
-            }
-            Event::MouseMove(mouse_event) => {
-                let hot_changed = WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
-                    ctx.state,
-                    rect,
-                    Some(mouse_event.pos),
-                    data,
-                    env,
-                );
+                };
+                let is_hot = rect.contains(mouse_event.pos);
                 // MouseMove is recursed even if the widget is not active and not hot,
                 // but was hot previously. This is to allow the widget to respond to the movement,
                 // e.g. drag functionality where the widget wants to follow the mouse.
-                if had_active || self.state.is_hot || hot_changed {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos -= rect.origin().to_vec2();
-                    modified_event = Some(Event::MouseMove(mouse_event));
-                    true
-                } else {
-                    false
-                }
-            }
-            Event::Wheel(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
-                    ctx.state,
-                    rect,
-                    Some(mouse_event.pos),
-                    data,
-                    env,
-                );
-                if had_active || self.state.is_hot {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos -= rect.origin().to_vec2();
-                    modified_event = Some(Event::Wheel(mouse_event));
+                if had_active || is_hot || hot_changed {
+                    modified_event = Some(event.translate(-rect.origin().to_vec2()));
                     true
                 } else {
                     false

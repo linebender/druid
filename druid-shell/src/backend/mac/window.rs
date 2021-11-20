@@ -57,7 +57,8 @@ use super::util::{assert_main_thread, make_nsstring};
 use crate::common_util::IdleCallback;
 use crate::dialog::{FileDialogOptions, FileDialogType};
 use crate::keyboard_types::KeyState;
-use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::mouse::{Cursor, CursorDesc};
+use crate::pointer::{Button, Buttons, PointerEvent, PointerType};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
@@ -616,64 +617,74 @@ fn mouse_event(
     view: id,
     count: u8,
     focus: bool,
-    button: MouseButton,
+    button: Button,
     wheel_delta: Vec2,
-) -> MouseEvent {
+) -> PointerEvent {
     unsafe {
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
         let pos = Point::new(view_point.x as f64, view_point.y as f64);
         let buttons = get_mouse_buttons(NSEvent::pressedMouseButtons(nsevent));
         let modifiers = make_modifiers(nsevent.modifierFlags());
-        MouseEvent {
+        PointerEvent {
+            pointer_id: crate::PointerId(super::pointer::PointerId {}),
             pos,
             buttons,
-            mods: modifiers,
+            is_primary: true,
+            // TODO: support these properties
+            size: (1.0, 1.0).into(),
+            pressure: 0.0,
+            tangential_pressure: 0.0,
+            tilt_x: 0.0,
+            tilt_y: 0.0,
+            twist: 0,
+            pointer_type: PointerType::Mouse,
             count,
             focus,
-            button,
             wheel_delta,
+            mods: modifiers,
+            button,
         }
     }
 }
 
-fn get_mouse_button(button: NSInteger) -> Option<MouseButton> {
+fn get_mouse_button(button: NSInteger) -> Option<Button> {
     match button {
-        0 => Some(MouseButton::Left),
-        1 => Some(MouseButton::Right),
-        2 => Some(MouseButton::Middle),
-        3 => Some(MouseButton::X1),
-        4 => Some(MouseButton::X2),
+        0 => Some(Button::Left),
+        1 => Some(Button::Right),
+        2 => Some(Button::Middle),
+        3 => Some(Button::X1),
+        4 => Some(Button::X2),
         _ => None,
     }
 }
 
-fn get_mouse_buttons(mask: NSUInteger) -> MouseButtons {
-    let mut buttons = MouseButtons::new();
+fn get_mouse_buttons(mask: NSUInteger) -> Buttons {
+    let mut buttons = Buttons::new();
     if mask & 1 != 0 {
-        buttons.insert(MouseButton::Left);
+        buttons.insert(Button::Left);
     }
     if mask & 1 << 1 != 0 {
-        buttons.insert(MouseButton::Right);
+        buttons.insert(Button::Right);
     }
     if mask & 1 << 2 != 0 {
-        buttons.insert(MouseButton::Middle);
+        buttons.insert(Button::Middle);
     }
     if mask & 1 << 3 != 0 {
-        buttons.insert(MouseButton::X1);
+        buttons.insert(Button::X1);
     }
     if mask & 1 << 4 != 0 {
-        buttons.insert(MouseButton::X2);
+        buttons.insert(Button::X2);
     }
     buttons
 }
 
 extern "C" fn mouse_down_left(this: &mut Object, _: Sel, nsevent: id) {
-    mouse_down(this, nsevent, MouseButton::Left);
+    mouse_down(this, nsevent, Button::Left);
 }
 
 extern "C" fn mouse_down_right(this: &mut Object, _: Sel, nsevent: id) {
-    mouse_down(this, nsevent, MouseButton::Right);
+    mouse_down(this, nsevent, Button::Right);
 }
 
 extern "C" fn mouse_down_other(this: &mut Object, _: Sel, nsevent: id) {
@@ -684,23 +695,23 @@ extern "C" fn mouse_down_other(this: &mut Object, _: Sel, nsevent: id) {
     }
 }
 
-fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
+fn mouse_down(this: &mut Object, nsevent: id, button: Button) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let count = nsevent.clickCount() as u8;
-        let focus = view_state.focus_click && button == MouseButton::Left;
+        let focus = view_state.focus_click && button == Button::Left;
         let event = mouse_event(nsevent, this as id, count, focus, button, Vec2::ZERO);
-        (*view_state).handler.mouse_down(&event);
+        (*view_state).handler.pointer_down(&event);
     }
 }
 
 extern "C" fn mouse_up_left(this: &mut Object, _: Sel, nsevent: id) {
-    mouse_up(this, nsevent, MouseButton::Left);
+    mouse_up(this, nsevent, Button::Left);
 }
 
 extern "C" fn mouse_up_right(this: &mut Object, _: Sel, nsevent: id) {
-    mouse_up(this, nsevent, MouseButton::Right);
+    mouse_up(this, nsevent, Button::Right);
 }
 
 extern "C" fn mouse_up_other(this: &mut Object, _: Sel, nsevent: id) {
@@ -711,25 +722,25 @@ extern "C" fn mouse_up_other(this: &mut Object, _: Sel, nsevent: id) {
     }
 }
 
-fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
+fn mouse_up(this: &mut Object, nsevent: id, button: Button) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let focus = if view_state.focus_click && button == MouseButton::Left {
+        let focus = if view_state.focus_click && button == Button::Left {
             view_state.focus_click = false;
             true
         } else {
             false
         };
         let event = mouse_event(nsevent, this as id, 0, focus, button, Vec2::ZERO);
-        (*view_state).handler.mouse_up(&event);
+        (*view_state).handler.pointer_up(&event);
         // If we have already received a mouseExited event then that means
         // we're still receiving mouse events because some buttons are being held down.
         // When the last held button is released and we haven't received a mouseEntered event,
         // then we will no longer receive mouse events until the next mouseEntered event
         // and need to inform the handler of the mouse leaving.
         if view_state.mouse_left && event.buttons.is_empty() {
-            (*view_state).handler.mouse_leave();
+            (*view_state).handler.pointer_leave(&event);
         }
     }
 }
@@ -738,8 +749,8 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let event = mouse_event(nsevent, this as id, 0, false, MouseButton::None, Vec2::ZERO);
-        (*view_state).handler.mouse_move(&event);
+        let event = mouse_event(nsevent, this as id, 0, false, Button::None, Vec2::ZERO);
+        (*view_state).handler.pointer_move(&event);
     }
 }
 
@@ -748,17 +759,18 @@ extern "C" fn mouse_enter(this: &mut Object, _sel: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         view_state.mouse_left = false;
-        let event = mouse_event(nsevent, this, 0, false, MouseButton::None, Vec2::ZERO);
-        (*view_state).handler.mouse_move(&event);
+        let event = mouse_event(nsevent, this, 0, false, Button::None, Vec2::ZERO);
+        (*view_state).handler.pointer_move(&event);
     }
 }
 
-extern "C" fn mouse_leave(this: &mut Object, _: Sel, _nsevent: id) {
+extern "C" fn mouse_leave(this: &mut Object, _: Sel, nsevent: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         view_state.mouse_left = true;
-        (*view_state).handler.mouse_leave();
+        let event = mouse_event(nsevent, this, 0, false, Button::None, Vec2::ZERO);
+        (*view_state).handler.pointer_leave(&event);
     }
 }
 
@@ -781,7 +793,7 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
             this as id,
             0,
             false,
-            MouseButton::None,
+            Button::None,
             Vec2::new(dx, dy),
         );
         (*view_state).handler.wheel(&event);

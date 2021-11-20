@@ -352,7 +352,7 @@ impl ScrollComponent {
         let scroll_offset = port.view_origin.to_vec2();
 
         let scrollbar_is_hovered = match event {
-            Event::MouseMove(e) | Event::MouseUp(e) | Event::MouseDown(e) => {
+            Event::PointerMove(e) | Event::PointerUp(e) | Event::PointerDown(e) => {
                 let offset_pos = e.pos + scroll_offset;
                 self.point_hits_vertical_bar(port, offset_pos, env)
                     || self.point_hits_horizontal_bar(port, offset_pos, env)
@@ -363,7 +363,7 @@ impl ScrollComponent {
         if self.are_bars_held() {
             // if we're dragging a scrollbar
             match event {
-                Event::MouseMove(event) => {
+                Event::PointerMove(event) => {
                     match self.held {
                         BarHeldState::Vertical(offset) => {
                             let scale_y = viewport_size.height / content_size.height;
@@ -389,7 +389,7 @@ impl ScrollComponent {
                     }
                     ctx.request_paint();
                 }
-                Event::MouseUp(_) => {
+                Event::PointerUp(_) => {
                     self.held = BarHeldState::None;
                     ctx.set_active(false);
 
@@ -405,7 +405,7 @@ impl ScrollComponent {
         } else if scrollbar_is_hovered {
             // if we're over a scrollbar but not dragging
             match event {
-                Event::MouseMove(event) => {
+                Event::PointerMove(event) => {
                     let offset_pos = event.pos + scroll_offset;
                     if self.point_hits_vertical_bar(port, offset_pos, env) {
                         self.hovered = BarHoveredState::Vertical;
@@ -420,7 +420,7 @@ impl ScrollComponent {
                     ctx.request_paint();
                     ctx.set_handled();
                 }
-                Event::MouseDown(event) => {
+                Event::PointerDown(event) => {
                     let pos = event.pos + scroll_offset;
 
                     if self.point_hits_vertical_bar(port, pos, env) {
@@ -442,12 +442,12 @@ impl ScrollComponent {
                     ctx.set_handled();
                 }
                 // if the mouse was downed elsewhere, moved over a scroll bar and released: noop.
-                Event::MouseUp(_) => (),
+                Event::PointerUp(_) => (),
                 _ => unreachable!(),
             }
         } else {
             match event {
-                Event::MouseMove(_) => {
+                Event::PointerMove(_) => {
                     // if we have just stopped hovering
                     if self.hovered.is_hovered() && !scrollbar_is_hovered {
                         self.hovered = BarHoveredState::None;
