@@ -143,6 +143,9 @@ pub(crate) struct ApplicationData {
     pub(super) pointer: pointers::Pointer,
     /// reference to the keyboard events manager.
     keyboard: keyboard::Manager,
+    // wakeup events when outputs are added/removed.
+    outputs_removed: RefCell<Option<calloop::channel::Channel<Output>>>,
+    outputs_added: RefCell<Option<calloop::channel::Channel<Output>>>,
 }
 
 impl Application {
@@ -166,69 +169,84 @@ impl Application {
         let outputs: Rc<RefCell<BTreeMap<u32, Output>>> = Rc::new(RefCell::new(BTreeMap::new()));
         let seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>> =
             Rc::new(RefCell::new(BTreeMap::new()));
-
         // This object will create a container for the global wayland objects, and request that
         // it is populated by the server. Doesn't take ownership of the registry, we are
         // responsible for keeping it alive.
         let weak_outputs = Rc::downgrade(&outputs);
         let weak_seats = Rc::downgrade(&seats);
+
+        let (outputsremovedtx, outputsremovedrx) = calloop::channel::channel::<Output>();
+        let (outputsaddedtx, outputsaddedrx) = calloop::channel::channel::<Output>();
+
         let globals = wl::GlobalManager::new_with_cb(
-            &attached_server,
-            move |event, registry, _| match event {
-                wl::GlobalEvent::New {
-                    id,
-                    interface,
-                    version,
-                } => {
-                    tracing::trace!("invalidate_rect initiated");
-                    if interface.as_str() == "wl_output" && version >= 3 {
-                        let output = registry.bind::<WlOutput>(3, id);
-                        let output = Output::new(id, output);
-                        let output_id = output.id();
-                        output.wl_output.quick_assign(with_cloned!(weak_outputs; move |_, event, _| {
-                            match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&output_id) {
-                                Some(o) => o.process_event(event),
-                                None => tracing::warn!(
-                                    "wayland sent an event for an output that doesn't exist {:?} {:?}",
-                                    &output_id,
-                                    &event,
-                                ),
+            &attached_server, {
+                move |event, registry, data| {
+                    tracing::debug!("global manager event received {:?}\n{:?}\n{:?}", event, registry, data);
+                    match event {
+                        wl::GlobalEvent::New {
+                            id,
+                            interface,
+                            version,
+                        } => {
+                            if interface.as_str() == "wl_output" && version >= 3 {
+                                let output = registry.bind::<WlOutput>(3, id);
+                                let output = Output::new(id, output);
+                                let oid = output.id();
+                                let gid = output.gid;
+                                let previous = weak_outputs.upgrade().unwrap().borrow_mut().insert(oid, output.clone());
+                                assert!(previous.is_none(), "internal: wayland should always use new IDs");
+                                tracing::trace!("output added {:?} {:?}", gid, oid);
+                                output.wl_output.quick_assign(with_cloned!(weak_outputs, gid, oid, outputsaddedtx; move |a, event, b| {
+                                    tracing::trace!("output event {:?} {:?} {:?}", a, event, b);
+                                    match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&oid) {
+                                        Some(o) => o.process_event(event, &outputsaddedtx),
+                                        None => tracing::warn!(
+                                            "wayland sent an event for an output that doesn't exist global({:?}) proxy({:?}) {:?}",
+                                            &gid,
+                                            &oid,
+                                            &event,
+                                        ),
+                                    }
+                                }));
+                            } else if interface.as_str() == "wl_seat" && version >= 7 {
+                                let new_seat = registry.bind::<WlSeat>(7, id);
+                                let prev_seat = weak_seats
+                                    .upgrade()
+                                    .unwrap()
+                                    .borrow_mut()
+                                    .insert(id, Rc::new(RefCell::new(Seat::new(new_seat))));
+                                assert!(
+                                    prev_seat.is_none(),
+                                    "internal: wayland should always use new IDs"
+                                );
+                                // Defer setting up the pointer/keyboard event handling until we've
+                                // finished constructing the `Application`. That way we can pass it as a
+                                // parameter.
                             }
-                        }));
-                        let prev_output = weak_outputs
-                            .upgrade()
-                            .unwrap()
-                            .borrow_mut()
-                            .insert(output_id, output);
-                        assert!(
-                            prev_output.is_none(),
-                            "internal: wayland should always use new IDs"
-                        );
-                    } else if interface.as_str() == "wl_seat" && version >= 7 {
-                        let new_seat = registry.bind::<WlSeat>(7, id);
-                        let prev_seat = weak_seats
-                            .upgrade()
-                            .unwrap()
-                            .borrow_mut()
-                            .insert(id, Rc::new(RefCell::new(Seat::new(new_seat))));
-                        assert!(
-                            prev_seat.is_none(),
-                            "internal: wayland should always use new IDs"
-                        );
-                        // Defer setting up the pointer/keyboard event handling until we've
-                        // finished constructing the `Application`. That way we can pass it as a
-                        // parameter.
+                        }
+                        wl::GlobalEvent::Removed { id, interface } if interface.as_str() == "wl_output" => {
+                            let boutputs = weak_outputs.upgrade().unwrap();
+                            let mut outputs = boutputs.borrow_mut();
+                            let removed = outputs.iter()
+                                .find(|(_pid, o)| o.gid == id)
+                                .map(|(pid, _)| pid.clone())
+                                .and_then(|id| outputs.remove(&id));
+
+                            let result = match removed {
+                                None => return,
+                                Some(removed) => outputsremovedtx.send(removed),
+                            };
+
+                            match result {
+                                Ok(_) => tracing::debug!("outputs remaining {:?}...", outputs.len()),
+                                Err(cause) => tracing::error!("failed to remove output {:?}", cause),
+                            }
+                        }
+                        _ => {
+                            tracing::debug!("unhandled global manager event received {:?}", event);
+                        },
                     }
                 }
-                wl::GlobalEvent::Removed { id, interface } if interface.as_str() == "wl_output" => {
-                    match weak_outputs.upgrade().unwrap().borrow_mut().remove(&id) {
-                        Some(removed) => removed.wl_output.release(),
-                        None => tracing::warn!(
-                            "wayland sent a remove event for an output that doesn't exist"
-                        ),
-                    }
-                }
-                _ => (), // ignore other interfaces
             },
         );
 
@@ -243,7 +261,7 @@ impl Application {
         });
 
         for (id, name, version) in globals_list.into_iter() {
-            tracing::trace!("{:?}@{:?} - {:?}", name, version, id);
+            tracing::debug!("{:?}@{:?} - {:?}", name, version, id);
         }
 
         let xdg_base = globals
@@ -309,6 +327,8 @@ impl Application {
             pointer,
             keyboard: keyboard::Manager::default(),
             roundtrip_requested: RefCell::new(false),
+            outputs_added: RefCell::new(Some(outputsaddedrx)),
+            outputs_removed: RefCell::new(Some(outputsremovedrx)),
         });
 
         // Collect the supported image formats.
@@ -373,12 +393,36 @@ impl Application {
         // flush pending events (otherwise anything we submitted since sync will never be sent)
         self.data.wl_server.flush().unwrap();
         // Use calloop so we can epoll both wayland events and others (e.g. timers)
-        let mut event_loop = calloop::EventLoop::try_new().unwrap();
-        let handle = event_loop.handle();
+        let mut eventloop = calloop::EventLoop::try_new().unwrap();
+        let handle = eventloop.handle();
 
         let wayland_dispatcher = WaylandSource::new(self.data.clone()).into_dispatcher();
 
         handle.register_dispatcher(wayland_dispatcher).unwrap();
+        handle.insert_source(self.data.outputs_added.borrow_mut().take().unwrap(), {
+            move |evt, _ignored, appdata| {
+                match evt {
+                    calloop::channel::Event::Closed => return,
+                    calloop::channel::Event::Msg(output) => {
+                        tracing::debug!("output added {:?} {:?}", output.gid, output.id());
+                        for (_, win) in appdata.handles_iter() {
+                            surfaces::Outputs::inserted(&win, &output);
+                        }
+                    },
+                }
+            }
+        }).unwrap();
+        handle.insert_source(self.data.outputs_removed.borrow_mut().take().unwrap(), |evt, _ignored, appdata| {
+            match evt {
+                calloop::channel::Event::Closed => return,
+                calloop::channel::Event::Msg(output) => {
+                    tracing::trace!("output removed {:?} {:?}", output.gid, output.id());
+                    for (_, win) in appdata.handles_iter() {
+                        surfaces::Outputs::removed(&win, &output);
+                    }
+                },
+            }
+        }).unwrap();
 
         handle
             .insert_source(timer_source, move |token, _metadata, appdata| {
@@ -387,15 +431,15 @@ impl Application {
             })
             .unwrap();
 
-        let signal = event_loop.get_signal();
+        let signal = eventloop.get_signal();
         let handle = handle.clone();
 
-        event_loop
-            .run(
+        eventloop.run(
                 Duration::from_millis(20),
                 &mut self.data.clone(),
                 move |appdata| {
                     if appdata.shutdown.get() {
+                        tracing::debug!("shutting down");
                         signal.stop();
                     }
 
@@ -535,7 +579,7 @@ impl ApplicationData {
                 Some(s) => s,
                 None => {
                     // NOTE this might be expected
-                    log::warn!("Received event for surface that doesn't exist any more");
+                    log::warn!("received event for surface that doesn't exist any more {:?} {:?}", expired, expired.id());
                     continue;
                 }
             };
@@ -569,9 +613,9 @@ impl ApplicationData {
                 match appdata.acquire_current_window() {
                     Some(winhandle) => {
                         tracing::trace!("idle processing initiated");
+
                         winhandle.request_anim_frame();
                         winhandle.run_idle();
-
                         // if we already flushed this cycle don't flush again.
                         if *appdata.display_flushed.borrow() {
                             tracing::trace!("idle repaint flushing display initiated");
@@ -659,7 +703,7 @@ impl Output {
     }
 
     /// Incorporate update data from the server for this output.
-    fn process_event(&mut self, evt: wl_output::Event) {
+    fn process_event(&mut self, evt: wl_output::Event, tx: &calloop::channel::Sender<Self>) {
         tracing::trace!("processing wayland output event {:?}", evt);
         match evt {
             wl_output::Event::Geometry {
@@ -716,6 +760,9 @@ impl Output {
             wl_output::Event::Done => {
                 self.update_in_progress = false;
                 self.last_update = Instant::now();
+                if let Err(cause) = tx.send(self.clone()) {
+                    tracing::error!("unable to add output {:?} {:?}", self.gid, self.id());
+                }
             }
             wl_output::Event::Scale { factor } => {
                 self.scale = factor;
