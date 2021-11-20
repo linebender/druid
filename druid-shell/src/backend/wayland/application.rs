@@ -41,7 +41,6 @@ use wayland_client::{
         wl_shm::{self, WlShm},
         wl_surface::WlSurface,
     },
-    Proxy,
 };
 use wayland_cursor::CursorTheme;
 use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
@@ -184,7 +183,7 @@ impl Application {
                     tracing::trace!("invalidate_rect initiated");
                     if interface.as_str() == "wl_output" && version >= 3 {
                         let output = registry.bind::<WlOutput>(3, id);
-                        let output = Output::new(output);
+                        let output = Output::new(id, output);
                         let output_id = output.id();
                         output.wl_output.quick_assign(with_cloned!(weak_outputs; move |_, event, _| {
                             match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&output_id) {
@@ -608,6 +607,9 @@ impl From<std::sync::Arc<ApplicationData>> for surfaces::CompositorHandle {
 #[derive(Debug, Clone)]
 pub struct Output {
     wl_output: wl::Main<WlOutput>,
+    wl_proxy: wl::Proxy<WlOutput>,
+    /// global id of surface.
+    pub gid: u32,
     pub x: i32,
     pub y: i32,
     pub physical_width: i32,
@@ -629,9 +631,11 @@ pub struct Output {
 impl Output {
     // All the stuff before `current_mode` will be filled out immediately after creation, so these
     // dummy values will never be observed.
-    fn new(wl_output: wl::Main<WlOutput>) -> Self {
+    fn new(id: u32, wl_output: wl::Main<WlOutput>) -> Self {
         Output {
-            wl_output,
+            wl_output: wl_output.clone(),
+            wl_proxy: wl::Proxy::from(wl_output.detach()),
+            gid: id,
             x: 0,
             y: 0,
             physical_width: 0,
@@ -640,7 +644,6 @@ impl Output {
             make: "".into(),
             model: "".into(),
             transform: Transform::Normal,
-
             current_mode: None,
             preferred_mode: None,
             scale: 1, // the spec says if there is no scale event, assume 1.
@@ -652,7 +655,7 @@ impl Output {
     /// Get the wayland object ID for this output. This is how we key outputs in our global
     /// registry.
     pub fn id(&self) -> u32 {
-        Proxy::from(self.wl_output.detach()).id()
+        self.wl_proxy.id()
     }
 
     /// Incorporate update data from the server for this output.
@@ -671,13 +674,22 @@ impl Output {
             } => {
                 self.x = x;
                 self.y = y;
-                self.physical_width = physical_width;
-                self.physical_height = physical_height;
                 self.subpixel = subpixel;
                 self.make = make;
                 self.model = model;
                 self.transform = transform;
                 self.update_in_progress = true;
+
+                match transform {
+                    wl_output::Transform::Flipped270 | wl_output::Transform::_270 => {
+                        self.physical_width = physical_height;
+                        self.physical_height = physical_width;
+                    },
+                    _ => {
+                        self.physical_width = physical_width;
+                        self.physical_height = physical_height;
+                    }
+                }
             }
             wl_output::Event::Mode {
                 flags,
@@ -709,7 +721,7 @@ impl Output {
                 self.scale = factor;
                 self.update_in_progress = true;
             }
-            _ => (), // ignore possible future events
+            _ => tracing::warn!("unknown output event {:?}", evt), // ignore possible future events
         }
     }
 
