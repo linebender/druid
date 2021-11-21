@@ -1368,7 +1368,7 @@ mod tests {
     use crate::widget::{Button, Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
     use std::collections::HashMap;
-    use test_env_log::test;
+    use test_log::test;
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);
