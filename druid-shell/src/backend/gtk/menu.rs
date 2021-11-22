@@ -16,11 +16,11 @@
 
 use gtk::gdk::ModifierType;
 use gtk::{
-    AccelGroup, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
-    SeparatorMenuItemBuilder,
+    AccelGroup, CheckMenuItem as GtkCheckMenuItem, Menu as GtkMenu, MenuBar as GtkMenuBar,
+    MenuItem as GtkMenuItem, SeparatorMenuItemBuilder,
 };
 
-use gtk::prelude::{GtkMenuExt, GtkMenuItemExt, MenuShellExt, WidgetExt};
+use gtk::prelude::{CheckMenuItemExt, GtkMenuExt, GtkMenuItemExt, MenuShellExt, WidgetExt};
 
 use super::keycodes;
 use super::window::WindowHandle;
@@ -40,6 +40,7 @@ enum MenuItem {
         id: u32,
         key: Option<HotKey>,
         enabled: bool,
+        selected: bool,
     },
     SubMenu(String, Menu),
     Separator,
@@ -66,14 +67,14 @@ impl Menu {
         text: &str,
         key: Option<&HotKey>,
         enabled: bool,
-        _selected: bool,
+        selected: bool,
     ) {
-        // TODO: implement selected items
         self.items.push(MenuItem::Entry {
             name: strip_access_key(text),
             id,
             key: key.cloned(),
             enabled,
+            selected,
         });
     }
 
@@ -94,12 +95,21 @@ impl Menu {
                     id,
                     key,
                     enabled,
+                    selected,
                 } => {
-                    let item = GtkMenuItem::with_label(&name);
+                    let (unchecked, checked);
+                    let item = if selected {
+                        checked = GtkCheckMenuItem::with_label(&name);
+                        checked.set_active(true);
+                        checked.as_ref()
+                    } else {
+                        unchecked = GtkMenuItem::with_label(&name);
+                        &unchecked
+                    };
                     item.set_sensitive(enabled);
 
                     if let Some(k) = key {
-                        register_accelerator(&item, accel_group, k);
+                        register_accelerator(item, accel_group, k);
                     }
 
                     let handle = handle.clone();
@@ -109,7 +119,7 @@ impl Menu {
                         }
                     });
 
-                    menu.append(&item);
+                    menu.append(item);
                 }
                 MenuItem::SubMenu(name, submenu) => {
                     let item = GtkMenuItem::with_label(&name);
