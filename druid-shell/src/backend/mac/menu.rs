@@ -180,7 +180,7 @@ impl HotKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn strip_access() {

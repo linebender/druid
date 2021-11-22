@@ -679,7 +679,7 @@ impl From<(f64, f64, f64, f64)> for KeyOrValue<Insets> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn string_key_or_value() {

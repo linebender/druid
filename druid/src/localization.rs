@@ -397,7 +397,7 @@ impl<'a, T: std::fmt::Display> std::fmt::Display for PrintLocales<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn resolve() {
