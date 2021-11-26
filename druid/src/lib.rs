@@ -127,7 +127,7 @@
 //! [`image` crate]: https://crates.io/crates/image
 
 #![deny(
-    broken_intra_doc_links,
+    rustdoc::broken_intra_doc_links,
     unsafe_code,
     clippy::trivially_copy_pass_by_ref
 )]

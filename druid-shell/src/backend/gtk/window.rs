@@ -73,7 +73,7 @@ use super::util;
 /// GTK considers 96 the default value which represents a 1.0 scale factor.
 const SCALE_TARGET_DPI: f64 = 96.0;
 
-/// Taken from https://gtk-rs.org/docs-src/tutorial/closures
+/// Taken from <https://gtk-rs.org/docs-src/tutorial/closures>
 /// It is used to reduce the boilerplate of setting up gtk callbacks
 /// Example:
 /// ```

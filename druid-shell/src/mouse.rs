@@ -270,7 +270,9 @@ pub enum Cursor {
 /// A platform-independent description of a custom cursor.
 #[derive(Clone)]
 pub struct CursorDesc {
+    #[allow(dead_code)] // Not yet used on all platforms.
     pub(crate) image: ImageBuf,
+    #[allow(dead_code)] // Not yet used on all platforms.
     pub(crate) hot: Point,
 }
 
