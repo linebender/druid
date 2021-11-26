@@ -216,14 +216,20 @@ impl WindowHandle {
         self.0.show_titlebar(show_titlebar)
     }
 
-    /// Sets the position of the window in [display points](crate::Scale), relative to the origin of the
-    /// virtual screen.
+    /// Sets the position of the window.
+    ///
+    /// The position is given in [display points], measured relative to the parent window if there
+    /// is one, or the origin of the virtual screen if there is no parent.
+    ///
+    /// [display points]: crate::Scale
     pub fn set_position(&self, position: impl Into<Point>) {
         self.0.set_position(position.into())
     }
 
-    /// Returns the position of the top left corner of the window in
-    /// [display points], relative to the origin of the virtual screen.
+    /// Returns the position of the top left corner of the window.
+    ///
+    /// The position is returned in [display points], measured relative to the parent window if
+    /// there is one, of the origin of the virtual screen if there is no parent.
     ///
     /// [display points]: crate::Scale
     pub fn get_position(&self) -> Point {
