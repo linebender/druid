@@ -15,7 +15,7 @@
 //! Tests related to propagation of invalid rects.
 
 use float_cmp::approx_eq;
-use test_env_log::test;
+use test_log::test;
 
 use super::*;
 

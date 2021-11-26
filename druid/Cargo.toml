@@ -57,7 +57,7 @@ druid-shell = { version = "0.7.0", default-features = false, path = "../druid-sh
 druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
 tracing = { version = "0.1.22" }
-tracing-subscriber = { version = "0.2.15", features = ["fmt", "ansi"], default-features = false }
+tracing-subscriber = { version = "0.3.2", features = ["fmt", "ansi"], default-features = false }
 fluent-bundle = "0.15.1"
 fluent-langneg = "0.13.0"
 fluent-syntax = "0.11.0"
@@ -82,9 +82,9 @@ float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
 tempfile = "=3.1.0"
 piet-common = { version = "=0.5.0", features = ["png"] }
 pulldown-cmark = { version = "0.8", default-features = false }
-test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
+test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 # test-env-log needs it
-tracing-subscriber = { version = "0.2.15", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
 open = "1.6"

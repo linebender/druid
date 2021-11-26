@@ -369,7 +369,7 @@ pub fn len_utf8_from_first_byte(b: u8) -> usize {
 mod tests {
     use super::*;
     use crate::Data;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn replace() {

@@ -435,7 +435,7 @@ fn color_from_svg(c: usvg::Color, opacity: usvg::Opacity) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn usvg_transform_vs_affine() {

@@ -98,8 +98,8 @@ features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEve
 [dev-dependencies]
 piet-common = { version = "=0.5.0", features = ["png"] }
 static_assertions = "1.1.0"
-test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
-tracing-subscriber = "0.2.15"
+test-log = { version = "0.2.5", features = ["trace"], default-features = false }
+tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 unicode-segmentation = "1.7.0"
 
 [build-dependencies]
