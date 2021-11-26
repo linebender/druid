@@ -183,8 +183,8 @@ impl<T: Data> AppLauncher<T> {
     ///
     /// # Panics
     ///
-    /// Panics if the subscriber fails to initialize.
-    /// It will raise a panic if a `tracing`/`tracing_wasm` global logger was already set.
+    /// Panics if the subscriber fails to initialize, for example if a `tracing`/`tracing_wasm`
+    /// global logger was already set.
     pub fn log_to_console(self) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         {
