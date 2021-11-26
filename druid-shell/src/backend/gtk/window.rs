@@ -966,7 +966,6 @@ impl WindowHandle {
     }
 
     pub fn set_position(&self, mut position: Point) {
-        // TODO: Make the window follow the parent.
         if let Some(state) = self.state.upgrade() {
             if let Some(parent_state) = &state.parent {
                 let pos = (*parent_state).get_position();
