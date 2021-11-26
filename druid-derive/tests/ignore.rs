@@ -8,6 +8,7 @@ fn simple_ignore() {
     struct Point {
         x: f64,
         #[data(ignore)]
+        #[allow(dead_code)]
         y: f64,
     }
     let p1 = Point { x: 0.0, y: 1.0 };
@@ -23,6 +24,7 @@ fn ignore_item_without_data_impl() {
     struct CoolStruct {
         len: usize,
         #[data(ignore)]
+        #[allow(dead_code)]
         path: PathBuf,
     }
 }
