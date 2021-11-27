@@ -526,6 +526,7 @@ Last release without a changelog :(
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
 [@klemensn]: https://github.com/klemensn
+[@agentsim]: https://github.com/agentsim
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -805,6 +806,7 @@ Last release without a changelog :(
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
 [#1996]: https://github.com/linebender/druid/pull/1996
+[#2036]: https://github.com/linebender/druid/pull/2036
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
