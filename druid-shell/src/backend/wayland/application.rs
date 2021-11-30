@@ -30,6 +30,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::backend::shared::linux;
 use wayland_client::protocol::wl_keyboard::WlKeyboard;
 use wayland_client::{
     self as wl,
@@ -475,8 +476,7 @@ impl Application {
     }
 
     pub fn get_locale() -> String {
-        tracing::warn!("get_locale unimplemented");
-        "en_US".into()
+        linux::env::locale()
     }
 }
 
