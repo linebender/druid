@@ -25,5 +25,6 @@ cfg_if::cfg_if! {
         mod timer;
         pub(crate) use timer::*;
         pub(crate) mod xkb;
+        pub(crate) mod linux;
     }
 }
