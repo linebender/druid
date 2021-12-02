@@ -76,7 +76,7 @@ const LABEL_X_PADDING: f64 = 2.0;
 /// [`Env`]: ../struct.Env.html
 /// [`RawLabel`]: struct.RawLabel.html
 /// [`Label::raw`]: #method.raw
-/// [`LabelText`]: struct.LabelText.html
+/// [`LabelText`]: enum.LabelText.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
 /// [`draw_at`]: #method.draw_at
 /// [`Widget`]: ../trait.Widget.html
