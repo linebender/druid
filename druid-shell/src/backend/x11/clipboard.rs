@@ -545,10 +545,8 @@ impl ClipboardContents {
 #[derive(Debug)]
 struct IncrementalTransfer {
     requestor: Window,
-    selection: Atom,
     target: Atom,
     property: Atom,
-    time: Timestamp,
     data: Rc<[u8]>,
     data_offset: usize,
 }
@@ -576,10 +574,8 @@ impl IncrementalTransfer {
         )?;
         Ok(Self {
             requestor: event.requestor,
-            selection: event.selection,
             target: event.target,
             property: event.property,
-            time: event.time,
             data,
             data_offset: 0,
         })
