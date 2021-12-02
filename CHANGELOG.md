@@ -83,6 +83,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Remove `set_level` on windows ([#1919] by [@JAicewizard])
 - Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
 - `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
+- Closures passed to `Label::new` can now return any type that implements `Into<ArcStr>` ([#2064] by [@jplatte])
 
 ### Deprecated
 
@@ -525,6 +526,7 @@ Last release without a changelog :(
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
 [@klemensn]: https://github.com/klemensn
+[@jplatte]: https://github.com/jplatte
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -804,6 +806,7 @@ Last release without a changelog :(
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
 [#1996]: https://github.com/linebender/druid/pull/1996
+[#2064]: https://github.com/linebender/druid/pull/2064
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
