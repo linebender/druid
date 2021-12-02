@@ -74,6 +74,8 @@ pub enum Event {
     /// This event means the window *will* go away; it is safe to dispose of resources and
     /// do any other cleanup.
     WindowDisconnected,
+    /// Called when window focus changes.
+    WindowFocus(bool),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -431,6 +433,7 @@ impl Event {
             Event::WindowConnected
             | Event::WindowCloseRequested
             | Event::WindowDisconnected
+            | Event::WindowFocus(_)
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)
