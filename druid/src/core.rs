@@ -594,7 +594,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
         }
 
-        ctx.widget_state.merge_up(&mut child_ctx.widget_state);
+        ctx.widget_state.merge_up(child_ctx.widget_state);
         self.state.size = new_size;
         self.log_layout_issues(new_size);
 
