@@ -499,7 +499,7 @@ impl MyWndProc {
         F: FnOnce(&mut WndState) -> R,
     {
         let ret = if let Ok(mut s) = self.state.try_borrow_mut() {
-            (*s).as_mut().map(|state| f(state))
+            (*s).as_mut().map(f)
         } else {
             error!("failed to borrow WndState at {}", Location::caller());
             None

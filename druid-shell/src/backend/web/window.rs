@@ -134,10 +134,10 @@ impl WindowState {
         self.handler.borrow_mut().prepare_paint();
 
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        if let Err(e) = piet_ctx.with_save(|mut ctx| {
+        if let Err(e) = piet_ctx.with_save(|ctx| {
             let invalid = self.invalid.borrow();
             ctx.clip(invalid.to_bez_path());
-            self.handler.borrow_mut().paint(&mut ctx, &invalid);
+            self.handler.borrow_mut().paint(ctx, &invalid);
             Ok(())
         }) {
             error!("piet error on render: {:?}", e);
