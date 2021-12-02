@@ -115,8 +115,8 @@ pub enum LineBreaking {
 /// The text for a [`Label`].
 ///
 /// This can be one of three things; either an [`ArcStr`], a [`LocalizedString`],
-/// or a closure with the signature, `Fn(&T, &Env) -> String`, where `T` is
-/// the `Data` at this point in the tree.
+/// or a closure with the signature `Fn(&T, &Env) -> impl Into<ArcStr>`, where
+/// `T` is the `Data` at this point in the tree.
 ///
 /// [`ArcStr`]: ../type.ArcStr.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
@@ -135,7 +135,7 @@ pub enum LabelText<T> {
 /// Text that is computed dynamically.
 #[derive(Clone)]
 pub struct Dynamic<T> {
-    f: Arc<dyn Fn(&T, &Env) -> String>,
+    f: Arc<dyn Fn(&T, &Env) -> ArcStr>,
     resolved: ArcStr,
 }
 
@@ -451,8 +451,8 @@ impl Static {
 impl<T> Dynamic<T> {
     fn resolve(&mut self, data: &T, env: &Env) -> bool {
         let new = (self.f)(data, env);
-        let changed = new.as_str() != self.resolved.as_ref();
-        self.resolved = new.into();
+        let changed = new != self.resolved;
+        self.resolved = new;
         changed
     }
 }
@@ -678,9 +678,13 @@ impl<T> From<LocalizedString<T>> for LabelText<T> {
     }
 }
 
-impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
+impl<T, S, F> From<F> for LabelText<T>
+where
+    S: Into<Arc<str>>,
+    F: Fn(&T, &Env) -> S + 'static,
+{
     fn from(src: F) -> LabelText<T> {
-        let f = Arc::new(src);
+        let f = Arc::new(move |state: &T, env: &Env| src(state, env).into());
         LabelText::Dynamic(Dynamic {
             f,
             resolved: ArcStr::from(""),
