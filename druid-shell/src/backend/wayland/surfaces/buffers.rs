@@ -39,6 +39,8 @@ pub(super) const NUM_FRAMES: i32 = 2;
 ///
 /// This object knows nothing about scaling or events. It just provides buffers to draw into.
 pub struct Buffers<const N: usize> {
+    /// Release buffers which are just waiting to be freed.
+    released: Cell<Vec<Buffer>>,
     /// The actual buffer objects.
     buffers: Cell<Option<[Buffer; N]>>,
     /// Which buffer is the next to present. Iterates through to `N-1` then wraps. Draw to this
@@ -51,9 +53,6 @@ pub struct Buffers<const N: usize> {
     size: Cell<RawSize>,
     /// Do we need to rebuild the framebuffers (size changed).
     recreate_buffers: Cell<bool>,
-    /// A paint call could not be completed because no buffers were available. Once a buffer
-    /// becomes free, a frame should be painted.
-    deferred_paint: Cell<bool>,
     /// This flag allows us to check that we only hand out a mutable ref to the buffer data once.
     /// Otherwise providing mutable access to the data would be unsafe.
     pending_buffer_borrowed: Cell<bool>,
@@ -68,11 +67,11 @@ impl<const N: usize> Buffers<N> {
     pub fn new(wl_shm: wl::Main<WlShm>, size: RawSize) -> Rc<Self> {
         assert!(N >= 2, "must be at least 2 buffers");
         Rc::new(Self {
+            released: Cell::new(Vec::new()),
             buffers: Cell::new(None),
             pending: Cell::new(0),
             size: Cell::new(size),
             recreate_buffers: Cell::new(true),
-            deferred_paint: Cell::new(false),
             pending_buffer_borrowed: Cell::new(false),
             shm: RefCell::new(Shm::new(wl_shm).expect("error allocating shared memory")),
         })
@@ -99,8 +98,11 @@ impl<const N: usize> Buffers<N> {
     /// available we will set a flag, so that when one becomes available we immediately paint and
     /// present. This includes if we need to resize.
     pub fn request_paint(self: &Rc<Self>, window: &surface::Data) {
-        tracing::trace!("buffer.request_paint {:?}", self.size.get());
-
+        tracing::trace!(
+            "request_paint {:?} {:?}",
+            self.size.get(),
+            window.get_size()
+        );
         // if our size is empty there is nothing to do.
         if self.size.get().is_empty() {
             return;
@@ -109,32 +111,17 @@ impl<const N: usize> Buffers<N> {
         if self.pending_buffer_borrowed.get() {
             panic!("called request_paint during painting");
         }
-        // Ok so complicated here:
-        //  - If we need to recreate the buffers, we must wait until *all* buffers are
-        //    released, so we can re-use the memory.
-        //  - If we are just waiting for the next frame, we can check if the *pending*
-        //    buffer is free.
-        if self.recreate_buffers.get() {
-            // If all buffers are free, destroy and recreate them
-            if self.all_buffers_released() {
-                //log::debug!("all buffers released, recreating");
-                self.deferred_paint.set(false);
-                self.recreate_buffers_unchecked();
-                self.paint_unchecked(window);
-            } else {
-                self.deferred_paint.set(true);
-            }
-        } else {
-            // If the next buffer is free, draw & present. If buffers have not been initialized it
-            // is a bug in this code.
-            if self.pending_buffer_released() {
-                //log::debug!("next frame has been released: draw and present");
-                self.deferred_paint.set(false);
-                self.paint_unchecked(window);
-            } else {
-                self.deferred_paint.set(true);
-            }
+
+        // recreate if necessary
+        self.buffers_recreate();
+
+        // paint if we have a buffer available.
+        if self.pending_buffer_released() {
+            self.paint_unchecked(window);
         }
+
+        // attempt to release any unused buffers.
+        self.buffers_drop_unused();
     }
 
     /// Paint the next frame, without checking if the buffer is free.
@@ -145,24 +132,47 @@ impl<const N: usize> Buffers<N> {
             self.pending_buffer_released(),
             "buffer in use/not initialized"
         );
-        window.paint(self.size.get(), &mut *buf_data, self.recreate_buffers.get());
-        self.recreate_buffers.set(false);
+
+        window.paint(
+            self.size.get(),
+            &mut *buf_data,
+            self.recreate_buffers.replace(false),
+        );
+    }
+
+    // attempt to release unused buffers.
+    fn buffers_drop_unused(&self) {
+        let mut pool = self.released.take();
+        pool.retain(|b| {
+            if b.in_use.get() {
+                return true;
+            }
+            b.destroy();
+            return false;
+        });
+        self.released.replace(pool);
+    }
+
+    fn buffers_invalidate(&self) {
+        if let Some(buffers) = self.buffers.replace(None) {
+            let mut tmp = self.released.take();
+            tmp.append(&mut buffers.to_vec());
+            self.released.replace(tmp);
+        }
     }
 
     /// Destroy the current buffers, resize the shared memory pool if necessary, and create new
-    /// buffers. Does not check if all buffers are free.
-    fn recreate_buffers_unchecked(&self) {
-        debug_assert!(
-            self.all_buffers_released(),
-            "recreate buffers: some buffer still in use"
-        );
+    /// buffers.
+    fn buffers_recreate(&self) {
+        if !self.recreate_buffers.get() {
+            return;
+        }
+
         debug_assert!(!self.pending_buffer_borrowed.get());
-        self.with_buffers(|buffers| {
-            if let Some(buffers) = buffers.as_ref() {
-                buffers[0].destroy();
-                buffers[1].destroy();
-            }
-        });
+
+        // move current buffers into the release queue to be cleaned up later.
+        self.buffers_invalidate();
+
         let new_buffer_size = self.size.get().buffer_size(N.try_into().unwrap());
         // This is probably OOM if it fails, but we unwrap to report the underlying error.
         self.shm.borrow_mut().extend(new_buffer_size).unwrap();
@@ -170,7 +180,6 @@ impl<const N: usize> Buffers<N> {
         let pool = self.shm.borrow_mut().create_pool();
         self.buffers.set({
             let mut buffers = vec![];
-
             let size = self.size.get();
             for i in 0..N {
                 buffers.push(Buffer::create(&pool, i, size.width, size.height));
@@ -192,16 +201,6 @@ impl<const N: usize> Buffers<N> {
     /// Get a ref to the next buffer to draw to.
     fn with_pending_buffer<T>(&self, f: impl FnOnce(Option<&Buffer>) -> T) -> T {
         self.with_buffers(|buffers| f(buffers.as_ref().map(|buffers| &buffers[self.pending.get()])))
-    }
-
-    /// For checking whether all buffers are free.
-    fn all_buffers_released(&self) -> bool {
-        self.with_buffers(|buffers| {
-            buffers
-                .as_ref()
-                .map(|buffers| buffers.iter().all(|buf| !buf.in_use.get()))
-                .unwrap_or(true)
-        })
     }
 
     /// For checking whether the next buffer is free.
@@ -291,12 +290,6 @@ impl Buffer {
             panic!("Destroying a buffer while it is in use");
         }
         self.inner.destroy();
-    }
-}
-
-impl Drop for Buffer {
-    fn drop(&mut self) {
-        self.destroy();
     }
 }
 
