@@ -1279,7 +1279,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
-                gtk::glib::idle_add_local(move || run_idle(&state));
+                gtk::glib::idle_add_local_once(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Callback(Box::new(callback)));
             }
@@ -1292,7 +1292,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
-                gtk::glib::idle_add_local(move || run_idle(&state));
+                gtk::glib::idle_add_local_once(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Token(token));
             }
@@ -1300,7 +1300,7 @@ impl IdleHandle {
     }
 }
 
-fn run_idle(state: &Arc<WindowState>) -> Continue {
+fn run_idle(state: &Arc<WindowState>) {
     let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
 
@@ -1315,13 +1315,13 @@ fn run_idle(state: &Arc<WindowState>) -> Continue {
     if result.is_none() {
         warn!("Delaying idle callbacks because the handler is borrowed.");
         // Keep trying to reschedule this idle callback, because we haven't had a chance
-        // to empty the idle queue. Returning Continue(true) achieves this but
-        // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
+        // to empty the idle queue. Using non-`_once` idle_add and returning `Continue(true)`
+        // achieves this but causes 100% CPU usage, apparently because glib likes to call us
+        // back very quickly.
         let state = Arc::clone(state);
         let timeout = Duration::from_millis(16);
-        gtk::glib::timeout_add_local(timeout, move || run_idle(&state));
+        gtk::glib::timeout_add_local_once(timeout, move || run_idle(&state));
     }
-    Continue(false)
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &Window) -> Option<gtk::gdk::Cursor> {
