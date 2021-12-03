@@ -66,7 +66,6 @@ use super::application::Application;
 use super::dialog;
 use super::keycodes;
 use super::menu::Menu;
-use super::util;
 
 /// The backend target DPI.
 ///
@@ -1302,7 +1301,6 @@ impl IdleHandle {
 }
 
 fn run_idle(state: &Arc<WindowState>) -> Continue {
-    util::assert_main_thread();
     let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
 
