@@ -1145,7 +1145,7 @@ impl WindowHandle {
         let token = TimerToken::next();
 
         if let Some(state) = self.state.upgrade() {
-            gtk::glib::timeout_add(interval, move || {
+            gtk::glib::timeout_add_local(interval, move || {
                 if state.with_handler(|h| h.timer(token)).is_some() {
                     return Continue(false);
                 }
@@ -1264,13 +1264,6 @@ impl WindowHandle {
     }
 }
 
-// WindowState needs to be Send + Sync so it can be passed into glib closures.
-// TODO: can we localize the unsafety more? Glib's idle loop always runs on the main thread,
-// and we always construct the WindowState on the main thread, so it should be ok (and also
-// WindowState isn't a public type).
-unsafe impl Send for WindowState {}
-unsafe impl Sync for WindowState {}
-
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
     /// is empty. The idle handler will be run from the main UI thread, and
@@ -1287,7 +1280,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Callback(Box::new(callback)));
-                gtk::glib::idle_add(move || run_idle(&state));
+                gtk::glib::idle_add_local(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Callback(Box::new(callback)));
             }
@@ -1300,7 +1293,7 @@ impl IdleHandle {
             #[allow(clippy::branches_sharing_code)]
             if queue.is_empty() {
                 queue.push(IdleKind::Token(token));
-                gtk::glib::idle_add(move || run_idle(&state));
+                gtk::glib::idle_add_local(move || run_idle(&state));
             } else {
                 queue.push(IdleKind::Token(token));
             }
@@ -1328,7 +1321,7 @@ fn run_idle(state: &Arc<WindowState>) -> Continue {
         // causes 100% CPU usage, apparently because glib likes to call us back very quickly.
         let state = Arc::clone(state);
         let timeout = Duration::from_millis(16);
-        gtk::glib::timeout_add(timeout, move || run_idle(&state));
+        gtk::glib::timeout_add_local(timeout, move || run_idle(&state));
     }
     Continue(false)
 }
