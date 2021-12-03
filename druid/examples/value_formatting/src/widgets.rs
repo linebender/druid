@@ -193,7 +193,7 @@ impl<W: Widget<AppData>> Controller<AppData, W> for RootController {
     ) {
         match event {
             Event::Command(cmd) if cmd.is(EDIT_BEGAN) => {
-                let widget_id = cmd.get_unchecked(EDIT_BEGAN).clone();
+                let widget_id = *cmd.get_unchecked(EDIT_BEGAN);
                 data.active_message = match widget_id {
                     DOLLAR_ERROR_WIDGET => Some(DOLLAR_EXPLAINER),
                     EURO_ERROR_WIDGET => Some(EURO_EXPLAINER),
@@ -205,7 +205,7 @@ impl<W: Widget<AppData>> Controller<AppData, W> for RootController {
                 data.active_textbox = Some(widget_id);
             }
             Event::Command(cmd) if cmd.is(EDIT_FINISHED) => {
-                let finished_id = cmd.get_unchecked(EDIT_FINISHED).clone();
+                let finished_id = *cmd.get_unchecked(EDIT_FINISHED);
                 if data.active_textbox == Some(finished_id) {
                     data.active_textbox = None;
                     data.active_message = None;
@@ -241,10 +241,10 @@ impl ValidationDelegate for TextBoxErrorDelegate {
                 ctx.submit_command(CLEAR_ERROR.to(self.target));
             }
             TextBoxEvent::PartiallyInvalid(err) if self.sends_partial_errors => {
-                ctx.submit_command(SHOW_ERROR.with(err.to_owned()).to(self.target));
+                ctx.submit_command(SHOW_ERROR.with(err).to(self.target));
             }
             TextBoxEvent::Invalid(err) => {
-                ctx.submit_command(SHOW_ERROR.with(err.to_owned()).to(self.target));
+                ctx.submit_command(SHOW_ERROR.with(err).to(self.target));
             }
             TextBoxEvent::Cancel | TextBoxEvent::Complete => {
                 ctx.submit_command(CLEAR_ERROR.to(self.target));
