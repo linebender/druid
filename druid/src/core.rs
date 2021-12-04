@@ -594,7 +594,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
         }
 
-        ctx.widget_state.merge_up(&mut child_ctx.widget_state);
+        ctx.widget_state.merge_up(child_ctx.widget_state);
         self.state.size = new_size;
         self.log_layout_issues(new_size);
 
@@ -1368,7 +1368,7 @@ mod tests {
     use crate::widget::{Button, Flex, Scroll, Split, TextBox};
     use crate::{WidgetExt, WindowHandle, WindowId};
     use std::collections::HashMap;
-    use test_env_log::test;
+    use test_log::test;
 
     const ID_1: WidgetId = WidgetId::reserved(0);
     const ID_2: WidgetId = WidgetId::reserved(1);

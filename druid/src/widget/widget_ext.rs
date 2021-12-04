@@ -329,7 +329,7 @@ mod tests {
     use super::*;
     use crate::widget::Slider;
     use crate::Color;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn container_reuse() {

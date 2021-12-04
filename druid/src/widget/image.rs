@@ -258,7 +258,7 @@ impl<T: Data> Widget<T> for Image {
 mod tests {
     use super::*;
     use crate::piet::ImageFormat;
-    use test_env_log::test;
+    use test_log::test;
 
     /// Painting an empty image shouldn't crash druid.
     #[test]

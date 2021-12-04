@@ -210,7 +210,7 @@ impl<T: Data> Widget<T> for SizedBox<T> {
 mod tests {
     use super::*;
     use crate::widget::Label;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn expand() {

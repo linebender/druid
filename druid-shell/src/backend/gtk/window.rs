@@ -73,7 +73,7 @@ use super::util;
 /// GTK considers 96 the default value which represents a 1.0 scale factor.
 const SCALE_TARGET_DPI: f64 = 96.0;
 
-/// Taken from https://gtk-rs.org/docs-src/tutorial/closures
+/// Taken from <https://gtk-rs.org/docs-src/tutorial/closures>
 /// It is used to reduce the boilerplate of setting up gtk callbacks
 /// Example:
 /// ```
@@ -966,7 +966,6 @@ impl WindowHandle {
     }
 
     pub fn set_position(&self, mut position: Point) {
-        // TODO: Make the window follow the parent.
         if let Some(state) = self.state.upgrade() {
             if let Some(parent_state) = &state.parent {
                 let pos = (*parent_state).get_position();

@@ -373,8 +373,8 @@ fn make_widget() -> impl Widget<AppData> {
                         .with_flex_child(
                             // pause / resume button
                             Button::new(|data: &bool, _: &Env| match data {
-                                true => "Resume".into(),
-                                false => "Pause".into(),
+                                true => "Resume",
+                                false => "Pause",
                             })
                             .on_click(|ctx, data: &mut bool, _: &Env| {
                                 *data = !*data;
