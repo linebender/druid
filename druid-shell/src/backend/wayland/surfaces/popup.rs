@@ -6,15 +6,20 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use crate::kurbo;
 use crate::window;
 
+use super::error;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Handle;
 use super::Outputs;
+use super::Popup;
 
+#[allow(unused)]
 struct Inner {
     wl_surface: surface::Surface,
+    wl_xdg_surface: wlc::Main<xdg_surface::XdgSurface>,
     wl_xdg_popup: wlc::Main<xdg_popup::XdgPopup>,
+    wl_xdg_pos: wlc::Main<xdg_positioner::XdgPositioner>,
 }
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
@@ -49,8 +54,20 @@ impl Config {
         pos.set_anchor(self.anchor);
         pos.set_gravity(self.gravity);
         pos.set_constraint_adjustment(self.constraint_adjustment.bits());
+        // requires version 3...
+        // pos.set_reactive();
 
         pos
+    }
+
+    pub fn with_size(mut self, dim: kurbo::Size) -> Self {
+        self.size = dim;
+        self
+    }
+
+    pub fn with_offset(mut self, p: kurbo::Point) -> Self {
+        self.offset = p;
+        self
     }
 }
 
@@ -58,11 +75,11 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             size: kurbo::Size::new(1., 1.),
-            anchor: xdg_positioner::Anchor::None,
+            anchor: xdg_positioner::Anchor::Bottom,
             offset: kurbo::Point::ZERO,
             anchor_rect: (kurbo::Point::ZERO, kurbo::Size::from((1., 1.))),
-            gravity: xdg_positioner::Gravity::None,
-            constraint_adjustment: xdg_positioner::ConstraintAdjustment::None,
+            gravity: xdg_positioner::Gravity::BottomLeft,
+            constraint_adjustment: xdg_positioner::ConstraintAdjustment::all(),
         }
     }
 }
@@ -77,8 +94,8 @@ impl Surface {
         c: impl Into<CompositorHandle>,
         handler: Box<dyn window::WinHandler>,
         config: Config,
-        parent: Option<&xdg_surface::XdgSurface>,
-    ) -> Self {
+        parent: &dyn Popup,
+    ) -> Result<Self, error::Error> {
         let compositor = CompositorHandle::new(c);
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
         let wl_xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
@@ -97,12 +114,15 @@ impl Surface {
             }
         });
 
-        let pos = config.apply(&compositor);
+        let wl_xdg_pos = config.apply(&compositor);
+        wl_xdg_pos.quick_assign(|obj, event, _| {
+            tracing::debug!("{:?} {:?}", obj, event);
+        });
 
-        let wl_xdg_popup = wl_xdg_surface.get_popup(parent, &pos);
-
-        pos.destroy();
-
+        let wl_xdg_popup = match parent.surface(&wl_xdg_surface, &wl_xdg_pos) {
+            Ok(p) => p,
+            Err(cause) => return Err(cause),
+        };
         wl_xdg_popup.quick_assign({
             let wl_surface = wl_surface.clone();
             move |_xdg_popup, event, _| {
@@ -113,7 +133,7 @@ impl Surface {
                         width,
                         height,
                     } => {
-                        tracing::trace!(
+                        tracing::debug!(
                             "popup configuration ({:?},{:?}) {:?}x{:?}",
                             x,
                             y,
@@ -121,6 +141,17 @@ impl Surface {
                             height
                         );
                         wl_surface.update_dimensions((width as f64, height as f64));
+                    }
+                    xdg_popup::Event::PopupDone => {
+                        tracing::debug!("popup done {:?}", event);
+                        match wl_surface.data() {
+                            None => tracing::warn!("missing surface data, cannot close popup"),
+                            Some(data) => {
+                                data.with_handler(|winhandle| {
+                                    winhandle.request_close();
+                                });
+                            }
+                        };
                     }
                     _ => tracing::warn!("unhandled xdg_popup event configure {:?}", event),
                 };
@@ -130,15 +161,14 @@ impl Surface {
         let handle = Self {
             inner: std::sync::Arc::new(Inner {
                 wl_surface,
+                wl_xdg_surface,
                 wl_xdg_popup,
+                wl_xdg_pos,
             }),
         };
 
-        handle
-    }
-
-    pub(super) fn get_xdg_popup(&self) -> wlc::Main<xdg_popup::XdgPopup> {
-        self.inner.wl_xdg_popup.clone()
+        handle.commit();
+        Ok(handle)
     }
 
     pub(super) fn commit(&self) {
@@ -154,9 +184,53 @@ impl Surface {
     }
 }
 
-impl From<Surface> for Box<dyn Outputs> {
-    fn from(s: Surface) -> Box<dyn Outputs> {
-        Box::new(s.inner.wl_surface.clone()) as Box<dyn Outputs>
+impl Handle for Surface {
+    fn get_size(&self) -> kurbo::Size {
+        return self.inner.wl_surface.get_size();
+    }
+
+    fn set_size(&self, dim: kurbo::Size) {
+        self.inner.wl_surface.set_size(dim);
+    }
+
+    fn request_anim_frame(&self) {
+        self.inner.wl_surface.request_anim_frame()
+    }
+
+    fn invalidate(&self) {
+        return self.inner.wl_surface.invalidate();
+    }
+
+    fn invalidate_rect(&self, rect: kurbo::Rect) {
+        return self.inner.wl_surface.invalidate_rect(rect);
+    }
+
+    fn remove_text_field(&self, token: crate::TextFieldToken) {
+        return self.inner.wl_surface.remove_text_field(token);
+    }
+
+    fn set_focused_text_field(&self, active_field: Option<crate::TextFieldToken>) {
+        return self.inner.wl_surface.set_focused_text_field(active_field);
+    }
+
+    fn get_idle_handle(&self) -> super::idle::Handle {
+        return self.inner.wl_surface.get_idle_handle();
+    }
+
+    fn get_scale(&self) -> crate::Scale {
+        return self.inner.wl_surface.get_scale();
+    }
+
+    fn run_idle(&self) {
+        self.inner.wl_surface.run_idle();
+    }
+
+    fn release(&self) {
+        return self.inner.wl_surface.release();
+    }
+
+    fn data(&self) -> Option<std::sync::Arc<surface::Data>> {
+        return self.inner.wl_surface.data();
     }
 }
 
@@ -166,14 +240,31 @@ impl From<&Surface> for std::sync::Arc<surface::Data> {
     }
 }
 
-impl From<Surface> for std::sync::Arc<surface::Data> {
-    fn from(s: Surface) -> std::sync::Arc<surface::Data> {
-        std::sync::Arc::<surface::Data>::from(s.inner.wl_surface.clone())
+impl Popup for Surface {
+    fn surface<'a>(
+        &self,
+        popup: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
+    {
+        Ok(popup.get_popup(Some(&self.inner.wl_xdg_surface), pos))
+    }
+}
+
+impl From<Surface> for Box<dyn Outputs> {
+    fn from(s: Surface) -> Box<dyn Outputs> {
+        Box::new(s.inner.wl_surface.clone()) as Box<dyn Outputs>
     }
 }
 
 impl From<Surface> for Box<dyn Handle> {
     fn from(s: Surface) -> Box<dyn Handle> {
-        Box::new(s.inner.wl_surface.clone()) as Box<dyn Handle>
+        Box::new(s.clone()) as Box<dyn Handle>
+    }
+}
+
+impl From<Surface> for Box<dyn Popup> {
+    fn from(s: Surface) -> Self {
+        Box::new(s) as Box<dyn Popup>
     }
 }

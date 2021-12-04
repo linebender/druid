@@ -3,7 +3,7 @@ use std::rc::Rc;
 use wayland_client as wlc;
 use wayland_client::protocol::wl_surface;
 
-use crate::backend::application::Output;
+use crate::backend::wayland::application;
 use crate::kurbo;
 use crate::window;
 use crate::{piet::Piet, region::Region, scale::Scale, TextFieldToken};
@@ -13,8 +13,8 @@ use super::super::Changed;
 use super::buffers;
 use super::error;
 use super::idle;
-use super::popup;
-use super::{Compositor, CompositorHandle, Decor, Handle, Outputs, PopupHandle};
+use super::Popup;
+use super::{Compositor, CompositorHandle, Decor, Handle, Outputs};
 
 pub enum DeferredTask {
     Paint,
@@ -57,7 +57,6 @@ impl Surface {
             active_text_input: Cell::new(None),
             damaged_region: RefCell::new(Region::EMPTY),
             deferred_tasks: RefCell::new(std::collections::VecDeque::new()),
-            popup_impl: RefCell::new(None),
         });
 
         // register to receive wl_surface events.
@@ -76,10 +75,6 @@ impl Surface {
 
     pub(super) fn resize(&self, dim: kurbo::Size) -> kurbo::Size {
         self.inner.resize(dim)
-    }
-
-    pub(super) fn set_popup_impl(&self, imp: PopupHandle) {
-        self.inner.popup_impl.replace(Some(imp));
     }
 
     pub(super) fn commit(&self) {
@@ -144,11 +139,11 @@ impl Surface {
 }
 
 impl Outputs for Surface {
-    fn removed(&self, o: &Output) {
+    fn removed(&self, o: &application::Output) {
         self.inner.outputs.borrow_mut().remove(&o.id());
     }
 
-    fn inserted(&self, _: &Output) {
+    fn inserted(&self, _: &application::Output) {
         // nothing to do here.
     }
 }
@@ -192,10 +187,6 @@ impl Handle for Surface {
 
     fn run_idle(&self) {
         self.inner.run_idle();
-    }
-
-    fn popup<'a>(&self, p: &'a popup::Surface) -> Result<(), error::Error> {
-        self.inner.popup(p)
     }
 
     fn release(&self) {
@@ -252,8 +243,6 @@ pub struct Data {
     deferred_tasks: RefCell<std::collections::VecDeque<DeferredTask>>,
 
     idle_queue: std::sync::Arc<std::sync::Mutex<Vec<idle::Kind>>>,
-
-    popup_impl: RefCell<Option<PopupHandle>>,
 }
 
 impl Data {
@@ -288,7 +277,6 @@ impl Data {
     }
 
     pub(super) fn update_dimensions(&self, dim: impl Into<kurbo::Size>) -> kurbo::Size {
-        // let dim = kurbo::Size::from((width as f64, height as f64));
         let dim = dim.into();
         if self.logical_size.get() != self.resize(dim) {
             match self.handler.try_borrow_mut() {
@@ -309,7 +297,6 @@ impl Data {
             height: dim.height as i32,
         };
         let previous_logical_size = self.logical_size.replace(dim);
-
         if previous_logical_size != dim {
             self.buffers.set_size(raw_logical_size.scale(scale));
         }
@@ -362,11 +349,11 @@ impl Data {
     /// - `buf` is what we draw the frame into
     /// - `size` is the physical size in pixels we are drawing.
     /// - `force` means draw the whole frame, even if it wasn't all invalidated.
-    pub(super) fn paint(&self, size: buffers::RawSize, buf: &mut [u8], force: bool) {
+    pub(super) fn paint(&self, physical_size: buffers::RawSize, buf: &mut [u8], force: bool) {
         tracing::trace!(
             "paint initiated {:?} - {:?} {:?}",
             self.get_size(),
-            size,
+            physical_size,
             force
         );
 
@@ -389,8 +376,6 @@ impl Data {
                 return;
             }
         }
-
-        let physical_size = self.buffers.size();
 
         // create cairo context (safety: we must drop the buffer before we commit the frame)
         // TODO: Cairo is native-endian while wayland is little-endian, which is a pain. Currently
@@ -435,9 +420,9 @@ impl Data {
             // The handler must not be already borrowed. This may mean deferring this call.
             self.handler.borrow_mut().paint(&mut piet, &*region);
         }
+
         // reset damage ready for next frame.
         self.damaged_region.borrow_mut().clear();
-
         self.buffers.attach(self);
         self.wl_surface.borrow().commit();
     }
@@ -499,10 +484,6 @@ impl Data {
         }
     }
 
-    pub(super) fn wayland_surface_id(&self) -> u32 {
-        wlc::Proxy::from(self.wl_surface.borrow().detach()).id()
-    }
-
     pub(super) fn get_size(&self) -> kurbo::Size {
         // size in pixels, so we must apply scale.
         let logical_size = self.logical_size.get();
@@ -552,16 +533,6 @@ impl Data {
         });
     }
 
-    pub(super) fn popup<'a>(&self, p: &'a popup::Surface) -> Result<(), error::Error> {
-        match &*self.popup_impl.borrow() {
-            Some(imp) => imp.popup(p),
-            None => Err(error::Error::string(format!(
-                "parent window doesn't support popups: {:?}",
-                self.wayland_surface_id()
-            ))),
-        }
-    }
-
     pub(super) fn release(&self) {
         self.wl_surface.borrow().destroy();
     }
@@ -594,9 +565,21 @@ impl Decor for Dead {
 }
 
 impl Outputs for Dead {
-    fn removed(&self, _: &Output) {}
+    fn removed(&self, _: &application::Output) {}
 
-    fn inserted(&self, _: &Output) {}
+    fn inserted(&self, _: &application::Output) {}
+}
+
+impl Popup for Dead {
+    fn surface<'a>(
+        &self,
+        _: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_surface::XdgSurface>,
+        _: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
+    {
+        tracing::warn!("popup invoked on a dead surface");
+        Err(error::Error::InvalidParent(0))
+    }
 }
 
 impl Handle for Dead {
@@ -638,11 +621,6 @@ impl Handle for Dead {
 
     fn run_idle(&self) {
         tracing::warn!("run_idle invoked on a dead surface")
-    }
-
-    fn popup(&self, _: &popup::Surface) -> Result<(), error::Error> {
-        tracing::warn!("popup invoked on a dead surface");
-        Err(error::Error::InvalidParent(0))
     }
 
     fn release(&self) {

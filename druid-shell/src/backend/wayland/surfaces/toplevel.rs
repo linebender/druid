@@ -6,12 +6,14 @@ use wayland_protocols::xdg_shell::client::xdg_toplevel;
 use crate::kurbo;
 use crate::window;
 
+use super::error;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Decor;
 use super::Handle;
 use super::Outputs;
+use super::Popup;
 
 struct Inner {
     wl_surface: surface::Surface,
@@ -137,6 +139,17 @@ impl Surface {
     }
 }
 
+impl Popup for Surface {
+    fn surface<'a>(
+        &self,
+        popup: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
+    {
+        Ok(popup.get_popup(Some(&self.inner.xdg_surface), pos))
+    }
+}
+
 impl Decor for Surface {
     fn inner_set_title(&self, title: String) {
         self.inner.xdg_toplevel.set_title(title);
@@ -170,5 +183,11 @@ impl From<Surface> for Box<dyn Decor> {
 impl From<Surface> for Box<dyn Outputs> {
     fn from(s: Surface) -> Box<dyn Outputs> {
         Box::new(s.inner.wl_surface.clone()) as Box<dyn Outputs>
+    }
+}
+
+impl From<Surface> for Box<dyn Popup> {
+    fn from(s: Surface) -> Self {
+        Box::new(s) as Box<dyn Popup>
     }
 }

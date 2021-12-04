@@ -107,6 +107,7 @@ pub(crate) enum PointerEvent {
 }
 
 /// An enum that we will convert into the different callbacks.
+#[derive(Debug)]
 pub(crate) enum MouseEvtKind {
     Move(mouse::MouseEvent),
     Up(mouse::MouseEvent),
