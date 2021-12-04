@@ -15,7 +15,7 @@
 #![allow(clippy::single_match)]
 
 use super::{
-    clipboard::Clipboard, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
+    clipboard, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
     window::WindowHandle,
 };
 
@@ -144,6 +144,7 @@ pub(crate) struct ApplicationData {
     pub(super) pointer: pointers::Pointer,
     /// reference to the keyboard events manager.
     keyboard: keyboard::Manager,
+    clipboard: clipboard::Manager,
     // wakeup events when outputs are added/removed.
     outputs_removed: RefCell<Option<calloop::channel::Channel<Output>>>,
     outputs_added: RefCell<Option<calloop::channel::Channel<Output>>>,
@@ -320,9 +321,7 @@ impl Application {
 
         // We need to have keyboard events set up for our seats before the next roundtrip.
         let app_data = std::sync::Arc::new(ApplicationData {
-            wl_server,
             event_queue: Rc::new(RefCell::new(event_queue)),
-            globals,
             xdg_base,
             zxdg_decoration_manager_v1,
             zwlr_layershell_v1,
@@ -340,9 +339,12 @@ impl Application {
             display_flushed: RefCell::new(false),
             pointer,
             keyboard: keyboard::Manager::default(),
+            clipboard: clipboard::Manager::new(&wl_server, &globals)?,
             roundtrip_requested: RefCell::new(false),
             outputs_added: RefCell::new(Some(outputsaddedrx)),
             outputs_removed: RefCell::new(Some(outputsremovedrx)),
+            globals,
+            wl_server,
         });
 
         // Collect the supported image formats.
@@ -361,6 +363,7 @@ impl Application {
             wl_seat.quick_assign(with_cloned!(seat, app_data; move |d1, event, d3| {
                 tracing::info!("seat events {:?} {:?} {:?}", d1, event, d3);
                 let mut seat = seat.borrow_mut();
+                app_data.clipboard.attach(&mut seat);
                 match event {
                     wl_seat::Event::Capabilities { capabilities } => {
                         seat.capabilities = capabilities;
@@ -473,8 +476,8 @@ impl Application {
         self.data.shutdown.set(true);
     }
 
-    pub fn clipboard(&self) -> Clipboard {
-        Clipboard
+    pub fn clipboard(&self) -> clipboard::Clipboard {
+        clipboard::Clipboard::from(&self.data.clipboard)
     }
 
     pub fn get_locale() -> String {
@@ -812,7 +815,7 @@ pub struct Mode {
 
 #[derive(Debug, Clone)]
 pub struct Seat {
-    wl_seat: wl::Main<WlSeat>,
+    pub(super) wl_seat: wl::Main<WlSeat>,
     name: String,
     capabilities: wl_seat::Capability,
     keyboard: Option<wl::Main<WlKeyboard>>,
