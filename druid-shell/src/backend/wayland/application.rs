@@ -367,7 +367,7 @@ impl Application {
                         if capabilities.contains(wl_seat::Capability::Keyboard)
                             && seat.keyboard.is_none()
                         {
-                            seat.keyboard = Some(app_data.keyboard.attach(app_data.clone(), id, seat.wl_seat.clone()));
+                            seat.keyboard = Some(app_data.keyboard.attach(id, seat.wl_seat.clone()))
                         }
                         if capabilities.contains(wl_seat::Capability::Pointer)
                             && seat.pointer.is_none()
@@ -411,6 +411,8 @@ impl Application {
         let handle = eventloop.handle();
 
         let wayland_dispatcher = WaylandSource::new(self.data.clone()).into_dispatcher();
+
+        self.data.keyboard.events(&handle);
 
         handle.register_dispatcher(wayland_dispatcher).unwrap();
         handle
