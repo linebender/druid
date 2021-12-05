@@ -2,6 +2,7 @@ use wayland_client::protocol::wl_shm::WlShm;
 use wayland_client::{self as wlc, protocol::wl_surface::WlSurface};
 use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
+use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
@@ -43,17 +44,11 @@ impl dyn Decor {
 }
 
 pub trait Popup {
-    fn popup_impl(&self, popup: &popup::Surface) -> Result<(), error::Error>;
-}
-
-pub struct PopupHandle {
-    inner: std::sync::Arc<dyn Popup>,
-}
-
-impl PopupHandle {
-    fn popup(&self, p: &popup::Surface) -> Result<(), error::Error> {
-        self.inner.popup_impl(p)
-    }
+    fn surface<'a>(
+        &self,
+        popup: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<xdg_popup::XdgPopup>, error::Error>;
 }
 
 pub(super) trait Outputs {
@@ -73,7 +68,6 @@ pub trait Handle {
     fn get_idle_handle(&self) -> idle::Handle;
     fn get_scale(&self) -> Scale;
     fn run_idle(&self);
-    fn popup(&self, popup: &popup::Surface) -> Result<(), error::Error>;
     fn release(&self);
     fn data(&self) -> Option<std::sync::Arc<surface::Data>>;
 }

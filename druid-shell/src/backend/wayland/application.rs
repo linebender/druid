@@ -181,13 +181,7 @@ impl Application {
         let (outputsaddedtx, outputsaddedrx) = calloop::channel::channel::<Output>();
 
         let globals = wl::GlobalManager::new_with_cb(&attached_server, {
-            move |event, registry, data| {
-                tracing::debug!(
-                    "global manager event received {:?}\n{:?}\n{:?}",
-                    event,
-                    registry,
-                    data
-                );
+            move |event, registry, _ctx| {
                 match event {
                     wl::GlobalEvent::New {
                         id,
@@ -269,15 +263,6 @@ impl Application {
         event_queue
             .sync_roundtrip(&mut (), |_, _, _| unreachable!())
             .map_err(Error::fatal)?;
-
-        let mut globals_list = globals.list();
-        globals_list.sort_by(|(_, name1, version1), (_, name2, version2)| {
-            name1.cmp(name2).then(version1.cmp(version2))
-        });
-
-        for (id, name, version) in globals_list.into_iter() {
-            tracing::debug!("{:?}@{:?} - {:?}", name, version, id);
-        }
 
         let xdg_base = globals
             .instantiate_exact::<XdgWmBase>(2)
@@ -370,7 +355,7 @@ impl Application {
                         if capabilities.contains(wl_seat::Capability::Keyboard)
                             && seat.keyboard.is_none()
                         {
-                            seat.keyboard = Some(app_data.keyboard.attach(id, seat.wl_seat.clone()))
+                            seat.keyboard = Some(app_data.keyboard.attach(id, seat.wl_seat.clone()));
                         }
                         if capabilities.contains(wl_seat::Capability::Pointer)
                             && seat.pointer.is_none()
@@ -403,7 +388,7 @@ impl Application {
     }
 
     pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
-        tracing::info!("run initiated");
+        tracing::info!("wayland event loop initiated");
         // NOTE if we want to call this function more than once, we will need to put the timer
         // source back.
         let timer_source = self.data.timer_source.borrow_mut().take().unwrap();
@@ -431,6 +416,7 @@ impl Application {
                 }
             })
             .unwrap();
+
         handle
             .insert_source(
                 self.data.outputs_removed.borrow_mut().take().unwrap(),
@@ -456,20 +442,30 @@ impl Application {
         let signal = eventloop.get_signal();
         let handle = handle.clone();
 
-        eventloop
-            .run(
-                Duration::from_millis(20),
-                &mut self.data.clone(),
-                move |appdata| {
-                    if appdata.shutdown.get() {
-                        tracing::debug!("shutting down");
-                        signal.stop();
-                    }
+        let res = eventloop.run(
+            Duration::from_millis(20),
+            &mut self.data.clone(),
+            move |appdata| {
+                if appdata.shutdown.get() {
+                    tracing::debug!("shutting down, requested");
+                    signal.stop();
+                    return;
+                }
 
-                    ApplicationData::idle_repaint(handle.clone());
-                },
-            )
-            .unwrap();
+                if appdata.handles.borrow().len() == 0 {
+                    tracing::debug!("shutting down, no window remaining");
+                    signal.stop();
+                    return;
+                }
+
+                ApplicationData::idle_repaint(handle.clone());
+            },
+        );
+
+        match res {
+            Ok(_) => tracing::info!("wayland event loop completed"),
+            Err(cause) => tracing::error!("wayland event loop failed {:?}", cause),
+        }
     }
 
     pub fn quit(&self) {
@@ -576,18 +572,8 @@ impl ApplicationData {
         }
     }
 
-    pub(super) fn popup<'a>(&self, surface: &'a surfaces::popup::Surface) -> Result<(), Error> {
-        match self.acquire_current_window() {
-            None => return Err(Error::string("parent window does not exist")),
-            Some(winhandle) => winhandle.popup(surface),
-        }
-    }
-
     fn handle_timer_event(&self, _token: TimerToken) {
-        // Shouldn't be necessary.
-        self.timer_handle.cancel_all_timeouts();
         // Don't borrow the timers in case the callbacks want to add more.
-        // TODO make this in the stack (smallvec)
         let mut expired_timers = Vec::with_capacity(1);
         let mut timers = self.timers.borrow_mut();
         let now = Instant::now();
@@ -601,7 +587,7 @@ impl ApplicationData {
                 Some(s) => s,
                 None => {
                     // NOTE this might be expected
-                    log::warn!(
+                    tracing::warn!(
                         "received event for surface that doesn't exist any more {:?} {:?}",
                         expired,
                         expired.id()
