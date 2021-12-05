@@ -106,7 +106,10 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub(super) fn new(display: &wl::Display, gm: &wl::GlobalManager) -> Result<Self, waylanderr::Error> {
+    pub(super) fn new(
+        display: &wl::Display,
+        gm: &wl::GlobalManager,
+    ) -> Result<Self, waylanderr::Error> {
         let m = gm
             .instantiate_exact::<wl_data_device_manager::WlDataDeviceManager>(3)
             .map_err(|e| waylanderr::Error::global("wl_data_device_manager", 1, e))?;
@@ -257,13 +260,15 @@ impl Clipboard {
     pub fn get_string(&self) -> Option<String> {
         vec![Clipboard::UTF8, Clipboard::TEXT, Clipboard::UTF8_STRING]
             .iter()
-            .find_map(|mimetype| match std::str::from_utf8(&self.inner.receive(*mimetype)?) {
-                Ok(s) => Some(s.to_string()),
-                Err(cause) => {
-                    tracing::error!("clipboard unable to retrieve utf8 content {:?}", cause);
-                    None
+            .find_map(
+                |mimetype| match std::str::from_utf8(&self.inner.receive(*mimetype)?) {
+                    Ok(s) => Some(s.to_string()),
+                    Err(cause) => {
+                        tracing::error!("clipboard unable to retrieve utf8 content {:?}", cause);
+                        None
+                    }
                 },
-            })
+            )
     }
 
     /// Given a list of supported clipboard types, returns the supported type which has

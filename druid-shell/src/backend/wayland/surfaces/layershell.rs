@@ -1,19 +1,18 @@
 use wayland_client as wlc;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client as layershell;
+use wayland_protocols::xdg_shell::client::xdg_surface;
 
 use crate::kurbo;
 use crate::window;
 
 use super::super::application::Output;
 use super::super::error;
-use super::popup;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
 use super::Handle;
 use super::Outputs;
 use super::Popup;
-use super::PopupHandle;
 
 struct Inner {
     config: Config,
@@ -24,17 +23,32 @@ struct Inner {
     available: std::cell::RefCell<bool>,
 }
 
-impl Drop for Inner {
-    fn drop(&mut self) {
-        self.ls_surface.borrow().destroy();
+impl Inner {
+    fn popup<'a>(
+        &self,
+        surface: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup> {
+        let popup = surface.get_popup(None, pos);
+        self.ls_surface.borrow().get_popup(&popup);
+        return popup;
     }
 }
 
 impl Popup for Inner {
-    fn popup_impl(&self, p: &popup::Surface) -> Result<(), error::Error> {
-        self.ls_surface.borrow().get_popup(&p.get_xdg_popup());
-        p.commit();
-        Ok(())
+    fn surface<'a>(
+        &self,
+        surface: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
+    {
+        return Ok(self.popup(surface, pos));
+    }
+}
+
+impl Drop for Inner {
+    fn drop(&mut self) {
+        self.ls_surface.borrow().destroy();
     }
 }
 
@@ -218,13 +232,6 @@ impl Surface {
         }
 
         tracing::info!("attempting to initialize layershell");
-        handle
-            .inner
-            .wl_surface
-            .borrow()
-            .set_popup_impl(PopupHandle {
-                inner: handle.inner.clone(),
-            });
 
         handle.inner.ls_surface.borrow().quick_assign({
             let handle = handle.clone();
@@ -319,6 +326,17 @@ impl Outputs for Surface {
     }
 }
 
+impl Popup for Surface {
+    fn surface<'a>(
+        &self,
+        popup: &'a wlc::Main<xdg_surface::XdgSurface>,
+        pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
+    {
+        return Ok(self.inner.popup(popup, pos));
+    }
+}
+
 impl Handle for Surface {
     fn get_size(&self) -> kurbo::Size {
         return self.inner.wl_surface.borrow().get_size();
@@ -368,10 +386,6 @@ impl Handle for Surface {
         }
     }
 
-    fn popup(&self, popup: &popup::Surface) -> Result<(), error::Error> {
-        return self.inner.wl_surface.borrow().popup(popup);
-    }
-
     fn release(&self) {
         return self.inner.wl_surface.borrow().release();
     }
@@ -402,5 +416,11 @@ impl From<Surface> for Box<dyn Handle> {
 impl From<Surface> for Box<dyn Outputs> {
     fn from(s: Surface) -> Box<dyn Outputs> {
         Box::new(s) as Box<dyn Outputs>
+    }
+}
+
+impl From<Surface> for Box<dyn Popup> {
+    fn from(s: Surface) -> Self {
+        Box::new(s) as Box<dyn Popup>
     }
 }
