@@ -32,5 +32,7 @@ mod test {
 
     use super::*;
     use static_assertions as sa;
+    // TODO: impl ApplicationExt for wayland
+    #[cfg(not(feature = "wayland"))]
     sa::assert_impl_all!(Application: ApplicationExt);
 }
