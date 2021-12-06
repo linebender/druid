@@ -12,11 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! GTK Monitors and Screen information.
-
+//! wayland Monitors and Screen information.
 use crate::screen::Monitor;
-//use kurbo::{Point, Rect, Size};
+
+use super::display;
+use super::error;
+use super::outputs;
+
+fn _get_monitors() -> Result<Vec<Monitor>, error::Error> {
+    let env = display::global()?;
+    let metas = outputs::current(&env)?;
+    let monitors: Vec<Monitor> = metas
+        .iter()
+        .map(|m| {
+            let rect = kurbo::Rect::from_origin_size(
+                (m.position.x as f64, m.position.y as f64),
+                (m.logical.width as f64, m.logical.height as f64),
+            );
+            Monitor::new(false, rect, rect)
+        })
+        .collect();
+    Ok(monitors)
+}
 
 pub(crate) fn get_monitors() -> Vec<Monitor> {
-    todo!()
+    match _get_monitors() {
+        Ok(m) => m,
+        Err(cause) => {
+            tracing::error!(
+                "unable to detect monitors, failed to connect to wayland server {:?}",
+                cause
+            );
+            Vec::new()
+        }
+    }
 }
