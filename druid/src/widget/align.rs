@@ -129,6 +129,13 @@ impl<T: Data> Widget<T> for Align<T> {
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+        if self.height_factor.is_some() {
+            let baseline_offset = self.child.baseline_offset();
+            if baseline_offset > 0f64 {
+                ctx.set_baseline_offset(baseline_offset + extra_height / 2.0);
+            }
+        }
+
         trace!(
             "Computed layout: origin={}, size={}, insets={:?}",
             origin,
