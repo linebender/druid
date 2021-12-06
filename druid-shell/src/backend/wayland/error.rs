@@ -32,9 +32,15 @@ pub enum Error {
     Fatal(Arc<dyn StdError + 'static>),
     String(ErrorString),
     InvalidParent(u32),
+    /// general error.
+    Err(Arc<dyn StdError + 'static>),
 }
 
 impl Error {
+    pub fn error(e: impl StdError + 'static) -> Self {
+        Self::Err(Arc::new(e))
+    }
+
     pub fn fatal(e: impl StdError + 'static) -> Self {
         Self::Fatal(Arc::new(e))
     }
@@ -62,6 +68,7 @@ impl fmt::Display for Error {
                 name, version
             ),
             Self::Fatal(e) => write!(f, "an unhandled error occurred: {:?}", e),
+            Self::Err(e) => write!(f, "an unhandled error occurred: {:?}", e),
             Self::String(e) => e.fmt(f),
             Self::InvalidParent(id) => write!(f, "invalid parent window for popup: {:?}", id),
         }
@@ -74,6 +81,7 @@ impl std::error::Error for Error {
             Self::Connect(e) => Some(&**e),
             Self::Global { inner, .. } => Some(&**inner),
             Self::Fatal(e) => Some(&**e),
+            Self::Err(e) => Some(&**e),
             Self::String(e) => Some(e),
             Self::InvalidParent(_) => None,
         }

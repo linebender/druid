@@ -37,7 +37,10 @@ pub struct FileInfo {
 }
 
 /// Type of file dialog.
-#[cfg(not(any(all(feature = "x11", any(target_os = "linux", target_os = "openbsd")), feature = "wayland")))]
+#[cfg(not(any(
+    all(feature = "x11", any(target_os = "linux", target_os = "openbsd")),
+    feature = "wayland"
+)))]
 #[derive(Clone, Copy, PartialEq)]
 pub enum FileDialogType {
     /// File open dialog.

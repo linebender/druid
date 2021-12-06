@@ -16,10 +16,12 @@
 
 pub mod application;
 pub mod clipboard;
+mod display;
 pub mod error;
 mod events;
 pub mod keyboard;
 pub mod menu;
+mod outputs;
 pub mod pointers;
 pub mod screen;
 pub mod surfaces;
