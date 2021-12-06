@@ -24,7 +24,7 @@ pub(crate) struct WaylandSource {
 impl WaylandSource {
     /// Wrap an `EventQueue` as a `WaylandSource`.
     pub fn new(appdata: std::sync::Arc<application::ApplicationData>) -> WaylandSource {
-        let queue = appdata.event_queue.clone();
+        let queue = appdata.wayland.queue.clone();
         let fd = queue.borrow().display().get_connection_fd();
         WaylandSource {
             appdata,

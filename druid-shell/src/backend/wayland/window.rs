@@ -103,7 +103,7 @@ impl WindowHandle {
     }
 
     pub fn show(&self) {
-        tracing::info!("show initiated");
+        tracing::debug!("show initiated");
     }
 
     pub fn resizable(&self, _resizable: bool) {

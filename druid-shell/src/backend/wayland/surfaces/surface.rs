@@ -98,7 +98,7 @@ impl Surface {
         current.wl_surface.borrow().quick_assign({
             let current = current.clone();
             move |a, event, b| {
-                tracing::info!("wl_surface event {:?} {:?} {:?}", a, event, b);
+                tracing::debug!("wl_surface event {:?} {:?} {:?}", a, event, b);
                 Surface::consume_surface_event(&current, &a, &event, &b);
             }
         });
@@ -110,7 +110,7 @@ impl Surface {
         event: &wlc::protocol::wl_surface::Event,
         data: &wlc::DispatchData,
     ) {
-        tracing::info!("wl_surface event {:?} {:?} {:?}", surface, event, data);
+        tracing::debug!("wl_surface event {:?} {:?} {:?}", surface, event, data);
         match event {
             wl_surface::Event::Enter { output } => {
                 let proxy = wlc::Proxy::from(output.clone());
@@ -320,7 +320,7 @@ impl Data {
     /// Recompute the scale to use (the maximum of all the scales for the different outputs this
     /// surface is drawn to).
     fn recompute_scale(&self) -> i32 {
-        tracing::info!("recompute initiated");
+        tracing::debug!("recompute initiated");
         self.compositor.recompute_scale(&self.outputs.borrow())
     }
 
@@ -328,7 +328,7 @@ impl Data {
     ///
     /// Up to the caller to make sure `physical_size`, `logical_size` and `scale` are consistent.
     fn set_scale(&self, new_scale: i32) -> Changed {
-        tracing::info!("set_scale initiated");
+        tracing::debug!("set_scale initiated");
         if self.scale.get() != new_scale {
             self.scale.set(new_scale);
             // (re-entrancy) Report change to client
