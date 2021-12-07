@@ -12,6 +12,7 @@ use super::application::ApplicationData;
 use super::surfaces::buffers;
 use crate::backend::shared::xkb;
 
+#[allow(unused)]
 #[derive(Clone)]
 struct CachedKeyPress {
     seat: u32,
