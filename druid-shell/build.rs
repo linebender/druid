@@ -18,17 +18,21 @@ fn main() {
     #[cfg(feature = "x11")]
     probe_library("xkbcommon-x11").unwrap();
 
+    let mut header = "\
+#include <xkbcommon/xkbcommon-compose.h>
+#include <xkbcommon/xkbcommon-names.h>
+#include <xkbcommon/xkbcommon.h>"
+        .to_string();
+
+    if cfg!(feature = "x11") {
+        header += "
+#include <xkbcommon/xkbcommon-x11.h>";
+    }
+
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header_contents(
-            "wrapper.h",
-            "\
-#include <xkbcommon/xkbcommon-compose.h>
-#include <xkbcommon/xkbcommon-names.h>
-#include <xkbcommon/xkbcommon-x11.h>
-#include <xkbcommon/xkbcommon.h>",
-        )
+        .header_contents("wrapper.h", &header)
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
