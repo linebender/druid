@@ -209,7 +209,10 @@ impl WindowHandle {
     pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
         let appdata = match self.inner.appdata.upgrade() {
             Some(d) => d,
-            None => panic!("requested timer on a window that was destroyed"),
+            None => {
+                tracing::warn!("requested timer on a window that was destroyed");
+                return Timer::new(self.id(), deadline).token();
+            }
         };
 
         let now = instant::Instant::now();
