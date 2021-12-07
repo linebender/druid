@@ -98,23 +98,15 @@ pub(crate) fn get_file_dialog_path(
     let result = dialog.run();
 
     let result = match result {
-        ResponseType::Accept => {
-            if dialog.filenames().is_empty() {
-                Err(anyhow!("No path received for filename"))
-            } else {
-                if !options.multi_selection && dialog.filenames().len() > 1 {
-                    // This really shouldn't happen, unless there is a bug
-                    // when setting the dialog options
-                    Err(anyhow!("More than one path received for single selection"))
-                } else {
-                    Ok(dialog
-                        .filenames()
-                        .into_iter()
-                        .map(|p| p.into_os_string())
-                        .collect())
-                }
+        ResponseType::Accept => match dialog.filenames() {
+            filenames if filenames.is_empty() => Err(anyhow!("No path received for filename")),
+            // This really shouldn't happen, unless there is a bug
+            // when setting the dialog options
+            filenames if filenames.len() > 1 && !options.multi_selection => {
+                Err(anyhow!("More than one path received for single selection"))
             }
-        }
+            filenames => Ok(filenames.into_iter().map(|p| p.into_os_string()).collect()),
+        },
         ResponseType::Cancel => Err(anyhow!("Dialog was deleted")),
         _ => {
             tracing::warn!("Unhandled dialog result: {:?}", result);
