@@ -38,13 +38,14 @@ impl Offer {
     }
 }
 
+#[derive(Default)]
 struct Data {
     pending: std::cell::RefCell<Vec<Offer>>,
     current: std::cell::RefCell<Vec<Offer>>,
 }
 
 impl Data {
-    fn receive<'a>(&'a self, mimetype: &'a String) -> Option<Offer> {
+    fn receive(&self, mimetype: &str) -> Option<Offer> {
         for offer in self.current.borrow().iter() {
             if !offer.mimetype.starts_with(mimetype) {
                 // tracing::debug!("compared {:?} {:?}", offer.mimetype, mimetype);
@@ -63,15 +64,6 @@ impl std::fmt::Debug for Data {
             .field("pending", &self.pending.borrow().len())
             .field("current", &self.current.borrow().len())
             .finish()
-    }
-}
-
-impl Default for Data {
-    fn default() -> Self {
-        Self {
-            pending: Default::default(),
-            current: Default::default(),
-        }
     }
 }
 
@@ -145,7 +137,7 @@ impl Manager {
                         move |i, event, _ignored| match event {
                             wl_data_offer::Event::Offer { mime_type } => {
                                 let data = m.devices.borrow_mut();
-                                let offer = Offer::new(i.clone(), mime_type);
+                                let offer = Offer::new(i, mime_type);
                                 data.pending.borrow_mut().push(offer);
                             }
                             _ => tracing::warn!("clipboard unhandled {:?} event {:?}", i, event),
@@ -153,7 +145,7 @@ impl Manager {
                     });
                 }
                 wl_data_device::Event::Selection { id } => {
-                    if let Some(_) = id {
+                    if id.is_some() {
                         let data = m.devices.borrow();
                         tracing::debug!(
                             "current data offers {:?} {:?}",
@@ -223,7 +215,7 @@ impl Manager {
             return self.initiate(offer);
         }
 
-        return None;
+        None
     }
 }
 
@@ -234,12 +226,11 @@ pub struct Clipboard {
 }
 
 impl From<&Manager> for Clipboard {
-    fn from<'a>(m: &'a Manager) -> Self {
+    fn from(m: &Manager) -> Self {
         Self { inner: m.clone() }
     }
 }
 
-#[allow(unused)]
 impl Clipboard {
     const UTF8: &'static str = "text/plain;charset=utf-8";
     const TEXT: &'static str = "text/plain";
@@ -247,12 +238,12 @@ impl Clipboard {
 
     /// Put a string onto the system clipboard.
     pub fn put_string(&mut self, s: impl AsRef<str>) {
-        let s = s.as_ref().to_string();
+        let _s = s.as_ref().to_string();
         self.inner.inner.wdsobj.offer(Clipboard::UTF8.to_string());
     }
 
     /// Put multi-format data on the system clipboard.
-    pub fn put_formats(&mut self, formats: &[ClipboardFormat]) {
+    pub fn put_formats(&mut self, _formats: &[ClipboardFormat]) {
         tracing::warn!("clipboard copy not implemented");
     }
 
@@ -273,7 +264,7 @@ impl Clipboard {
 
     /// Given a list of supported clipboard types, returns the supported type which has
     /// highest priority on the system clipboard, or `None` if no types are supported.
-    pub fn preferred_format(&self, formats: &[FormatId]) -> Option<FormatId> {
+    pub fn preferred_format(&self, _formats: &[FormatId]) -> Option<FormatId> {
         tracing::warn!("clipboard preferred_format not implemented");
         None
     }

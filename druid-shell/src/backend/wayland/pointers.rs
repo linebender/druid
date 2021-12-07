@@ -207,10 +207,10 @@ impl Pointer {
     // Just use the first image, people using animated cursors have already made bad life
     // choices and shouldn't expect it to work.
     fn unpack_image_buffer(&self, name: &str) -> Option<CursorImageBuffer> {
-        match self.theme.borrow_mut().get_cursor(name) {
-            None => None,
-            Some(c) => Some(c[c.frame_and_duration(0).frame_index].clone()),
-        }
+        self.theme
+            .borrow_mut()
+            .get_cursor(name)
+            .map(|c| c[c.frame_and_duration(0).frame_index].clone())
     }
 
     pub(super) fn consume(
@@ -227,7 +227,7 @@ impl Pointer {
             } => {
                 appdata.pointer.push(PointerEvent::Motion {
                     point: Point::new(surface_x, surface_y),
-                    pointer: source.clone(),
+                    pointer: source,
                 });
             }
             wl_pointer::Event::Leave { surface, .. } => {
@@ -240,7 +240,7 @@ impl Pointer {
             } => {
                 appdata.pointer.push(PointerEvent::Motion {
                     point: Point::new(surface_x, surface_y),
-                    pointer: source.clone(),
+                    pointer: source,
                 });
             }
             wl_pointer::Event::Button { button, state, .. } => {

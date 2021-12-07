@@ -33,9 +33,7 @@ impl Menu {
         Menu
     }
 
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
-        ()
-    }
+    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {}
 
     pub fn add_item(
         &mut self,
@@ -45,10 +43,7 @@ impl Menu {
         enabled: bool,
         _selected: bool,
     ) {
-        ()
     }
 
-    pub fn add_separator(&mut self) {
-        ()
-    }
+    pub fn add_separator(&mut self) {}
 }

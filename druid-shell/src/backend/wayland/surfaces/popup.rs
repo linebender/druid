@@ -24,7 +24,7 @@ struct Inner {
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
     fn from(s: Inner) -> std::sync::Arc<surface::Data> {
-        std::sync::Arc::<surface::Data>::from(s.wl_surface.clone())
+        std::sync::Arc::<surface::Data>::from(s.wl_surface)
     }
 }
 
@@ -186,7 +186,7 @@ impl Surface {
 
 impl Handle for Surface {
     fn get_size(&self) -> kurbo::Size {
-        return self.inner.wl_surface.get_size();
+        self.inner.wl_surface.get_size()
     }
 
     fn set_size(&self, dim: kurbo::Size) {
@@ -198,27 +198,27 @@ impl Handle for Surface {
     }
 
     fn invalidate(&self) {
-        return self.inner.wl_surface.invalidate();
+        self.inner.wl_surface.invalidate()
     }
 
     fn invalidate_rect(&self, rect: kurbo::Rect) {
-        return self.inner.wl_surface.invalidate_rect(rect);
+        self.inner.wl_surface.invalidate_rect(rect)
     }
 
     fn remove_text_field(&self, token: crate::TextFieldToken) {
-        return self.inner.wl_surface.remove_text_field(token);
+        self.inner.wl_surface.remove_text_field(token)
     }
 
     fn set_focused_text_field(&self, active_field: Option<crate::TextFieldToken>) {
-        return self.inner.wl_surface.set_focused_text_field(active_field);
+        self.inner.wl_surface.set_focused_text_field(active_field)
     }
 
     fn get_idle_handle(&self) -> super::idle::Handle {
-        return self.inner.wl_surface.get_idle_handle();
+        self.inner.wl_surface.get_idle_handle()
     }
 
     fn get_scale(&self) -> crate::Scale {
-        return self.inner.wl_surface.get_scale();
+        self.inner.wl_surface.get_scale()
     }
 
     fn run_idle(&self) {
@@ -226,11 +226,11 @@ impl Handle for Surface {
     }
 
     fn release(&self) {
-        return self.inner.wl_surface.release();
+        self.inner.wl_surface.release()
     }
 
     fn data(&self) -> Option<std::sync::Arc<surface::Data>> {
-        return self.inner.wl_surface.data();
+        self.inner.wl_surface.data()
     }
 }
 
@@ -259,7 +259,7 @@ impl From<Surface> for Box<dyn Outputs> {
 
 impl From<Surface> for Box<dyn Handle> {
     fn from(s: Surface) -> Box<dyn Handle> {
-        Box::new(s.clone()) as Box<dyn Handle>
+        Box::new(s) as Box<dyn Handle>
     }
 }
 

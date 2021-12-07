@@ -86,7 +86,7 @@ impl Keyboard {
 
     fn release_last_key_press(&self, current: &CachedKeyPress) -> Option<CachedKeyPress> {
         match &self.last_key_press {
-            None => return None, // nothing to do.
+            None => None, // nothing to do.
             Some(last) => {
                 if last.serial >= current.serial {
                     return Some(last.clone());
@@ -186,7 +186,7 @@ impl Keyboard {
                     timestamp: time,
                     key: key + 8, // TODO: understand the magic 8.
                     state,
-                    queue: keyqueue.clone(),
+                    queue: keyqueue,
                 })
             }
             wl_keyboard::Event::Modifiers { .. } => {
@@ -290,7 +290,7 @@ impl ModMap {
             return m;
         }
 
-        return m | self.1;
+        m | self.1
     }
 }
 
@@ -314,10 +314,10 @@ pub fn event_to_mods(event: wl_keyboard::Event) -> Modifiers {
             let mods = MOD_CTRL.merge(mods, mods_depressed, mods_locked);
             let mods = MOD_ALT.merge(mods, mods_depressed, mods_locked);
             let mods = MOD_NUM_LOCK.merge(mods, mods_depressed, mods_locked);
-            let mods = MOD_META.merge(mods, mods_depressed, mods_locked);
-            return mods;
+
+            MOD_META.merge(mods, mods_depressed, mods_locked)
         }
-        _ => return Modifiers::empty(),
+        _ => Modifiers::empty(),
     }
 }
 
@@ -371,10 +371,10 @@ impl Manager {
                     };
 
                     if let Some(winhandle) = appdata.acquire_current_window() {
-                        winhandle.data().map(|windata| {
+                        if let Some(windata) = winhandle.data() {
                             windata.with_handler({
                                 let windata = windata.clone();
-                                let evt = evt.clone();
+                                let evt = evt;
                                 move |handler| match evt.state {
                                     KeyState::Up => {
                                         handler.key_up(evt.clone());
@@ -399,7 +399,7 @@ impl Manager {
                                     }
                                 }
                             });
-                        });
+                        }
                     }
                 }
             })

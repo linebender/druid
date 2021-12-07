@@ -1,3 +1,4 @@
+#![allow(clippy::single_match)]
 use super::error;
 use std::collections::BTreeMap;
 use wayland_client as wlc;
@@ -18,11 +19,11 @@ impl GlobalEventSubscription {
 }
 
 impl GlobalEventConsumer for GlobalEventSubscription {
-    fn consume<'a>(
+    fn consume(
         &self,
-        event: &'a wlc::GlobalEvent,
-        registry: &'a wlc::Attached<wl_registry::WlRegistry>,
-        ctx: &'a wlc::DispatchData,
+        event: &wlc::GlobalEvent,
+        registry: &wlc::Attached<wl_registry::WlRegistry>,
+        ctx: &wlc::DispatchData,
     ) {
         self.sub.consume(event, registry, ctx)
     }
@@ -46,11 +47,11 @@ impl<X> GlobalEventConsumer for X
 where
     X: Fn(&wlc::GlobalEvent, &wlc::Attached<wl_registry::WlRegistry>, &wlc::DispatchData) + 'static,
 {
-    fn consume<'a>(
+    fn consume(
         &self,
-        event: &'a wlc::GlobalEvent,
-        registry: &'a wlc::Attached<wl_registry::WlRegistry>,
-        ctx: &'a wlc::DispatchData,
+        event: &wlc::GlobalEvent,
+        registry: &wlc::Attached<wl_registry::WlRegistry>,
+        ctx: &wlc::DispatchData,
     ) {
         self(event, registry, ctx)
     }
@@ -85,11 +86,11 @@ impl Default for Dispatcher {
 }
 
 impl GlobalEventConsumer for Dispatcher {
-    fn consume<'a>(
+    fn consume(
         &self,
-        event: &'a wlc::GlobalEvent,
-        registry: &'a wlc::Attached<wl_registry::WlRegistry>,
-        ctx: &'a wlc::DispatchData,
+        event: &wlc::GlobalEvent,
+        registry: &wlc::Attached<wl_registry::WlRegistry>,
+        ctx: &wlc::DispatchData,
     ) {
         // tracing::info!("global event initiated {:?} {:?}", registry, event);
         for (_, sub) in self.subscriptions.borrow().iter() {
@@ -140,7 +141,7 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<std::sync::Arc<Environment>,
     let d = wlc::Display::connect_to_env()?;
 
     let mut queue = d.create_event_queue();
-    let handle = d.clone().attach(queue.token());
+    let handle = d.attach(queue.token());
     let registry = wlc::GlobalManager::new_with_cb(&handle, {
         let dispatcher = dispatcher.clone();
         move |event, registry, ctx| {
@@ -184,7 +185,7 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<std::sync::Arc<Environment>,
         dispatcher,
     });
 
-    return Ok(env);
+    Ok(env)
 }
 
 pub(super) fn global() -> Result<std::sync::Arc<Environment>, error::Error> {
@@ -202,11 +203,11 @@ pub(super) fn global() -> Result<std::sync::Arc<Environment>, error::Error> {
     let env = new(Dispatcher::default())?;
     guard.replace(env.clone());
 
-    return Ok(env);
+    Ok(env)
 }
 
 #[allow(unused)]
-pub(super) fn print<'a>(reg: &'a wlc::GlobalManager) {
+pub(super) fn print(reg: &wlc::GlobalManager) {
     let mut globals_list = reg.list();
     globals_list.sort_by(|(_, name1, version1), (_, name2, version2)| {
         name1.cmp(name2).then(version1.cmp(version2))
@@ -217,6 +218,6 @@ pub(super) fn print<'a>(reg: &'a wlc::GlobalManager) {
     }
 }
 
-pub(super) fn count<'a>(reg: &'a wlc::GlobalManager, i: &str) -> usize {
+pub(super) fn count(reg: &wlc::GlobalManager, i: &str) -> usize {
     reg.list().iter().filter(|(_, name, _)| name == i).count()
 }

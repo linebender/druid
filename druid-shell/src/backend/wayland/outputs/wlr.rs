@@ -14,22 +14,14 @@ pub trait Consumer {
     );
 }
 
+#[derive(Default)]
 struct Meta {
     meta: outputs::Meta,
     modes: Vec<std::sync::Arc<std::cell::RefCell<outputs::Mode>>>,
 }
 
-impl Default for Meta {
-    fn default() -> Self {
-        Self {
-            meta: Default::default(),
-            modes: Default::default(),
-        }
-    }
-}
-
-pub fn detect<'a>(
-    registry: &'a wlc::GlobalManager,
+pub fn detect(
+    registry: &wlc::GlobalManager,
 ) -> Result<calloop::channel::Channel<outputs::Event>, error::Error> {
     let (outputsaddedtx, outputsaddedrx) = calloop::channel::channel::<outputs::Event>();
     let zwlr_output_manager = registry
@@ -83,8 +75,7 @@ impl Consumer for std::sync::Arc<std::cell::RefCell<Meta>> {
                 self.borrow_mut().meta.description = description.to_string();
             }
             zwlr_output_head_v1::Event::PhysicalSize { width, height } => {
-                self.borrow_mut().meta.physical =
-                    outputs::Dimensions::from((width.clone(), height.clone()));
+                self.borrow_mut().meta.physical = outputs::Dimensions::from((*width, *height));
             }
             zwlr_output_head_v1::Event::Make { make } => {
                 self.borrow_mut().meta.make = make.to_string();
@@ -100,10 +91,10 @@ impl Consumer for std::sync::Arc<std::cell::RefCell<Meta>> {
                 self.borrow_mut().meta.position = outputs::Position::from((*x, *y));
             }
             zwlr_output_head_v1::Event::Scale { scale } => {
-                self.borrow_mut().meta.scale = scale.clone();
+                self.borrow_mut().meta.scale = *scale;
             }
             zwlr_output_head_v1::Event::Transform { transform } => {
-                self.borrow_mut().meta.transform = transform.clone();
+                self.borrow_mut().meta.transform = *transform;
             }
             zwlr_output_head_v1::Event::Mode { mode } => {
                 let current =
@@ -141,7 +132,7 @@ impl Consumer for std::sync::Arc<std::cell::RefCell<Meta>> {
                 drop(b);
 
                 self.borrow_mut().meta.logical = mode.logical.clone();
-                self.borrow_mut().meta.refresh = mode.refresh.clone();
+                self.borrow_mut().meta.refresh = mode.refresh;
             }
             _ => tracing::warn!("unhandled {:?} {:?}", obj, event),
         };

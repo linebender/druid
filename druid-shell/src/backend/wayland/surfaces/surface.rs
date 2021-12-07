@@ -62,7 +62,7 @@ impl Surface {
         // register to receive wl_surface events.
         Surface::initsurface(&current);
 
-        return Self { inner: current };
+        Self { inner: current }
     }
 
     pub(super) fn request_paint(&self) {
@@ -88,7 +88,7 @@ impl Surface {
                 None => panic!("unable to create surface"),
                 Some(v) => v,
             });
-        Surface::initsurface(&current);
+        Surface::initsurface(current);
         Self {
             inner: current.clone(),
         }
@@ -200,13 +200,13 @@ impl Handle for Surface {
 
 impl From<Surface> for std::sync::Arc<Data> {
     fn from(s: Surface) -> std::sync::Arc<Data> {
-        std::sync::Arc::<Data>::from(s.inner.clone())
+        s.inner
     }
 }
 
 impl From<&Surface> for std::sync::Arc<Data> {
     fn from(s: &Surface) -> std::sync::Arc<Data> {
-        std::sync::Arc::<Data>::from(s.inner.clone())
+        s.inner.clone()
     }
 }
 
@@ -285,7 +285,7 @@ impl Data {
             };
         }
 
-        return dim;
+        dim
     }
 
     // client initiated resizing.
@@ -301,7 +301,7 @@ impl Data {
             self.buffers.set_size(raw_logical_size.scale(scale));
         }
 
-        return dim;
+        dim
     }
 
     /// Assert that the physical size = logical size * scale
@@ -476,7 +476,7 @@ impl Data {
     fn run_deferred_task(&self, task: DeferredTask) {
         match task {
             DeferredTask::Paint => {
-                self.buffers.request_paint(&self);
+                self.buffers.request_paint(self);
             }
             DeferredTask::AnimationClear => {
                 self.anim_frame_requested.set(false);
@@ -488,10 +488,10 @@ impl Data {
         // size in pixels, so we must apply scale.
         let logical_size = self.logical_size.get();
         let scale = self.scale.get() as f64;
-        return kurbo::Size::new(
+        kurbo::Size::new(
             logical_size.width as f64 * scale,
             logical_size.height as f64 * scale,
-        );
+        )
     }
 
     pub(super) fn request_anim_frame(&self) {
@@ -538,13 +538,8 @@ impl Data {
     }
 }
 
+#[derive(Default)]
 pub struct Dead;
-
-impl Default for Dead {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl From<Dead> for Box<dyn Decor> {
     fn from(d: Dead) -> Box<dyn Decor> {

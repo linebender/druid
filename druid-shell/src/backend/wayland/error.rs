@@ -37,6 +37,7 @@ pub enum Error {
 }
 
 impl Error {
+    #[allow(clippy::self_named_constructors)]
     pub fn error(e: impl StdError + 'static) -> Self {
         Self::Err(Arc::new(e))
     }

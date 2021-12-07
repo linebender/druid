@@ -148,7 +148,7 @@ impl<const N: usize> Buffers<N> {
                 return true;
             }
             b.destroy();
-            return false;
+            false
         });
         self.released.replace(pool);
     }
@@ -211,7 +211,7 @@ impl<const N: usize> Buffers<N> {
     /// Get the raw buffer data of the next buffer to draw to.
     ///
     /// Will return `None` if buffer already borrowed.
-    fn pending_buffer_data<'a>(self: &'a Rc<Self>) -> Option<impl DerefMut<Target = [u8]> + 'a> {
+    fn pending_buffer_data(self: &Rc<Self>) -> Option<impl DerefMut<Target = [u8]>> {
         if self.pending_buffer_borrowed.get() {
             None
         } else {

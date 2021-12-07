@@ -13,8 +13,8 @@ pub enum Event {
     Removed(Meta),
 }
 
-pub fn auto<'a>(
-    registry: &'a wlc::GlobalManager,
+pub fn auto(
+    registry: &wlc::GlobalManager,
 ) -> Result<calloop::channel::Channel<Event>, error::Error> {
     tracing::debug!("detecting wlr outputs");
     match wlr::detect(registry) {
@@ -31,7 +31,7 @@ pub fn auto<'a>(
     Err(error::Error::string("unable to detect display outputs"))
 }
 
-pub(super) fn current<'a>(env: &'a display::Environment) -> Result<Vec<Meta>, error::Error> {
+pub(super) fn current(env: &display::Environment) -> Result<Vec<Meta>, error::Error> {
     let rx = auto(&env.registry)?;
     let mut cache = std::collections::BTreeMap::new();
     let mut eventloop: calloop::EventLoop<(
@@ -50,7 +50,7 @@ pub(super) fn current<'a>(env: &'a display::Environment) -> Result<Vec<Meta>, er
 
                 match event {
                     Event::Located(meta) => {
-                        cache.insert(meta.name.clone(), meta.clone());
+                        cache.insert(meta.name.clone(), meta);
                     }
                     Event::Removed(meta) => {
                         cache.remove(&meta.name);
@@ -79,7 +79,6 @@ pub(super) fn current<'a>(env: &'a display::Environment) -> Result<Vec<Meta>, er
                     if expected <= cache.len() {
                         result.replace(cache.values().cloned().collect());
                         signal.stop();
-                        return;
                     }
                 }
             },
@@ -96,19 +95,10 @@ pub trait Wayland {
     );
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Dimensions {
     pub width: i32,
     pub height: i32,
-}
-
-impl Default for Dimensions {
-    fn default() -> Self {
-        Self {
-            width: 0,
-            height: 0,
-        }
-    }
 }
 
 impl From<(i32, i32)> for Dimensions {
@@ -120,16 +110,10 @@ impl From<(i32, i32)> for Dimensions {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
-}
-
-impl Default for Position {
-    fn default() -> Self {
-        Self { x: 0, y: 0 }
-    }
 }
 
 impl From<(i32, i32)> for Position {
@@ -138,21 +122,11 @@ impl From<(i32, i32)> for Position {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Mode {
     pub logical: Dimensions,
     pub refresh: i32,
     pub preferred: bool,
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Self {
-            logical: Default::default(),
-            refresh: 0,
-            preferred: false,
-        }
-    }
 }
 
 #[derive(Clone, Debug)]

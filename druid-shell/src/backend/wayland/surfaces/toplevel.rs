@@ -68,7 +68,7 @@ impl Surface {
         });
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
-            let mut dim = initial_size.clone();
+            let mut dim = initial_size;
             move |_xdg_toplevel, event, a3| match event {
                 xdg_toplevel::Event::Configure {
                     width,
@@ -98,9 +98,7 @@ impl Surface {
         });
 
         zxdg_toplevel_decoration_v1.quick_assign(move |_zxdg_toplevel_decoration_v1, event, _| {
-            match event {
-                _ => tracing::info!("toplevel decoration unimplemented {:?}", event),
-            }
+            tracing::info!("toplevel decoration unimplemented {:?}", event);
         });
 
         let inner = Inner {
@@ -176,7 +174,7 @@ impl From<Surface> for Box<dyn Handle> {
 
 impl From<Surface> for Box<dyn Decor> {
     fn from(s: Surface) -> Box<dyn Decor> {
-        Box::new(s.clone()) as Box<dyn Decor>
+        Box::new(s) as Box<dyn Decor>
     }
 }
 
