@@ -232,10 +232,6 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
-    ///
-    ///
-    /// [`LensWrap`]: crate::widget::LensWrap
-    /// [`Lens`]: crate::Lens
     fn lens<S: Data, L: Lens<S, T>>(self, lens: L) -> LensWrap<S, T, L, Self> {
         LensWrap::new(self, lens)
     }
