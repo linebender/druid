@@ -215,8 +215,9 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
         }
     }
 
-    /// This allows you to access the content of the Scopes state from
-    /// outside the widget.
+    /// A reference to the contents of the `Scope`'s state.
+    ///
+    /// This allows you to access the content from outside the widget.
     pub fn state(&self) -> Option<&SP::State> {
         if let ScopeContent::Transfer { ref state, .. } = &self.content {
             Some(state)
@@ -225,9 +226,14 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Scope<SP, W> {
         }
     }
 
-    /// This allows you to mutably access the content of the Scopes state from
-    /// outside the widget. Mainly useful for composite widgets. Note that
-    /// if you modify the state through this reference, the Scope will not
+    /// A mutable reference to the contents of the [`Scope`]'s state.
+    ///
+    /// This allows you to mutably access the content of the `Scope`' s state from
+    /// outside the widget. Mainly useful for composite widgets.
+    ///
+    /// # Note:
+    ///
+    /// If you modify the state through this reference, the Scope will not
     /// call update on its children until the next event it receives.
     pub fn state_mut(&mut self) -> Option<&mut SP::State> {
         if let ScopeContent::Transfer { ref mut state, .. } = &mut self.content {

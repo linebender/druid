@@ -919,7 +919,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         self
     }
 
-    /// Return this Tabs widget with the specified (zero based) tab index
+    /// A builder-style method to specify the (zero-based) index of the selected tab.
     pub fn with_tab_index(mut self, idx: TabIndex) -> Self {
         self.set_tab_index(idx);
         self
@@ -941,7 +941,7 @@ impl<TP: TabsPolicy> Tabs<TP> {
         }
     }
 
-    /// Get the currently selected (zero-based) tab index.
+    /// The (zero-based) index of the currently selected tab.
     pub fn tab_index(&self) -> TabIndex {
         let index = match &self.content {
             TabsContent::Running { scope, .. } => scope.widget().state().map(|s| s.selected),
@@ -953,9 +953,10 @@ impl<TP: TabsPolicy> Tabs<TP> {
         index.unwrap_or(0)
     }
 
-    /// Set the selected (zero-based) tab index, this tab will become visible if it exists.
-    /// Animated transitions will apply as if clicking the tab bar if they are enabled and the
-    /// Tabs widget is laid out.
+    /// Set the selected (zero-based) tab index.
+    ///
+    /// This tab will become visible if it exists. If animations are enabled
+    /// (and the widget is laid out), the tab transition will be animated.
     pub fn set_tab_index(&mut self, idx: TabIndex) {
         match &mut self.content {
             TabsContent::Running { scope, .. } => {
