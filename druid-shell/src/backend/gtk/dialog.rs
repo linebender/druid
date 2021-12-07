@@ -37,7 +37,7 @@ pub(crate) fn get_file_dialog_path(
     window: &Window,
     ty: FileDialogType,
     options: FileDialogOptions,
-) -> Result<OsString, Error> {
+) -> Result<Vec<OsString>, Error> {
     // TODO: support message localization
 
     let (title, action) = match (ty, options.select_directories) {
@@ -98,10 +98,23 @@ pub(crate) fn get_file_dialog_path(
     let result = dialog.run();
 
     let result = match result {
-        ResponseType::Accept => match dialog.filename() {
-            Some(path) => Ok(path.into_os_string()),
-            None => Err(anyhow!("No path received for filename")),
-        },
+        ResponseType::Accept => {
+            if dialog.filenames().is_empty() {
+                Err(anyhow!("No path received for filename"))
+            } else {
+                if !options.multi_selection && dialog.filenames().len() > 1 {
+                    // This really shouldn't happen, unless there is a bug
+                    // when setting the dialog options
+                    Err(anyhow!("More than one path received for single selection"))
+                } else {
+                    Ok(dialog
+                        .filenames()
+                        .into_iter()
+                        .map(|p| p.into_os_string())
+                        .collect())
+                }
+            }
+        }
         ResponseType::Cancel => Err(anyhow!("Dialog was deleted")),
         _ => {
             tracing::warn!("Unhandled dialog result: {:?}", result);

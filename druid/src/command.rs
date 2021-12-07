@@ -270,6 +270,11 @@ pub mod sys {
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
 
+    /// Open a path, must be handled by the application.
+    ///
+    /// [`FileInfo`]: ../struct.FileInfo.html
+    pub const OPEN_FILES: Selector<Vec<FileInfo>> = Selector::new("druid-builtin.open-files-path");
+
     /// When submitted by the application, the system will show the 'save as' panel,
     /// and if a path is selected the system will issue a [`SAVE_FILE`] command
     /// with the selected path as the payload.

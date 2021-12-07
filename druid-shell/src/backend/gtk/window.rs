@@ -907,17 +907,28 @@ impl WindowState {
         for op in queue {
             match op {
                 DeferredOp::Open(options, token) => {
-                    let file_info = dialog::get_file_dialog_path(
+                    // Keep the value of this option for later
+                    let multi_selection = options.multi_selection;
+                    let file_infos = dialog::get_file_dialog_path(
                         self.window.upcast_ref(),
                         FileDialogType::Open,
                         options,
                     )
-                    .ok()
-                    .map(|s| FileInfo {
-                        path: s.into(),
-                        format: None,
+                    // If result is an error, return an empty vector,
+                    // otherwise return a vec of FileInfos
+                    .map_or(vec![], |f| {
+                        f.iter()
+                            .map(|s| FileInfo {
+                                path: s.into(),
+                                format: None,
+                            })
+                            .collect()
                     });
-                    self.with_handler(|h| h.open_file(token, file_info));
+                    if multi_selection {
+                        self.with_handler(|h| h.open_files(token, file_infos));
+                    } else {
+                        self.with_handler(|h| h.open_file(token, file_infos.first().cloned()));
+                    }
                 }
                 DeferredOp::SaveAs(options, token) => {
                     let file_info = dialog::get_file_dialog_path(
@@ -927,7 +938,9 @@ impl WindowState {
                     )
                     .ok()
                     .map(|s| FileInfo {
-                        path: s.into(),
+                        // `get_file_dialog_path` should make sure one and only one
+                        // file is passed
+                        path: s.first().unwrap().into(),
                         format: None,
                     });
                     self.with_handler(|h| h.save_as(token, file_info));
