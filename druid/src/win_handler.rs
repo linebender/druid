@@ -81,7 +81,7 @@ struct DialogInfo {
     /// The command to send if the dialog is accepted.
     accept_cmd: Selector<FileInfo>,
     /// The command to send if the dialog is accepted with multiple files.
-    accept_multiple_cmd: Option<Selector<Vec<FileInfo>>>,
+    accept_multiple_cmd: Selector<Vec<FileInfo>>,
     /// The command to send if the dialog is cancelled.
     cancel_cmd: Selector<()>,
 }
@@ -728,7 +728,7 @@ impl<T: Data> AppState<T> {
                 DialogInfo {
                     id: window_id,
                     accept_cmd,
-                    accept_multiple_cmd: Some(accept_multiple_cmd),
+                    accept_multiple_cmd,
                     cancel_cmd,
                 },
             );
@@ -744,6 +744,9 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
         let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::SAVE_FILE_AS);
+        let accept_multiple_cmd = options
+            .accept_multiple_cmd
+            .unwrap_or(crate::commands::OPEN_FILES);
         let cancel_cmd = options
             .cancel_cmd
             .unwrap_or(crate::commands::SAVE_PANEL_CANCELLED);
@@ -754,8 +757,7 @@ impl<T: Data> AppState<T> {
                 DialogInfo {
                     id: window_id,
                     accept_cmd,
-                    // Not possible to save in multiple files
-                    accept_multiple_cmd: None,
+                    accept_multiple_cmd,
                     cancel_cmd,
                 },
             );
@@ -768,12 +770,9 @@ impl<T: Data> AppState<T> {
     ) {
         let mut inner = self.inner.borrow_mut();
         if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
-            let cmd = if dialog_info.accept_multiple_cmd.is_some() && !file_info.is_empty() {
+            let cmd = if !file_info.is_empty() {
                 dialog_info
                     .accept_multiple_cmd
-                    // Here we can unwrap since we just checked
-                    // that accept_multiple_cmd is not None
-                    .unwrap()
                     .with(file_info)
                     .to(dialog_info.id)
             } else {

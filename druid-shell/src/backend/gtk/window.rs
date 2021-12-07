@@ -909,21 +909,23 @@ impl WindowState {
                 DeferredOp::Open(options, token) => {
                     // Keep the value of this option for later
                     let multi_selection = options.multi_selection;
-                    let file_infos = dialog::get_file_dialog_path(
+                    let file_infos = match dialog::get_file_dialog_path(
                         self.window.upcast_ref(),
                         FileDialogType::Open,
                         options,
-                    )
-                    // If result is an error, return an empty vector,
-                    // otherwise return a vec of FileInfos
-                    .map_or(vec![], |f| {
-                        f.iter()
-                            .map(|s| FileInfo {
-                                path: s.into(),
+                    ) {
+                        Ok(infos) => infos
+                            .iter()
+                            .map(|path| FileInfo {
+                                path: path.into(),
                                 format: None,
                             })
-                            .collect()
-                    });
+                            .collect(),
+                        Err(err) => {
+                            tracing::error!("Error trying to open file: {}", err);
+                            vec![]
+                        }
+                    };
                     if multi_selection {
                         self.with_handler(|h| h.open_files(token, file_infos));
                     } else {
