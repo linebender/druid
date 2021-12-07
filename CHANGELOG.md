@@ -93,6 +93,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Fixed
 
+- Centre checkmark in checkbox ([#2036] by [@agentsim])
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
@@ -526,6 +527,7 @@ Last release without a changelog :(
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
 [@klemensn]: https://github.com/klemensn
+[@agentsim]: https://github.com/agentsim
 [@jplatte]: https://github.com/jplatte
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -806,6 +808,7 @@ Last release without a changelog :(
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1993]: https://github.com/linebender/druid/pull/1993
 [#1996]: https://github.com/linebender/druid/pull/1996
+[#2036]: https://github.com/linebender/druid/pull/2036
 [#2064]: https://github.com/linebender/druid/pull/2064
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
