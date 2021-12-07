@@ -132,7 +132,7 @@ impl WindowHandle {
     }
 
     pub fn get_size(&self) -> Size {
-        return self.inner.surface.get_size();
+        self.inner.surface.get_size()
     }
 
     pub fn set_window_state(&mut self, _current_state: window::WindowState) {
@@ -234,7 +234,7 @@ impl WindowHandle {
             appdata.timer_handle.add_timeout(timeout, timer.token());
         }
 
-        return timer.token();
+        timer.token()
     }
 
     pub fn set_cursor(&mut self, cursor: &Cursor) {
@@ -398,7 +398,7 @@ impl WindowBuilder {
         }
 
         if let WindowLevel::DropDown(parent) = self.level {
-            let dim = self.min_size.unwrap_or_else(|| Size::ZERO);
+            let dim = self.min_size.unwrap_or(Size::ZERO);
             let dim = Size::new(dim.width.max(1.), dim.height.max(1.));
             let dim = Size::new(
                 self.size.width.max(dim.width),
@@ -438,10 +438,11 @@ impl WindowBuilder {
             self.appdata.clone(),
         );
 
-        if let Some(_) = appdata
+        if appdata
             .handles
             .borrow_mut()
             .insert(handle.id(), handle.clone())
+            .is_some()
         {
             return Err(ShellError::Platform(Error::string(
                 "wayland should use a unique id",
@@ -521,10 +522,11 @@ pub mod layershell {
                 self.appdata.clone(),
             );
 
-            if let Some(_) = appdata
+            if appdata
                 .handles
                 .borrow_mut()
                 .insert(handle.id(), handle.clone())
+                .is_some()
             {
                 panic!("wayland should use unique object IDs");
             }
@@ -587,13 +589,14 @@ pub mod popup {
             surfaces::surface::Dead::default(),
             surface.clone(),
             surface.clone(),
-            wappdata.clone(),
+            wappdata,
         );
 
-        if let Some(_) = appdata
+        if appdata
             .handles
             .borrow_mut()
             .insert(handle.id(), handle.clone())
+            .is_some()
         {
             panic!("wayland should use unique object IDs");
         }

@@ -181,8 +181,8 @@ impl Application {
                         interface,
                         version,
                     } => {
-                        let id = id.clone();
-                        let version = version.clone();
+                        let id = *id;
+                        let version = *version;
 
                         if !(interface.as_str() == "wl_output" && version >= 3) {
                             return;
@@ -222,8 +222,8 @@ impl Application {
                     });
                     }
                     wl::GlobalEvent::Removed { id, interface } => {
-                        let id = id.clone();
-                        if !(interface.as_str() == "wl_output") {
+                        let id = *id;
+                        if interface.as_str() != "wl_output" {
                             return;
                         }
                         tracing::info!("output removed event {:?} {:?}", registry, interface);
@@ -232,7 +232,7 @@ impl Application {
                         let removed = outputs
                             .iter()
                             .find(|(_pid, o)| o.gid == id)
-                            .map(|(pid, _)| pid.clone())
+                            .map(|(pid, _)| *pid)
                             .and_then(|id| outputs.remove(&id));
 
                         let result = match removed {
@@ -260,8 +260,8 @@ impl Application {
                         interface,
                         version,
                     } => {
-                        let id = id.clone();
-                        let version = version.clone();
+                        let id = *id;
+                        let version = *version;
 
                         if !(interface.as_str() == "wl_seat" && version >= 7) {
                             return;
@@ -399,7 +399,7 @@ impl Application {
         Ok(Application { data: app_data })
     }
 
-    pub fn run(self, _handler: Option<Box<dyn AppHandler>>) {
+    pub fn run(mut self, _handler: Option<Box<dyn AppHandler>>) {
         tracing::info!("wayland event loop initiated");
         // NOTE if we want to call this function more than once, we will need to put the timer
         // source back.
@@ -419,7 +419,7 @@ impl Application {
         handle
             .insert_source(self.data.outputs_added.borrow_mut().take().unwrap(), {
                 move |evt, _ignored, appdata| match evt {
-                    calloop::channel::Event::Closed => return,
+                    calloop::channel::Event::Closed => {}
                     calloop::channel::Event::Msg(output) => {
                         tracing::debug!("output added {:?} {:?}", output.gid, output.id());
                         for (_, win) in appdata.handles_iter() {
@@ -434,7 +434,7 @@ impl Application {
             .insert_source(
                 self.data.outputs_removed.borrow_mut().take().unwrap(),
                 |evt, _ignored, appdata| match evt {
-                    calloop::channel::Event::Closed => return,
+                    calloop::channel::Event::Closed => {}
                     calloop::channel::Event::Msg(output) => {
                         tracing::trace!("output removed {:?} {:?}", output.gid, output.id());
                         for (_, win) in appdata.handles_iter() {
@@ -455,25 +455,21 @@ impl Application {
         let signal = eventloop.get_signal();
         let handle = handle.clone();
 
-        let res = eventloop.run(
-            Duration::from_millis(20),
-            &mut self.data.clone(),
-            move |appdata| {
-                if appdata.shutdown.get() {
-                    tracing::debug!("shutting down, requested");
-                    signal.stop();
-                    return;
-                }
+        let res = eventloop.run(Duration::from_millis(20), &mut self.data, move |appdata| {
+            if appdata.shutdown.get() {
+                tracing::debug!("shutting down, requested");
+                signal.stop();
+                return;
+            }
 
-                if appdata.handles.borrow().len() == 0 {
-                    tracing::debug!("shutting down, no window remaining");
-                    signal.stop();
-                    return;
-                }
+            if appdata.handles.borrow().len() == 0 {
+                tracing::debug!("shutting down, no window remaining");
+                signal.stop();
+                return;
+            }
 
-                ApplicationData::idle_repaint(handle.clone());
-            },
-        );
+            ApplicationData::idle_repaint(handle.clone());
+        });
 
         match res {
             Ok(_) => tracing::info!("wayland event loop completed"),
@@ -495,11 +491,8 @@ impl Application {
 }
 
 impl surfaces::Compositor for ApplicationData {
-    fn output(&self, id: &u32) -> Option<Output> {
-        match self.outputs.borrow().get(id) {
-            None => None,
-            Some(o) => Some(o.clone()),
-        }
+    fn output(&self, id: u32) -> Option<Output> {
+        self.outputs.borrow().get(&id).cloned()
     }
 
     fn create_surface(&self) -> wl::Main<WlSurface> {
@@ -529,7 +522,7 @@ impl surfaces::Compositor for ApplicationData {
 
 impl ApplicationData {
     pub(crate) fn set_cursor(&self, cursor: &mouse::Cursor) {
-        self.pointer.replace(&cursor);
+        self.pointer.replace(cursor);
     }
 
     /// Send all pending messages and process all received messages.
@@ -547,12 +540,8 @@ impl ApplicationData {
     }
 
     fn current_window_id(&self) -> u64 {
-        static DEFAULT: u64 = 0 as u64;
-        self.active_surface_id
-            .borrow()
-            .get(0)
-            .unwrap_or_else(|| &DEFAULT)
-            .clone()
+        static DEFAULT: u64 = 0_u64;
+        *self.active_surface_id.borrow().get(0).unwrap_or(&DEFAULT)
     }
 
     pub(super) fn initial_window_size(&self, defaults: kurbo::Size) -> kurbo::Size {
@@ -580,10 +569,10 @@ impl ApplicationData {
     }
 
     pub(super) fn acquire_current_window(&self) -> Option<WindowHandle> {
-        match self.handles.borrow().get(&self.current_window_id()) {
-            None => None,
-            Some(w) => Some(w.clone()),
-        }
+        self.handles
+            .borrow()
+            .get(&self.current_window_id())
+            .cloned()
     }
 
     fn handle_timer_event(&self, _token: TimerToken) {
@@ -610,12 +599,15 @@ impl ApplicationData {
                 }
             };
             // re-entrancy
-            win.data()
-                .map(|data| data.handler.borrow_mut().timer(expired.token()));
+            if let Some(data) = win.data() {
+                data.handler.borrow_mut().timer(expired.token())
+            }
         }
 
         for (_, win) in self.handles_iter() {
-            win.data().map(|data| data.run_deferred_tasks());
+            if let Some(data) = win.data() {
+                data.run_deferred_tasks()
+            }
         }
 
         // Get the deadline soonest and queue it.
@@ -633,7 +625,7 @@ impl ApplicationData {
         self.handles.borrow().clone().into_iter()
     }
 
-    fn idle_repaint<'a>(loophandle: calloop::LoopHandle<'a, std::sync::Arc<ApplicationData>>) {
+    fn idle_repaint(loophandle: calloop::LoopHandle<'_, std::sync::Arc<ApplicationData>>) {
         loophandle.insert_idle({
             move |appdata| {
                 match appdata.acquire_current_window() {

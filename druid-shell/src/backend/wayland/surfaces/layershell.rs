@@ -31,7 +31,7 @@ impl Inner {
     ) -> wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup> {
         let popup = surface.get_popup(None, pos);
         self.ls_surface.borrow().get_popup(&popup);
-        return popup;
+        popup
     }
 }
 
@@ -42,7 +42,7 @@ impl Popup for Inner {
         pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
     ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
     {
-        return Ok(self.popup(surface, pos));
+        Ok(self.popup(surface, pos))
     }
 }
 
@@ -193,7 +193,7 @@ impl Surface {
 
         let handle = Self {
             inner: std::sync::Arc::new(Inner {
-                config: config.clone(),
+                config,
                 wl_surface: std::cell::RefCell::new(wl_surface),
                 ls_surface: std::cell::RefCell::new(ls_surface),
                 requires_initialization: std::cell::RefCell::new(true),
@@ -241,7 +241,7 @@ impl Surface {
             }
         });
 
-        handle.inner.config.apply(&handle);
+        handle.inner.config.apply(handle);
         handle.inner.wl_surface.borrow().commit();
     }
 
@@ -257,7 +257,7 @@ impl Surface {
                 width,
                 height,
             } => {
-                let mut dim = handle.inner.config.initial_size.clone();
+                let mut dim = handle.inner.config.initial_size;
                 // compositor is deferring to the client for determining the size
                 // when values are zero.
                 if width != 0 && height != 0 {
@@ -287,7 +287,7 @@ impl Outputs for Surface {
     }
 
     fn inserted(&self, o: &Output) {
-        if !self.inner.requires_initialization.borrow().clone() {
+        if !*self.inner.requires_initialization.borrow() {
             tracing::debug!(
                 "skipping reinitialization output for layershell {:?} {:?}",
                 o.gid,
@@ -317,7 +317,7 @@ impl Outputs for Surface {
                     self.inner.config.layer,
                     self.inner.config.namespace.to_string(),
                 ));
-        Surface::initialize(&self);
+        Surface::initialize(self);
 
         tracing::debug!("replaced surface {:p}", &replacedsurface);
         tracing::debug!("current surface {:p}", &self.inner.wl_surface.borrow());
@@ -333,7 +333,7 @@ impl Popup for Surface {
         pos: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
     ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
     {
-        return Ok(self.inner.popup(popup, pos));
+        Ok(self.inner.popup(popup, pos))
     }
 }
 

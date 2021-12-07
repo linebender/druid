@@ -23,7 +23,7 @@ pub mod toplevel;
 pub static GLOBAL_ID: crate::Counter = crate::Counter::new();
 
 pub trait Compositor {
-    fn output(&self, id: &u32) -> Option<application::Output>;
+    fn output(&self, id: u32) -> Option<application::Output>;
     fn create_surface(&self) -> wlc::Main<WlSurface>;
     fn shared_mem(&self) -> wlc::Main<WlShm>;
     fn get_xdg_surface(&self, surface: &wlc::Main<WlSurface>)
@@ -87,14 +87,11 @@ impl CompositorHandle {
     }
 
     fn create_surface(&self) -> Option<wlc::Main<WlSurface>> {
-        match self.inner.upgrade() {
-            Some(c) => Some(c.create_surface()),
-            None => None,
-        }
+        self.inner.upgrade().map(|c| c.create_surface())
     }
 
     /// Recompute the scale to use (the maximum of all the provided outputs).
-    fn recompute_scale<'a>(&self, outputs: &'a std::collections::HashSet<u32>) -> i32 {
+    fn recompute_scale(&self, outputs: &std::collections::HashSet<u32>) -> i32 {
         let compositor = match self.inner.upgrade() {
             Some(c) => c,
             None => panic!("should never recompute scale of window that has been dropped"),
@@ -102,7 +99,7 @@ impl CompositorHandle {
         tracing::debug!("computing scale using {:?} outputs", outputs.len());
         let scale = outputs.iter().fold(0, |scale, id| {
             tracing::debug!("recomputing scale using output {:?}", id);
-            match compositor.output(id) {
+            match compositor.output(*id) {
                 None => {
                     tracing::warn!(
                         "we still have a reference to an output that's gone away. The output had id {}",
@@ -125,7 +122,7 @@ impl CompositorHandle {
 }
 
 impl Compositor for CompositorHandle {
-    fn output(&self, id: &u32) -> Option<application::Output> {
+    fn output(&self, id: u32) -> Option<application::Output> {
         match self.inner.upgrade() {
             None => None,
             Some(c) => c.output(id),
