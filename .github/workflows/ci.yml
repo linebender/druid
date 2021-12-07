@@ -108,6 +108,49 @@ jobs:
           args: --manifest-path=docs/book_examples/Cargo.toml
         if: contains(matrix.os, 'mac')
 
+  # we test the wayland backend as a separate job 
+  test-stable-wayland:
+    runs-on: ubuntu-latest
+    name: cargo clippy+test (wayland)
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install wayland
+        run: |
+          sudo apt update
+          sudo apt install libwayland-dev libpango1.0-dev libxkbcommon-dev
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: cargo clippy druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features wayland --no-default-features -- -D warnings
+
+      - name: cargo test druid-shell
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid-shell/Cargo.toml --features wayland --no-default-features
+
+      # We use --all-targets to skip doc tests; there are no wayland-specific
+      # doctests in the main druid crate anyway
+      - name: cargo test druid
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im --features wayland --no-default-features
+
   # we test the gtk backend as a separate job because gtk install takes
   # a long time.
   test-stable-gtk:
