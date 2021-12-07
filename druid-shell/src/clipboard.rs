@@ -179,6 +179,7 @@ pub type FormatId = &'static str;
 
 /// Data coupled with a type identifier.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "wayland", allow(dead_code))]
 #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub struct ClipboardFormat {
     pub(crate) identifier: FormatId,
