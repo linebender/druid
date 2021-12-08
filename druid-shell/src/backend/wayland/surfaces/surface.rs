@@ -3,13 +3,13 @@ use std::rc::Rc;
 use wayland_client as wlc;
 use wayland_client::protocol::wl_surface;
 
-use crate::backend::wayland::application;
 use crate::kurbo;
 use crate::window;
 use crate::{piet::Piet, region::Region, scale::Scale, TextFieldToken};
 
 use super::super::Changed;
 
+use super::super::outputs;
 use super::buffers;
 use super::error;
 use super::idle;
@@ -117,10 +117,11 @@ impl Surface {
                 current.outputs.borrow_mut().insert(proxy.id());
             }
             wl_surface::Event::Leave { output } => {
+                let proxy = wlc::Proxy::from(output.clone());
                 current
                     .outputs
                     .borrow_mut()
-                    .remove(&wlc::Proxy::from(output.clone()).id());
+                    .remove(&proxy.id());
             }
             _ => tracing::warn!("unhandled wayland surface event {:?}", event),
         }
@@ -139,11 +140,11 @@ impl Surface {
 }
 
 impl Outputs for Surface {
-    fn removed(&self, o: &application::Output) {
+    fn removed(&self, o: &outputs::Meta) {
         self.inner.outputs.borrow_mut().remove(&o.id());
     }
 
-    fn inserted(&self, _: &application::Output) {
+    fn inserted(&self, _: &outputs::Meta) {
         // nothing to do here.
     }
 }
@@ -560,9 +561,9 @@ impl Decor for Dead {
 }
 
 impl Outputs for Dead {
-    fn removed(&self, _: &application::Output) {}
+    fn removed(&self, _: &outputs::Meta) {}
 
-    fn inserted(&self, _: &application::Output) {}
+    fn inserted(&self, _: &outputs::Meta) {}
 }
 
 impl Popup for Dead {
