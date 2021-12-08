@@ -16,10 +16,11 @@
 use tracing;
 
 use super::{
-    application::{Application, ApplicationData, Output, Timer},
+    application::{Application, ApplicationData, Timer},
     error::Error,
     menu::Menu,
     surfaces,
+    outputs,
 };
 
 use crate::{
@@ -52,11 +53,11 @@ pub struct WindowHandle {
 }
 
 impl surfaces::Outputs for WindowHandle {
-    fn removed(&self, o: &Output) {
+    fn removed(&self, o: &outputs::Meta) {
         self.inner.outputs.removed(o)
     }
 
-    fn inserted(&self, o: &Output) {
+    fn inserted(&self, o: &outputs::Meta) {
         self.inner.outputs.inserted(o)
     }
 }

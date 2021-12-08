@@ -15,7 +15,7 @@
 #![allow(clippy::single_match)]
 
 use super::{
-    clipboard, display, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
+    clipboard, display, outputs, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
     window::WindowHandle,
 };
 
@@ -37,7 +37,6 @@ use wayland_client::{
     self as wl,
     protocol::{
         wl_compositor::WlCompositor,
-        wl_output::{self, Subpixel, Transform, WlOutput},
         wl_pointer::WlPointer,
         wl_seat::{self, WlSeat},
         wl_shm::{self, WlShm},
@@ -105,7 +104,7 @@ pub(crate) struct ApplicationData {
     ///
     /// It's a BTreeMap so the ordering is consistent when enumerating outputs (not sure if this is
     /// necessary, but it negligable cost).
-    pub(super) outputs: Rc<RefCell<BTreeMap<u32, Output>>>,
+    pub(super) outputs: Rc<RefCell<BTreeMap<u32, outputs::Meta>>>,
     pub(super) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
     /// Handles to any surfaces that have been created.
     ///
@@ -142,8 +141,7 @@ pub(crate) struct ApplicationData {
     keyboard: keyboard::Manager,
     clipboard: clipboard::Manager,
     // wakeup events when outputs are added/removed.
-    outputs_removed: RefCell<Option<calloop::channel::Channel<Output>>>,
-    outputs_added: RefCell<Option<calloop::channel::Channel<Output>>>,
+    outputsqueue: RefCell<Option<calloop::channel::Channel<outputs::Event>>>,
 }
 
 impl Application {
@@ -155,99 +153,15 @@ impl Application {
         // They have to be behind a shared pointer because wayland may need to add or remove them
         // for the life of the application. Use weak rcs inside the callbacks to avoid leaking
         // memory.
-        let outputs: Rc<RefCell<BTreeMap<u32, Output>>> = Rc::new(RefCell::new(BTreeMap::new()));
+        let dispatcher = display::Dispatcher::default();
+        let outputqueue = outputs::auto(&dispatcher)?;
+
         let seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>> =
             Rc::new(RefCell::new(BTreeMap::new()));
         // This object will create a container for the global wayland objects, and request that
         // it is populated by the server. Doesn't take ownership of the registry, we are
         // responsible for keeping it alive.
-        let weak_outputs = Rc::downgrade(&outputs);
         let weak_seats = Rc::downgrade(&seats);
-
-        let (outputsremovedtx, outputsremovedrx) = calloop::channel::channel::<Output>();
-        let (outputsaddedtx, outputsaddedrx) = calloop::channel::channel::<Output>();
-
-        let dispatcher = display::Dispatcher::default();
-
-        display::GlobalEventDispatch::subscribe(
-            &dispatcher,
-            move |event: &'_ wl::GlobalEvent,
-                  registry: &'_ wl::Attached<wl_registry::WlRegistry>,
-                  _ctx: &'_ wl::DispatchData| {
-                // tracing::debug!("output detection consuming event {:?} {:?}", registry, event);
-                match event {
-                    wl::GlobalEvent::New {
-                        id,
-                        interface,
-                        version,
-                    } => {
-                        let id = *id;
-                        let version = *version;
-
-                        if !(interface.as_str() == "wl_output" && version >= 3) {
-                            return;
-                        }
-                        tracing::info!("output added event {:?} {:?}", registry, interface);
-                        let output = registry.bind::<WlOutput>(3, id);
-                        let output = Output::new(id, output);
-                        let oid = output.id();
-                        let gid = output.gid;
-                        let previous = weak_outputs
-                            .upgrade()
-                            .unwrap()
-                            .borrow_mut()
-                            .insert(oid, output.clone());
-                        assert!(
-                            previous.is_none(),
-                            "internal: wayland should always use new IDs"
-                        );
-                        tracing::trace!("output added {:?} {:?}", gid, oid);
-                        output.wl_output.quick_assign({
-                        let weak_outputs = weak_outputs.clone();
-                        let gid = gid;
-                        let oid = oid;
-                        let outputsaddedtx = outputsaddedtx.clone();
-                        move |a, event, b| {
-                            tracing::trace!("output event {:?} {:?} {:?}", a, event, b);
-                            match weak_outputs.upgrade().unwrap().borrow_mut().get_mut(&oid) {
-                                Some(o) => o.process_event(event, &outputsaddedtx),
-                                None => tracing::warn!(
-                                    "wayland sent an event for an output that doesn't exist global({:?}) proxy({:?}) {:?}",
-                                    &gid,
-                                    &oid,
-                                    &event,
-                                ),
-                            }
-                        }
-                    });
-                    }
-                    wl::GlobalEvent::Removed { id, interface } => {
-                        let id = *id;
-                        if interface.as_str() != "wl_output" {
-                            return;
-                        }
-                        tracing::info!("output removed event {:?} {:?}", registry, interface);
-                        let boutputs = weak_outputs.upgrade().unwrap();
-                        let mut outputs = boutputs.borrow_mut();
-                        let removed = outputs
-                            .iter()
-                            .find(|(_pid, o)| o.gid == id)
-                            .map(|(pid, _)| *pid)
-                            .and_then(|id| outputs.remove(&id));
-
-                        let result = match removed {
-                            None => return,
-                            Some(removed) => outputsremovedtx.send(removed),
-                        };
-
-                        match result {
-                            Ok(_) => tracing::debug!("outputs remaining {:?}...", outputs.len()),
-                            Err(cause) => tracing::error!("failed to remove output {:?}", cause),
-                        }
-                    }
-                };
-            },
-        );
 
         display::GlobalEventDispatch::subscribe(
             &dispatcher,
@@ -325,7 +239,7 @@ impl Application {
             zwlr_layershell_v1,
             wl_compositor,
             wl_shm: wl_shm.clone(),
-            outputs,
+            outputs: Rc::new(RefCell::new(BTreeMap::new())),
             seats,
             handles: RefCell::new(im::OrdMap::new()),
             formats: RefCell::new(vec![]),
@@ -339,8 +253,7 @@ impl Application {
             keyboard: keyboard::Manager::default(),
             clipboard: clipboard::Manager::new(&env.display, &env.registry)?,
             roundtrip_requested: RefCell::new(false),
-            outputs_added: RefCell::new(Some(outputsaddedrx)),
-            outputs_removed: RefCell::new(Some(outputsremovedrx)),
+            outputsqueue: RefCell::new(Some(outputqueue)),
             wayland: env,
         });
 
@@ -417,32 +330,27 @@ impl Application {
 
         handle.register_dispatcher(wayland_dispatcher).unwrap();
         handle
-            .insert_source(self.data.outputs_added.borrow_mut().take().unwrap(), {
+            .insert_source(self.data.outputsqueue.take().unwrap(), {
                 move |evt, _ignored, appdata| match evt {
                     calloop::channel::Event::Closed => {}
                     calloop::channel::Event::Msg(output) => {
-                        tracing::debug!("output added {:?} {:?}", output.gid, output.id());
-                        for (_, win) in appdata.handles_iter() {
-                            surfaces::Outputs::inserted(&win, &output);
+                        match output {
+                            outputs::Event::Located(output) => {
+                                appdata.outputs.borrow_mut().insert(output.id(), output.clone());
+                                for (_, win) in appdata.handles_iter() {
+                                    surfaces::Outputs::inserted(&win, &output);
+                                }
+                            },
+                            outputs::Event::Removed(output) => {
+                                appdata.outputs.borrow_mut().remove(&output.id());
+                                for (_, win) in appdata.handles_iter() {
+                                    surfaces::Outputs::removed(&win, &output);
+                                }
+                            },
                         }
                     }
                 }
             })
-            .unwrap();
-
-        handle
-            .insert_source(
-                self.data.outputs_removed.borrow_mut().take().unwrap(),
-                |evt, _ignored, appdata| match evt {
-                    calloop::channel::Event::Closed => {}
-                    calloop::channel::Event::Msg(output) => {
-                        tracing::trace!("output removed {:?} {:?}", output.gid, output.id());
-                        for (_, win) in appdata.handles_iter() {
-                            surfaces::Outputs::removed(&win, &output);
-                        }
-                    }
-                },
-            )
             .unwrap();
 
         handle
@@ -491,7 +399,7 @@ impl Application {
 }
 
 impl surfaces::Compositor for ApplicationData {
-    fn output(&self, id: u32) -> Option<Output> {
+    fn output(&self, id: u32) -> Option<outputs::Meta> {
         self.outputs.borrow().get(&id).cloned()
     }
 
@@ -558,12 +466,11 @@ impl ApplicationData {
         };
         return self.outputs.borrow().iter().fold(
             kurbo::Size::from((initialwidth, initialheight)),
-            |computed, entry| match &entry.1.current_mode {
-                None => computed,
-                Some(mode) => kurbo::Size::new(
-                    computed.width.min(mode.width.into()),
-                    computed.height.min(mode.height.into()),
-                ),
+            |computed, entry| {
+                kurbo::Size::new(
+                    computed.width.min(entry.1.logical.width.into()),
+                    computed.height.min(entry.1.logical.height.into()),
+                )
             },
         );
     }
@@ -664,145 +571,6 @@ impl From<std::sync::Arc<ApplicationData>> for surfaces::CompositorHandle {
             std::sync::Arc::downgrade(&data) as std::sync::Weak<dyn surfaces::Compositor>
         )
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Output {
-    wl_output: wl::Main<WlOutput>,
-    wl_proxy: wl::Proxy<WlOutput>,
-    /// global id of surface.
-    pub gid: u32,
-    pub x: i32,
-    pub y: i32,
-    pub physical_width: i32,
-    pub physical_height: i32,
-    pub subpixel: Subpixel,
-    pub make: String,
-    pub model: String,
-    pub transform: Transform,
-    pub scale: i32,
-    pub current_mode: Option<Mode>,
-    pub preferred_mode: Option<Mode>,
-    /// Whether we have received some update events but not the `done` event.
-    update_in_progress: bool,
-    /// Lets us work out if things have changed since we last observed the output.
-    last_update: Instant,
-}
-
-#[allow(unused)]
-impl Output {
-    // All the stuff before `current_mode` will be filled out immediately after creation, so these
-    // dummy values will never be observed.
-    fn new(id: u32, wl_output: wl::Main<WlOutput>) -> Self {
-        Output {
-            wl_output: wl_output.clone(),
-            wl_proxy: wl::Proxy::from(wl_output.detach()),
-            gid: id,
-            x: 0,
-            y: 0,
-            physical_width: 0,
-            physical_height: 0,
-            subpixel: Subpixel::Unknown,
-            make: "".into(),
-            model: "".into(),
-            transform: Transform::Normal,
-            current_mode: None,
-            preferred_mode: None,
-            scale: 1, // the spec says if there is no scale event, assume 1.
-            update_in_progress: true,
-            last_update: Instant::now(),
-        }
-    }
-
-    /// Get the wayland object ID for this output. This is how we key outputs in our global
-    /// registry.
-    pub fn id(&self) -> u32 {
-        self.wl_proxy.id()
-    }
-
-    /// Incorporate update data from the server for this output.
-    fn process_event(&mut self, evt: wl_output::Event, tx: &calloop::channel::Sender<Self>) {
-        tracing::trace!("processing wayland output event {:?}", evt);
-        match evt {
-            wl_output::Event::Geometry {
-                x,
-                y,
-                physical_width,
-                physical_height,
-                subpixel,
-                make,
-                model,
-                transform,
-            } => {
-                self.x = x;
-                self.y = y;
-                self.subpixel = subpixel;
-                self.make = make;
-                self.model = model;
-                self.transform = transform;
-                self.update_in_progress = true;
-
-                match transform {
-                    wl_output::Transform::Flipped270 | wl_output::Transform::_270 => {
-                        self.physical_width = physical_height;
-                        self.physical_height = physical_width;
-                    }
-                    _ => {
-                        self.physical_width = physical_width;
-                        self.physical_height = physical_height;
-                    }
-                }
-            }
-            wl_output::Event::Mode {
-                flags,
-                width,
-                height,
-                refresh,
-            } => {
-                if flags.contains(wl_output::Mode::Current) {
-                    self.current_mode = Some(Mode {
-                        width,
-                        height,
-                        refresh,
-                    });
-                }
-                if flags.contains(wl_output::Mode::Preferred) {
-                    self.preferred_mode = Some(Mode {
-                        width,
-                        height,
-                        refresh,
-                    });
-                }
-                self.update_in_progress = true;
-            }
-            wl_output::Event::Done => {
-                self.update_in_progress = false;
-                self.last_update = Instant::now();
-                if let Err(cause) = tx.send(self.clone()) {
-                    tracing::error!("unable to add output {:?} {:?}", self.gid, self.id());
-                }
-            }
-            wl_output::Event::Scale { factor } => {
-                self.scale = factor;
-                self.update_in_progress = true;
-            }
-            _ => tracing::warn!("unknown output event {:?}", evt), // ignore possible future events
-        }
-    }
-
-    /// Whether the output has changed since `since`.
-    ///
-    /// Will return `false` if an update is in progress, as updates should be handled atomically.
-    fn changed(&self, since: Instant) -> bool {
-        !self.update_in_progress && since < self.last_update
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Mode {
-    pub width: i32,
-    pub height: i32,
-    pub refresh: i32,
 }
 
 #[derive(Debug, Clone)]

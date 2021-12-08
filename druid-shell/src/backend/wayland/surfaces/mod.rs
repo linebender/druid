@@ -10,7 +10,7 @@ use crate::kurbo;
 use crate::Scale;
 use crate::TextFieldToken;
 
-use super::application;
+use super::outputs;
 use super::error;
 
 pub mod buffers;
@@ -23,7 +23,7 @@ pub mod toplevel;
 pub static GLOBAL_ID: crate::Counter = crate::Counter::new();
 
 pub trait Compositor {
-    fn output(&self, id: u32) -> Option<application::Output>;
+    fn output(&self, id: u32) -> Option<outputs::Meta>;
     fn create_surface(&self) -> wlc::Main<WlSurface>;
     fn shared_mem(&self) -> wlc::Main<WlShm>;
     fn get_xdg_surface(&self, surface: &wlc::Main<WlSurface>)
@@ -52,8 +52,8 @@ pub trait Popup {
 }
 
 pub(super) trait Outputs {
-    fn removed(&self, o: &application::Output);
-    fn inserted(&self, o: &application::Output);
+    fn removed(&self, o: &outputs::Meta);
+    fn inserted(&self, o: &outputs::Meta);
 }
 
 // handle on given surface.
@@ -107,7 +107,7 @@ impl CompositorHandle {
                     );
                     scale
                 },
-                Some(output) => scale.max(output.scale),
+                Some(output) => scale.max(output.scale as i32),
             }
         });
 
@@ -122,7 +122,7 @@ impl CompositorHandle {
 }
 
 impl Compositor for CompositorHandle {
-    fn output(&self, id: u32) -> Option<application::Output> {
+    fn output(&self, id: u32) -> Option<outputs::Meta> {
         match self.inner.upgrade() {
             None => None,
             Some(c) => c.output(id),

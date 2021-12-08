@@ -126,6 +126,16 @@ pub(super) struct Environment {
 unsafe impl Sync for Environment {}
 unsafe impl Send for Environment {}
 
+impl GlobalEventDispatch for Environment {
+    fn subscribe(&self, sub: impl Into<GlobalEventSubscription>) -> GlobalEventSubscription {
+        self.dispatcher.subscribe(sub)
+    }
+
+    fn release(&self, s: &GlobalEventSubscription) {
+        self.dispatcher.release(s)
+    }
+}
+
 impl GlobalEventDispatch for std::sync::Arc<Environment> {
     fn subscribe(&self, sub: impl Into<GlobalEventSubscription>) -> GlobalEventSubscription {
         self.dispatcher.subscribe(sub)
@@ -184,24 +194,6 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<std::sync::Arc<Environment>,
         xdg_base,
         dispatcher,
     });
-
-    Ok(env)
-}
-
-pub(super) fn global() -> Result<std::sync::Arc<Environment>, error::Error> {
-    use lazy_static::lazy_static;
-    lazy_static! {
-        static ref _GLOBAL: std::sync::Mutex<Option<std::sync::Arc<Environment>>> =
-            std::sync::Mutex::new(None,);
-    }
-
-    let mut guard = _GLOBAL.lock().unwrap();
-    if let Some(d) = &*guard {
-        return Ok(d.clone());
-    }
-
-    let env = new(Dispatcher::default())?;
-    guard.replace(env.clone());
 
     Ok(env)
 }

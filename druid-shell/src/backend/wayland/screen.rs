@@ -15,13 +15,11 @@
 //! wayland Monitors and Screen information.
 use crate::screen::Monitor;
 
-use super::display;
 use super::error;
 use super::outputs;
 
 fn _get_monitors() -> Result<Vec<Monitor>, error::Error> {
-    let env = display::global()?;
-    let metas = outputs::current(&env)?;
+    let metas = outputs::current()?;
     let monitors: Vec<Monitor> = metas
         .iter()
         .map(|m| {

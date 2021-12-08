@@ -3,8 +3,7 @@ use wayland_client::protocol::wl_output;
 
 use super::display;
 use super::error;
-mod wlr;
-mod xdg;
+pub mod output;
 
 #[derive(Debug, Clone)]
 #[allow(unused)]
@@ -14,16 +13,10 @@ pub enum Event {
 }
 
 pub fn auto(
-    registry: &wlc::GlobalManager,
+    env: & impl display::GlobalEventDispatch,
 ) -> Result<calloop::channel::Channel<Event>, error::Error> {
-    tracing::debug!("detecting wlr outputs");
-    match wlr::detect(registry) {
-        Ok(rx) => return Ok(rx),
-        Err(cause) => tracing::info!("unable to detect wlr outputs {:?}", cause),
-    }
-
     tracing::debug!("detecting xdg outputs");
-    match xdg::detect(registry) {
+    match output::detect(env) {
         Ok(rx) => return Ok(rx),
         Err(cause) => tracing::info!("unable to detect xdg outputs {:?}", cause),
     }
@@ -31,8 +24,10 @@ pub fn auto(
     Err(error::Error::string("unable to detect display outputs"))
 }
 
-pub(super) fn current(env: &display::Environment) -> Result<Vec<Meta>, error::Error> {
-    let rx = auto(&env.registry)?;
+pub(super) fn current() -> Result<Vec<Meta>, error::Error> {
+    let dispatcher = display::Dispatcher::default();
+    let rx = auto(&dispatcher)?;
+    let env = display::new(dispatcher)?;
     let mut cache = std::collections::BTreeMap::new();
     let mut eventloop: calloop::EventLoop<(
         calloop::LoopSignal,
@@ -78,6 +73,15 @@ pub(super) fn current(env: &display::Environment) -> Result<Vec<Meta>, error::Er
                 move |(signal, cache)| {
                     if expected <= cache.len() {
                         result.replace(cache.values().cloned().collect());
+                        signal.stop();
+                    }
+
+                    let res = queue
+                    .sync_roundtrip(&mut (), |_, _, _| unreachable!())
+                    .map_err(error::Error::error);
+
+                    if let Err(cause) = res {
+                        tracing::error!("wayland sync failed {:?}", cause);
                         signal.stop();
                     }
                 }
@@ -131,6 +135,7 @@ pub struct Mode {
 
 #[derive(Clone, Debug)]
 pub struct Meta {
+    pub gid: u32,
     pub name: String,
     pub description: String,
     pub logical: Dimensions,
@@ -145,22 +150,10 @@ pub struct Meta {
     pub position: Position,
 }
 
-impl Meta {
-    pub fn normalize(mut self) -> Self {
-        match self.transform {
-            wl_output::Transform::Flipped270 | wl_output::Transform::_270 => {
-                self.logical = Dimensions::from((self.logical.height, self.logical.width));
-                self.physical = Dimensions::from((self.physical.height, self.physical.width));
-            }
-            _ => {}
-        }
-        self
-    }
-}
-
 impl Default for Meta {
     fn default() -> Self {
         Self {
+            gid: Default::default(),
             name: Default::default(),
             description: Default::default(),
             logical: Default::default(),
@@ -174,5 +167,22 @@ impl Default for Meta {
             scale: Default::default(),
             enabled: Default::default(),
         }
+    }
+}
+
+impl Meta {
+    pub fn normalize(mut self) -> Self {
+        match self.transform {
+            wl_output::Transform::Flipped270 | wl_output::Transform::_270 => {
+                self.logical = Dimensions::from((self.logical.height, self.logical.width));
+                self.physical = Dimensions::from((self.physical.height, self.physical.width));
+            }
+            _ => {}
+        }
+        self
+    }
+
+    pub fn id(&self) -> u32 {
+        self.gid
     }
 }
