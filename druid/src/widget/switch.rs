@@ -112,7 +112,7 @@ impl Widget<bool> for Switch {
                     if self.knob_dragged {
                         // toggle value when dragging if knob has been moved far enough
                         *data = self.knob_pos.x > switch_width / 2.;
-                    } else if ctx.is_active() {
+                    } else {
                         // toggle value on click
                         *data = !*data;
                     }
