@@ -75,6 +75,7 @@ impl Menu {
         unsafe {
             let menu_item = NSMenuItem::alloc(nil).autorelease();
             let title = make_nsstring(&strip_access_key(text));
+            let () = msg_send![menu.menu, setTitle: title];
             let () = msg_send![menu_item, setTitle: title];
             if !enabled {
                 let () = msg_send![menu_item, setEnabled: NO];
