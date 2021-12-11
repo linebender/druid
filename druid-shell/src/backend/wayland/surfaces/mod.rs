@@ -10,8 +10,8 @@ use crate::kurbo;
 use crate::Scale;
 use crate::TextFieldToken;
 
-use super::outputs;
 use super::error;
+use super::outputs;
 
 pub mod buffers;
 pub mod idle;

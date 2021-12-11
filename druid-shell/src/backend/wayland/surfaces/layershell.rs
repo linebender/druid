@@ -5,8 +5,8 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use crate::kurbo;
 use crate::window;
 
-use super::super::outputs;
 use super::super::error;
+use super::super::outputs;
 use super::surface;
 use super::Compositor;
 use super::CompositorHandle;
@@ -296,11 +296,7 @@ impl Outputs for Surface {
             return;
         }
 
-        tracing::debug!(
-            "reinitializing output for layershell {:?} {:?}",
-            o.id(),
-            o
-        );
+        tracing::debug!("reinitializing output for layershell {:?} {:?}", o.id(), o);
         let sdata = self.inner.wl_surface.borrow().inner.clone();
         let replacedsurface = self
             .inner

@@ -19,8 +19,7 @@ use super::{
     application::{Application, ApplicationData, Timer},
     error::Error,
     menu::Menu,
-    surfaces,
-    outputs,
+    outputs, surfaces,
 };
 
 use crate::{

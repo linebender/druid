@@ -1,12 +1,11 @@
-use wayland_client as wlc;
-use wayland_client::protocol::wl_registry;
-use wayland_client::protocol::wl_output;
-use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_manager_v1;
-use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_v1;
 use super::super::display;
 use super::super::error;
 use super::super::outputs;
-
+use wayland_client as wlc;
+use wayland_client::protocol::wl_output;
+use wayland_client::protocol::wl_registry;
+use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_manager_v1;
+use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_v1;
 
 pub trait Consumer {
     fn consume(
@@ -17,14 +16,14 @@ pub trait Consumer {
 }
 
 pub fn detect(
-    env: & impl display::GlobalEventDispatch,
+    env: &impl display::GlobalEventDispatch,
 ) -> Result<calloop::channel::Channel<outputs::Event>, error::Error> {
     let (outputstx, outputsrx) = calloop::channel::channel::<outputs::Event>();
     let xdg_output_manager_id: std::cell::RefCell<Option<u32>> = std::cell::RefCell::new(None);
-    display::GlobalEventDispatch::subscribe(
-        env, {
-        let outputstx = outputstx.clone();
-        move |event: &'_ wlc::GlobalEvent, registry: &'_ wlc::Attached<wl_registry::WlRegistry>, _ctx: &'_ wlc::DispatchData| {
+    display::GlobalEventDispatch::subscribe(env, {
+        move |event: &'_ wlc::GlobalEvent,
+              registry: &'_ wlc::Attached<wl_registry::WlRegistry>,
+              _ctx: &'_ wlc::DispatchData| {
             match event {
                 wlc::GlobalEvent::New {
                     id,
@@ -44,16 +43,14 @@ pub fn detect(
                     }
 
                     let output = registry.bind::<wl_output::WlOutput>(3, id);
-                    let xdgm = match *xdg_output_manager_id.borrow() {
-                        Some(xdgm_id) => Some(registry.bind::<zxdg_output_manager_v1::ZxdgOutputManagerV1>(3, xdgm_id)),
-                        None => None,
-                    };
+                    let xdgm = (*xdg_output_manager_id.borrow()).map(|xdgm_id| {
+                        registry.bind::<zxdg_output_manager_v1::ZxdgOutputManagerV1>(3, xdgm_id)
+                    });
 
                     let mut meta = Meta::default();
                     let mut xdgmeta = XdgMeta::new();
                     output.quick_assign({
                         let outputstx = outputstx.clone();
-                        let xdgm = xdgm.clone();
                         move |output, event, _ctx| {
                             let mut m = match meta.consume(&output, &event) {
                                 Some(m) => m,
@@ -69,7 +66,7 @@ pub fn detect(
                                             xdgmeta.consume(&xdg_output, &event);
                                         }
                                     });
-                                    return
+                                    return;
                                 }
                             }
 
@@ -122,20 +119,24 @@ impl XdgMeta {
         tmp
     }
 
-    fn consume(&mut self, output: &wlc::Main<zxdg_output_v1::ZxdgOutputV1>, evt: &zxdg_output_v1::Event) {
+    fn consume(
+        &mut self,
+        output: &wlc::Main<zxdg_output_v1::ZxdgOutputV1>,
+        evt: &zxdg_output_v1::Event,
+    ) {
         match evt {
             zxdg_output_v1::Event::Name { name } => {
                 self.state.borrow_mut().name = name.clone();
-            },
+            }
             zxdg_output_v1::Event::Description { description } => {
                 self.state.borrow_mut().description = description.clone();
-            },
+            }
             zxdg_output_v1::Event::LogicalPosition { x, y } => {
                 self.state.borrow_mut().position = outputs::Position::from((*x, *y));
-            },
+            }
             zxdg_output_v1::Event::LogicalSize { width, height } => {
                 self.state.borrow_mut().logical = outputs::Dimensions::from((*width, *height));
-            },
+            }
             _ => tracing::warn!("unused xdg_output_v1 event {:?} {:?}", output, evt),
         };
     }
@@ -156,7 +157,11 @@ struct Meta {
 
 impl Consumer for Meta {
     /// Incorporate update data from the server for this output.
-    fn consume(&mut self, output: &wlc::Main<wl_output::WlOutput>, evt: &wl_output::Event,) -> Option<outputs::Meta> {
+    fn consume(
+        &mut self,
+        output: &wlc::Main<wl_output::WlOutput>,
+        evt: &wl_output::Event,
+    ) -> Option<outputs::Meta> {
         match evt {
             wl_output::Event::Geometry {
                 x,
@@ -201,7 +206,7 @@ impl Consumer for Meta {
             _ => {
                 tracing::warn!("unknown output event {:?}", evt); // ignore possible future events
                 None
-            },
+            }
         }
     }
 }

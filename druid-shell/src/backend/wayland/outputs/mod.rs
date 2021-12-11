@@ -13,7 +13,7 @@ pub enum Event {
 }
 
 pub fn auto(
-    env: & impl display::GlobalEventDispatch,
+    env: &impl display::GlobalEventDispatch,
 ) -> Result<calloop::channel::Channel<Event>, error::Error> {
     tracing::debug!("detecting xdg outputs");
     match output::detect(env) {
@@ -77,8 +77,8 @@ pub(super) fn current() -> Result<Vec<Meta>, error::Error> {
                     }
 
                     let res = queue
-                    .sync_roundtrip(&mut (), |_, _, _| unreachable!())
-                    .map_err(error::Error::error);
+                        .sync_roundtrip(&mut (), |_, _, _| unreachable!())
+                        .map_err(error::Error::error);
 
                     if let Err(cause) = res {
                         tracing::error!("wayland sync failed {:?}", cause);
