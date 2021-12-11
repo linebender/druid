@@ -5,7 +5,7 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 use crate::kurbo;
 use crate::window;
 
-use super::super::application::Output;
+use super::super::outputs;
 use super::super::error;
 use super::surface;
 use super::Compositor;
@@ -282,23 +282,22 @@ impl Surface {
 }
 
 impl Outputs for Surface {
-    fn removed(&self, o: &Output) {
+    fn removed(&self, o: &outputs::Meta) {
         self.inner.wl_surface.borrow().removed(o);
     }
 
-    fn inserted(&self, o: &Output) {
+    fn inserted(&self, o: &outputs::Meta) {
         if !*self.inner.requires_initialization.borrow() {
             tracing::debug!(
                 "skipping reinitialization output for layershell {:?} {:?}",
-                o.gid,
-                o.id()
+                o.id(),
+                o
             );
             return;
         }
 
         tracing::debug!(
-            "reinitializing output for layershell {:?} {:?} {:?}",
-            o.gid,
+            "reinitializing output for layershell {:?} {:?}",
             o.id(),
             o
         );
