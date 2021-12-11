@@ -118,10 +118,7 @@ impl Surface {
             }
             wl_surface::Event::Leave { output } => {
                 let proxy = wlc::Proxy::from(output.clone());
-                current
-                    .outputs
-                    .borrow_mut()
-                    .remove(&proxy.id());
+                current.outputs.borrow_mut().remove(&proxy.id());
             }
             _ => tracing::warn!("unhandled wayland surface event {:?}", event),
         }

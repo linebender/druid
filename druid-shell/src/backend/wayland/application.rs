@@ -15,7 +15,7 @@
 #![allow(clippy::single_match)]
 
 use super::{
-    clipboard, display, outputs, error::Error, events::WaylandSource, keyboard, pointers, surfaces,
+    clipboard, display, error::Error, events::WaylandSource, keyboard, outputs, pointers, surfaces,
     window::WindowHandle,
 };
 
@@ -333,22 +333,23 @@ impl Application {
             .insert_source(self.data.outputsqueue.take().unwrap(), {
                 move |evt, _ignored, appdata| match evt {
                     calloop::channel::Event::Closed => {}
-                    calloop::channel::Event::Msg(output) => {
-                        match output {
-                            outputs::Event::Located(output) => {
-                                appdata.outputs.borrow_mut().insert(output.id(), output.clone());
-                                for (_, win) in appdata.handles_iter() {
-                                    surfaces::Outputs::inserted(&win, &output);
-                                }
-                            },
-                            outputs::Event::Removed(output) => {
-                                appdata.outputs.borrow_mut().remove(&output.id());
-                                for (_, win) in appdata.handles_iter() {
-                                    surfaces::Outputs::removed(&win, &output);
-                                }
-                            },
+                    calloop::channel::Event::Msg(output) => match output {
+                        outputs::Event::Located(output) => {
+                            appdata
+                                .outputs
+                                .borrow_mut()
+                                .insert(output.id(), output.clone());
+                            for (_, win) in appdata.handles_iter() {
+                                surfaces::Outputs::inserted(&win, &output);
+                            }
                         }
-                    }
+                        outputs::Event::Removed(output) => {
+                            appdata.outputs.borrow_mut().remove(&output.id());
+                            for (_, win) in appdata.handles_iter() {
+                                surfaces::Outputs::removed(&win, &output);
+                            }
+                        }
+                    },
                 }
             })
             .unwrap();
