@@ -100,10 +100,13 @@ pub(crate) fn get_file_dialog_path(
     let result = match result {
         ResponseType::Accept => match dialog.filenames() {
             filenames if filenames.is_empty() => Err(anyhow!("No path received for filename")),
-            // This really shouldn't happen, unless there is a bug
-            // when setting the dialog options
+            // If we receive more than one file, but `multi_selection` is false, return an error.
             filenames if filenames.len() > 1 && !options.multi_selection => {
                 Err(anyhow!("More than one path received for single selection"))
+            }
+            // If we receive more than one file with a save action, return an error.
+            filenames if filenames.len() > 1 && action == FileChooserAction::Save => {
+                Err(anyhow!("More than one path received for save action"))
             }
             filenames => Ok(filenames.into_iter().map(|p| p.into_os_string()).collect()),
         },
