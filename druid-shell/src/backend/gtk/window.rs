@@ -907,17 +907,30 @@ impl WindowState {
         for op in queue {
             match op {
                 DeferredOp::Open(options, token) => {
-                    let file_info = dialog::get_file_dialog_path(
+                    // Keep the value of this option for later
+                    let multi_selection = options.multi_selection;
+                    let file_infos = match dialog::get_file_dialog_path(
                         self.window.upcast_ref(),
                         FileDialogType::Open,
                         options,
-                    )
-                    .ok()
-                    .map(|s| FileInfo {
-                        path: s.into(),
-                        format: None,
-                    });
-                    self.with_handler(|h| h.open_file(token, file_info));
+                    ) {
+                        Ok(infos) => infos
+                            .iter()
+                            .map(|path| FileInfo {
+                                path: path.into(),
+                                format: None,
+                            })
+                            .collect(),
+                        Err(err) => {
+                            tracing::error!("Error trying to open file: {}", err);
+                            vec![]
+                        }
+                    };
+                    if multi_selection {
+                        self.with_handler(|h| h.open_files(token, file_infos));
+                    } else {
+                        self.with_handler(|h| h.open_file(token, file_infos.first().cloned()));
+                    }
                 }
                 DeferredOp::SaveAs(options, token) => {
                     let file_info = dialog::get_file_dialog_path(
@@ -927,7 +940,9 @@ impl WindowState {
                     )
                     .ok()
                     .map(|s| FileInfo {
-                        path: s.into(),
+                        // `get_file_dialog_path` guarantees that save dialogs
+                        // only return on path
+                        path: s.first().unwrap().into(),
                         format: None,
                     });
                     self.with_handler(|h| h.save_as(token, file_info));

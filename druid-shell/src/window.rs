@@ -585,6 +585,13 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn open_file(&mut self, token: FileDialogToken, file: Option<FileInfo>) {}
 
+    /// Called when an "Open" dialog with multiple selection is closed.
+    ///
+    /// `token` is the value returned by [`WindowHandle::open_file`]. `files` contains the information
+    /// of the chosen paths, or `None` if the save dialog was cancelled.
+    #[allow(unused_variables)]
+    fn open_files(&mut self, token: FileDialogToken, files: Vec<FileInfo>) {}
+
     /// Called on a key down event.
     ///
     /// Return `true` if the event is handled.

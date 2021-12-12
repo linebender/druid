@@ -80,6 +80,8 @@ struct DialogInfo {
     id: WindowId,
     /// The command to send if the dialog is accepted.
     accept_cmd: Selector<FileInfo>,
+    /// The command to send if the dialog is accepted with multiple files.
+    accept_multiple_cmd: Selector<Vec<FileInfo>>,
     /// The command to send if the dialog is cancelled.
     cancel_cmd: Selector<()>,
 }
@@ -713,6 +715,9 @@ impl<T: Data> AppState<T> {
             .map(|w| w.handle.clone());
 
         let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::OPEN_FILE);
+        let accept_multiple_cmd = options
+            .accept_multiple_cmd
+            .unwrap_or(crate::commands::OPEN_FILES);
         let cancel_cmd = options
             .cancel_cmd
             .unwrap_or(crate::commands::OPEN_PANEL_CANCELLED);
@@ -723,6 +728,7 @@ impl<T: Data> AppState<T> {
                 DialogInfo {
                     id: window_id,
                     accept_cmd,
+                    accept_multiple_cmd,
                     cancel_cmd,
                 },
             );
@@ -738,6 +744,9 @@ impl<T: Data> AppState<T> {
             .get_mut(window_id)
             .map(|w| w.handle.clone());
         let accept_cmd = options.accept_cmd.unwrap_or(crate::commands::SAVE_FILE_AS);
+        let accept_multiple_cmd = options
+            .accept_multiple_cmd
+            .unwrap_or(crate::commands::OPEN_FILES);
         let cancel_cmd = options
             .cancel_cmd
             .unwrap_or(crate::commands::SAVE_PANEL_CANCELLED);
@@ -748,10 +757,35 @@ impl<T: Data> AppState<T> {
                 DialogInfo {
                     id: window_id,
                     accept_cmd,
+                    accept_multiple_cmd,
                     cancel_cmd,
                 },
             );
         }
+    }
+    fn handle_dialog_multiple_response(
+        &mut self,
+        token: FileDialogToken,
+        file_info: Vec<FileInfo>,
+    ) {
+        let mut inner = self.inner.borrow_mut();
+        if let Some(dialog_info) = inner.file_dialogs.remove(&token) {
+            let cmd = if !file_info.is_empty() {
+                dialog_info
+                    .accept_multiple_cmd
+                    .with(file_info)
+                    .to(dialog_info.id)
+            } else {
+                dialog_info.cancel_cmd.to(dialog_info.id)
+            };
+            inner.append_command(cmd);
+        } else {
+            tracing::error!("unknown dialog token");
+        }
+
+        std::mem::drop(inner);
+        self.process_commands();
+        self.inner.borrow_mut().do_update();
     }
 
     fn handle_dialog_response(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
@@ -931,6 +965,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
 
     fn open_file(&mut self, token: FileDialogToken, file_info: Option<FileInfo>) {
         self.app_state.handle_dialog_response(token, file_info);
+    }
+
+    fn open_files(&mut self, token: FileDialogToken, file_info: Vec<FileInfo>) {
+        self.app_state
+            .handle_dialog_multiple_response(token, file_info);
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
