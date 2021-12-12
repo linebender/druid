@@ -940,8 +940,8 @@ impl WindowState {
                     )
                     .ok()
                     .map(|s| FileInfo {
-                        // `get_file_dialog_path` should make sure one and only one
-                        // file is passed
+                        // `get_file_dialog_path` guarantees that save dialogs
+                        // only return on path
                         path: s.first().unwrap().into(),
                         format: None,
                     });
