@@ -1888,8 +1888,7 @@ impl WindowHandle {
         let position = unsafe {
             if !GetWindow(self.get_hwnd().unwrap(), GW_OWNER).is_null() {
                 // Has owned window. Convert point from window coords to screen coords.
-                let screen_point = self.get_position() + position.to_vec2();
-                screen_point
+                self.get_position() + position.to_vec2()
             } else {
                 position
             }
