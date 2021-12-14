@@ -1489,7 +1489,7 @@ impl WindowBuilder {
                 pos_y,
                 width,
                 height,
-                parent_hwnd.unwrap_or_else(|| 0 as HWND),
+                parent_hwnd.unwrap_or(0 as HWND),
                 hmenu,
                 0 as HINSTANCE,
                 win,
