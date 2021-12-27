@@ -237,6 +237,7 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
+    window_level: RefCell<Option<WindowLevel>>,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -1396,6 +1397,7 @@ impl WindowBuilder {
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
             let mut parent_hwnd = None;
+            let window_level = RefCell::new(self.level.clone());
             if let Some(level) = self.level {
                 match level {
                     WindowLevel::AppWindow => (),
@@ -1441,6 +1443,7 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
+                window_level,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1885,19 +1888,28 @@ impl WindowHandle {
 
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
-        let position = unsafe {
-            if !GetWindow(self.get_hwnd().unwrap(), GW_OWNER).is_null() {
-                // Has owned window. Convert point from window coords to screen coords.
-                self.get_position() + position.to_vec2()
+        if let Some(w) = self.state.upgrade() {
+            if let Some(window_level) = w.window_level.borrow().as_ref() {
+                match window_level {
+                    WindowLevel::Tooltip(parent_window_handle)
+                    | WindowLevel::DropDown(parent_window_handle)
+                    | WindowLevel::Modal(parent_window_handle) => {
+                        // Has owned window. Convert point from window coords to screen coords.
+                        let screen_position =
+                            parent_window_handle.get_position() + position.to_vec2();
+                        self.defer(DeferredOp::SetPosition(screen_position));
+                    }
+                    _ => {
+                        // Dead code!! Not sure if app window will ever be owned but we can be defensive.
+                        self.defer(DeferredOp::SetPosition(position));
+                    }
+                }
             } else {
-                position
+                self.defer(DeferredOp::SetPosition(position));
             }
-        };
-        self.defer(DeferredOp::SetPosition(position));
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("Window level unimplemented for Windows!");
+        } else {
+            self.defer(DeferredOp::SetPosition(position));
+        }
     }
 
     // Gets the position of the window in virtual screen coordinates
