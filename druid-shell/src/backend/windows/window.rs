@@ -237,6 +237,7 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
+    window_level: WindowLevel,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -1341,12 +1342,7 @@ impl WindowBuilder {
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
-        match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip(_) => self.level = Some(level),
-            _ => {
-                warn!("WindowLevel::Modal and WindowLevel::DropDown is currently unimplemented for Windows backend.");
-            }
-        }
+        self.level = Some(level)
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1393,35 +1389,36 @@ impl WindowBuilder {
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
+            let mut parent_hwnd = None;
+            let window_level;
             if let Some(level) = self.level {
+                window_level = level.clone();
                 match level {
                     WindowLevel::AppWindow => (),
-                    WindowLevel::Tooltip(parent_window_handle) => {
+                    WindowLevel::Tooltip(parent_window_handle)
+                    | WindowLevel::DropDown(parent_window_handle)
+                    | WindowLevel::Modal(parent_window_handle) => {
+                        parent_hwnd = parent_window_handle.0.get_hwnd();
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
                         if let Some(point_in_window_coord) = self.position {
                             let screen_point = parent_window_handle.get_position()
                                 + point_in_window_coord.to_vec2();
-                            let scaled_tooltip_point = WindowBuilder::scale_sub_window_position(
+                            let scaled_point = WindowBuilder::scale_sub_window_position(
                                 screen_point,
                                 parent_window_handle.get_scale(),
                             );
-                            pos_x = scaled_tooltip_point.x as i32;
-                            pos_y = scaled_tooltip_point.y as i32;
+                            pos_x = scaled_point.x as i32;
+                            pos_y = scaled_point.y as i32;
                         } else {
-                            warn!("No position provided for tooltip!");
+                            warn!("No position provided for subwindow!");
                         }
                     }
-                    WindowLevel::DropDown(_) => {
-                        dwStyle = WS_CHILD;
-                        dwExStyle = 0;
-                    }
-                    WindowLevel::Modal(_) => {
-                        dwStyle = WS_OVERLAPPED;
-                        dwExStyle = WS_EX_TOPMOST;
-                    }
                 }
+            } else {
+                // Default window level
+                window_level = WindowLevel::AppWindow;
             }
 
             let window = WindowState {
@@ -1440,6 +1437,7 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
+                window_level,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1488,7 +1486,7 @@ impl WindowBuilder {
                 pos_y,
                 width,
                 height,
-                0 as HWND,
+                parent_hwnd.unwrap_or(0 as HWND),
                 hmenu,
                 0 as HINSTANCE,
                 win,
@@ -1882,14 +1880,22 @@ impl WindowHandle {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
     }
 
-    // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
-        self.defer(DeferredOp::SetPosition(position));
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("Window level unimplemented for Windows!");
+        if let Some(w) = self.state.upgrade() {
+            match &w.window_level {
+                WindowLevel::Tooltip(parent_window_handle)
+                | WindowLevel::DropDown(parent_window_handle)
+                | WindowLevel::Modal(parent_window_handle) => {
+                    // Has owned window. Convert point from window coords to screen coords.
+                    let screen_position = parent_window_handle.get_position() + position.to_vec2();
+                    self.defer(DeferredOp::SetPosition(screen_position));
+                }
+                WindowLevel::AppWindow => {
+                    self.defer(DeferredOp::SetPosition(position));
+                }
+            }
+        }
     }
 
     // Gets the position of the window in virtual screen coordinates
