@@ -237,7 +237,7 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
-    window_level: RefCell<Option<WindowLevel>>,
+    window_level: WindowLevel,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -1342,14 +1342,7 @@ impl WindowBuilder {
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
-        match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) => {
-                self.level = Some(level)
-            }
-            _ => {
-                warn!("WindowLevel::Modal is currently unimplemented for Windows backend.");
-            }
-        }
+        self.level = Some(level)
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1397,12 +1390,14 @@ impl WindowBuilder {
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
             let mut parent_hwnd = None;
-            let window_level = RefCell::new(self.level.clone());
+            let mut window_level = WindowLevel::AppWindow;
             if let Some(level) = self.level {
+                window_level = level.clone();
                 match level {
                     WindowLevel::AppWindow => (),
                     WindowLevel::Tooltip(parent_window_handle)
-                    | WindowLevel::DropDown(parent_window_handle) => {
+                    | WindowLevel::DropDown(parent_window_handle)
+                    | WindowLevel::Modal(parent_window_handle) => {
                         parent_hwnd = parent_window_handle.0.get_hwnd();
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
@@ -1419,10 +1414,6 @@ impl WindowBuilder {
                         } else {
                             warn!("No position provided for subwindow!");
                         }
-                    }
-                    WindowLevel::Modal(_) => {
-                        dwStyle = WS_OVERLAPPED;
-                        dwExStyle = WS_EX_TOPMOST;
                     }
                 }
             }
@@ -1889,26 +1880,18 @@ impl WindowHandle {
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         if let Some(w) = self.state.upgrade() {
-            if let Some(window_level) = w.window_level.borrow().as_ref() {
-                match window_level {
-                    WindowLevel::Tooltip(parent_window_handle)
-                    | WindowLevel::DropDown(parent_window_handle)
-                    | WindowLevel::Modal(parent_window_handle) => {
-                        // Has owned window. Convert point from window coords to screen coords.
-                        let screen_position =
-                            parent_window_handle.get_position() + position.to_vec2();
-                        self.defer(DeferredOp::SetPosition(screen_position));
-                    }
-                    _ => {
-                        // Dead code!! Not sure if app window will ever be owned but we can be defensive.
-                        self.defer(DeferredOp::SetPosition(position));
-                    }
+            match &w.window_level {
+                WindowLevel::Tooltip(parent_window_handle)
+                | WindowLevel::DropDown(parent_window_handle)
+                | WindowLevel::Modal(parent_window_handle) => {
+                    // Has owned window. Convert point from window coords to screen coords.
+                    let screen_position = parent_window_handle.get_position() + position.to_vec2();
+                    self.defer(DeferredOp::SetPosition(screen_position));
                 }
-            } else {
-                self.defer(DeferredOp::SetPosition(position));
+                WindowLevel::AppWindow => {
+                    self.defer(DeferredOp::SetPosition(position));
+                }
             }
-        } else {
-            self.defer(DeferredOp::SetPosition(position));
         }
     }
 
