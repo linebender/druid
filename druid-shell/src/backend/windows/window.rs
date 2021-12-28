@@ -1390,7 +1390,7 @@ impl WindowBuilder {
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
             let mut parent_hwnd = None;
-            let mut window_level = WindowLevel::AppWindow;
+            let window_level;
             if let Some(level) = self.level {
                 window_level = level.clone();
                 match level {
@@ -1416,6 +1416,9 @@ impl WindowBuilder {
                         }
                     }
                 }
+            } else {
+                // Default window level
+                window_level = WindowLevel::AppWindow;
             }
 
             let window = WindowState {
