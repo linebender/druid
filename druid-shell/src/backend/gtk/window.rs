@@ -997,12 +997,13 @@ impl WindowHandle {
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.position();
-            let mut position = Point::new(x as f64, y as f64);
-            if let Some(parent_state) = &state.parent {
-                let pos = (*parent_state).get_position();
-                position -= (pos.x, pos.y)
+            let position = Point::new(x as f64, y as f64).to_dp(state.scale.get());
+            if let Some(parent_handle) = &state.parent {
+                let pos = parent_handle.get_position();
+                (position - pos).to_point()
+            } else {
+                position
             }
-            position.to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }
