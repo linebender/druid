@@ -392,7 +392,7 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
             style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
         }
         if !titlebar {
-            style &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
+            style &= !(WS_SYSMENU | WS_OVERLAPPED);
         } else {
             style |= WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED;
         }
@@ -1464,7 +1464,7 @@ impl WindowBuilder {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
             if !self.show_titlebar {
-                dwStyle &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
+                dwStyle &= !(WS_SYSMENU | WS_OVERLAPPED);
             }
 
             if self.present_strategy == PresentStrategy::Flip {
