@@ -22,9 +22,10 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::kurbo::RoundedRectRadii;
 use crate::localization::L10nManager;
 use crate::text::FontDescriptor;
-use crate::{ArcStr, Color, Data, Insets, Point, Rect, RoundedRectRadii, Size};
+use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 
 /// An environment passed down through all widget traversals.
 ///
@@ -662,23 +663,21 @@ impl<T: ValueType> From<Key<T>> for KeyOrValue<T> {
     }
 }
 
-impl From<f64> for KeyOrValue<Insets> {
-    fn from(src: f64) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(src.into())
-    }
+macro_rules! key_or_value_from_concrete {
+    ($from:ty => $to:ty) => {
+        impl From<$from> for KeyOrValue<$to> {
+            fn from(f: $from) -> KeyOrValue<$to> {
+                KeyOrValue::Concrete(f.into())
+            }
+        }
+    };
 }
 
-impl From<(f64, f64)> for KeyOrValue<Insets> {
-    fn from(src: (f64, f64)) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(src.into())
-    }
-}
-
-impl From<(f64, f64, f64, f64)> for KeyOrValue<Insets> {
-    fn from(src: (f64, f64, f64, f64)) -> KeyOrValue<Insets> {
-        KeyOrValue::Concrete(src.into())
-    }
-}
+key_or_value_from_concrete!(f64 => Insets);
+key_or_value_from_concrete!((f64, f64) => Insets);
+key_or_value_from_concrete!((f64, f64, f64, f64) => Insets);
+key_or_value_from_concrete!(f64 => RoundedRectRadii);
+key_or_value_from_concrete!((f64, f64, f64, f64) => RoundedRectRadii);
 
 #[cfg(test)]
 mod tests {
