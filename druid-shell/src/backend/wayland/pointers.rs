@@ -18,11 +18,19 @@ const BTN_MIDDLE: u32 = 0x112;
 
 // used to keep track of click event counts.
 #[derive(Debug, Clone)]
-struct ClickDebouncer(std::time::Instant, u8, mouse::MouseButton);
+struct ClickDebouncer {
+    timestamp: std::time::Instant,
+    count: u8,
+    previous: mouse::MouseButton,
+}
 
 impl Default for ClickDebouncer {
     fn default() -> Self {
-        Self(std::time::Instant::now(), 1, mouse::MouseButton::None)
+        Self {
+            timestamp: std::time::Instant::now(),
+            count: 1,
+            previous: mouse::MouseButton::None,
+        }
     }
 }
 
@@ -34,28 +42,32 @@ impl ClickDebouncer {
     const THRESHOLD: std::time::Duration = std::time::Duration::from_millis(500);
 
     fn reset(ts: std::time::Instant, btn: mouse::MouseButton) -> Self {
-        Self(ts, 1, btn)
+        Self {
+            timestamp: ts,
+            count: 1,
+            previous: btn,
+        }
     }
 
     fn debounce(&mut self, current: MouseEvtKind) -> MouseEvtKind {
         let ts = std::time::Instant::now();
 
         // reset counting and button.
-        if self.0 + ClickDebouncer::THRESHOLD < ts {
+        if self.timestamp + ClickDebouncer::THRESHOLD < ts {
             *self = ClickDebouncer::default();
         }
 
         match current {
-            MouseEvtKind::Up(mut evt) if self.2 == evt.button => {
-                evt.count = self.1;
+            MouseEvtKind::Up(mut evt) if self.previous == evt.button => {
+                evt.count = self.count;
                 MouseEvtKind::Up(evt)
             }
-            MouseEvtKind::Down(mut evt) if self.2 == evt.button => {
-                self.1 += 1;
-                evt.count = self.1;
+            MouseEvtKind::Down(mut evt) if self.previous == evt.button => {
+                self.count += 1;
+                evt.count = self.count;
                 MouseEvtKind::Down(evt)
             }
-            MouseEvtKind::Down(evt) if self.2 != evt.button => {
+            MouseEvtKind::Down(evt) if self.previous != evt.button => {
                 *self = ClickDebouncer::reset(ts, evt.button);
                 MouseEvtKind::Down(evt)
             }
@@ -250,15 +262,7 @@ impl Pointer {
                 appdata.pointer.push(PointerEvent::Axis { axis, value });
             }
             wl_pointer::Event::Frame => {
-                let winhandle = match appdata.acquire_current_window() {
-                    Some(w) => w,
-                    None => {
-                        tracing::warn!("dropping mouse events, no window available");
-                        appdata.pointer.queued_events.borrow_mut().clear();
-                        return;
-                    }
-                };
-                let winhandle = match winhandle.data() {
+                let winhandle = match appdata.acquire_current_window().and_then(|w| w.data()) {
                     Some(w) => w,
                     None => {
                         tracing::warn!("dropping mouse events, no window available");

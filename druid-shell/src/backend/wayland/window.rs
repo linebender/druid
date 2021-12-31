@@ -14,6 +14,9 @@
 #![allow(clippy::single_match)]
 
 use tracing;
+use wayland_protocols::xdg_shell::client::xdg_popup;
+use wayland_protocols::xdg_shell::client::xdg_positioner;
+use wayland_protocols::xdg_shell::client::xdg_surface;
 
 use super::{
     application::{Application, ApplicationData, Timer},
@@ -62,18 +65,11 @@ impl surfaces::Outputs for WindowHandle {
 }
 
 impl surfaces::Popup for WindowHandle {
-    fn surface<'a>(
+    fn surface(
         &self,
-        popup: &'a wayland_client::Main<
-            wayland_protocols::xdg_shell::client::xdg_surface::XdgSurface,
-        >,
-        pos: &'a wayland_client::Main<
-            wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner,
-        >,
-    ) -> Result<
-        wayland_client::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>,
-        Error,
-    > {
+        popup: &wayland_client::Main<xdg_surface::XdgSurface>,
+        pos: &wayland_client::Main<xdg_positioner::XdgPositioner>,
+    ) -> Result<wayland_client::Main<xdg_popup::XdgPopup>, Error> {
         self.inner.popup.surface(popup, pos)
     }
 }
@@ -427,7 +423,6 @@ impl WindowBuilder {
         let handler = self.handler.expect("must set a window handler");
         // compute the initial window size.
         let initial_size = appdata.initial_window_size(self.size);
-
         let surface =
             surfaces::toplevel::Surface::new(appdata.clone(), handler, initial_size, self.min_size);
 
