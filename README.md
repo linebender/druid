@@ -1,4 +1,4 @@
-# Druid
+![druid banner](https://raw.githubusercontent.com/linebender/druid/screenshots/images/small_banner.png)
 
 ## A data-first Rust-native UI toolkit.
 
@@ -65,9 +65,9 @@ Druid's existing functionality and widgets. Check [druid_widget_nursery](https:/
 
 ## Screenshots
 
-[![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](./druid/examples/calc.rs)
-[![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](./druid/examples/flex.rs)
-[![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](./druid/examples/custom_widget.rs)
+[![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](/druid/examples/calc.rs)
+[![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](/druid/examples/flex.rs)
+[![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](/druid/examples/custom_widget.rs)
 
 ## Using Druid
 
@@ -91,9 +91,15 @@ druid = { git = "https://github.com/linebender/druid.git" }
 
 #### Linux
 
-On Linux, Druid requires gtk+3; see [GTK installation page]. 
+On Linux, Druid requires gtk+3; see [GTK installation page].
 (On ubuntu-based distro, running `sudo apt-get install libgtk-3-dev` from the terminal will do the job.)
 
+#### OpenBSD
+
+On OpenBSD, Druid requires gtk+3;  install from packages:
+```sh
+pkg_add gtk+3
+```
 
 Alternatively, there is an X11 backend available, although it is currently
 [missing quite a few features](https://github.com/linebender/druid/issues?q=is%3Aopen+is%3Aissue+label%3Ashell%2Fx11+label%3Amissing).
@@ -124,7 +130,7 @@ the Rust community is working on a variety of different libraries with
 different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
 
-- Use the the platform-native widgets or mimic them. ([Relm])
+- Use the the platform-native widgets or mimic them. ([Relm], [SixtyFPS])
 - Embed easily into custom render pipelines. ([Conrod])
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when targeting the web. ([Iced], [Moxie])
@@ -152,7 +158,7 @@ Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D gra
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
 `piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
 In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
-Linux uses `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
+Linux and OpenBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
 use druid::kurbo::{BezPath, Point, Rect};
@@ -292,17 +298,17 @@ The main authors are Raph Levien and Colin Rofls, with much support from an
 active and friendly community.
 
 [Runebender]: https://github.com/linebender/runebender
-[the examples folder]: ./druid/examples
+[the examples folder]: /druid/examples
 [Piet library]: https://github.com/linebender/piet
-[custom_widget]: ./druid/examples/custom_widget.rs
-[basic utility and layout widgets]: ./druid/src/widget
+[custom_widget]: /druid/examples/custom_widget.rs
+[basic utility and layout widgets]: /druid/src/widget
 [Flutter's box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
 [value types]: https://sinusoid.es/lager/model.html#id2
 [GTK installation page]: https://www.gtk.org/docs/installations/linux/
 [Rust-native GUI experiments]: https://areweguiyet.com
-[CONTRIBUTING.md]: ./CONTRIBUTING.md
+[CONTRIBUTING.md]: /CONTRIBUTING.md
 [Zulip chat instance]: https://xi.zulipchat.com
-[non-`druid` examples]: ./druid-shell/examples/shello.rs
+[non-`druid` examples]: /druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
 [EventCtx]: https://docs.rs/druid/0.7.0/druid/struct.EventCtx.html
 [LifeCycleCtx]: https://docs.rs/druid/0.7.0/druid/struct.LifeCycleCtx.html
@@ -317,3 +323,4 @@ active and friendly community.
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
+[SixtyFPS]: https://github.com/sixtyfpsui/sixtyfps

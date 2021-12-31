@@ -175,7 +175,6 @@ pub(crate) struct Application {
     render_argb32_pictformat_cursor: Option<Pictformat>,
     /// Newest timestamp that we received
     timestamp: Rc<Cell<Timestamp>>,
-    xkb_context: xkb::Context,
 }
 
 /// The mutable `Application` state.
@@ -349,7 +348,6 @@ impl Application {
             marker: std::marker::PhantomData,
             render_argb32_pictformat_cursor,
             timestamp,
-            xkb_context,
         })
     }
 

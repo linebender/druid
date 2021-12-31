@@ -79,6 +79,16 @@ pub(crate) struct WindowBuilder {
 
 #[derive(Clone, Default)]
 pub struct WindowHandle(Weak<WindowState>);
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.0.upgrade(), other.0.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::rc::Rc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
@@ -124,10 +134,10 @@ impl WindowState {
         self.handler.borrow_mut().prepare_paint();
 
         let mut piet_ctx = piet_common::Piet::new(self.context.clone(), self.window.clone());
-        if let Err(e) = piet_ctx.with_save(|mut ctx| {
+        if let Err(e) = piet_ctx.with_save(|ctx| {
             let invalid = self.invalid.borrow();
             ctx.clip(invalid.to_bez_path());
-            self.handler.borrow_mut().paint(&mut ctx, &invalid);
+            self.handler.borrow_mut().paint(ctx, &invalid);
             Ok(())
         }) {
             error!("piet error on render: {:?}", e);
@@ -477,10 +487,6 @@ impl WindowHandle {
 
     pub fn set_position(&self, _position: Point) {
         warn!("WindowHandle::set_position unimplemented for web");
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level  is currently unimplemented for web.");
     }
 
     pub fn get_position(&self) -> Point {

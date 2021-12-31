@@ -115,6 +115,7 @@ use crate::{FileInfo, FileSpec, Selector};
 pub struct FileDialogOptions {
     pub(crate) opt: ShellOptions,
     pub(crate) accept_cmd: Option<Selector<FileInfo>>,
+    pub(crate) accept_multiple_cmd: Option<Selector<Vec<FileInfo>>>,
     pub(crate) cancel_cmd: Option<Selector<()>>,
 }
 
@@ -235,6 +236,14 @@ impl FileDialogOptions {
     /// [`SAVE_FILE_AS`]: crate::commands::SAVE_FILE_AS
     pub fn accept_command(mut self, cmd: Selector<FileInfo>) -> Self {
         self.accept_cmd = Some(cmd);
+        self
+    }
+
+    /// Sets a custom command to use when the file dialog succeeds with multi selection.
+    ///
+    /// This only works for "open" dialogs configured for multiselection.
+    pub fn accept_multiple_command(mut self, cmd: Selector<Vec<FileInfo>>) -> Self {
+        self.accept_multiple_cmd = Some(cmd);
         self
     }
 

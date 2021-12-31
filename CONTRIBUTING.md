@@ -125,7 +125,7 @@ old versions of our sub-dependencies and so we shouldn't claim that the old vers
 
 An easy way to do this is to use the `cargo upgrade` tool available via [cargo-edit].
 
-```
+```sh
 cargo install cargo-edit
 ```
 
@@ -138,7 +138,7 @@ which are still [semver] compatible with what we have specified in our `Cargo.to
 
 If you just want to see what would happen you can add the `--dry-run` option.
 
-```
+```sh
 cargo update
 ```
 
@@ -148,7 +148,7 @@ It's crucial that we use `--to-lockfile` because without it `cargo upgrade` won'
 
 If you just want to see what would happen you can add the `--dry-run` option.
 
-```
+```sh
 cargo upgrade --workspace --to-lockfile
 ```
 
@@ -157,12 +157,43 @@ cargo upgrade --workspace --to-lockfile
 Incompatible version updates should be done manually after carefully reviewing the changes.
 However you can still use the `cargo upgrade` tool to find out which dependencies could be updated.
 
-```
+```sh
 cargo upgrade --workspace --dry-run
 ```
 
 Then based on the reported potential updates you should manually go and check out what has changed,
 plus how and if it makes sense to update to the newer version.
+
+### Screenshots
+
+We need to update the screenshots. This involves:
+
+- Taking new screenshots.
+- Adding them to the repository in the `screenshots` branch on Github.
+- Updating the links in the README to point to the new screenshots.
+
+### Publishing
+
+Once all the docs, cargo files and screenshots have been updated, we need to
+publish the crate to crates.io.
+
+```sh
+cargo publish --manifest-path="druid-derive/Cargo.toml" --no-verify
+cargo publish --manifest-path="druid-shell/Cargo.toml"
+cargo publish --manifest-path="druid/Cargo.toml"
+```
+
+We need to run the commands in this order, because the druid crate depends on the two other crates. We use `--no-verify` for `druid-derive`, because the crate has a cyclic dependency on `druid` that might cause problem, since we haven't published the latest version of `druid` yet.
+
+<!--- TODO: check that the above is actually true. I'm not sure we really need `--no-verify` --->
+
+Once we've published our crate, we create a new git tag:
+
+```sh
+git tag $MY_NEW_VERSION_NUMBER HEAD
+```
+
+Finally, we [create a new Github release](https://docs.github.com/en/github/administering-a-repository/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
 
 [GitHub Help]: https://help.github.com/articles/about-pull-requests/
 [AUTHORS]: AUTHORS

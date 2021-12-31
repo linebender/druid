@@ -60,7 +60,7 @@ use super::application::Application;
 use super::dcomp::D3D11Device;
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
-use super::keyboard::KeyboardState;
+use super::keyboard::{self, KeyboardState};
 use super::menu::Menu;
 use super::paint;
 use super::timers::TimerSlots;
@@ -163,11 +163,22 @@ enum DeferredOp {
     ReleaseMouseCapture,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WindowHandle {
     text: PietText,
     state: Weak<WindowState>,
 }
+
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.state.upgrade(), other.state.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::rc::Rc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
@@ -226,6 +237,16 @@ struct WindowState {
     // Is the window focusable ("activatable" in Win32 terminology)?
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
+    window_level: WindowLevel,
+}
+
+impl std::fmt::Debug for WindowState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowState{\n")?;
+        f.write_str(format!("{:p}", self.hwnd.get()).as_str())?;
+        f.write_str("}")?;
+        Ok(())
+    }
 }
 
 /// Generic handler trait for the winapi window procedure entry point.
@@ -371,7 +392,7 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
             style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
         }
         if !titlebar {
-            style &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
+            style &= !(WS_SYSMENU | WS_OVERLAPPED);
         } else {
             style |= WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED;
         }
@@ -479,7 +500,7 @@ impl MyWndProc {
         F: FnOnce(&mut WndState) -> R,
     {
         let ret = if let Ok(mut s) = self.state.try_borrow_mut() {
-            (*s).as_mut().map(|state| f(state))
+            (*s).as_mut().map(f)
         } else {
             error!("failed to borrow WndState at {}", Location::caller());
             None
@@ -964,9 +985,20 @@ impl WndProc for MyWndProc {
             WM_CHAR | WM_SYSCHAR | WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP
             | WM_INPUTLANGCHANGE => {
                 unsafe {
+                    // We must call keyboard::is_last_message outside of the
+                    // WndState borrow below, because is_last_message
+                    // calls PeekMessageW, which can make reentrant calls
+                    // to our window procedure. There is one known real-world
+                    // example of this problem: when Narrator is running
+                    // and the user presses Alt+Tab, Narrator's keyboard event
+                    // preprocessing withholds the key-down event for Alt
+                    // until the user presses Tab, so we receive
+                    // WM_KILLFOCUS while we're processing WM_KEYDOWN.
+                    let is_last = keyboard::is_last_message(hwnd, msg, lparam);
                     let handled = self.with_wnd_state(|s| {
-                        if let Some(event) =
-                            s.keyboard_state.process_message(hwnd, msg, wparam, lparam)
+                        if let Some(event) = s
+                            .keyboard_state
+                            .process_message(msg, wparam, lparam, is_last)
                         {
                             // If the window doesn't have a menu, then we need to suppress ALT/F10.
                             // Otherwise we will stop getting mouse events for no gain.
@@ -1310,12 +1342,7 @@ impl WindowBuilder {
     }
 
     pub fn set_level(&mut self, level: WindowLevel) {
-        match level {
-            WindowLevel::AppWindow | WindowLevel::Tooltip => self.level = Some(level),
-            _ => {
-                warn!("WindowBuilder::set_level({:?}) is currently unimplemented for Windows backend.", level);
-            }
-        }
+        self.level = Some(level)
     }
 
     pub fn build(self) -> Result<WindowHandle, Error> {
@@ -1333,7 +1360,9 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
-            let (pos_x, pos_y) = match self.position {
+            // TODO: pos_x and pos_y are only scaled for windows with parents. But they need to be
+            // scaled for windows without parents too.
+            let (mut pos_x, mut pos_y) = match self.position {
                 Some(pos) => (pos.x as i32, pos.y as i32),
                 None => (CW_USEDEFAULT, CW_USEDEFAULT),
             };
@@ -1360,23 +1389,36 @@ impl WindowBuilder {
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
+            let mut parent_hwnd = None;
+            let window_level;
             if let Some(level) = self.level {
+                window_level = level.clone();
                 match level {
                     WindowLevel::AppWindow => (),
-                    WindowLevel::Tooltip => {
+                    WindowLevel::Tooltip(parent_window_handle)
+                    | WindowLevel::DropDown(parent_window_handle)
+                    | WindowLevel::Modal(parent_window_handle) => {
+                        parent_hwnd = parent_window_handle.0.get_hwnd();
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
-                    }
-                    WindowLevel::DropDown => {
-                        dwStyle = WS_CHILD;
-                        dwExStyle = 0;
-                    }
-                    WindowLevel::Modal => {
-                        dwStyle = WS_OVERLAPPED;
-                        dwExStyle = WS_EX_TOPMOST;
+                        if let Some(point_in_window_coord) = self.position {
+                            let screen_point = parent_window_handle.get_position()
+                                + point_in_window_coord.to_vec2();
+                            let scaled_point = WindowBuilder::scale_sub_window_position(
+                                screen_point,
+                                parent_window_handle.get_scale(),
+                            );
+                            pos_x = scaled_point.x as i32;
+                            pos_y = scaled_point.y as i32;
+                        } else {
+                            warn!("No position provided for subwindow!");
+                        }
                     }
                 }
+            } else {
+                // Default window level
+                window_level = WindowLevel::AppWindow;
             }
 
             let window = WindowState {
@@ -1395,6 +1437,7 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
+                window_level,
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1421,7 +1464,7 @@ impl WindowBuilder {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
             if !self.show_titlebar {
-                dwStyle &= !(WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED);
+                dwStyle &= !(WS_SYSMENU | WS_OVERLAPPED);
             }
 
             if self.present_strategy == PresentStrategy::Flip {
@@ -1443,7 +1486,7 @@ impl WindowBuilder {
                 pos_y,
                 width,
                 height,
-                0 as HWND,
+                parent_hwnd.unwrap_or(0 as HWND),
                 hmenu,
                 0 as HINSTANCE,
                 win,
@@ -1479,6 +1522,21 @@ impl WindowBuilder {
                 register_accel(hwnd, &accels);
             }
             Ok(handle)
+        }
+    }
+
+    /// When creating a sub-window, we need to scale its position with respect to its parent.
+    /// If there is any error while scaling, log it as a warn and show sub-window in top left corner of screen/window.
+    fn scale_sub_window_position(
+        un_scaled_sub_window_position: Point,
+        parent_window_scale: Result<Scale, crate::Error>,
+    ) -> Point {
+        match parent_window_scale {
+            Ok(s) => un_scaled_sub_window_position.to_px(s),
+            Err(e) => {
+                warn!("Error with scale: {:?}", e);
+                Point::new(0., 0.)
+            }
         }
     }
 }
@@ -1822,14 +1880,22 @@ impl WindowHandle {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
     }
 
-    // Sets the position of the window in virtual screen coordinates
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
-        self.defer(DeferredOp::SetPosition(position));
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("Window level unimplemented for Windows!");
+        if let Some(w) = self.state.upgrade() {
+            match &w.window_level {
+                WindowLevel::Tooltip(parent_window_handle)
+                | WindowLevel::DropDown(parent_window_handle)
+                | WindowLevel::Modal(parent_window_handle) => {
+                    // Has owned window. Convert point from window coords to screen coords.
+                    let screen_position = parent_window_handle.get_position() + position.to_vec2();
+                    self.defer(DeferredOp::SetPosition(screen_position));
+                }
+                WindowLevel::AppWindow => {
+                    self.defer(DeferredOp::SetPosition(position));
+                }
+            }
+        }
     }
 
     // Gets the position of the window in virtual screen coordinates
@@ -1849,7 +1915,8 @@ impl WindowHandle {
                         Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                     );
                 };
-                return Point::new(rect.left as f64, rect.top as f64);
+                return Point::new(rect.left as f64, rect.top as f64)
+                    .to_dp(self.get_scale().unwrap());
             }
         }
         Point::new(0.0, 0.0)

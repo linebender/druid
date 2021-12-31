@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
 - System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
 - `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
@@ -57,6 +58,11 @@ You can find its changes [documented below](#070---2021-01-01).
 - Add #[data(eq)] shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
 - X11: detect keyboard layout ([#1779] by [@Maan2003])
 - WindowDesc::with_config ([#1929] by [@Maan2003])
+- `scroll_to_view` and `scroll_area_to_view` methods on `UpdateCtx`, `LifecycleCtx` and `EventCtx` ([#1976] by [@xarvic])
+- `Notification::route` ([#1978] by [@xarvic])
+- Build on OpenBSD ([#1993] by [@klemensn])
+- Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
+- Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
 
 ### Changed
 
@@ -76,6 +82,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
 - x11: Only query atoms once instead of per window ([#1865] by [@psychon])
 - remove prefix from platform extension traits ([#1873] by [@Maan2003])
+- Remove `set_level` on windows ([#1919] by [@JAicewizard])
+- Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
+- `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
+- Closures passed to `Label::new` can now return any type that implements `Into<ArcStr>` ([#2064] by [@jplatte])
 
 ### Deprecated
 
@@ -85,6 +95,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Fixed
 
+- Centre checkmark in checkbox ([#2036] by [@agentsim])
 - `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
 - `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
 - GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
@@ -99,7 +110,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11 backend now uses the platform locale ([#1756] by [@Maan2003])
 - `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
 - RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
-- X11: window focus events ([#1938] by [@Maan2003])
+- GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
+- `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
+- Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
+- X11: window focus events ([#1938] by [@Maan2003]
 
 ### Visual
 
@@ -514,6 +528,10 @@ Last release without a changelog :(
 [@bjorn]: https://github.com/bjorn
 [@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
+[@jenra-uwu]: https://github.com/jenra-uwu
+[@klemensn]: https://github.com/klemensn
+[@agentsim]: https://github.com/agentsim
+[@jplatte]: https://github.com/jplatte
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -784,8 +802,18 @@ Last release without a changelog :(
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
 [#1907]: https://github.com/linebender/druid/pull/1907
+[#1919]: https://github.com/linebender/druid/pull/1919
 [#1929]: https://github.com/linebender/druid/pull/1929
 [#1938]: https://github.com/linebender/druid/pull/1938
+[#1947]: https://github.com/linebender/druid/pull/1947
+[#1953]: https://github.com/linebender/druid/pull/1953
+[#1967]: https://github.com/linebender/druid/pull/1967
+[#1976]: https://github.com/linebender/druid/pull/1976
+[#1978]: https://github.com/linebender/druid/pull/1978
+[#1993]: https://github.com/linebender/druid/pull/1993
+[#1996]: https://github.com/linebender/druid/pull/1996
+[#2036]: https://github.com/linebender/druid/pull/2036
+[#2064]: https://github.com/linebender/druid/pull/2064
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

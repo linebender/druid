@@ -41,16 +41,16 @@ serde = ["kurbo/serde"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.5.0-pre1"
-kurbo = "0.8.1"
+piet-common = "=0.5.0"
+kurbo = "0.8.2"
 
 tracing = "0.1.22"
 lazy_static = "1.4.0"
-time = "0.2.16"
+time = "0.3.0"
 cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
 anyhow = "1.0.32"
-keyboard-types = { version = "0.5.0", default_features = false }
+keyboard-types = { version = "0.6.2", default_features = false }
 
 # Optional dependencies
 image = { version = "0.23.12", optional = true, default_features = false }
@@ -75,7 +75,7 @@ core-graphics = "0.22.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
 
-[target.'cfg(target_os="linux")'.dependencies]
+[target.'cfg(any(target_os="linux", target_os="openbsd"))'.dependencies]
 # TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.14.0", default_features = false, optional = true }
@@ -96,10 +96,10 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "=0.5.0-pre1", features = ["png"] }
+piet-common = { version = "=0.5.0", features = ["png"] }
 static_assertions = "1.1.0"
-test-env-log = { version = "0.2.5", features = ["trace"], default-features = false }
-tracing-subscriber = "0.2.15"
+test-log = { version = "0.2.5", features = ["trace"], default-features = false }
+tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 unicode-segmentation = "1.7.0"
 
 [build-dependencies]

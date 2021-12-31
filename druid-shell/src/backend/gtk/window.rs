@@ -44,7 +44,7 @@ use instant::Duration;
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -73,7 +73,7 @@ use super::util;
 /// GTK considers 96 the default value which represents a 1.0 scale factor.
 const SCALE_TARGET_DPI: f64 = 96.0;
 
-/// Taken from https://gtk-rs.org/docs-src/tutorial/closures
+/// Taken from <https://gtk-rs.org/docs-src/tutorial/closures>
 /// It is used to reduce the boilerplate of setting up gtk callbacks
 /// Example:
 /// ```
@@ -103,12 +103,23 @@ macro_rules! clone {
     );
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct WindowHandle {
     pub(crate) state: Weak<WindowState>,
     // Ensure that we don't implement Send, because it isn't actually safe to send the WindowState.
     marker: std::marker::PhantomData<*const ()>,
 }
+
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.state.upgrade(), other.state.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
@@ -191,6 +202,17 @@ pub(crate) struct WindowState {
 
     request_animation: Cell<bool>,
     in_draw: Cell<bool>,
+
+    parent: Option<crate::WindowHandle>,
+}
+
+impl std::fmt::Debug for WindowState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowState{")?;
+        self.window.fmt(f)?;
+        f.write_str("}")?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -293,7 +315,48 @@ impl WindowBuilder {
         window.add(&vbox);
         let drawing_area = gtk::DrawingArea::new();
 
-        let win_state = Arc::new(WindowState {
+        // Set the parent widget and handle level specific code
+        let mut parent: Option<crate::WindowHandle> = None;
+        if let Some(level) = &self.level {
+            let hint = match level {
+                WindowLevel::AppWindow => WindowTypeHint::Normal,
+                WindowLevel::Tooltip(_) => WindowTypeHint::Tooltip,
+                WindowLevel::DropDown(_) => WindowTypeHint::DropdownMenu,
+                WindowLevel::Modal(_) => WindowTypeHint::Dialog,
+            };
+
+            window.set_type_hint(hint);
+
+            match &level {
+                WindowLevel::Tooltip(p) => {
+                    parent = Some(p.clone());
+                }
+                WindowLevel::DropDown(p) => {
+                    parent = Some(p.clone());
+                }
+                WindowLevel::Modal(p) => {
+                    parent = Some(p.clone());
+                    window.set_urgency_hint(true);
+                    window.set_modal(true);
+                }
+                _ => (),
+            };
+            if let Some(parent) = &parent {
+                if let Some(parent_state) = parent.0.state.upgrade() {
+                    window.set_transient_for(Some(&parent_state.window));
+                }
+            }
+
+            let override_redirect = match level {
+                WindowLevel::AppWindow => false,
+                WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
+            };
+            if let Some(window) = window.window() {
+                window.set_override_redirect(override_redirect);
+            }
+        }
+
+        let state = WindowState {
             window,
             scale: Cell::new(scale),
             area: Cell::new(area),
@@ -311,7 +374,10 @@ impl WindowBuilder {
             deferred_queue: RefCell::new(Vec::new()),
             request_animation: Cell::new(false),
             in_draw: Cell::new(false),
-        });
+            parent,
+        };
+
+        let win_state = Arc::new(state);
 
         self.app
             .gtk_app()
@@ -326,12 +392,10 @@ impl WindowBuilder {
             state: Arc::downgrade(&win_state),
             marker: std::marker::PhantomData,
         };
-        if let Some(level) = self.level {
-            handle.set_level(level);
-        }
         if let Some(pos) = self.position {
             handle.set_position(pos);
         }
+
         if let Some(state) = self.state {
             handle.set_window_state(state)
         }
@@ -735,10 +799,6 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
-        if let Some(level) = self.level {
-            handle.set_override_redirect(level);
-        }
-
         let size = self.size;
         win_state.with_handler(|h| {
             h.connect(&handle.clone().into());
@@ -847,17 +907,30 @@ impl WindowState {
         for op in queue {
             match op {
                 DeferredOp::Open(options, token) => {
-                    let file_info = dialog::get_file_dialog_path(
+                    // Keep the value of this option for later
+                    let multi_selection = options.multi_selection;
+                    let file_infos = match dialog::get_file_dialog_path(
                         self.window.upcast_ref(),
                         FileDialogType::Open,
                         options,
-                    )
-                    .ok()
-                    .map(|s| FileInfo {
-                        path: s.into(),
-                        format: None,
-                    });
-                    self.with_handler(|h| h.open_file(token, file_info));
+                    ) {
+                        Ok(infos) => infos
+                            .iter()
+                            .map(|path| FileInfo {
+                                path: path.into(),
+                                format: None,
+                            })
+                            .collect(),
+                        Err(err) => {
+                            tracing::error!("Error trying to open file: {}", err);
+                            vec![]
+                        }
+                    };
+                    if multi_selection {
+                        self.with_handler(|h| h.open_files(token, file_infos));
+                    } else {
+                        self.with_handler(|h| h.open_file(token, file_infos.first().cloned()));
+                    }
                 }
                 DeferredOp::SaveAs(options, token) => {
                     let file_info = dialog::get_file_dialog_path(
@@ -867,7 +940,9 @@ impl WindowState {
                     )
                     .ok()
                     .map(|s| FileInfo {
-                        path: s.into(),
+                        // `get_file_dialog_path` guarantees that save dialogs
+                        // only return on path
+                        path: s.first().unwrap().into(),
                         format: None,
                     });
                     self.with_handler(|h| h.save_as(token, file_info));
@@ -905,7 +980,14 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_position(&self, position: Point) {
+    pub fn set_position(&self, mut position: Point) {
+        if let Some(state) = self.state.upgrade() {
+            if let Some(parent_state) = &state.parent {
+                let pos = (*parent_state).get_position();
+                position += (pos.x, pos.y)
+            }
+        };
+
         if let Some(state) = self.state.upgrade() {
             let px = position.to_px(state.scale.get());
             state.window.move_(px.x as i32, px.y as i32)
@@ -915,7 +997,12 @@ impl WindowHandle {
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.position();
-            Point::new(x as f64, y as f64).to_dp(state.scale.get())
+            let mut position = Point::new(x as f64, y as f64);
+            if let Some(parent_state) = &state.parent {
+                let pos = (*parent_state).get_position();
+                position -= (pos.x, pos.y)
+            }
+            position.to_dp(state.scale.get())
         } else {
             Point::new(0.0, 0.0)
         }
@@ -942,38 +1029,6 @@ impl WindowHandle {
             window.to_rect() - alloc
         } else {
             Insets::ZERO
-        }
-    }
-
-    pub fn set_level(&self, level: WindowLevel) {
-        if let Some(state) = self.state.upgrade() {
-            let hint = match level {
-                WindowLevel::AppWindow => WindowTypeHint::Normal,
-                WindowLevel::Tooltip => WindowTypeHint::Tooltip,
-                WindowLevel::DropDown => WindowTypeHint::DropdownMenu,
-                WindowLevel::Modal => WindowTypeHint::Dialog,
-            };
-
-            state.window.set_type_hint(hint);
-        }
-
-        self.set_override_redirect(level);
-    }
-
-    /// The override-redirect flag tells the window manager not to mess with the window; it should
-    /// be set for things like tooltips, dropdowns, etc.
-    ///
-    /// Note that this is exposed on the GDK window, so we can't set it until the GTK window is
-    /// realized.
-    fn set_override_redirect(&self, level: WindowLevel) {
-        let override_redirect = match level {
-            WindowLevel::AppWindow => false,
-            WindowLevel::Tooltip | WindowLevel::DropDown | WindowLevel::Modal => true,
-        };
-        if let Some(state) = self.state.upgrade() {
-            if let Some(window) = state.window.window() {
-                window.set_override_redirect(override_redirect);
-            }
         }
     }
 

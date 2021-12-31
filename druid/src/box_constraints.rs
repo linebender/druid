@@ -275,7 +275,7 @@ impl BoxConstraints {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     fn bc(min_width: f64, min_height: f64, max_width: f64, max_height: f64) -> BoxConstraints {
         BoxConstraints::new(

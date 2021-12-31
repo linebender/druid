@@ -17,6 +17,7 @@
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::f64;
+use std::ops::Deref;
 use std::sync::Arc;
 
 use tracing::{instrument, trace};
@@ -26,6 +27,7 @@ use crate::im::{OrdMap, Vector};
 
 use crate::kurbo::{Point, Rect, Size};
 
+use crate::debug_state::DebugState;
 use crate::{
     widget::Axis, BoxConstraints, Data, Env, Event, EventCtx, KeyOrValue, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, UpdateCtx, Widget, WidgetPod,
@@ -108,8 +110,12 @@ impl<T: Data> ListIter<T> for Vector<T> {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
-        for (i, item) in self.iter_mut().enumerate() {
-            cb(item, i);
+        for (index, element) in self.clone().iter().enumerate() {
+            let mut new_element = element.to_owned();
+            cb(&mut new_element, index);
+            if !new_element.same(element) {
+                self[index] = new_element;
+            }
         }
     }
 
@@ -160,15 +166,15 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Vector<T>) {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
-        for (i, item) in self.1.iter_mut().enumerate() {
-            let mut d = (self.0.clone(), item.clone());
-            cb(&mut d, i);
+        for (index, element) in self.1.clone().iter().enumerate() {
+            let mut d = (self.0.clone(), element.to_owned());
+            cb(&mut d, index);
 
             if !self.0.same(&d.0) {
                 self.0 = d.0;
             }
-            if !item.same(&d.1) {
-                *item = d.1;
+            if !element.same(&d.1) {
+                self.1[index] = d.1;
             }
         }
     }
@@ -186,21 +192,27 @@ impl<T: Data> ListIter<T> for Arc<Vec<T>> {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
-        let mut new_data = Vec::with_capacity(self.data_len());
-        let mut any_changed = false;
+        let mut new_data: Option<Vec<T>> = None;
 
         for (i, item) in self.iter().enumerate() {
             let mut d = item.to_owned();
             cb(&mut d, i);
 
-            if !any_changed && !item.same(&d) {
-                any_changed = true;
+            if !item.same(&d) {
+                match &mut new_data {
+                    Some(vec) => {
+                        vec[i] = d;
+                    }
+                    None => {
+                        let mut new = (**self).clone();
+                        new[i] = d;
+                        new_data = Some(new);
+                    }
+                }
             }
-            new_data.push(d);
         }
-
-        if any_changed {
-            *self = Arc::new(new_data);
+        if let Some(vec) = new_data {
+            *self = Arc::new(vec);
         }
     }
 
@@ -219,28 +231,29 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<Vec<T>>) {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
-        let mut new_data = Vec::with_capacity(self.1.len());
-        let mut any_shared_changed = false;
-        let mut any_el_changed = false;
+        let mut new_data: Option<Vec<T>> = None;
 
         for (i, item) in self.1.iter().enumerate() {
             let mut d = (self.0.clone(), item.to_owned());
             cb(&mut d, i);
 
-            if !any_shared_changed && !self.0.same(&d.0) {
-                any_shared_changed = true;
-            }
-            if any_shared_changed {
-                self.0 = d.0;
-            }
-            if !any_el_changed && !item.same(&d.1) {
-                any_el_changed = true;
-            }
-            new_data.push(d.1);
-        }
+            self.0 = d.0;
 
-        if any_el_changed {
-            self.1 = Arc::new(new_data);
+            if !item.same(&d.1) {
+                match &mut new_data {
+                    Some(vec) => {
+                        vec[i] = d.1;
+                    }
+                    None => {
+                        let mut new = self.1.deref().clone();
+                        new[i] = d.1;
+                        new_data = Some(new);
+                    }
+                }
+            }
+        }
+        if let Some(vec) = new_data {
+            self.1 = Arc::new(vec);
         }
     }
 
@@ -257,21 +270,27 @@ impl<T: Data> ListIter<T> for Arc<VecDeque<T>> {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut T, usize)) {
-        let mut new_data = VecDeque::with_capacity(self.data_len());
-        let mut any_changed = false;
+        let mut new_data: Option<VecDeque<T>> = None;
 
         for (i, item) in self.iter().enumerate() {
             let mut d = item.to_owned();
             cb(&mut d, i);
 
-            if !any_changed && !item.same(&d) {
-                any_changed = true;
+            if !item.same(&d) {
+                match &mut new_data {
+                    Some(vec) => {
+                        vec[i] = d;
+                    }
+                    None => {
+                        let mut new = (**self).clone();
+                        new[i] = d;
+                        new_data = Some(new);
+                    }
+                }
             }
-            new_data.push_back(d);
         }
-
-        if any_changed {
-            *self = Arc::new(new_data);
+        if let Some(vec) = new_data {
+            *self = Arc::new(vec);
         }
     }
 
@@ -290,28 +309,29 @@ impl<S: Data, T: Data> ListIter<(S, T)> for (S, Arc<VecDeque<T>>) {
     }
 
     fn for_each_mut(&mut self, mut cb: impl FnMut(&mut (S, T), usize)) {
-        let mut new_data = VecDeque::with_capacity(self.1.len());
-        let mut any_shared_changed = false;
-        let mut any_el_changed = false;
+        let mut new_data: Option<VecDeque<T>> = None;
 
         for (i, item) in self.1.iter().enumerate() {
             let mut d = (self.0.clone(), item.to_owned());
             cb(&mut d, i);
 
-            if !any_shared_changed && !self.0.same(&d.0) {
-                any_shared_changed = true;
-            }
-            if any_shared_changed {
-                self.0 = d.0;
-            }
-            if !any_el_changed && !item.same(&d.1) {
-                any_el_changed = true;
-            }
-            new_data.push_back(d.1);
-        }
+            self.0 = d.0;
 
-        if any_el_changed {
-            self.1 = Arc::new(new_data);
+            if !item.same(&d.1) {
+                match &mut new_data {
+                    Some(vec) => {
+                        vec[i] = d.1;
+                    }
+                    None => {
+                        let mut new = self.1.deref().clone();
+                        new[i] = d.1;
+                        new_data = Some(new);
+                    }
+                }
+            }
+        }
+        if let Some(vec) = new_data {
+            self.1 = Arc::new(vec);
         }
     }
 
@@ -410,5 +430,21 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 child.paint(ctx, child_data, env);
             }
         });
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let mut children = self.children.iter();
+        let mut children_state = Vec::with_capacity(data.data_len());
+        data.for_each(|child_data, _| {
+            if let Some(child) = children.next() {
+                children_state.push(child.widget().debug_state(child_data));
+            }
+        });
+
+        DebugState {
+            display_name: "List".to_string(),
+            children: children_state,
+            ..Default::default()
+        }
     }
 }

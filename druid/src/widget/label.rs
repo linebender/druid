@@ -15,9 +15,11 @@
 //! A label widget.
 
 use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 use druid_shell::Cursor;
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
@@ -74,7 +76,7 @@ const LABEL_X_PADDING: f64 = 2.0;
 /// [`Env`]: ../struct.Env.html
 /// [`RawLabel`]: struct.RawLabel.html
 /// [`Label::raw`]: #method.raw
-/// [`LabelText`]: struct.LabelText.html
+/// [`LabelText`]: enum.LabelText.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
 /// [`draw_at`]: #method.draw_at
 /// [`Widget`]: ../trait.Widget.html
@@ -113,12 +115,13 @@ pub enum LineBreaking {
 /// The text for a [`Label`].
 ///
 /// This can be one of three things; either an [`ArcStr`], a [`LocalizedString`],
-/// or a closure with the signature, `Fn(&T, &Env) -> String`, where `T` is
-/// the `Data` at this point in the tree.
+/// or a closure with the signature `Fn(&T, &Env) -> impl Into<ArcStr>`, where
+/// `T` is the `Data` at this point in the tree.
 ///
 /// [`ArcStr`]: ../type.ArcStr.html
 /// [`LocalizedString`]: ../struct.LocalizedString.html
 /// [`Label`]: struct.Label.html
+#[derive(Clone)]
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
     Localized(LocalizedString<T>),
@@ -130,12 +133,14 @@ pub enum LabelText<T> {
 }
 
 /// Text that is computed dynamically.
+#[derive(Clone)]
 pub struct Dynamic<T> {
-    f: Box<dyn Fn(&T, &Env) -> String>,
+    f: Arc<dyn Fn(&T, &Env) -> ArcStr>,
     resolved: ArcStr,
 }
 
 /// Static text.
+#[derive(Debug, Clone)]
 pub struct Static {
     /// The text.
     string: ArcStr,
@@ -446,8 +451,8 @@ impl Static {
 impl<T> Dynamic<T> {
     fn resolve(&mut self, data: &T, env: &Env) -> bool {
         let new = (self.f)(data, env);
-        let changed = new.as_str() != self.resolved.as_ref();
-        self.resolved = new.into();
+        let changed = new != self.resolved;
+        self.resolved = new;
         changed
     }
 }
@@ -523,6 +528,14 @@ impl<T: Data> Widget<T> for Label<T> {
             tracing::warn!("Label text changed without call to update. See LabelAdapter::set_text for information.");
         }
         self.label.paint(ctx, &self.current_text, env)
+    }
+
+    fn debug_state(&self, _data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: self.current_text.to_string(),
+            ..Default::default()
+        }
     }
 }
 
@@ -665,9 +678,13 @@ impl<T> From<LocalizedString<T>> for LabelText<T> {
     }
 }
 
-impl<T, F: Fn(&T, &Env) -> String + 'static> From<F> for LabelText<T> {
+impl<T, S, F> From<F> for LabelText<T>
+where
+    S: Into<Arc<str>>,
+    F: Fn(&T, &Env) -> S + 'static,
+{
     fn from(src: F) -> LabelText<T> {
-        let f = Box::new(src);
+        let f = Arc::new(move |state: &T, env: &Env| src(state, env).into());
         LabelText::Dynamic(Dynamic {
             f,
             resolved: ArcStr::from(""),

@@ -285,7 +285,21 @@ impl WindowBuilder {
                 .colormap(colormap);
         };
 
-        let pos = self.position.unwrap_or_default().to_px(scale);
+        let (parent, parent_origin) = match &self.level {
+            WindowLevel::AppWindow => (Weak::new(), Vec2::ZERO),
+            WindowLevel::Tooltip(parent)
+            | WindowLevel::DropDown(parent)
+            | WindowLevel::Modal(parent) => {
+                let handle = parent.0.window.clone();
+                let origin = handle
+                    .upgrade()
+                    .map(|x| x.get_position())
+                    .unwrap_or_default()
+                    .to_vec2();
+                (handle, origin)
+            }
+        };
+        let pos = (self.position.unwrap_or_default() + parent_origin).to_px(scale);
 
         // Create the actual window
         let (width_px, height_px) = (size_px.width as u16, size_px.height as u16);
@@ -430,9 +444,9 @@ impl WindowBuilder {
         {
             let window_type = match self.level {
                 WindowLevel::AppWindow => atoms._NET_WM_WINDOW_TYPE_NORMAL,
-                WindowLevel::Tooltip => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
-                WindowLevel::Modal => atoms._NET_WM_WINDOW_TYPE_DIALOG,
-                WindowLevel::DropDown => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                WindowLevel::Tooltip(_) => atoms._NET_WM_WINDOW_TYPE_TOOLTIP,
+                WindowLevel::Modal(_) => atoms._NET_WM_WINDOW_TYPE_DIALOG,
+                WindowLevel::DropDown(_) => atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
             };
 
             let conn = self.app.connection();
@@ -445,7 +459,7 @@ impl WindowBuilder {
             ));
             if matches!(
                 self.level,
-                WindowLevel::DropDown | WindowLevel::Modal | WindowLevel::Tooltip
+                WindowLevel::DropDown(_) | WindowLevel::Modal(_) | WindowLevel::Tooltip(_)
             ) {
                 log_x11!(conn.change_window_attributes(
                     id,
@@ -471,6 +485,7 @@ impl WindowBuilder {
             present_data: RefCell::new(present_data),
             buffers,
             active_text_field: Cell::new(None),
+            parent,
         });
 
         window.set_title(&self.title);
@@ -589,6 +604,7 @@ pub(crate) struct Window {
     present_data: RefCell<Option<PresentData>>,
     buffers: RefCell<Buffers>,
     active_text_field: Cell<Option<TextFieldToken>>,
+    parent: Weak<Window>,
 }
 
 /// A collection of pixmaps for rendering to. This gets used in two different ways: if the present
@@ -769,7 +785,7 @@ impl Window {
             let cairo_ctx = cairo::Context::new(&surface).unwrap();
             let scale = self.scale.get();
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale);
+                let rect = rect.to_px(scale).round();
                 cairo_ctx.rectangle(rect.x0, rect.y0, rect.width(), rect.height());
             }
             cairo_ctx.clip();
@@ -819,7 +835,7 @@ impl Window {
             buffers.idle_pixmaps.pop();
         } else {
             for rect in invalid.rects() {
-                let rect = rect.to_px(scale).expand();
+                let rect = rect.to_px(scale).round();
                 let (x, y) = (rect.x0 as i16, rect.y0 as i16);
                 let (w, h) = (rect.width() as u16, rect.height() as u16);
                 self.app
@@ -853,6 +869,14 @@ impl Window {
         warn!("Window::show_titlebar is currently unimplemented for X11 backend.");
     }
 
+    fn parent_origin(&self) -> Vec2 {
+        self.parent
+            .upgrade()
+            .map(|x| x.get_position())
+            .unwrap_or_default()
+            .to_vec2()
+    }
+
     fn get_position(&self) -> Point {
         fn _get_position(window: &Window) -> Result<Point, Error> {
             let conn = window.app.connection();
@@ -865,13 +889,14 @@ impl Window {
         }
         let pos = _get_position(self);
         log_x11!(&pos);
-        pos.unwrap_or_default()
+        pos.map(|pos| pos - self.parent_origin())
+            .unwrap_or_default()
     }
 
     fn set_position(&self, pos: Point) {
         let conn = self.app.connection();
         let scale = self.scale.get();
-        let pos = pos.to_px(scale).expand();
+        let pos = (pos + self.parent_origin()).to_px(scale).expand();
         log_x11!(conn.configure_window(
             self.id,
             &ConfigureWindowAux::new().x(pos.x as i32).y(pos.y as i32),
@@ -910,8 +935,8 @@ impl Window {
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
-        // expanding not needed here, because we are expanding at every use of invalid
-        borrow_mut!(self.invalid)?.add_rect(rect);
+        let scale = self.scale.get();
+        borrow_mut!(self.invalid)?.add_rect(rect.to_px(scale).expand().to_dp(scale));
         Ok(())
     }
 
@@ -1395,7 +1420,7 @@ impl PresentData {
             .rects()
             .iter()
             .map(|r| {
-                let r = r.to_px(scale).expand();
+                let r = r.to_px(scale).round();
                 Rectangle {
                     x: r.x0 as i16,
                     y: r.y0 as i16,
@@ -1558,6 +1583,12 @@ pub(crate) struct WindowHandle {
     id: u32,
     window: Weak<Window>,
 }
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+impl Eq for WindowHandle {}
 
 impl WindowHandle {
     fn new(id: u32, window: Weak<Window>) -> WindowHandle {
@@ -1616,10 +1647,6 @@ impl WindowHandle {
     pub fn content_insets(&self) -> Insets {
         warn!("WindowHandle::content_insets unimplemented for X11 backend.");
         Insets::ZERO
-    }
-
-    pub fn set_level(&self, _level: WindowLevel) {
-        warn!("WindowHandle::set_level unimplemented for X11 backend.");
     }
 
     pub fn set_size(&self, size: Size) {

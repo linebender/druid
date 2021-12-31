@@ -14,6 +14,8 @@
 
 //! A container that scrolls its contents.
 
+use crate::commands::SCROLL_TO_VIEW;
+use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
@@ -183,9 +185,27 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
             self.clip.event(ctx, event, data, env);
         }
 
+        // Handle scroll after the inner widget processed the events, to prefer inner widgets while
+        // scrolling.
         self.clip.with_port(|port| {
             scroll_component.handle_scroll(port, ctx, event, env);
         });
+
+        if !self.scroll_component.are_bars_held() {
+            // We only scroll to the component if the user is not trying to move the scrollbar.
+            if let Event::Notification(notification) = event {
+                if let Some(&global_highlight_rect) = notification.get(SCROLL_TO_VIEW) {
+                    ctx.set_handled();
+                    let view_port_changed = self
+                        .clip
+                        .default_scroll_to_view_handling(ctx, global_highlight_rect);
+                    if view_port_changed {
+                        self.scroll_component
+                            .reset_scrollbar_fade(|duration| ctx.request_timer(duration), env);
+                    }
+                }
+            }
+        }
     }
 
     #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
@@ -225,6 +245,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         self.clip.paint(ctx, data, env);
         self.scroll_component
             .draw_bars(ctx, &self.clip.viewport(), env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.clip.debug_state(data)],
+            ..Default::default()
+        }
     }
 }
 

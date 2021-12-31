@@ -16,13 +16,14 @@
 
 use std::{
     any::{Any, TypeId},
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     ops::{Deref, DerefMut},
     rc::Rc,
     time::Duration,
 };
 use tracing::{error, trace, warn};
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::core::{CommandQueue, CursorChange, FocusChange, WidgetState};
 use crate::env::KeyLike;
 use crate::menu::ContextMenu;
@@ -60,6 +61,8 @@ pub(crate) struct ContextState<'a> {
     /// The id of the widget that currently has focus.
     pub(crate) focus_widget: Option<WidgetId>,
     pub(crate) root_app_data_type: TypeId,
+    pub(crate) timers: &'a mut HashMap<TimerToken, WidgetId>,
+    pub(crate) text_registrations: &'a mut Vec<TextFieldRegistration>,
 }
 
 /// A mutable context provided to event handling methods of widgets.
@@ -453,6 +456,20 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.submit_command(commands::NEW_SUB_WINDOW.with(SingleUse::new(req)));
         window_id
     }
+
+    /// Scrolls this widget into view.
+    ///
+    /// If this widget is only partially visible or not visible at all because of [`Scroll`]s
+    /// it is wrapped in, they will do the minimum amount of scrolling necessary to bring this
+    /// widget fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_to_view(&mut self) {
+        self.scroll_area_to_view(self.size().to_rect())
+    }
 });
 
 // methods on everyone but paintctx
@@ -493,7 +510,7 @@ impl_context_method!(
         /// request with the event.
         pub fn request_timer(&mut self, deadline: Duration) -> TimerToken {
             trace!("request_timer deadline={:?}", deadline);
-            self.state.request_timer(&mut self.widget_state, deadline)
+            self.state.request_timer(self.widget_state.id, deadline)
         }
     }
 );
@@ -686,6 +703,21 @@ impl EventCtx<'_, '_> {
         trace!("request_update");
         self.widget_state.request_update = true;
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_notification(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
+    }
 }
 
 impl UpdateCtx<'_, '_> {
@@ -725,6 +757,25 @@ impl UpdateCtx<'_, '_> {
             None => false,
         }
     }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(Command::new(
+            SCROLL_TO_VIEW,
+            area + self.window_origin().to_vec2(),
+            self.widget_id(),
+        ));
+    }
 }
 
 impl LifeCycleCtx<'_, '_> {
@@ -758,7 +809,26 @@ impl LifeCycleCtx<'_, '_> {
             document: Rc::new(document),
             widget_id: self.widget_id(),
         };
-        self.widget_state.text_registrations.push(registration);
+        self.state.text_registrations.push(registration);
+    }
+
+    /// Scrolls the area into view.
+    ///
+    /// If the area is only partially visible or not visible at all because of [`Scroll`]s
+    /// this widget is wrapped in, they will do the minimum amount of scrolling necessary to
+    /// bring the area fully into view.
+    ///
+    /// If the widget is [`hidden`], this method has no effect.
+    ///
+    /// [`Scroll`]: crate::widget::Scroll
+    /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    pub fn scroll_area_to_view(&mut self, area: Rect) {
+        //TODO: only do something if this widget is not hidden
+        self.submit_command(
+            SCROLL_TO_VIEW
+                .with(area + self.window_origin().to_vec2())
+                .to(self.widget_id()),
+        );
     }
 }
 
@@ -892,6 +962,8 @@ impl<'a> ContextState<'a> {
         window: &'a WindowHandle,
         window_id: WindowId,
         focus_widget: Option<WidgetId>,
+        timers: &'a mut HashMap<TimerToken, WidgetId>,
+        text_registrations: &'a mut Vec<TextFieldRegistration>,
     ) -> Self {
         ContextState {
             command_queue,
@@ -899,6 +971,8 @@ impl<'a> ContextState<'a> {
             window,
             window_id,
             focus_widget,
+            timers,
+            text_registrations,
             text: window.text(),
             root_app_data_type: TypeId::of::<T>(),
         }
@@ -910,10 +984,10 @@ impl<'a> ContextState<'a> {
             .push_back(command.default_to(self.window_id.into()));
     }
 
-    fn request_timer(&self, widget_state: &mut WidgetState, deadline: Duration) -> TimerToken {
+    fn request_timer(&mut self, widget_id: WidgetId, deadline: Duration) -> TimerToken {
         trace!("request_timer deadline={:?}", deadline);
         let timer_token = self.window.request_timer(deadline);
-        widget_state.add_timer(timer_token);
+        self.timers.insert(timer_token, widget_id);
         timer_token
     }
 }

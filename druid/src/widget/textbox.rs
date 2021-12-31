@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
 use crate::text::{
@@ -32,7 +33,11 @@ use crate::{
 use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
-const MAC_OR_LINUX: bool = cfg!(any(target_os = "macos", target_os = "linux"));
+const MAC_OR_LINUX_OR_OBSD: bool = cfg!(any(
+    target_os = "macos",
+    target_os = "linux",
+    target_os = "openbsd"
+));
 
 /// When we scroll after editing or movement, we show a little extra of the document.
 const SCROLL_TO_INSETS: Insets = Insets::uniform_xy(40.0, 0.0);
@@ -465,6 +470,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                     .borrow_mut()
                     .set_selection(Selection::new(0, data.as_str().len()))
                 {
+                    ctx.request_paint();
                     ctx.invalidate_text_input(inval);
                 }
                 ctx.set_handled();
@@ -510,9 +516,10 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 self.reset_cursor_blink(ctx.request_timer(CURSOR_BLINK_DURATION));
                 self.was_focused_from_click = false;
                 ctx.request_paint();
+                ctx.scroll_to_view();
             }
             LifeCycle::FocusChanged(false) => {
-                if self.text().can_write() && MAC_OR_LINUX && !self.multiline {
+                if self.text().can_write() && MAC_OR_LINUX_OR_OBSD && !self.multiline {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
@@ -670,6 +677,15 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
 
         // Paint the border
         ctx.stroke(clip_rect, &border_color, border_width);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        let text = data.slice(0..data.len()).unwrap_or_default();
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            main_value: text.to_string(),
+            ..Default::default()
+        }
     }
 }
 

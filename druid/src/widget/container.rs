@@ -15,6 +15,8 @@
 //! A widget that provides simple visual styling options to a child.
 
 use super::BackgroundBrush;
+use crate::debug_state::DebugState;
+use crate::kurbo::RoundedRectRadii;
 use crate::widget::prelude::*;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
 use tracing::{instrument, trace, trace_span};
@@ -28,7 +30,7 @@ struct BorderStyle {
 pub struct Container<T> {
     background: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
-    corner_radius: KeyOrValue<f64>,
+    corner_radius: KeyOrValue<RoundedRectRadii>,
 
     child: WidgetPod<T, Box<dyn Widget<T>>>,
 }
@@ -118,13 +120,13 @@ impl<T: Data> Container<T> {
     }
 
     /// Builder style method for rounding off corners of this container by setting a corner radius
-    pub fn rounded(mut self, radius: impl Into<KeyOrValue<f64>>) -> Self {
+    pub fn rounded(mut self, radius: impl Into<KeyOrValue<RoundedRectRadii>>) -> Self {
         self.set_rounded(radius);
         self
     }
 
     /// Round off corners of this container by setting a corner radius
-    pub fn set_rounded(&mut self, radius: impl Into<KeyOrValue<f64>>) {
+    pub fn set_rounded(&mut self, radius: impl Into<KeyOrValue<RoundedRectRadii>>) {
         self.corner_radius = radius.into();
     }
 
@@ -226,5 +228,13 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.child.paint(ctx, data, env);
+    }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
     }
 }

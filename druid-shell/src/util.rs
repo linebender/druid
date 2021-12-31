@@ -27,15 +27,15 @@ fn current_thread_id() -> u64 {
     unsafe { mem::transmute(thread::current().id()) }
 }
 
-/// Assert that the current thread is the registered main thread.
+/// Assert that the current thread is the registered main thread or main thread is not claimed.
 ///
 /// # Panics
 ///
-/// Panics when called from a non-main thread.
-pub fn assert_main_thread() {
+/// Panics when called from a non-main thread and main thread is claimed.
+pub(crate) fn assert_main_thread_or_main_unclaimed() {
     let thread_id = current_thread_id();
     let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
-    if thread_id != main_thread_id {
+    if thread_id != main_thread_id && main_thread_id != 0 {
         panic!(
             "Main thread assertion failed {} != {}",
             thread_id, main_thread_id
@@ -48,7 +48,7 @@ pub fn assert_main_thread() {
 /// # Panics
 ///
 /// Panics if the main thread has already been claimed by another thread.
-pub fn claim_main_thread() {
+pub(crate) fn claim_main_thread() {
     let thread_id = current_thread_id();
     let old_thread_id =
         MAIN_THREAD_ID.compare_exchange(0, thread_id, Ordering::AcqRel, Ordering::Acquire);
@@ -70,7 +70,7 @@ pub fn claim_main_thread() {
 /// # Panics
 ///
 /// Panics if the main thread status is owned by another thread.
-pub fn release_main_thread() {
+pub(crate) fn release_main_thread() {
     let thread_id = current_thread_id();
     let old_thread_id =
         MAIN_THREAD_ID.compare_exchange(thread_id, 0, Ordering::AcqRel, Ordering::Acquire);

@@ -26,14 +26,17 @@
 //! - `DRUID_SHELL_DISABLE_X11_PRESENT`: if this is set and `druid-shell` is using the `x11`
 //! backend, it will avoid using the Present extension.
 
-#![warn(broken_intra_doc_links)]
+#![warn(rustdoc::broken_intra_doc_links)]
 #![allow(clippy::new_without_default)]
 #![deny(clippy::trivially_copy_pass_by_ref)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
+)]
 
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
 // The `target_os` requirement is there to exclude anything `wasm` like.
-#[cfg(all(target_os = "linux", feature = "gtk"))]
+#[cfg(all(any(target_os = "linux", target_os = "openbsd"), feature = "gtk"))]
 extern crate gtk_rs as gtk;
 
 // Reexport the version of `image` we are using.

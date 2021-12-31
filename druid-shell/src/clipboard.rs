@@ -179,6 +179,7 @@ pub type FormatId = &'static str;
 
 /// Data coupled with a type identifier.
 #[derive(Debug, Clone)]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 pub struct ClipboardFormat {
     pub(crate) identifier: FormatId,
     pub(crate) data: Vec<u8>,
@@ -224,7 +225,7 @@ cfg_if::cfg_if! {
     } else {
         impl ClipboardFormat {
             cfg_if::cfg_if! {
-                if #[cfg(target_os = "linux")] {
+                if #[cfg(any(target_os = "linux", target_os = "openbsd"))] {
                     // trial and error; this is the most supported string type for gtk?
                     pub const TEXT: &'static str = "UTF8_STRING";
                 } else {

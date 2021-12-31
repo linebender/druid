@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::commands::SCROLL_TO_VIEW;
+use crate::debug_state::DebugState;
 use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
@@ -23,7 +25,7 @@ use tracing::{instrument, trace};
 pub struct Viewport {
     /// The size of the area that we have a viewport into.
     pub content_size: Size,
-    /// The origin of the view rectangle.
+    /// The origin of the view rectangle, relative to the content.
     pub view_origin: Point,
     /// The size of the view rectangle.
     pub view_size: Size,
@@ -307,6 +309,38 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.child
             .set_viewport_offset(self.viewport_origin().to_vec2());
     }
+
+    /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
+    ///
+    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// are called.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    pub fn default_scroll_to_view_handling(
+        &mut self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+    ) -> bool {
+        let mut viewport_changed = false;
+        self.with_port(|port| {
+            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+            let content_highlight_rect = global_highlight_rect - global_content_offset;
+
+            if port.pan_to_visible(content_highlight_rect) {
+                ctx.request_paint();
+                viewport_changed = true;
+            }
+
+            // This is a new value since view_origin has changed in the meantime
+            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+            ctx.submit_notification(
+                SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
+            );
+        });
+        viewport_changed
+    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
@@ -377,12 +411,20 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
             ctx.with_child_ctx(visible, |ctx| self.child.paint_raw(ctx, data, env));
         });
     }
+
+    fn debug_state(&self, data: &T) -> DebugState {
+        DebugState {
+            display_name: self.short_type_name().to_string(),
+            children: vec![self.child.widget().debug_state(data)],
+            ..Default::default()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_env_log::test;
+    use test_log::test;
 
     #[test]
     fn pan_to_visible() {
