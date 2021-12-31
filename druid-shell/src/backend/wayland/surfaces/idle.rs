@@ -11,7 +11,10 @@ impl std::fmt::Debug for Kind {
     fn fmt(&self, format: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             Kind::Callback(_) => format.debug_struct("Idle(Callback)").finish(),
-            Kind::Token(_) => format.debug_struct("Idle(Token)").finish(),
+            Kind::Token(token) => format
+                .debug_struct("Idle(Token)")
+                .field("token", &token)
+                .finish(),
         }
     }
 }

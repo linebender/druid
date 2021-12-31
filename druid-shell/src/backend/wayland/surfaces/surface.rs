@@ -2,6 +2,9 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use wayland_client as wlc;
 use wayland_client::protocol::wl_surface;
+use wayland_protocols::xdg_shell::client::xdg_popup;
+use wayland_protocols::xdg_shell::client::xdg_positioner;
+use wayland_protocols::xdg_shell::client::xdg_surface;
 
 use crate::kurbo;
 use crate::window;
@@ -566,10 +569,9 @@ impl Outputs for Dead {
 impl Popup for Dead {
     fn surface<'a>(
         &self,
-        _: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_surface::XdgSurface>,
-        _: &'a wlc::Main<wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner>,
-    ) -> Result<wlc::Main<wayland_protocols::xdg_shell::client::xdg_popup::XdgPopup>, error::Error>
-    {
+        _: &'a wlc::Main<xdg_surface::XdgSurface>,
+        _: &'a wlc::Main<xdg_positioner::XdgPositioner>,
+    ) -> Result<wlc::Main<xdg_popup::XdgPopup>, error::Error> {
         tracing::warn!("popup invoked on a dead surface");
         Err(error::Error::InvalidParent(0))
     }

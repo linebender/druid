@@ -48,10 +48,8 @@ impl Data {
     fn receive(&self, mimetype: &str) -> Option<Offer> {
         for offer in self.current.borrow().iter() {
             if !offer.mimetype.starts_with(mimetype) {
-                // tracing::debug!("compared {:?} {:?}", offer.mimetype, mimetype);
                 continue;
             }
-            // tracing::debug!("retrieving {:?} {:?}", offer.mimetype, mimetype);
             return Some(offer.clone());
         }
         None

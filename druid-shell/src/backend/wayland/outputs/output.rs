@@ -7,14 +7,6 @@ use wayland_client::protocol::wl_registry;
 use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_manager_v1;
 use wayland_protocols::unstable::xdg_output::v1::client::zxdg_output_v1;
 
-pub trait Consumer {
-    fn consume(
-        &mut self,
-        obj: &wlc::Main<wl_output::WlOutput>,
-        event: &wl_output::Event,
-    ) -> Option<outputs::Meta>;
-}
-
 pub fn detect(
     env: &impl display::GlobalEventDispatch,
 ) -> Result<calloop::channel::Channel<outputs::Event>, error::Error> {
@@ -155,7 +147,7 @@ struct Meta {
     meta: outputs::Meta,
 }
 
-impl Consumer for Meta {
+impl Meta {
     /// Incorporate update data from the server for this output.
     fn consume(
         &mut self,

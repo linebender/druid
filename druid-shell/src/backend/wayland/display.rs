@@ -5,10 +5,13 @@ use wayland_client as wlc;
 use wayland_client::protocol::wl_registry;
 use wayland_protocols::xdg_shell::client::xdg_wm_base;
 
+type GlobalEventConsumer = dyn Fn(&wlc::GlobalEvent, &wlc::Attached<wl_registry::WlRegistry>, &wlc::DispatchData)
+    + 'static;
+
 #[derive(Clone)]
 pub struct GlobalEventSubscription {
     id: u64,
-    sub: std::sync::Arc<dyn GlobalEventConsumer>,
+    sub: std::sync::Arc<GlobalEventConsumer>,
 }
 
 impl GlobalEventSubscription {
@@ -18,22 +21,20 @@ impl GlobalEventSubscription {
     }
 }
 
-impl GlobalEventConsumer for GlobalEventSubscription {
+impl GlobalEventSubscription {
     fn consume(
         &self,
         event: &wlc::GlobalEvent,
         registry: &wlc::Attached<wl_registry::WlRegistry>,
         ctx: &wlc::DispatchData,
     ) {
-        self.sub.consume(event, registry, ctx)
+        (self.sub)(event, registry, ctx)
     }
 }
 
 impl<X> From<X> for GlobalEventSubscription
 where
-    X: Fn(&wlc::GlobalEvent, &wlc::Attached<wl_registry::WlRegistry>, &wlc::DispatchData)
-        + GlobalEventConsumer
-        + 'static,
+    X: Fn(&wlc::GlobalEvent, &wlc::Attached<wl_registry::WlRegistry>, &wlc::DispatchData) + 'static,
 {
     fn from(closure: X) -> Self {
         Self {
@@ -43,32 +44,9 @@ where
     }
 }
 
-impl<X> GlobalEventConsumer for X
-where
-    X: Fn(&wlc::GlobalEvent, &wlc::Attached<wl_registry::WlRegistry>, &wlc::DispatchData) + 'static,
-{
-    fn consume(
-        &self,
-        event: &wlc::GlobalEvent,
-        registry: &wlc::Attached<wl_registry::WlRegistry>,
-        ctx: &wlc::DispatchData,
-    ) {
-        self(event, registry, ctx)
-    }
-}
-
 pub trait GlobalEventDispatch {
     fn subscribe(&self, sub: impl Into<GlobalEventSubscription>) -> GlobalEventSubscription;
     fn release(&self, s: &GlobalEventSubscription);
-}
-
-pub trait GlobalEventConsumer {
-    fn consume(
-        &self,
-        event: &wlc::GlobalEvent,
-        registry: &wlc::Attached<wl_registry::WlRegistry>,
-        ctx: &wlc::DispatchData,
-    );
 }
 
 pub(super) struct Dispatcher {
@@ -85,18 +63,16 @@ impl Default for Dispatcher {
     }
 }
 
-impl GlobalEventConsumer for Dispatcher {
+impl Dispatcher {
     fn consume(
         &self,
         event: &wlc::GlobalEvent,
         registry: &wlc::Attached<wl_registry::WlRegistry>,
         ctx: &wlc::DispatchData,
     ) {
-        // tracing::info!("global event initiated {:?} {:?}", registry, event);
         for (_, sub) in self.subscriptions.borrow().iter() {
             sub.consume(event, registry, ctx);
         }
-        // tracing::info!("global event completed {:?} {:?}", registry, event);
     }
 }
 
@@ -119,12 +95,6 @@ pub(super) struct Environment {
     pub(super) queue: std::rc::Rc<std::cell::RefCell<wlc::EventQueue>>,
     dispatcher: std::sync::Arc<Dispatcher>,
 }
-
-// because we have the global environment we need to mark these as safe/send.
-// strictly speaking we should probably guard the access to the various fields
-// behind a mutex, but in practice we are not actually accessing across threads.
-unsafe impl Sync for Environment {}
-unsafe impl Send for Environment {}
 
 impl GlobalEventDispatch for Environment {
     fn subscribe(&self, sub: impl Into<GlobalEventSubscription>) -> GlobalEventSubscription {

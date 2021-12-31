@@ -582,7 +582,6 @@ impl From<Size> for RawSize {
     fn from(s: Size) -> Self {
         let width = s.width as i32;
         let height = s.height as i32;
-
         // Sanity check
         assert!(width >= 0 && height >= 0);
 

@@ -106,10 +106,6 @@ pub(crate) struct ApplicationData {
     /// necessary, but it negligable cost).
     pub(super) outputs: Rc<RefCell<BTreeMap<u32, outputs::Meta>>>,
     pub(super) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
-    /// Handles to any surfaces that have been created.
-    ///
-    /// This is where the window data is owned. Other handles should be weak.
-    // pub(super) surfaces: RefCell<im::OrdMap<u32, std::sync::Arc<surfaces::surface::Data>>>,
 
     /// Handles to any surfaces that have been created.
     pub(super) handles: RefCell<im::OrdMap<u64, WindowHandle>>,
@@ -256,6 +252,10 @@ impl Application {
             outputsqueue: RefCell::new(Some(outputqueue)),
             wayland: env,
         });
+
+        for m in outputs::current()? {
+            app_data.outputs.borrow_mut().insert(m.id(), m);
+        }
 
         // Collect the supported image formats.
         wl_shm.quick_assign(with_cloned!(app_data; move |d1, event, d3| {
