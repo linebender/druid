@@ -190,9 +190,17 @@ impl<T: Data> AppLauncher<T> {
     ///
     /// # Panics
     ///
-    /// Panics if the subscriber fails to initialize, for example if a `tracing`/`tracing_wasm`
-    /// global logger was already set.
-    pub fn log_to_console(self) -> Self {
+    /// Panics if `enable` is `true` and the subscriber fails to initialize,
+    /// for example if a `tracing`/`tracing_wasm` global logger was already set.
+    ///
+    /// Never panics when `enable` is `false`, or have any other side effect.
+    ///
+    /// Passing in false is useful if you want to enable a global logger as feature
+    /// but log to console otherwise.
+    pub fn start_console_logging(self, enable: bool) -> Self {
+        if !enable {
+            return self;
+        }
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
@@ -219,6 +227,10 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
+    /// Calls `start_console_logging` with `true`.
+    pub fn log_to_console(self) -> Self {
+        self.start_console_logging(true)
+    }
     /// Use custom localization resource
     ///
     /// `resources` is a list of file names that contain strings. `base_dir`

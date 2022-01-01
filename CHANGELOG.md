@@ -78,6 +78,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `Event::WindowScale` to notify widgets of the window's scale changes. ([#2335] by [@xStrom])
 - `Ctx::scale` method to all contexts for widgets to easily access the window's scale. ([#2335] by [@xStrom])
 - Add a public constructor to `StringCursor` ([#2319] by [@benoitryder])
+- App: add start_console_logging(bool) which accepts a flag. ([#2102] by [@ratmice])
 
 ### Changed
 
@@ -580,6 +581,7 @@ Last release without a changelog :(
 [@benoitryder]: https://github.com/benoitryder
 [@sprocklem]: https://github.com/sprocklem
 [@cbondurant]: https://github.com/cbondurant
+[@ratmice]: https://github.com/ratmice
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -863,6 +865,7 @@ Last release without a changelog :(
 [#2036]: https://github.com/linebender/druid/pull/2036
 [#2064]: https://github.com/linebender/druid/pull/2064
 [#1979]: https://github.com/linebender/druid/pull/1979
+[#2102]: https://github.com/linebender/druid/pull/2102
 [#2119]: https://github.com/linebender/druid/pull/2119
 [#2111]: https://github.com/linebender/druid/pull/2111
 [#2117]: https://github.com/linebender/druid/pull/2117
