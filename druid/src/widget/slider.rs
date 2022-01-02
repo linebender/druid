@@ -162,6 +162,20 @@ impl Slider {
         let mapping = self.mapping;
         Annotated::new(self, mapping, named_steps, unnamed_steps)
     }
+
+    fn calculate_scroll_value(&self, mouse_delta: f64) -> f64 {
+        let increment = if let Some(step) = self.mapping.step {
+            step
+        } else {
+            0.1
+        };
+
+        if mouse_delta < 0.0 {
+            increment
+        } else {
+            -increment
+        }
+    }
 }
 
 impl Widget<f64> for Slider {
@@ -182,6 +196,15 @@ impl Widget<f64> for Slider {
                         .calculate_value(me.pos, knob_size, ctx.size(), 0.0);
                     ctx.request_paint();
                     ctx.set_active(true);
+                }
+            }
+            if let Event::Wheel(me) = event {
+                if !ctx.is_disabled() {
+                    *data = (*data + self.calculate_scroll_value(me.wheel_delta.y))
+                        .max(self.mapping.min)
+                        .min(self.mapping.max);
+                    ctx.request_paint();
+                    ctx.set_handled();
                 }
             }
         }
