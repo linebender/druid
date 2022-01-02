@@ -20,3 +20,5 @@ cfg_if::cfg_if! {
         pub use keyboard::*;
     }
 }
+
+pub(crate) mod noop_menu;
