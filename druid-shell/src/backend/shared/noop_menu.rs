@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! X11 menus implementation.
+//! Implementation of menu that does nothing, for platforms that either don't have a menu available, or
+//! just don't have an implementation in druid-shell yet.
 
 use crate::hotkey::HotKey;
 
