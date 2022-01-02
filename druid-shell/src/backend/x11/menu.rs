@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // TODO(x11/menus): implement menus (currently a no-op)
-pub use super::shared::noop_menu::*;
+pub use crate::backend::shared::noop_menu::*;

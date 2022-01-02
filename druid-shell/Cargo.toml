@@ -41,7 +41,7 @@ serde = ["kurbo/serde"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.5.0"
+piet-common = {path = "../../piet/piet-common"}
 kurbo = "0.8.2"
 
 tracing = "0.1.22"
@@ -67,7 +67,7 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
             "d3d11", "dwmapi", "wincon", "fileapi", "processenv", "winbase", "handleapi",
             "shellapi", "winnls"]
 
-[target.'cfg(any(target_os="macos", target-os="ios"))'.dependencies]
+[target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
 block = "0.1.6"
 cocoa = "0.24.0"
 objc = "0.2.7"
@@ -96,7 +96,7 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "=0.5.0", features = ["png"] }
+piet-common = { path = "../../piet/piet-common", features = ["png"] }
 static_assertions = "1.1.0"
 test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }

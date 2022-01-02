@@ -25,5 +25,7 @@ mod keyboard;
 pub mod menu;
 pub mod screen;
 pub mod text_input;
-pub mod util;
 pub mod window;
+pub mod util {
+    pub(crate) use crate::backend::shared::cocoa_util::*;
+}
