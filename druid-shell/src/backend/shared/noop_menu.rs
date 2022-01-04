@@ -15,8 +15,9 @@
 //! Implementation of menu that does nothing, for platforms that either don't have a menu available, or
 //! just don't have an implementation in druid-shell yet.
 
-use crate::hotkey::HotKey;
+#![allow(unused)]
 
+use crate::hotkey::HotKey;
 pub struct Menu;
 
 impl Menu {
