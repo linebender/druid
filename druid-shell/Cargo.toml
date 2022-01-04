@@ -41,7 +41,6 @@ serde = ["kurbo/serde"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.5.0"
 kurbo = "0.8.2"
 
 tracing = "0.1.22"
@@ -55,6 +54,12 @@ keyboard-types = { version = "0.6.2", default_features = false }
 # Optional dependencies
 image = { version = "0.23.12", optional = true, default_features = false }
 raw-window-handle = { version = "0.3.3", optional = true, default_features = false }
+
+[target.'cfg(not(target_os="ios"))'.dependencies]
+piet-common = "=0.5.0"
+
+[target.'cfg(not(target_os="ios"))'.dev-dependencies]
+piet-common = { version = "=0.5.0", features = ["png"] }
 
 [target.'cfg(target_os="windows")'.dependencies]
 scopeguard = "1.1.0"
@@ -96,7 +101,6 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "=0.5.0", features = ["png"] }
 static_assertions = "1.1.0"
 test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
