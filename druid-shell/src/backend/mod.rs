@@ -53,3 +53,5 @@ pub(crate) mod shared;
 mod web;
 #[cfg(target_arch = "wasm32")]
 pub use web::*;
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod shared;
