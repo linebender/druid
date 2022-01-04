@@ -22,6 +22,11 @@ On Fedora
 sudo dnf install gtk3-devel glib2-devel
 ```
 
+On Arch
+```no_compile
+sudo pacman -S gtk3
+```
+
 See [GTK installation page] for more installation instructions.
 
 ### OpenBSD
