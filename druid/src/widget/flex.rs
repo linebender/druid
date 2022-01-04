@@ -666,7 +666,7 @@ impl<T: Data> Widget<T> for Flex<T> {
         // these two are calculated but only used if we're baseline aligned
         let mut max_above_baseline = 0f64;
         let mut max_below_baseline = 0f64;
-        let mut any_use_baseline = self.cross_alignment == CrossAxisAlignment::Baseline;
+        let mut any_use_baseline = false;
 
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
@@ -674,7 +674,8 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             match child {
                 Child::Fixed { widget, alignment } => {
-                    any_use_baseline &= *alignment == Some(CrossAxisAlignment::Baseline);
+                    let alignment = alignment.unwrap_or(self.cross_alignment);
+                    any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
 
                     let child_bc =
                         self.direction
@@ -717,7 +718,14 @@ impl<T: Data> Widget<T> for Flex<T> {
         // Measure flex children.
         for child in &mut self.children {
             match child {
-                Child::Flex { widget, flex, .. } => {
+                Child::Flex {
+                    widget,
+                    flex,
+                    alignment,
+                } => {
+                    let alignment = alignment.unwrap_or(self.cross_alignment);
+                    any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
+
                     let desired_major = (*flex) * px_per_flex + remainder;
                     let actual_major = desired_major.round();
                     remainder = desired_major - actual_major;
