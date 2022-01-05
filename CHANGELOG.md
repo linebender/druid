@@ -63,6 +63,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Build on OpenBSD ([#1993] by [@klemensn])
 - Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
 - Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
+- `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
 
 ### Changed
 
@@ -812,6 +813,7 @@ Last release without a changelog :(
 [#1996]: https://github.com/linebender/druid/pull/1996
 [#2036]: https://github.com/linebender/druid/pull/2036
 [#2064]: https://github.com/linebender/druid/pull/2064
+[#1979]: https://github.com/linebender/druid/pull/1979
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

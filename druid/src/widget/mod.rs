@@ -91,7 +91,7 @@ pub use radio::{Radio, RadioGroup};
 pub use scope::{DefaultScopePolicy, LensScopeTransfer, Scope, ScopePolicy, ScopeTransfer};
 pub use scroll::Scroll;
 pub use sized_box::SizedBox;
-pub use slider::Slider;
+pub use slider::{KnobStyle, RangeSlider, Slider};
 pub use spinner::Spinner;
 pub use split::Split;
 pub use stepper::Stepper;
