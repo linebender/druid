@@ -29,9 +29,12 @@ pub struct Checkbox {
 impl Checkbox {
     /// Create a new `Checkbox` with a text label.
     pub fn new(text: impl Into<LabelText<bool>>) -> Checkbox {
-        Checkbox {
-            child_label: Label::new(text),
-        }
+        Self::from_label(Label::new(text))
+    }
+
+    /// Create a new `Checkbox` with the provided [`Label`].
+    pub fn from_label(label: Label<bool>) -> Checkbox {
+        Checkbox { child_label: label }
     }
 
     /// Update the text label.
