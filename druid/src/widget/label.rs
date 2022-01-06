@@ -615,11 +615,11 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         self.layout.rebuild_if_needed(ctx.text(), env);
 
         let text_metrics = self.layout.layout_metrics();
-        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
         let size = bc.constrain(Size::new(
             text_metrics.size.width + 2. * LABEL_X_PADDING,
             text_metrics.size.height,
         ));
+        ctx.set_baseline_offset(size.height - text_metrics.first_baseline);
         trace!("Computed size: {}", size);
         size
     }
