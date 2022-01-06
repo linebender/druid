@@ -28,6 +28,13 @@ pub use mac::*;
 #[cfg(target_os = "macos")]
 pub(crate) mod shared;
 
+#[cfg(target_os = "ios")]
+mod ios;
+#[cfg(target_os = "ios")]
+pub use ios::*;
+#[cfg(target_os = "ios")]
+pub(crate) mod shared;
+
 #[cfg(all(feature = "x11", any(target_os = "linux", target_os = "openbsd")))]
 mod x11;
 #[cfg(all(feature = "x11", any(target_os = "linux", target_os = "openbsd")))]
@@ -46,3 +53,5 @@ pub(crate) mod shared;
 mod web;
 #[cfg(target_arch = "wasm32")]
 pub use web::*;
+#[cfg(target_arch = "wasm32")]
+pub(crate) mod shared;

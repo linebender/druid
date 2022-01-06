@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2022 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! iOS backend errors.
 
-#![allow(clippy::let_unit_value)]
+#[derive(Debug, Clone)]
+pub struct Error;
 
-pub mod appkit;
-pub mod application;
-pub mod clipboard;
-pub mod dialog;
-pub mod error;
-mod keyboard;
-pub mod menu;
-pub mod screen;
-pub mod text_input;
-pub mod window;
-pub mod util {
-    pub(crate) use crate::backend::shared::cocoa_util::*;
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "iOS Platform Error")
+    }
 }
+
+impl std::error::Error for Error {}

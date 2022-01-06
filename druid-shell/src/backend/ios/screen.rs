@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2022 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! macOS Monitors and Screen information.
 
-#![allow(clippy::let_unit_value)]
+use crate::kurbo::Rect;
+use crate::screen::Monitor;
+use cocoa::base::id;
+use cocoa::foundation::NSArray;
+use objc::{class, msg_send, sel, sel_impl};
 
-pub mod appkit;
-pub mod application;
-pub mod clipboard;
-pub mod dialog;
-pub mod error;
-mod keyboard;
-pub mod menu;
-pub mod screen;
-pub mod text_input;
-pub mod window;
-pub mod util {
-    pub(crate) use crate::backend::shared::cocoa_util::*;
+pub(crate) fn get_monitors() -> Vec<Monitor> {
+    tracing::warn!("unimplemented");
+    vec![]
 }
