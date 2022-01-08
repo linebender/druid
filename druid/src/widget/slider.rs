@@ -167,7 +167,7 @@ impl Slider {
         let increment = if let Some(step) = self.mapping.step {
             step
         } else {
-            (self.max - self.min) / 10.0
+            (self.mapping.max - self.mapping.min) / 10.0
         };
 
         if mouse_delta < 0.0 {
