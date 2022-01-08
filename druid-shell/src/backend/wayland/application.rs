@@ -87,12 +87,12 @@ impl std::cmp::PartialOrd for Timer {
 
 #[derive(Clone)]
 pub struct Application {
-    pub(super) data: std::sync::Arc<ApplicationData>,
+    pub(super) data: std::sync::Arc<Data>,
 }
 
 #[allow(dead_code)]
-pub(crate) struct ApplicationData {
-    pub(super) wayland: std::sync::Arc<display::Environment>,
+pub(crate) struct Data {
+    pub(super) wayland: std::rc::Rc<display::Environment>,
     pub(super) zxdg_decoration_manager_v1: wl::Main<ZxdgDecorationManagerV1>,
     pub(super) zwlr_layershell_v1: wl::Main<ZwlrLayerShellV1>,
     pub(super) wl_compositor: wl::Main<WlCompositor>,
@@ -229,7 +229,7 @@ impl Application {
         );
 
         // We need to have keyboard events set up for our seats before the next roundtrip.
-        let app_data = std::sync::Arc::new(ApplicationData {
+        let appdata = std::sync::Arc::new(Data {
             zxdg_decoration_manager_v1,
             zwlr_layershell_v1,
             wl_compositor,
@@ -249,45 +249,45 @@ impl Application {
             clipboard: clipboard::Manager::new(&env.display, &env.registry)?,
             roundtrip_requested: RefCell::new(false),
             outputsqueue: RefCell::new(Some(outputqueue)),
-            wayland: env,
+            wayland: std::rc::Rc::new(env),
         });
 
         for m in outputs::current()? {
-            app_data.outputs.borrow_mut().insert(m.id(), m);
+            appdata.outputs.borrow_mut().insert(m.id(), m);
         }
 
         // Collect the supported image formats.
-        wl_shm.quick_assign(with_cloned!(app_data; move |d1, event, d3| {
+        wl_shm.quick_assign(with_cloned!(appdata; move |d1, event, d3| {
             tracing::debug!("shared memory events {:?} {:?} {:?}", d1, event, d3);
             match event {
-                wl_shm::Event::Format { format } => app_data.formats.borrow_mut().push(format),
+                wl_shm::Event::Format { format } => appdata.formats.borrow_mut().push(format),
                 _ => (), // ignore other messages
             }
         }));
 
         // Setup seat event listeners with our application
-        for (id, seat) in app_data.seats.borrow().iter() {
+        for (id, seat) in appdata.seats.borrow().iter() {
             let id = *id; // move into closure.
             let wl_seat = seat.borrow().wl_seat.clone();
-            wl_seat.quick_assign(with_cloned!(seat, app_data; move |d1, event, d3| {
+            wl_seat.quick_assign(with_cloned!(seat, appdata; move |d1, event, d3| {
                 tracing::debug!("seat events {:?} {:?} {:?}", d1, event, d3);
                 let mut seat = seat.borrow_mut();
-                app_data.clipboard.attach(&mut seat);
+                appdata.clipboard.attach(&mut seat);
                 match event {
                     wl_seat::Event::Capabilities { capabilities } => {
                         seat.capabilities = capabilities;
                         if capabilities.contains(wl_seat::Capability::Keyboard)
                             && seat.keyboard.is_none()
                         {
-                            seat.keyboard = Some(app_data.keyboard.attach(id, seat.wl_seat.clone()));
+                            seat.keyboard = Some(appdata.keyboard.attach(id, seat.wl_seat.clone()));
                         }
                         if capabilities.contains(wl_seat::Capability::Pointer)
                             && seat.pointer.is_none()
                         {
                             let pointer = seat.wl_seat.get_pointer();
-                            app_data.pointer.attach(pointer.detach());
+                            appdata.pointer.attach(pointer.detach());
                             pointer.quick_assign({
-                                let app = app_data.clone();
+                                let app = appdata.clone();
                                 move |pointer, event, _| {
                                     pointers::Pointer::consume(app.clone(), pointer.detach(), event);
                                 }
@@ -306,9 +306,9 @@ impl Application {
         }
 
         // Let wayland finish setup before we allow the client to start creating windows etc.
-        app_data.sync()?;
+        appdata.sync()?;
 
-        Ok(Application { data: app_data })
+        Ok(Application { data: appdata })
     }
 
     pub fn run(mut self, _handler: Option<Box<dyn AppHandler>>) {
@@ -376,7 +376,7 @@ impl Application {
                 return;
             }
 
-            ApplicationData::idle_repaint(handle.clone());
+            Data::idle_repaint(handle.clone());
         });
 
         match res {
@@ -398,7 +398,7 @@ impl Application {
     }
 }
 
-impl surfaces::Compositor for ApplicationData {
+impl surfaces::Compositor for Data {
     fn output(&self, id: u32) -> Option<outputs::Meta> {
         self.outputs.borrow().get(&id).cloned()
     }
@@ -428,7 +428,7 @@ impl surfaces::Compositor for ApplicationData {
     }
 }
 
-impl ApplicationData {
+impl Data {
     pub(crate) fn set_cursor(&self, cursor: &mouse::Cursor) {
         self.pointer.replace(cursor);
     }
@@ -509,7 +509,7 @@ impl ApplicationData {
         self.handles.borrow().clone().into_iter()
     }
 
-    fn idle_repaint(loophandle: calloop::LoopHandle<'_, std::sync::Arc<ApplicationData>>) {
+    fn idle_repaint(loophandle: calloop::LoopHandle<'_, std::sync::Arc<Data>>) {
         loophandle.insert_idle({
             move |appdata| {
                 tracing::trace!("idle processing initiated");
@@ -536,8 +536,8 @@ impl From<Application> for surfaces::CompositorHandle {
     }
 }
 
-impl From<std::sync::Arc<ApplicationData>> for surfaces::CompositorHandle {
-    fn from(data: std::sync::Arc<ApplicationData>) -> surfaces::CompositorHandle {
+impl From<std::sync::Arc<Data>> for surfaces::CompositorHandle {
+    fn from(data: std::sync::Arc<Data>) -> surfaces::CompositorHandle {
         surfaces::CompositorHandle::direct(
             std::sync::Arc::downgrade(&data) as std::sync::Weak<dyn surfaces::Compositor>
         )

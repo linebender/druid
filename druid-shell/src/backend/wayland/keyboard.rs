@@ -8,7 +8,7 @@ use crate::text;
 use crate::KeyEvent;
 use crate::Modifiers;
 
-use super::application::ApplicationData;
+use super::application::Data;
 use super::surfaces::buffers;
 use crate::backend::shared::xkb;
 
@@ -357,7 +357,7 @@ impl Manager {
     // TODO turn struct into a calloop event source.
     pub(super) fn events<'a>(
         &self,
-        handle: &'a calloop::LoopHandle<std::sync::Arc<ApplicationData>>,
+        handle: &'a calloop::LoopHandle<std::sync::Arc<Data>>,
     ) {
         let rx = self.inner.apprx.borrow_mut().take().unwrap();
         handle

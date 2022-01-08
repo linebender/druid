@@ -18,8 +18,8 @@ use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
+use super::application::{self, Timer};
 use super::{
-    application::{Application, ApplicationData, Timer},
     error::Error,
     menu::Menu,
     outputs, surfaces,
@@ -46,7 +46,7 @@ struct Inner {
     pub(super) surface: Box<dyn surfaces::Handle>,
     pub(super) outputs: Box<dyn surfaces::Outputs>,
     pub(super) popup: Box<dyn surfaces::Popup>,
-    pub(super) appdata: std::sync::Weak<ApplicationData>,
+    pub(super) appdata: std::sync::Weak<application::Data>,
 }
 
 #[derive(Clone)]
@@ -80,7 +80,7 @@ impl WindowHandle {
         decor: impl Into<Box<dyn surfaces::Decor>>,
         surface: impl Into<Box<dyn surfaces::Handle>>,
         popup: impl Into<Box<dyn surfaces::Popup>>,
-        appdata: impl Into<std::sync::Weak<ApplicationData>>,
+        appdata: impl Into<std::sync::Weak<application::Data>>,
     ) -> Self {
         Self {
             inner: std::sync::Arc::new(Inner {
@@ -314,7 +314,7 @@ pub struct CustomCursor;
 
 /// Builder abstraction for creating new windows
 pub(crate) struct WindowBuilder {
-    appdata: std::sync::Weak<ApplicationData>,
+    appdata: std::sync::Weak<application::Data>,
     handler: Option<Box<dyn WinHandler>>,
     title: String,
     menu: Option<Menu>,
@@ -329,7 +329,7 @@ pub(crate) struct WindowBuilder {
 }
 
 impl WindowBuilder {
-    pub fn new(app: Application) -> WindowBuilder {
+    pub fn new(app: application::Application) -> WindowBuilder {
         WindowBuilder {
             appdata: std::sync::Arc::downgrade(&app.data),
             handler: None,
@@ -461,7 +461,7 @@ impl WindowBuilder {
     }
 
     pub(super) fn initial_window_size(
-        appdata: &ApplicationData,
+        appdata: &application::Data,
         defaults: kurbo::Size,
     ) -> kurbo::Size {
         // compute the initial window size.
@@ -493,13 +493,13 @@ pub mod layershell {
     use crate::window::WinHandler;
 
     use super::WindowHandle;
-    use crate::backend::wayland::application::{Application, ApplicationData};
+    use crate::backend::wayland::application::{Application, Data};
     use crate::backend::wayland::error::Error;
     use crate::backend::wayland::surfaces;
 
     /// Builder abstraction for creating new windows
     pub(crate) struct Builder {
-        appdata: std::sync::Weak<ApplicationData>,
+        appdata: std::sync::Weak<Data>,
         winhandle: Option<Box<dyn WinHandler>>,
         pub(crate) config: surfaces::layershell::Config,
     }
@@ -573,14 +573,14 @@ pub mod popup {
 
     use super::WindowBuilder;
     use super::WindowHandle;
-    use crate::backend::wayland::application::{Application, ApplicationData};
+    use crate::backend::wayland::application::{Application, Data};
     use crate::backend::wayland::error::Error;
     use crate::backend::wayland::surfaces;
 
     pub(super) fn create(
         parent: &WindowHandle,
         config: &surfaces::popup::Config,
-        wappdata: std::sync::Weak<ApplicationData>,
+        wappdata: std::sync::Weak<Data>,
         winhandle: Option<Box<dyn WinHandler>>,
     ) -> Result<WindowHandle, ShellError> {
         let appdata = match wappdata.upgrade() {
