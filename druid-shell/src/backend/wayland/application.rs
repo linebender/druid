@@ -19,7 +19,7 @@ use super::{
     window::WindowHandle,
 };
 
-use crate::{backend, kurbo, mouse, AppHandler, TimerToken};
+use crate::{backend, mouse, AppHandler, TimerToken};
 
 use calloop;
 
@@ -199,7 +199,6 @@ impl Application {
         );
 
         let env = display::new(dispatcher)?;
-
         display::print(&env.registry);
 
         let zxdg_decoration_manager_v1 = env
@@ -453,29 +452,6 @@ impl ApplicationData {
         *self.active_surface_id.borrow().get(0).unwrap_or(&DEFAULT)
     }
 
-    pub(super) fn initial_window_size(&self, defaults: kurbo::Size) -> kurbo::Size {
-        // compute the initial window size.
-        let initialwidth = if defaults.width == 0.0 {
-            f64::INFINITY
-        } else {
-            defaults.width
-        };
-        let initialheight = if defaults.height == 0.0 {
-            f64::INFINITY
-        } else {
-            defaults.height
-        };
-        return self.outputs.borrow().iter().fold(
-            kurbo::Size::from((initialwidth, initialheight)),
-            |computed, entry| {
-                kurbo::Size::new(
-                    computed.width.min(entry.1.logical.width.into()),
-                    computed.height.min(entry.1.logical.height.into()),
-                )
-            },
-        );
-    }
-
     pub(super) fn acquire_current_window(&self) -> Option<WindowHandle> {
         self.handles
             .borrow()
@@ -529,32 +505,26 @@ impl ApplicationData {
     }
 
     /// Shallow clones surfaces so we can modify it during iteration.
-    fn handles_iter(&self) -> impl Iterator<Item = (u64, WindowHandle)> {
+    pub(super) fn handles_iter(&self) -> impl Iterator<Item = (u64, WindowHandle)> {
         self.handles.borrow().clone().into_iter()
     }
 
     fn idle_repaint(loophandle: calloop::LoopHandle<'_, std::sync::Arc<ApplicationData>>) {
         loophandle.insert_idle({
             move |appdata| {
-                match appdata.acquire_current_window() {
-                    Some(winhandle) => {
-                        tracing::trace!("idle processing initiated");
-
-                        winhandle.request_anim_frame();
-                        winhandle.run_idle();
-                        // if we already flushed this cycle don't flush again.
-                        if *appdata.display_flushed.borrow() {
-                            tracing::trace!("idle repaint flushing display initiated");
-                            if let Err(cause) = appdata.wayland.queue.borrow().display().flush() {
-                                tracing::warn!("unable to flush display: {:?}", cause);
-                            }
+                tracing::trace!("idle processing initiated");
+                for (_id, winhandle) in appdata.handles_iter() {
+                    winhandle.request_anim_frame();
+                    winhandle.run_idle();
+                    // if we already flushed this cycle don't flush again.
+                    if *appdata.display_flushed.borrow() {
+                        tracing::trace!("idle repaint flushing display initiated");
+                        if let Err(cause) = appdata.wayland.queue.borrow().display().flush() {
+                            tracing::warn!("unable to flush display: {:?}", cause);
                         }
-                        tracing::trace!("idle processing completed");
                     }
-                    None => tracing::error!(
-                        "unable to acquire current window, skipping idle processing"
-                    ),
-                };
+                }
+                tracing::trace!("idle processing completed");
             }
         });
     }

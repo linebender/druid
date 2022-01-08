@@ -422,7 +422,7 @@ impl WindowBuilder {
 
         let handler = self.handler.expect("must set a window handler");
         // compute the initial window size.
-        let initial_size = appdata.initial_window_size(self.size);
+        let initial_size = WindowBuilder::initial_window_size(&appdata, self.size);
         let surface =
             surfaces::toplevel::Surface::new(appdata.clone(), handler, initial_size, self.min_size);
 
@@ -458,6 +458,32 @@ impl WindowBuilder {
         });
 
         Ok(handle)
+    }
+
+    pub(super) fn initial_window_size(
+        appdata: &ApplicationData,
+        defaults: kurbo::Size,
+    ) -> kurbo::Size {
+        // compute the initial window size.
+        let initialwidth = if defaults.width == 0.0 {
+            f64::INFINITY
+        } else {
+            defaults.width
+        };
+        let initialheight = if defaults.height == 0.0 {
+            f64::INFINITY
+        } else {
+            defaults.height
+        };
+        return appdata.outputs.borrow().iter().fold(
+            kurbo::Size::from((initialwidth, initialheight)),
+            |computed, entry| {
+                kurbo::Size::new(
+                    computed.width.min(entry.1.logical.width.into()),
+                    computed.height.min(entry.1.logical.height.into()),
+                )
+            },
+        );
     }
 }
 
@@ -506,11 +532,8 @@ pub mod layershell {
                 }
             };
 
-            // compute the initial window size.
-            let mut updated = self.config.clone();
-            updated.initial_size = appdata.initial_window_size(self.config.initial_size);
-
-            let surface = surfaces::layershell::Surface::new(appdata.clone(), winhandle, updated);
+            let surface =
+                surfaces::layershell::Surface::new(appdata.clone(), winhandle, self.config.clone());
 
             let handle = WindowHandle::new(
                 surface.clone(),
