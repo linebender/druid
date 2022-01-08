@@ -544,9 +544,11 @@ impl Application {
                     .context("KEY_PRESS - failed to get window")?;
                 let hw_keycode = ev.detail;
                 let mut state = borrow_mut!(self.state)?;
-                let key_event = state
-                    .xkb_state
-                    .key_event(hw_keycode as _, keyboard_types::KeyState::Down);
+                let key_event = state.xkb_state.key_event(
+                    hw_keycode as _,
+                    keyboard_types::KeyState::Down,
+                    false,
+                );
 
                 w.handle_key_event(key_event);
             }
@@ -556,9 +558,10 @@ impl Application {
                     .context("KEY_PRESS - failed to get window")?;
                 let hw_keycode = ev.detail;
                 let mut state = borrow_mut!(self.state)?;
-                let key_event = state
-                    .xkb_state
-                    .key_event(hw_keycode as _, keyboard_types::KeyState::Up);
+                let key_event =
+                    state
+                        .xkb_state
+                        .key_event(hw_keycode as _, keyboard_types::KeyState::Up, false);
 
                 w.handle_key_event(key_event);
             }
