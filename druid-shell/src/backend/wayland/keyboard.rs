@@ -113,14 +113,12 @@ impl Keyboard {
             _ => panic!("unrecognised key event"),
         };
 
-        let mut event = self
-            .xkb_state
-            .borrow_mut()
-            .as_mut()
-            .unwrap()
-            .key_event(keystroke.key, keystate);
+        let mut event = self.xkb_state.borrow_mut().as_mut().unwrap().key_event(
+            keystroke.key,
+            keystate,
+            keystroke.repeat,
+        );
         event.mods = self.xkb_mods.get();
-        event.repeat = keystroke.repeat;
 
         if let Err(cause) = keystroke.queue.send(event) {
             tracing::error!("failed to send druid key event: {:?}", cause);
@@ -355,10 +353,7 @@ impl Manager {
     }
 
     // TODO turn struct into a calloop event source.
-    pub(super) fn events<'a>(
-        &self,
-        handle: &'a calloop::LoopHandle<std::sync::Arc<Data>>,
-    ) {
+    pub(super) fn events<'a>(&self, handle: &'a calloop::LoopHandle<std::sync::Arc<Data>>) {
         let rx = self.inner.apprx.borrow_mut().take().unwrap();
         handle
             .insert_source(rx, {

@@ -19,11 +19,7 @@ use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
 use super::application::{self, Timer};
-use super::{
-    error::Error,
-    menu::Menu,
-    outputs, surfaces,
-};
+use super::{error::Error, menu::Menu, outputs, surfaces};
 
 use crate::{
     dialog::FileDialogOptions,
