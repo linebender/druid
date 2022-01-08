@@ -1232,6 +1232,11 @@ impl WindowHandle {
     // TODO: Implement this
     pub fn show_titlebar(&self, _show_titlebar: bool) {}
 
+    pub fn has_titlebar(&self) -> bool {
+        tracing::warn!("WindowHandle::has_titlebar is currently unimplemented for Mac.");
+        true
+    }
+
     // Need to translate mac y coords, as they start from bottom left
     pub fn set_position(&self, mut position: Point) {
         // TODO: Maybe @cmyr can get this into a state where modal windows follow the parent?
@@ -1378,6 +1383,16 @@ impl WindowHandle {
 
             window.setStyleMask_(style_mask);
         }
+    }
+
+    pub fn is_resizable(&self) -> bool {
+        tracing::warn!("WindowHandle::is_resizable is currently unimplemented for Mac.");
+        true
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        tracing::warn!("WindowHandle::is_transparent is currently unimplemented for Mac.");
+        false
     }
 
     pub fn set_menu(&self, menu: Menu) {

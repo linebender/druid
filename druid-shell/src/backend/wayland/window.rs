@@ -106,8 +106,23 @@ impl WindowHandle {
         tracing::warn!("resizable is unimplemented on wayland");
     }
 
+    pub fn is_resizable(&self) -> bool {
+        tracing::warn!("is_resizable is unimplemented on wayland");
+        true
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        tracing::warn!("is_transparent is unimplemented on wayland");
+        false
+    }
+
     pub fn show_titlebar(&self, _show_titlebar: bool) {
         tracing::warn!("show_titlebar is unimplemented on wayland");
+    }
+
+    pub fn has_titlebar(&self) -> bool {
+        tracing::warn!("has_titlebar is unimplemented on wayland");
+        true
     }
 
     pub fn set_position(&self, _position: Point) {

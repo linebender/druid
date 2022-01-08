@@ -972,10 +972,28 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_resizable(&self) -> bool {
+        self.state
+            .upgrade()
+            .map(true, |state| state.window.is_resizable())
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        self.state
+            .upgrade()
+            .map_or(false, |state| state.is_transparent)
+    }
+
     pub fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(state) = self.state.upgrade() {
             state.window.set_decorated(show_titlebar)
         }
+    }
+
+    pub fn has_titlebar(&self) -> bool {
+        self.state
+            .upgrade()
+            .map(true, |state| state.window.is_decorated())
     }
 
     pub fn set_position(&self, mut position: Point) {

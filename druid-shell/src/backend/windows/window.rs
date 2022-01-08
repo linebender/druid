@@ -1926,6 +1926,13 @@ impl WindowHandle {
         self.defer(DeferredOp::ShowTitlebar(show_titlebar));
     }
 
+    pub fn has_titlebar(&self) -> bool {
+        self.state
+            .upgrade()
+            .map(|state| state.has_titlebar.get())
+            .unwrap_or_default()
+    }
+
     pub fn set_position(&self, position: Point) {
         self.defer(DeferredOp::SetWindowState(window::WindowState::Restored));
         if let Some(w) = self.state.upgrade() {
@@ -2030,6 +2037,20 @@ impl WindowHandle {
 
     pub fn resizable(&self, resizable: bool) {
         self.defer(DeferredOp::SetResizable(resizable));
+    }
+
+    pub fn is_resizable(&self) -> bool {
+        self.state
+            .upgrade()
+            .map(|state| state.is_resizable.get())
+            .unwrap_or_default()
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        self.state
+            .upgrade()
+            .map(|state| state.is_transparent.get())
+            .unwrap_or_default()
     }
 
     /// Sets the window state.

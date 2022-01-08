@@ -1625,12 +1625,27 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_resizable(&self) -> bool {
+        warn!("is_resizable is unimplemented on x11");
+        true
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        warn!("is_transparent is unimplemented on x11");
+        false
+    }
+
     pub fn show_titlebar(&self, show_titlebar: bool) {
         if let Some(w) = self.window.upgrade() {
             w.show_titlebar(show_titlebar);
         } else {
             error!("Window {} has already been dropped", self.id);
         }
+    }
+
+    pub fn has_titlebar(&self) -> bool {
+        warn!("has_titlebar is unimplemented on x11");
+        true
     }
 
     pub fn set_position(&self, position: Point) {
