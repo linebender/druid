@@ -68,6 +68,10 @@ impl Surface {
         Self { inner: current }
     }
 
+    pub(super) fn output(&self) -> Option<outputs::Meta> {
+        self.inner.output()
+    }
+
     pub(super) fn request_paint(&self) {
         self.inner.buffers.request_paint(&self.inner);
     }
@@ -247,6 +251,13 @@ pub struct Data {
 }
 
 impl Data {
+    pub(crate) fn output(&self) -> Option<outputs::Meta> {
+        match self.outputs.borrow().iter().find(|_| true) {
+            None => None,
+            Some(id) => self.compositor.output(*id),
+        }
+    }
+
     #[track_caller]
     pub(crate) fn with_handler<T, F: FnOnce(&mut dyn window::WinHandler) -> T>(
         &self,
