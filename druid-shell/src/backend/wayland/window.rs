@@ -112,8 +112,7 @@ impl WindowHandle {
     }
 
     pub fn is_transparent(&self) -> bool {
-        tracing::warn!("is_transparent is unimplemented on wayland");
-        false
+        true
     }
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
