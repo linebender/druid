@@ -16,14 +16,14 @@ use super::{application, window};
 
 /// A wrapper around the wayland event queue that calloop knows how to select.
 pub(crate) struct WaylandSource {
-    appdata: std::sync::Arc<application::ApplicationData>,
+    appdata: std::sync::Arc<application::Data>,
     queue: Rc<RefCell<EventQueue>>,
     fd: Generic<Fd>,
 }
 
 impl WaylandSource {
     /// Wrap an `EventQueue` as a `WaylandSource`.
-    pub fn new(appdata: std::sync::Arc<application::ApplicationData>) -> WaylandSource {
+    pub fn new(appdata: std::sync::Arc<application::Data>) -> WaylandSource {
         let queue = appdata.wayland.queue.clone();
         let fd = queue.borrow().display().get_connection_fd();
         WaylandSource {
@@ -41,7 +41,7 @@ impl WaylandSource {
         impl FnMut(
             window::WindowHandle,
             &mut Rc<RefCell<EventQueue>>,
-            &mut std::sync::Arc<application::ApplicationData>,
+            &mut std::sync::Arc<application::Data>,
         ) -> io::Result<u32>,
     > {
         Dispatcher::new(self, |_winhandle, queue, appdata| {
