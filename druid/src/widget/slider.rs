@@ -199,7 +199,7 @@ impl Widget<f64> for Slider {
                 }
             }
             if let Event::Wheel(me) = event {
-                if !ctx.is_disabled() {
+                if !self.knob.active {
                     *data = (*data + self.calculate_scroll_value(me.wheel_delta.y))
                         .max(self.mapping.min)
                         .min(self.mapping.max);
