@@ -377,12 +377,12 @@ impl Widget<(f64, f64)> for RangeSlider {
 
                     if press_value - data.0 < data.1 - press_value {
                         data.0 = (data.0 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
-                            .min(self.mapping.max)
+                            .min(data.1)
                             .max(self.mapping.min);
                     } else {
                         data.1 = (data.1 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
                             .min(self.mapping.max)
-                            .max(self.mapping.min);
+                            .max(data.0);
                     }
                     ctx.request_paint();
                     ctx.set_handled();
