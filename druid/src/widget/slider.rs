@@ -368,6 +368,26 @@ impl Widget<(f64, f64)> for RangeSlider {
                     ctx.request_paint();
                 }
             }
+            if let Event::Wheel(me) = event {
+                if !self.left_knob.is_active() && !self.right_knob.is_active() {
+                    let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+                    let press_value =
+                        self.mapping
+                            .calculate_value(me.pos, knob_size, ctx.size(), 0.0);
+
+                    if press_value - data.0 < data.1 - press_value {
+                        data.0 = (data.0 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
+                            .min(self.mapping.max)
+                            .max(self.mapping.min);
+                    } else {
+                        data.1 = (data.1 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
+                            .min(self.mapping.max)
+                            .max(self.mapping.min);
+                    }
+                    ctx.request_paint();
+                    ctx.set_handled();
+                }
+            }
         }
     }
 
