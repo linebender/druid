@@ -162,20 +162,6 @@ impl Slider {
         let mapping = self.mapping;
         Annotated::new(self, mapping, named_steps, unnamed_steps)
     }
-
-    fn calculate_scroll_value(&self, mouse_delta: f64) -> f64 {
-        let increment = if let Some(step) = self.mapping.step {
-            step
-        } else {
-            (self.mapping.max - self.mapping.min) / 10.0
-        };
-
-        if mouse_delta < 0.0 {
-            increment
-        } else {
-            -increment
-        }
-    }
 }
 
 impl Widget<f64> for Slider {
@@ -200,7 +186,7 @@ impl Widget<f64> for Slider {
             }
             if let Event::Wheel(me) = event {
                 if !self.knob.active {
-                    *data = (*data + self.calculate_scroll_value(me.wheel_delta.y))
+                    *data = (*data + self.mapping.calculate_scroll_value(me.wheel_delta.y))
                         .max(self.mapping.min)
                         .min(self.mapping.max);
                     ctx.request_paint();
@@ -678,6 +664,20 @@ impl SliderValueMapping {
             }
         }
         value
+    }
+
+    fn calculate_scroll_value(&self, mouse_delta: f64) -> f64 {
+        let increment = if let Some(step) = self.step {
+            step
+        } else {
+            (self.max - self.min) / 10.0
+        };
+
+        if mouse_delta < 0.0 {
+            increment
+        } else {
+            -increment
+        }
     }
 
     fn get_point(&self, value: f64, knob_size: f64, widget_size: Size) -> Point {
