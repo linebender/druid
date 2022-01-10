@@ -505,6 +505,9 @@ impl<T, W: Widget<T>> Annotated<T, W> {
             self.labels.push(layout);
 
             walk += self.labeled_steps;
+            if self.labeled_steps == 0.0 {
+                break;
+            }
         }
     }
 
@@ -596,6 +599,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Annotated<T, W> {
 
             ctx.stroke(line, &text_color, 1.0);
             walk += self.unlabeled_steps;
+            if self.labeled_steps == 0.0 {
+                return;
+            }
         }
 
         let mut walk = self.mapping.min;
@@ -626,6 +632,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Annotated<T, W> {
             );
 
             walk += self.labeled_steps;
+            if self.labeled_steps == 0.0 {
+                return;
+            }
         }
 
         self.inner.paint(ctx, data, env);
