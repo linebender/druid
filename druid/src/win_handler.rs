@@ -244,7 +244,7 @@ impl<T: Data> InnerAppState<T> {
 
     fn connect(&mut self, id: WindowId, handle: WindowHandle) {
         self.windows
-            .connect(id, handle, self.ext_event_host.make_sink());
+            .connect(id, handle.clone(), self.ext_event_host.make_sink());
 
         // If the external event host has no handle, it cannot wake us
         // when an event arrives.
@@ -252,7 +252,7 @@ impl<T: Data> InnerAppState<T> {
             self.set_ext_event_idle_handler(id);
         }
 
-        self.with_delegate(|del, data, env, ctx| del.window_added(id, data, env, ctx));
+        self.with_delegate(|del, data, env, ctx| del.window_added(id, handle, data, env, ctx));
     }
 
     /// Called after this window has been closed by the platform.

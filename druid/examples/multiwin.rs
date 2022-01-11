@@ -24,7 +24,7 @@ use druid::widget::{
 use druid::Target::Global;
 use druid::{
     commands as sys_cmds, AppDelegate, AppLauncher, Application, Color, Command, Data, DelegateCtx,
-    Handled, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowId,
+    Handled, LocalizedString, Menu, MenuItem, Target, WindowDesc, WindowHandle, WindowId,
 };
 use tracing::info;
 
@@ -170,6 +170,7 @@ impl AppDelegate<State> for Delegate {
     fn window_added(
         &mut self,
         id: WindowId,
+        _handle: WindowHandle,
         _data: &mut State,
         _env: &Env,
         _ctx: &mut DelegateCtx,
