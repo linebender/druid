@@ -384,27 +384,12 @@ impl WindowBuilder {
         // Ignored
     }
 
-    pub fn is_resizable(&self) -> bool {
-        warn!("is_resizable is unimplemented on web");
-        true
-    }
-
     pub fn show_titlebar(&mut self, _show_titlebar: bool) {
         // Ignored
     }
 
-    pub fn has_titlebar(&self) -> bool {
-        warn!("has_titlebar is unimplemented on web");
-        true
-    }
-
     pub fn set_transparent(&mut self, _transparent: bool) {
         // Ignored
-    }
-
-    pub fn is_transparent(&self) -> bool {
-        warn!("is_transparent is unimplemented on web");
-        true
     }
 
     pub fn set_position(&mut self, _position: Point) {
@@ -513,13 +498,27 @@ impl WindowHandle {
     }
 
     pub fn resizable(&self, _resizable: bool) {
-        warn!("resizable unimplemented for web");
+        warn!("WindowHandle::resizable unimplemented for web");
+    }
+
+    pub fn is_resizable(&self) -> bool {
+        warn!("WindowHandle::is_resizable is unimplemented on web");
+        true
     }
 
     pub fn show_titlebar(&self, _show_titlebar: bool) {
-        warn!("show_titlebar unimplemented for web");
+        warn!("WindowHandle::show_titlebar unimplemented for web");
     }
 
+    pub fn has_titlebar(&self) -> bool {
+        warn!("WindowHandle::has_titlebar is unimplemented on web");
+        true
+    }
+
+    pub fn is_transparent(&self) -> bool {
+        warn!("WindowHandle::is_transparent is unimplemented on web");
+        true
+    }
     pub fn set_position(&self, _position: Point) {
         warn!("WindowHandle::set_position unimplemented for web");
     }
