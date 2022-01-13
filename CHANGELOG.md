@@ -64,6 +64,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
 - Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
 - `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
+- `Slider` widget now scrollable by mouse wheel ([#2104] by [@gordonshieh])
 
 ### Changed
 

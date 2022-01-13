@@ -184,6 +184,15 @@ impl Widget<f64> for Slider {
                     ctx.set_active(true);
                 }
             }
+            if let Event::Wheel(me) = event {
+                if !self.knob.active {
+                    *data = (*data + self.mapping.calculate_scroll_value(me.wheel_delta.y))
+                        .max(self.mapping.min)
+                        .min(self.mapping.max);
+                    ctx.request_paint();
+                    ctx.set_handled();
+                }
+            }
         }
     }
 
@@ -359,6 +368,26 @@ impl Widget<(f64, f64)> for RangeSlider {
                     ctx.request_paint();
                 }
             }
+            if let Event::Wheel(me) = event {
+                if !self.left_knob.is_active() && !self.right_knob.is_active() {
+                    let knob_size = env.get(theme::BASIC_WIDGET_HEIGHT);
+                    let press_value =
+                        self.mapping
+                            .calculate_value(me.pos, knob_size, ctx.size(), 0.0);
+
+                    if press_value - data.0 < data.1 - press_value {
+                        data.0 = (data.0 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
+                            .min(data.1)
+                            .max(self.mapping.min);
+                    } else {
+                        data.1 = (data.1 + self.mapping.calculate_scroll_value(me.wheel_delta.y))
+                            .min(self.mapping.max)
+                            .max(data.0);
+                    }
+                    ctx.request_paint();
+                    ctx.set_handled();
+                }
+            }
         }
     }
 
@@ -476,6 +505,9 @@ impl<T, W: Widget<T>> Annotated<T, W> {
             self.labels.push(layout);
 
             walk += self.labeled_steps;
+            if self.labeled_steps == 0.0 {
+                break;
+            }
         }
     }
 
@@ -567,6 +599,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Annotated<T, W> {
 
             ctx.stroke(line, &text_color, 1.0);
             walk += self.unlabeled_steps;
+            if self.labeled_steps == 0.0 {
+                return;
+            }
         }
 
         let mut walk = self.mapping.min;
@@ -597,6 +632,9 @@ impl<T: Data, W: Widget<T>> Widget<T> for Annotated<T, W> {
             );
 
             walk += self.labeled_steps;
+            if self.labeled_steps == 0.0 {
+                return;
+            }
         }
 
         self.inner.paint(ctx, data, env);
@@ -655,6 +693,20 @@ impl SliderValueMapping {
             }
         }
         value
+    }
+
+    fn calculate_scroll_value(&self, mouse_delta: f64) -> f64 {
+        let increment = if let Some(step) = self.step {
+            step
+        } else {
+            (self.max - self.min) / 10.0
+        };
+
+        if mouse_delta < 0.0 {
+            increment
+        } else {
+            -increment
+        }
     }
 
     fn get_point(&self, value: f64, knob_size: f64, widget_size: Size) -> Point {
