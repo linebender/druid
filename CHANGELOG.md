@@ -65,6 +65,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
 - `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
 - Add `Checkbox::from_label` constructor ([#2111] by [@maurerdietmar])
+- fix content_insets for gtk backend ([#2117] by [@maurerdietmar])
 
 ### Changed
 
@@ -817,6 +818,7 @@ Last release without a changelog :(
 [#2064]: https://github.com/linebender/druid/pull/2064
 [#1979]: https://github.com/linebender/druid/pull/1979
 [#2111]: https://github.com/linebender/druid/pull/2111
+[#2117]: https://github.com/linebender/druid/pull/2117
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
