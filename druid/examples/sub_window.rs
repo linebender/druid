@@ -29,6 +29,7 @@ use druid_shell::piet::Text;
 use druid_shell::{Screen, WindowLevel};
 use instant::{Duration, Instant};
 use piet_common::{TextLayout, TextLayoutBuilder};
+use piet_common::{TextLayout, TextLayoutBuilder};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
