@@ -41,7 +41,7 @@ serde = ["kurbo/serde"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = { path = "../../piet/piet-common" }
+piet-common = { git = "https://github.com/linebender/piet", rev = "57cc49a8a88703b1c754a8c2c7f6f96007a24d4d" }
 kurbo = "0.8.2"
 
 tracing = "0.1.22"
@@ -96,7 +96,7 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { path = "../../piet/piet-common", features = ["png"] }
+piet-common = { git = "https://github.com/linebender/piet", rev = "57cc49a8a88703b1c754a8c2c7f6f96007a24d4d", features = ["png"] }
 static_assertions = "1.1.0"
 test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }

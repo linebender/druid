@@ -16,48 +16,42 @@
 
 #![allow(non_snake_case)]
 
-// use std::ffi::c_void;
-// use std::mem;
+use std::ffi::c_void;
+use std::mem;
 use std::sync::{Arc, Mutex, Weak};
-// use std::time::Instant;
+use std::time::Instant;
 
-// use block::ConcreteBlock;
-// use cocoa::base::{id, nil, BOOL, NO, YES};
-// use cocoa::foundation::{
-//     NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
-// };
-// use core_graphics::context::CGContextRef;
-// use foreign_types::ForeignTypeRef;
-// use lazy_static::lazy_static;
-// use objc::declare::ClassDecl;
+use block::ConcreteBlock;
+use cocoa::base::{id, nil, BOOL, NO, YES};
+use cocoa::foundation::{NSArray, NSAutoreleasePool, NSInteger, NSString, NSUInteger};
+use core_graphics::context::CGContextRef;
+use foreign_types::ForeignTypeRef;
+use lazy_static::lazy_static;
+use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
-// use objc::runtime::{Class, Object, Protocol, Sel};
-// use objc::{class, msg_send, sel, sel_impl};
-// use tracing::{debug, error, info};
+use objc::runtime::{Class, Object, Protocol, Sel};
+use objc::{class, msg_send, sel, sel_impl};
+use tracing::{debug, error, info};
 
-// #[cfg(feature = "raw-win-handle")]
-// use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
+#[cfg(feature = "raw-win-handle")]
+use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
 
-// use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-// use crate::piet::{Piet, PietText, RenderContext};
+use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
+use crate::piet::{Piet, PietText, RenderContext};
 
-// use super::application::Application;
-// use super::dialog;
-// use super::keyboard::{make_modifiers, KeyboardState};
-// use super::menu::Menu;
-// use super::text_input::NSRange;
-// use super::util::{assert_main_thread, make_nsstring};
-// use crate::common_util::IdleCallback;
-// use crate::dialog::{FileDialogOptions, FileDialogType};
-// use crate::keyboard_types::KeyState;
-// use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
-// use crate::region::Region;
-// use crate::scale::Scale;
-// use crate::text::{Event, InputHandler};
-// use crate::window::{
-//     FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel, WindowState,
-// };
-// use crate::Error;
+use super::application::Application;
+use super::menu::Menu;
+use crate::common_util::IdleCallback;
+use crate::dialog::{FileDialogOptions, FileDialogType};
+use crate::keyboard_types::KeyState;
+use crate::mouse::{Cursor, CursorDesc, MouseButton, MouseButtons, MouseEvent};
+use crate::region::Region;
+use crate::scale::Scale;
+use crate::text::{Event, InputHandler};
+use crate::window::{
+    FileDialogToken, IdleToken, TextFieldToken, TimerToken, WinHandler, WindowLevel, WindowState,
+};
+use crate::Error;
 
 // #[allow(non_upper_case_globals)]
 // const NSWindowDidBecomeKeyNotification: &str = "NSWindowDidBecomeKeyNotification";
@@ -89,55 +83,54 @@ use objc::rc::WeakPtr;
 //     }
 // }
 
-// #[derive(Clone)]
+#[derive(Clone)]
 pub(crate) struct WindowHandle {
-    /// This is an NSView, as our concept of "window" is more the top-level container holding
-    /// a view. Also, this is better for hosted applications such as VST.
-    nsview: WeakPtr,
+    // TODO rlord: should this be a uiwindow? uiwindowscene?
+    uiview: WeakPtr,
     idle_queue: Weak<Mutex<Vec<IdleKind>>>,
 }
-// impl PartialEq for WindowHandle {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (self.idle_queue.upgrade(), other.idle_queue.upgrade()) {
-//             (None, None) => true,
-//             (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
-//             (_, _) => false,
-//         }
-//     }
-// }
-// impl Eq for WindowHandle {}
+impl PartialEq for WindowHandle {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.idle_queue.upgrade(), other.idle_queue.upgrade()) {
+            (None, None) => true,
+            (Some(s), Some(o)) => std::sync::Arc::ptr_eq(&s, &o),
+            (_, _) => false,
+        }
+    }
+}
+impl Eq for WindowHandle {}
 
-// impl std::fmt::Debug for WindowHandle {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-//         f.write_str("WindowHandle{\n")?;
-//         f.write_str("}")?;
-//         Ok(())
-//     }
-// }
+impl std::fmt::Debug for WindowHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("WindowHandle{\n")?;
+        f.write_str("}")?;
+        Ok(())
+    }
+}
 
-// impl Default for WindowHandle {
-//     fn default() -> Self {
-//         WindowHandle {
-//             nsview: unsafe { WeakPtr::new(nil) },
-//             idle_queue: Default::default(),
-//         }
-//     }
-// }
+impl Default for WindowHandle {
+    fn default() -> Self {
+        WindowHandle {
+            uiview: unsafe { WeakPtr::new(nil) },
+            idle_queue: Default::default(),
+        }
+    }
+}
 
-// /// Builder abstraction for creating new windows.
-// pub(crate) struct WindowBuilder {
-//     handler: Option<Box<dyn WinHandler>>,
-//     title: String,
-//     menu: Option<Menu>,
-//     size: Size,
-//     min_size: Option<Size>,
-//     position: Option<Point>,
-//     level: Option<WindowLevel>,
-//     window_state: Option<WindowState>,
-//     resizable: bool,
-//     show_titlebar: bool,
-//     transparent: bool,
-// }
+/// Builder abstraction for creating new windows.
+pub(crate) struct WindowBuilder {
+    handler: Option<Box<dyn WinHandler>>,
+    title: String,
+    menu: Option<Menu>,
+    size: Size,
+    min_size: Option<Size>,
+    position: Option<Point>,
+    level: Option<WindowLevel>,
+    window_state: Option<WindowState>,
+    resizable: bool,
+    show_titlebar: bool,
+    transparent: bool,
+}
 
 #[derive(Clone)]
 pub(crate) struct IdleHandle {
@@ -153,179 +146,180 @@ enum DeferredOp {
 
 /// This represents different Idle Callback Mechanism
 enum IdleKind {
-    // Callback(Box<dyn IdleCallback>),
-// Token(IdleToken),
-// DeferredOp(DeferredOp),
+    Callback(Box<dyn IdleCallback>),
+    Token(IdleToken),
+    // DeferredOp(DeferredOp),
 }
 
-// /// This is the state associated with our custom NSView.
-// struct ViewState {
-//     nsview: WeakPtr,
-//     handler: Box<dyn WinHandler>,
-//     idle_queue: Arc<Mutex<Vec<IdleKind>>>,
-//     /// Tracks window focusing left clicks
-//     focus_click: bool,
-//     // Tracks whether we have already received the mouseExited event
-//     mouse_left: bool,
-//     keyboard_state: KeyboardState,
-//     text: PietText,
-//     active_text_input: Option<TextFieldToken>,
-//     parent: Option<crate::WindowHandle>,
-// }
+/// This is the state associated with our custom UIView.
+struct ViewState {
+    uiview: WeakPtr,
+    handler: Box<dyn WinHandler>,
+    idle_queue: Arc<Mutex<Vec<IdleKind>>>,
+    /// Tracks window focusing left clicks
+    // focus_click: bool,
+    // Tracks whether we have already received the mouseExited event
+    // mouse_left: bool,
+    // keyboard_state: KeyboardState,
+    text: PietText,
+    // active_text_input: Option<TextFieldToken>,
+    // parent: Option<crate::WindowHandle>,
+}
 
 #[derive(Clone, PartialEq)]
 // TODO: support custom cursors on iPadOS
 pub struct CustomCursor;
 
-// impl WindowBuilder {
-//     pub fn new(_app: Application) -> WindowBuilder {
-//         WindowBuilder {
-//             handler: None,
-//             title: String::new(),
-//             menu: None,
-//             size: Size::new(500., 400.),
-//             min_size: None,
-//             position: None,
-//             level: None,
-//             window_state: None,
-//             resizable: true,
-//             show_titlebar: true,
-//             transparent: false,
-//         }
-//     }
+impl WindowBuilder {
+    pub fn new(_app: Application) -> WindowBuilder {
+        WindowBuilder {
+            handler: None,
+            title: String::new(),
+            menu: None,
+            size: Size::new(500., 400.),
+            min_size: None,
+            position: None,
+            level: None,
+            window_state: None,
+            resizable: true,
+            show_titlebar: true,
+            transparent: false,
+        }
+    }
 
-//     pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
-//         self.handler = Some(handler);
-//     }
+    pub fn set_handler(&mut self, handler: Box<dyn WinHandler>) {
+        self.handler = Some(handler);
+    }
 
-//     pub fn set_size(&mut self, size: Size) {
-//         self.size = size;
-//     }
+    pub fn set_size(&mut self, size: Size) {
+        self.size = size;
+    }
 
-//     pub fn set_min_size(&mut self, size: Size) {
-//         self.min_size = Some(size);
-//     }
+    pub fn set_min_size(&mut self, size: Size) {
+        self.min_size = Some(size);
+    }
 
-//     pub fn resizable(&mut self, resizable: bool) {
-//         self.resizable = resizable;
-//     }
+    pub fn resizable(&mut self, resizable: bool) {
+        self.resizable = resizable;
+    }
 
-//     pub fn show_titlebar(&mut self, show_titlebar: bool) {
-//         self.show_titlebar = show_titlebar;
-//     }
+    pub fn show_titlebar(&mut self, show_titlebar: bool) {
+        self.show_titlebar = show_titlebar;
+    }
 
-//     pub fn set_transparent(&mut self, transparent: bool) {
-//         self.transparent = transparent;
-//     }
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.transparent = transparent;
+    }
 
-//     pub fn set_level(&mut self, level: WindowLevel) {
-//         self.level = Some(level);
-//     }
+    pub fn set_level(&mut self, level: WindowLevel) {
+        self.level = Some(level);
+    }
 
-//     pub fn set_position(&mut self, position: Point) {
-//         self.position = Some(position)
-//     }
+    pub fn set_position(&mut self, position: Point) {
+        self.position = Some(position)
+    }
 
-//     pub fn set_window_state(&mut self, state: WindowState) {
-//         self.window_state = Some(state);
-//     }
+    pub fn set_window_state(&mut self, state: WindowState) {
+        self.window_state = Some(state);
+    }
 
-//     pub fn set_title(&mut self, title: impl Into<String>) {
-//         self.title = title.into();
-//     }
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.title = title.into();
+    }
 
-//     pub fn set_menu(&mut self, menu: Menu) {
-//         self.menu = Some(menu);
-//     }
+    pub fn set_menu(&mut self, menu: Menu) {
+        self.menu = Some(menu);
+    }
 
-//     pub fn build(self) -> Result<WindowHandle, Error> {
-//         assert_main_thread();
-//         unsafe {
-//             let mut style_mask = NSWindowStyleMask::NSClosableWindowMask
-//                 | NSWindowStyleMask::NSMiniaturizableWindowMask;
+    pub fn build(self) -> Result<WindowHandle, Error> {
+        // assert_main_thread();
+        unsafe {
+            // let mut style_mask = NSWindowStyleMask::NSClosableWindowMask
+            //     | NSWindowStyleMask::NSMiniaturizableWindowMask;
 
-//             if self.show_titlebar {
-//                 style_mask |= NSWindowStyleMask::NSTitledWindowMask;
-//             }
+            // if self.show_titlebar {
+            //     style_mask |= NSWindowStyleMask::NSTitledWindowMask;
+            // }
 
-//             if self.resizable {
-//                 style_mask |= NSWindowStyleMask::NSResizableWindowMask;
-//             }
+            // if self.resizable {
+            //     style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+            // }
 
-//             let screen_height = crate::Screen::get_display_rect().height();
-//             let position = self.position.unwrap_or_else(|| Point::new(20., 20.));
-//             let origin = NSPoint::new(position.x, screen_height - position.y - self.size.height); // Flip back
+            // let screen_height = crate::Screen::get_display_rect().height();
+            // let position = self.position.unwrap_or_else(|| Point::new(20., 20.));
+            // let origin = NSPoint::new(position.x, screen_height - position.y - self.size.height); // Flip back
 
-//             let rect = NSRect::new(origin, NSSize::new(self.size.width, self.size.height));
+            // let rect = NSRect::new(origin, NSSize::new(self.size.width, self.size.height));
 
-//             let window: id = msg_send![WINDOW_CLASS.0, alloc];
-//             let window = window.initWithContentRect_styleMask_backing_defer_(
-//                 rect,
-//                 style_mask,
-//                 NSBackingStoreBuffered,
-//                 NO,
-//             );
+            // let window: id = msg_send![WINDOW_CLASS.0, alloc];
+            // let window = window.initWithContentRect_styleMask_backing_defer_(
+            //     rect,
+            //     style_mask,
+            //     NSBackingStoreBuffered,
+            //     NO,
+            // );
 
-//             if let Some(min_size) = self.min_size {
-//                 let size = NSSize::new(min_size.width, min_size.height);
-//                 window.setContentMinSize_(size);
-//             }
+            // if let Some(min_size) = self.min_size {
+            //     let size = NSSize::new(min_size.width, min_size.height);
+            //     window.setContentMinSize_(size);
+            // }
 
-//             if self.transparent {
-//                 window.setOpaque_(NO);
-//                 window.setBackgroundColor_(NSColor::clearColor(nil));
-//             }
+            // if self.transparent {
+            //     window.setOpaque_(NO);
+            //     window.setBackgroundColor_(NSColor::clearColor(nil));
+            // }
 
-//             window.setTitle_(make_nsstring(&self.title));
+            // window.setTitle_(make_nsstring(&self.title));
 
-//             let (view, idle_queue) = make_view(self.handler.expect("view"));
-//             let content_view = window.contentView();
-//             let frame = NSView::frame(content_view);
-//             view.initWithFrame_(frame);
+            // let (view, idle_queue) = make_view(self.handler.expect("view"));
+            // let content_view = window.contentView();
+            // let frame = NSView::frame(content_view);
+            // view.initWithFrame_(frame);
 
-//             let () = msg_send![window, setDelegate: view];
+            // let () = msg_send![window, setDelegate: view];
 
-//             if let Some(menu) = self.menu {
-//                 NSApp().setMainMenu_(menu.menu);
-//             }
+            // if let Some(menu) = self.menu {
+            //     NSApp().setMainMenu_(menu.menu);
+            // }
 
-//             content_view.addSubview_(view);
-//             let view_state: *mut c_void = *(*view).get_ivar("viewState");
-//             let view_state = &mut *(view_state as *mut ViewState);
-//             let mut handle = WindowHandle {
-//                 nsview: view_state.nsview.clone(),
-//                 idle_queue,
-//             };
+            // content_view.addSubview_(view);
+            // let view_state: *mut c_void = *(*view).get_ivar("viewState");
+            // let view_state = &mut *(view_state as *mut ViewState);
+            // let mut handle = WindowHandle {
+            //     nsview: view_state.nsview.clone(),
+            //     idle_queue,
+            // };
 
-//             if let Some(window_state) = self.window_state {
-//                 handle.set_window_state(window_state);
-//             }
+            // if let Some(window_state) = self.window_state {
+            //     handle.set_window_state(window_state);
+            // }
 
-//             if let Some(level) = self.level {
-//                 match &level {
-//                     WindowLevel::Tooltip(parent) => (*view_state).parent = Some(parent.clone()),
-//                     WindowLevel::DropDown(parent) => (*view_state).parent = Some(parent.clone()),
-//                     WindowLevel::Modal(parent) => (*view_state).parent = Some(parent.clone()),
-//                     _ => {}
-//                 }
-//                 handle.set_level(level);
-//             }
+            // if let Some(level) = self.level {
+            //     match &level {
+            //         WindowLevel::Tooltip(parent) => (*view_state).parent = Some(parent.clone()),
+            //         WindowLevel::DropDown(parent) => (*view_state).parent = Some(parent.clone()),
+            //         WindowLevel::Modal(parent) => (*view_state).parent = Some(parent.clone()),
+            //         _ => {}
+            //     }
+            //     handle.set_level(level);
+            // }
 
-//             // set_window_state above could have invalidated the frame size
-//             let frame = NSView::frame(content_view);
+            // // set_window_state above could have invalidated the frame size
+            // let frame = NSView::frame(content_view);
 
-//             (*view_state).handler.connect(&handle.clone().into());
-//             (*view_state).handler.scale(Scale::default());
-//             (*view_state)
-//                 .handler
-//                 .size(Size::new(frame.size.width, frame.size.height));
+            // (*view_state).handler.connect(&handle.clone().into());
+            // (*view_state).handler.scale(Scale::default());
+            // (*view_state)
+            //     .handler
+            //     .size(Size::new(frame.size.width, frame.size.height));
 
-//             Ok(handle)
-//         }
-//     }
-// }
+            // Ok(handle)
+        }
+        unimplemented!()
+    }
+}
 
-// // Wrap pointer because lazy_static requires Sync.
+// Wrap pointer because lazy_static requires Sync.
 // struct ViewClass(*const Class);
 // unsafe impl Sync for ViewClass {}
 
@@ -999,458 +993,469 @@ pub struct CustomCursor;
 //     }
 // }
 
-// impl WindowHandle {
-//     pub fn show(&self) {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             // register our view class to be alerted when it becomes the key view.
-//             let notif_center_class = class!(NSNotificationCenter);
-//             let notif_string = NSString::alloc(nil)
-//                 .init_str(NSWindowDidBecomeKeyNotification)
-//                 .autorelease();
-//             let notif_center: id = msg_send![notif_center_class, defaultCenter];
-//             let () = msg_send![notif_center, addObserver:*self.nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
-//             window.makeKeyAndOrderFront_(nil)
-//         }
-//     }
+impl WindowHandle {
+    pub fn show(&self) {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     // register our view class to be alerted when it becomes the key view.
+        //     let notif_center_class = class!(NSNotificationCenter);
+        //     let notif_string = NSString::alloc(nil)
+        //         .init_str(NSWindowDidBecomeKeyNotification)
+        //         .autorelease();
+        //     let notif_center: id = msg_send![notif_center_class, defaultCenter];
+        //     let () = msg_send![notif_center, addObserver:*self.nsview.load() selector: sel!(windowDidBecomeKey:) name: notif_string object: window];
+        //     window.makeKeyAndOrderFront_(nil)
+        // }
+    }
 
-//     /// Close the window.
-//     pub fn close(&self) {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let () = msg_send![window, performSelectorOnMainThread: sel!(close) withObject: nil waitUntilDone: NO];
-//         }
-//     }
+    /// Close the window.
+    pub fn close(&self) {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let () = msg_send![window, performSelectorOnMainThread: sel!(close) withObject: nil waitUntilDone: NO];
+        // }
+    }
 
-//     /// Bring this window to the front of the window stack and give it focus.
-//     pub fn bring_to_front_and_focus(&self) {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
-//         }
-//     }
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn bring_to_front_and_focus(&self) {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let () = msg_send![window, performSelectorOnMainThread: sel!(makeKeyAndOrderFront:) withObject: nil waitUntilDone: NO];
+        // }
+    }
 
-//     pub fn request_anim_frame(&self) {
-//         unsafe {
-//             // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
-//             let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
-//                 withObject: nil waitUntilDone: NO];
-//         }
-//     }
+    /// Bring this window to the front of the window stack and give it focus.
+    pub fn request_anim_frame(&self) {
+        unimplemented!()
+        // unsafe {
+        //     // TODO: synchronize with screen refresh rate using CVDisplayLink instead.
+        //     let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(redraw)
+        //             withObject: nil waitUntilDone: NO];
+        // }
+    }
 
-//     // Request invalidation of the entire window contents.
-//     pub fn invalidate(&self) {
-//         unsafe {
-//             // We could share impl with redraw, but we'd need to deal with nil.
-//             let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
-//         }
-//     }
+    //     // Request invalidation of the entire window contents.
+    pub fn invalidate(&self) {
+        unimplemented!()
+        //         unsafe {
+        //             // We could share impl with redraw, but we'd need to deal with nil.
+        //             let () = msg_send![*self.nsview.load(), setNeedsDisplay: YES];
+        //         }
+    }
 
-//     /// Request invalidation of one rectangle.
-//     pub fn invalidate_rect(&self, rect: Rect) {
-//         let rect = NSRect::new(
-//             NSPoint::new(rect.x0, rect.y0),
-//             NSSize::new(rect.width(), rect.height()),
-//         );
-//         unsafe {
-//             // We could share impl with redraw, but we'd need to deal with nil.
-//             let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
-//         }
-//     }
+    //     /// Request invalidation of one rectangle.
+    pub fn invalidate_rect(&self, rect: Rect) {
+        unimplemented!()
+        //         let rect = NSRect::new(
+        //             NSPoint::new(rect.x0, rect.y0),
+        //             NSSize::new(rect.width(), rect.height()),
+        //         );
+        //         unsafe {
+        //             // We could share impl with redraw, but we'd need to deal with nil.
+        //             let () = msg_send![*self.nsview.load(), setNeedsDisplayInRect: rect];
+        //         }
+    }
 
-//     pub fn set_cursor(&mut self, cursor: &Cursor) {
-//         unsafe {
-//             let nscursor = class!(NSCursor);
-//             #[allow(deprecated)]
-//             let cursor: id = match cursor {
-//                 Cursor::Arrow => msg_send![nscursor, arrowCursor],
-//                 Cursor::IBeam => msg_send![nscursor, IBeamCursor],
-//                 Cursor::Pointer => msg_send![nscursor, pointingHandCursor],
-//                 Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
-//                 Cursor::OpenHand => msg_send![nscursor, openHandCursor],
-//                 Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
-//                 Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
-//                 Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
-//                 // TODO: support custom cursors
-//                 Cursor::Custom(_) => msg_send![nscursor, arrowCursor],
-//             };
-//             let () = msg_send![cursor, set];
-//         }
-//     }
+    pub fn set_cursor(&mut self, cursor: &Cursor) {
+        unimplemented!()
+        // unsafe {
+        //     let nscursor = class!(NSCursor);
+        //     #[allow(deprecated)]
+        //     let cursor: id = match cursor {
+        //         Cursor::Arrow => msg_send![nscursor, arrowCursor],
+        //         Cursor::IBeam => msg_send![nscursor, IBeamCursor],
+        //         Cursor::Pointer => msg_send![nscursor, pointingHandCursor],
+        //         Cursor::Crosshair => msg_send![nscursor, crosshairCursor],
+        //         Cursor::OpenHand => msg_send![nscursor, openHandCursor],
+        //         Cursor::NotAllowed => msg_send![nscursor, operationNotAllowedCursor],
+        //         Cursor::ResizeLeftRight => msg_send![nscursor, resizeLeftRightCursor],
+        //         Cursor::ResizeUpDown => msg_send![nscursor, resizeUpDownCursor],
+        //         // TODO: support custom cursors
+        //         Cursor::Custom(_) => msg_send![nscursor, arrowCursor],
+        //     };
+        //     let () = msg_send![cursor, set];
+        // }
+    }
 
-//     pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
-//         tracing::warn!("Custom cursors are not yet supported in the macOS backend");
-//         None
-//     }
+    pub fn make_cursor(&self, _cursor_desc: &CursorDesc) -> Option<Cursor> {
+        // we should probably support this though??
+        tracing::warn!("Custom cursors are not yet supported in the iOS backend");
+        None
+    }
 
-//     pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
-//         let ti = time_interval_from_deadline(deadline);
-//         let token = TimerToken::next();
-//         unsafe {
-//             let nstimer = class!(NSTimer);
-//             let nsnumber = class!(NSNumber);
-//             let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
-//             let selector = sel!(handleTimer:);
-//             let view = self.nsview.load();
-//             let timer: id = msg_send![nstimer, timerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
-//             let runloop: id = msg_send![class!(NSRunLoop), currentRunLoop];
-//             let () = msg_send![runloop, addTimer: timer forMode: NSRunLoopCommonModes];
-//         }
-//         token
-//     }
+    pub fn request_timer(&self, deadline: std::time::Instant) -> TimerToken {
+        unimplemented!()
+        // let ti = time_interval_from_deadline(deadline);
+        // let token = TimerToken::next();
+        // unsafe {
+        //     let nstimer = class!(NSTimer);
+        //     let nsnumber = class!(NSNumber);
+        //     let user_info: id = msg_send![nsnumber, numberWithUnsignedInteger: token.into_raw()];
+        //     let selector = sel!(handleTimer:);
+        //     let view = self.nsview.load();
+        //     let timer: id = msg_send![nstimer, timerWithTimeInterval: ti target: view selector: selector userInfo: user_info repeats: NO];
+        //     let runloop: id = msg_send![class!(NSRunLoop), currentRunLoop];
+        //     let () = msg_send![runloop, addTimer: timer forMode: NSRunLoopCommonModes];
+        // }
+        // token
+    }
 
-//     pub fn text(&self) -> PietText {
-//         let view = self.nsview.load();
-//         unsafe {
-//             if let Some(view) = (*view).as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 (*(state as *mut ViewState)).text.clone()
-//             } else {
-//                 // this codepath should only happen during tests in druid, when view is nil
-//                 PietText::new_with_unique_state()
-//             }
-//         }
-//     }
+    pub fn text(&self) -> PietText {
+        unimplemented!()
+        // let view = self.nsview.load();
+        // unsafe {
+        //     if let Some(view) = (*view).as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         (*(state as *mut ViewState)).text.clone()
+        //     } else {
+        //         // this codepath should only happen during tests in druid, when view is nil
+        //         PietText::new_with_unique_state()
+        //     }
+        // }
+    }
 
-//     pub fn add_text_field(&self) -> TextFieldToken {
-//         TextFieldToken::next()
-//     }
+    pub fn add_text_field(&self) -> TextFieldToken {
+        unimplemented!()
+        // TextFieldToken::next()
+    }
 
-//     pub fn remove_text_field(&self, token: TextFieldToken) {
-//         let view = self.nsview.load();
-//         unsafe {
-//             if let Some(view) = (*view).as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 let state = &mut (*(state as *mut ViewState));
-//                 if state.active_text_input == Some(token) {
-//                     state.active_text_input = None;
-//                 }
-//             }
-//         }
-//     }
+    pub fn remove_text_field(&self, token: TextFieldToken) {
+        unimplemented!()
+        // let view = self.nsview.load();
+        // unsafe {
+        //     if let Some(view) = (*view).as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         let state = &mut (*(state as *mut ViewState));
+        //         if state.active_text_input == Some(token) {
+        //             state.active_text_input = None;
+        //         }
+        //     }
+        // }
+    }
 
-//     pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
-//         unsafe {
-//             if let Some(view) = self.nsview.load().as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 let state = &mut (*(state as *mut ViewState));
+    pub fn set_focused_text_field(&self, active_field: Option<TextFieldToken>) {
+        unimplemented!()
+        // unsafe {
+        //     if let Some(view) = self.nsview.load().as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         let state = &mut (*(state as *mut ViewState));
 
-//                 if let Some(old_field) = state.active_text_input {
-//                     self.update_text_field(old_field, Event::Reset);
-//                 }
-//                 state.active_text_input = active_field;
-//                 if let Some(new_field) = active_field {
-//                     self.update_text_field(new_field, Event::Reset);
-//                 }
-//             }
-//         }
-//     }
+        //         if let Some(old_field) = state.active_text_input {
+        //             self.update_text_field(old_field, Event::Reset);
+        //         }
+        //         state.active_text_input = active_field;
+        //         if let Some(new_field) = active_field {
+        //             self.update_text_field(new_field, Event::Reset);
+        //         }
+        //     }
+        // }
+    }
 
-//     pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
-//         unsafe {
-//             if let Some(view) = self.nsview.load().as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 let state = &mut (*(state as *mut ViewState));
+    pub fn update_text_field(&self, token: TextFieldToken, update: Event) {
+        unimplemented!()
+        // unsafe {
+        //     if let Some(view) = self.nsview.load().as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         let state = &mut (*(state as *mut ViewState));
 
-//                 if state.active_text_input != Some(token) {
-//                     return;
-//                 }
-//                 match update {
-//                     Event::LayoutChanged => {
-//                         let input_context: id = msg_send![*self.nsview.load(), inputContext];
-//                         let _: () = msg_send![input_context, invalidateCharacterCoordinates];
-//                     }
-//                     Event::Reset | Event::SelectionChanged => {
-//                         let input_context: id = msg_send![*self.nsview.load(), inputContext];
-//                         let _: () = msg_send![input_context, discardMarkedText];
-//                         let mut edit_lock = state.handler.acquire_input_lock(token, true);
-//                         edit_lock.set_composition_range(None);
-//                         state.handler.release_input_lock(token);
-//                     }
-//                 }
-//             }
-//         }
-//     }
+        //         if state.active_text_input != Some(token) {
+        //             return;
+        //         }
+        //         match update {
+        //             Event::LayoutChanged => {
+        //                 let input_context: id = msg_send![*self.nsview.load(), inputContext];
+        //                 let _: () = msg_send![input_context, invalidateCharacterCoordinates];
+        //             }
+        //             Event::Reset | Event::SelectionChanged => {
+        //                 let input_context: id = msg_send![*self.nsview.load(), inputContext];
+        //                 let _: () = msg_send![input_context, discardMarkedText];
+        //                 let mut edit_lock = state.handler.acquire_input_lock(token, true);
+        //                 edit_lock.set_composition_range(None);
+        //                 state.handler.release_input_lock(token);
+        //             }
+        //         }
+        //     }
+        // }
+    }
 
-//     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-//         Some(self.open_save_impl(FileDialogType::Open, options))
-//     }
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        unimplemented!()
+        // Some(self.open_save_impl(FileDialogType::Open, options))
+    }
 
-//     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
-//         Some(self.open_save_impl(FileDialogType::Save, options))
-//     }
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        unimplemented!()
+        // Some(self.open_save_impl(FileDialogType::Save, options))
+    }
 
-//     fn open_save_impl(&mut self, ty: FileDialogType, opts: FileDialogOptions) -> FileDialogToken {
-//         let token = FileDialogToken::next();
-//         let self_clone = self.clone();
-//         unsafe {
-//             let panel = dialog::build_panel(ty, opts.clone());
-//             let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
-//                 let url = dialog::get_file_info(panel, opts.clone(), response);
-//                 let view = self_clone.nsview.load();
-//                 if let Some(view) = (*view).as_ref() {
-//                     let view_state: *mut c_void = *view.get_ivar("viewState");
-//                     let view_state = &mut *(view_state as *mut ViewState);
-//                     if ty == FileDialogType::Open {
-//                         (*view_state).handler.open_file(token, url);
-//                     } else if ty == FileDialogType::Save {
-//                         (*view_state).handler.save_as(token, url);
-//                     }
-//                 }
-//             });
-//             let block = block.copy();
-//             let () = msg_send![panel, beginWithCompletionHandler: block];
-//         }
-//         token
-//     }
+    // fn open_save_impl(&mut self, ty: FileDialogType, opts: FileDialogOptions) -> FileDialogToken {
+    //     let token = FileDialogToken::next();
+    //     let self_clone = self.clone();
+    //     unsafe {
+    //         let panel = dialog::build_panel(ty, opts.clone());
+    //         let block = ConcreteBlock::new(move |response: dialog::NSModalResponse| {
+    //             let url = dialog::get_file_info(panel, opts.clone(), response);
+    //             let view = self_clone.nsview.load();
+    //             if let Some(view) = (*view).as_ref() {
+    //                 let view_state: *mut c_void = *view.get_ivar("viewState");
+    //                 let view_state = &mut *(view_state as *mut ViewState);
+    //                 if ty == FileDialogType::Open {
+    //                     (*view_state).handler.open_file(token, url);
+    //                 } else if ty == FileDialogType::Save {
+    //                     (*view_state).handler.save_as(token, url);
+    //                 }
+    //             }
+    //         });
+    //         let block = block.copy();
+    //         let () = msg_send![panel, beginWithCompletionHandler: block];
+    //     }
+    //     token
+    // }
 
-//     /// Set the title for this menu.
-//     pub fn set_title(&self, title: &str) {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let title = make_nsstring(title);
-//             window.setTitle_(title);
-//         }
-//     }
+    /// Set the title for this menu.
+    pub fn set_title(&self, title: &str) {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let title = make_nsstring(title);
+        //     window.setTitle_(title);
+        // }
+    }
 
-//     // TODO: Implement this
-//     pub fn show_titlebar(&self, _show_titlebar: bool) {}
+    // TODO: Implement this
+    pub fn show_titlebar(&self, _show_titlebar: bool) {
+        unimplemented!()
+    }
 
-//     // Need to translate mac y coords, as they start from bottom left
-//     pub fn set_position(&self, mut position: Point) {
-//         // TODO: Maybe @cmyr can get this into a state where modal windows follow the parent?
-//         // There is an API to do child windows, (https://developer.apple.com/documentation/appkit/nswindow/1419152-addchildwindow)
-//         // but I have no good way of testing and making sure this works.
-//         unsafe {
-//             if let Some(view) = self.nsview.load().as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 let state = &mut (*(state as *mut ViewState));
-//                 if let Some(parent_state) = &state.parent {
-//                     let pos = (*parent_state).get_position();
-//                     position += (pos.x, pos.y)
-//                 }
-//             }
-//         }
+    // Need to translate mac y coords, as they start from bottom left
+    pub fn set_position(&self, mut position: Point) {
+        unimplemented!()
+        // unsafe {
+        //     if let Some(view) = self.nsview.load().as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         let state = &mut (*(state as *mut ViewState));
+        //         if let Some(parent_state) = &state.parent {
+        //             let pos = (*parent_state).get_position();
+        //             position += (pos.x, pos.y)
+        //         }
+        //     }
+        // }
 
-//         self.defer(DeferredOp::SetPosition(position))
-//     }
+        // self.defer(DeferredOp::SetPosition(position))
+    }
 
-//     pub fn get_position(&self) -> Point {
-//         unsafe {
-//             // TODO this should be the max y in orig mac coords
-//             let screen_height = crate::Screen::get_display_rect().height();
+    pub fn get_position(&self) -> Point {
+        unimplemented!()
+        // unsafe {
+        //     // TODO this should be the max y in orig mac coords
+        //     let screen_height = crate::Screen::get_display_rect().height();
 
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let current_frame: NSRect = msg_send![window, frame];
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let current_frame: NSRect = msg_send![window, frame];
 
-//             let mut position = Point::new(
-//                 current_frame.origin.x,
-//                 screen_height - current_frame.origin.y - current_frame.size.height,
-//             );
-//             if let Some(view) = self.nsview.load().as_ref() {
-//                 let state: *mut c_void = *view.get_ivar("viewState");
-//                 let state = &mut (*(state as *mut ViewState));
-//                 if let Some(parent_state) = &state.parent {
-//                     let pos = (*parent_state).get_position();
-//                     position -= (pos.x, pos.y)
-//                 }
-//             }
-//             position
-//         }
-//     }
+        //     let mut position = Point::new(
+        //         current_frame.origin.x,
+        //         screen_height - current_frame.origin.y - current_frame.size.height,
+        //     );
+        //     if let Some(view) = self.nsview.load().as_ref() {
+        //         let state: *mut c_void = *view.get_ivar("viewState");
+        //         let state = &mut (*(state as *mut ViewState));
+        //         if let Some(parent_state) = &state.parent {
+        //             let pos = (*parent_state).get_position();
+        //             position -= (pos.x, pos.y)
+        //         }
+        //     }
+        //     position
+        // }
+    }
 
-//     pub fn content_insets(&self) -> Insets {
-//         unsafe {
-//             let screen_height = crate::Screen::get_display_rect().height();
+    pub fn content_insets(&self) -> Insets {
+        unimplemented!()
+        // unsafe {
+        //     let screen_height = crate::Screen::get_display_rect().height();
 
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let clr: NSRect = msg_send![window, contentLayoutRect];
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let clr: NSRect = msg_send![window, contentLayoutRect];
 
-//             let window_frame_r: NSRect = NSWindow::frame(window);
-//             let content_frame_r: NSRect = NSWindow::convertRectToScreen_(window, clr);
+        //     let window_frame_r: NSRect = NSWindow::frame(window);
+        //     let content_frame_r: NSRect = NSWindow::convertRectToScreen_(window, clr);
 
-//             let window_frame_rk = Rect::from_origin_size(
-//                 (
-//                     window_frame_r.origin.x,
-//                     screen_height - window_frame_r.origin.y - window_frame_r.size.height,
-//                 ),
-//                 (window_frame_r.size.width, window_frame_r.size.height),
-//             );
-//             let content_frame_rk = Rect::from_origin_size(
-//                 (
-//                     content_frame_r.origin.x,
-//                     screen_height - content_frame_r.origin.y - content_frame_r.size.height,
-//                 ),
-//                 (content_frame_r.size.width, content_frame_r.size.height),
-//             );
-//             window_frame_rk - content_frame_rk
-//         }
-//     }
+        //     let window_frame_rk = Rect::from_origin_size(
+        //         (
+        //             window_frame_r.origin.x,
+        //             screen_height - window_frame_r.origin.y - window_frame_r.size.height,
+        //         ),
+        //         (window_frame_r.size.width, window_frame_r.size.height),
+        //     );
+        //     let content_frame_rk = Rect::from_origin_size(
+        //         (
+        //             content_frame_r.origin.x,
+        //             screen_height - content_frame_r.origin.y - content_frame_r.size.height,
+        //         ),
+        //         (content_frame_r.size.width, content_frame_r.size.height),
+        //     );
+        //     window_frame_rk - content_frame_rk
+        // }
+    }
 
-//     fn set_level(&self, level: WindowLevel) {
-//         unsafe {
-//             let level = levels::as_raw_window_level(level);
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let () = msg_send![window, setLevel: level];
-//         }
-//     }
+    pub fn set_size(&self, size: Size) {
+        unimplemented!()
+        // self.defer(DeferredOp::SetSize(size));
+    }
 
-//     pub fn set_size(&self, size: Size) {
-//         self.defer(DeferredOp::SetSize(size));
-//     }
+    pub fn get_size(&self) -> Size {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let current_frame: NSRect = msg_send![window, frame];
+        //     Size::new(current_frame.size.width, current_frame.size.height)
+        // }
+    }
 
-//     pub fn get_size(&self) -> Size {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let current_frame: NSRect = msg_send![window, frame];
-//             Size::new(current_frame.size.width, current_frame.size.height)
-//         }
-//     }
+    pub fn get_window_state(&self) -> WindowState {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let isMin: BOOL = msg_send![window, isMiniaturized];
+        //     if isMin != NO {
+        //         return WindowState::Minimized;
+        //     }
+        //     let isZoomed: BOOL = msg_send![window, isZoomed];
+        //     if isZoomed != NO {
+        //         return WindowState::Maximized;
+        //     }
+        // }
+        // WindowState::Restored
+    }
 
-//     pub fn get_window_state(&self) -> WindowState {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let isMin: BOOL = msg_send![window, isMiniaturized];
-//             if isMin != NO {
-//                 return WindowState::Minimized;
-//             }
-//             let isZoomed: BOOL = msg_send![window, isZoomed];
-//             if isZoomed != NO {
-//                 return WindowState::Maximized;
-//             }
-//         }
-//         WindowState::Restored
-//     }
+    pub fn set_window_state(&mut self, state: WindowState) {
+        unimplemented!()
+        // let cur_state = self.get_window_state();
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     match (state, cur_state) {
+        //         (s1, s2) if s1 == s2 => (),
+        //         (WindowState::Minimized, _) => {
+        //             let () = msg_send![window, performMiniaturize: self];
+        //         }
+        //         (WindowState::Maximized, _) => {
+        //             let () = msg_send![window, performZoom: self];
+        //         }
+        //         (WindowState::Restored, WindowState::Maximized) => {
+        //             let () = msg_send![window, performZoom: self];
+        //         }
+        //         (WindowState::Restored, WindowState::Minimized) => {
+        //             let () = msg_send![window, deminiaturize: self];
+        //         }
+        //         (WindowState::Restored, WindowState::Restored) => {} // Can't be reached
+        //     }
+        // }
+    }
 
-//     pub fn set_window_state(&mut self, state: WindowState) {
-//         let cur_state = self.get_window_state();
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             match (state, cur_state) {
-//                 (s1, s2) if s1 == s2 => (),
-//                 (WindowState::Minimized, _) => {
-//                     let () = msg_send![window, performMiniaturize: self];
-//                 }
-//                 (WindowState::Maximized, _) => {
-//                     let () = msg_send![window, performZoom: self];
-//                 }
-//                 (WindowState::Restored, WindowState::Maximized) => {
-//                     let () = msg_send![window, performZoom: self];
-//                 }
-//                 (WindowState::Restored, WindowState::Minimized) => {
-//                     let () = msg_send![window, deminiaturize: self];
-//                 }
-//                 (WindowState::Restored, WindowState::Restored) => {} // Can't be reached
-//             }
-//         }
-//     }
+    pub fn handle_titlebar(&self, _val: bool) {
+        unimplemented!()
+        // tracing::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
+    }
 
-//     pub fn handle_titlebar(&self, _val: bool) {
-//         tracing::warn!("WindowHandle::handle_titlebar is currently unimplemented for Mac.");
-//     }
+    pub fn resizable(&self, resizable: bool) {
+        unimplemented!()
+        // unsafe {
+        //     let window: id = msg_send![*self.nsview.load(), window];
+        //     let mut style_mask: NSWindowStyleMask = window.styleMask();
 
-//     pub fn resizable(&self, resizable: bool) {
-//         unsafe {
-//             let window: id = msg_send![*self.nsview.load(), window];
-//             let mut style_mask: NSWindowStyleMask = window.styleMask();
+        //     if resizable {
+        //         style_mask |= NSWindowStyleMask::NSResizableWindowMask;
+        //     } else {
+        //         style_mask &= !NSWindowStyleMask::NSResizableWindowMask;
+        //     }
 
-//             if resizable {
-//                 style_mask |= NSWindowStyleMask::NSResizableWindowMask;
-//             } else {
-//                 style_mask &= !NSWindowStyleMask::NSResizableWindowMask;
-//             }
+        //     window.setStyleMask_(style_mask);
+        // }
+    }
 
-//             window.setStyleMask_(style_mask);
-//         }
-//     }
+    pub fn set_menu(&self, menu: Menu) {
+        unimplemented!()
+        // unsafe {
+        //     NSApp().setMainMenu_(menu.menu);
+        // }
+    }
 
-//     pub fn set_menu(&self, menu: Menu) {
-//         unsafe {
-//             NSApp().setMainMenu_(menu.menu);
-//         }
-//     }
+    //FIXME: we should be using the x, y values passed by the caller, but then
+    //we have to figure out some way to pass them along with this performSelector:
+    //call. This isn't super hard, I'm just not up for it right now.
+    pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
+        unimplemented!()
+        // unsafe {
+        //     let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
+        // }
+    }
 
-//     //FIXME: we should be using the x, y values passed by the caller, but then
-//     //we have to figure out some way to pass them along with this performSelector:
-//     //call. This isn't super hard, I'm just not up for it right now.
-//     pub fn show_context_menu(&self, menu: Menu, _pos: Point) {
-//         unsafe {
-//             let () = msg_send![*self.nsview.load(), performSelectorOnMainThread: sel!(showContextMenu:) withObject: menu.menu waitUntilDone: NO];
-//         }
-//     }
+    fn defer(&self, op: DeferredOp) {
+        // if let Some(i) = self.get_idle_handle() {
+        //     i.add_idle(IdleKind::DeferredOp(op))
+        // }
+    }
 
-//     fn defer(&self, op: DeferredOp) {
-//         if let Some(i) = self.get_idle_handle() {
-//             i.add_idle(IdleKind::DeferredOp(op))
-//         }
-//     }
+    /// Get a handle that can be used to schedule an idle task.
+    pub fn get_idle_handle(&self) -> Option<IdleHandle> {
+        unimplemented!()
+        // if self.nsview.load().is_null() {
+        //     None
+        // } else {
+        //     Some(IdleHandle {
+        //         nsview: self.nsview.clone(),
+        //         idle_queue: self.idle_queue.clone(),
+        //     })
+        // }
+    }
 
-//     /// Get a handle that can be used to schedule an idle task.
-//     pub fn get_idle_handle(&self) -> Option<IdleHandle> {
-//         if self.nsview.load().is_null() {
-//             None
-//         } else {
-//             Some(IdleHandle {
-//                 nsview: self.nsview.clone(),
-//                 idle_queue: self.idle_queue.clone(),
-//             })
-//         }
-//     }
-
-//     /// Get the `Scale` of the window.
-//     pub fn get_scale(&self) -> Result<Scale, Error> {
-//         // TODO: Get actual Scale
-//         Ok(Scale::new(1.0, 1.0))
-//     }
-// }
-
-// #[cfg(feature = "raw-win-handle")]
-// unsafe impl HasRawWindowHandle for WindowHandle {
-//     fn raw_window_handle(&self) -> RawWindowHandle {
-//         let nsv = self.nsview.load();
-//         let handle = MacOSHandle {
-//             ns_view: *nsv as *mut _,
-//             ..MacOSHandle::empty()
-//         };
-//         RawWindowHandle::MacOS(handle)
-//     }
-// }
+    /// Get the `Scale` of the window.
+    pub fn get_scale(&self) -> Result<Scale, Error> {
+        unimplemented!()
+        // TODO: Get actual Scale
+        // Ok(Scale::new(1.0, 1.0))
+    }
+}
 
 unsafe impl Send for IdleHandle {}
 
-// impl IdleHandle {
-//     fn add_idle(&self, idle: IdleKind) {
-//         if let Some(queue) = self.idle_queue.upgrade() {
-//             let mut queue = queue.lock().expect("queue lock");
-//             if queue.is_empty() {
-//                 unsafe {
-//                     let nsview = self.nsview.load();
-//                     // Note: the nsview might be nil here if the window has been dropped, but that's ok.
-//                     let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
-//                         withObject: nil waitUntilDone: NO);
-//                 }
-//             }
-//             queue.push(idle);
-//         }
-//     }
+impl IdleHandle {
+    fn add_idle(&self, idle: IdleKind) {
+        if let Some(queue) = self.idle_queue.upgrade() {
+            let mut queue = queue.lock().expect("queue lock");
+            if queue.is_empty() {
+                unsafe {
+                    unimplemented!()
+                    // let nsview = self.nsview.load();
+                    // // Note: the nsview might be nil here if the window has been dropped, but that's ok.
+                    // let () = msg_send!(*nsview, performSelectorOnMainThread: sel!(runIdle)
+                    //     withObject: nil waitUntilDone: NO);
+                }
+            }
+            queue.push(idle);
+        }
+    }
 
-//     /// Add an idle handler, which is called (once) when the message loop
-//     /// is empty. The idle handler will be run from the main UI thread, and
-//     /// won't be scheduled if the associated view has been dropped.
-//     ///
-//     /// Note: the name "idle" suggests that it will be scheduled with a lower
-//     /// priority than other UI events, but that's not necessarily the case.
-//     pub fn add_idle_callback<F>(&self, callback: F)
-//     where
-//         F: FnOnce(&mut dyn WinHandler) + Send + 'static,
-//     {
-//         self.add_idle(IdleKind::Callback(Box::new(callback)));
-//     }
+    /// Add an idle handler, which is called (once) when the message loop
+    /// is empty. The idle handler will be run from the main UI thread, and
+    /// won't be scheduled if the associated view has been dropped.
+    ///
+    /// Note: the name "idle" suggests that it will be scheduled with a lower
+    /// priority than other UI events, but that's not necessarily the case.
+    pub fn add_idle_callback<F>(&self, callback: F)
+    where
+        F: FnOnce(&mut dyn WinHandler) + Send + 'static,
+    {
+        self.add_idle(IdleKind::Callback(Box::new(callback)));
+    }
 
-//     pub fn add_idle_token(&self, token: IdleToken) {
-//         self.add_idle(IdleKind::Token(token));
-//     }
-// }
+    pub fn add_idle_token(&self, token: IdleToken) {
+        self.add_idle(IdleKind::Token(token));
+    }
+}
 
 // /// Convert an `Instant` into an NSTimeInterval, i.e. a fractional number
 // /// of seconds from now.
