@@ -44,7 +44,6 @@ use wayland_client::{
     },
 };
 use wayland_cursor::CursorTheme;
-use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 use wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
@@ -93,8 +92,7 @@ pub struct Application {
 #[allow(dead_code)]
 pub(crate) struct Data {
     pub(super) wayland: std::rc::Rc<display::Environment>,
-    pub(super) zxdg_decoration_manager_v1: wl::Main<ZxdgDecorationManagerV1>,
-    pub(super) zwlr_layershell_v1: wl::Main<ZwlrLayerShellV1>,
+    pub(super) zwlr_layershell_v1: Option<wl::Main<ZwlrLayerShellV1>>,
     pub(super) wl_compositor: wl::Main<WlCompositor>,
     pub(super) wl_shm: wl::Main<WlShm>,
     /// A map of wayland object IDs to outputs.
@@ -201,14 +199,17 @@ impl Application {
         let env = display::new(dispatcher)?;
         display::print(&env.registry);
 
-        let zxdg_decoration_manager_v1 = env
-            .registry
-            .instantiate_exact::<ZxdgDecorationManagerV1>(1)
-            .map_err(|e| Error::global("zxdg_decoration_manager_v1", 1, e))?;
         let zwlr_layershell_v1 = env
             .registry
             .instantiate_exact::<ZwlrLayerShellV1>(1)
-            .map_err(|e| Error::global("zwlr_layershell_v1", 1, e))?;
+            .map_or_else(
+                |e| {
+                    tracing::info!("unable to instantiate layershell {:?}", e);
+                    None
+                },
+                Some,
+            );
+
         let wl_compositor = env
             .registry
             .instantiate_exact::<WlCompositor>(4)
@@ -230,7 +231,6 @@ impl Application {
 
         // We need to have keyboard events set up for our seats before the next roundtrip.
         let appdata = std::sync::Arc::new(Data {
-            zxdg_decoration_manager_v1,
             zwlr_layershell_v1,
             wl_compositor,
             wl_shm: wl_shm.clone(),
@@ -334,6 +334,7 @@ impl Application {
                     calloop::channel::Event::Closed => {}
                     calloop::channel::Event::Msg(output) => match output {
                         outputs::Event::Located(output) => {
+                            tracing::debug!("output added {:?} {:?}", output.gid, output.id());
                             appdata
                                 .outputs
                                 .borrow_mut()
@@ -343,6 +344,7 @@ impl Application {
                             }
                         }
                         outputs::Event::Removed(output) => {
+                            tracing::debug!("output removed {:?} {:?}", output.gid, output.id());
                             appdata.outputs.borrow_mut().remove(&output.id());
                             for (_, win) in appdata.handles_iter() {
                                 surfaces::Outputs::removed(&win, &output);
@@ -419,11 +421,7 @@ impl surfaces::Compositor for Data {
         self.wayland.xdg_base.get_xdg_surface(s)
     }
 
-    fn zxdg_decoration_manager_v1(&self) -> wl::Main<ZxdgDecorationManagerV1> {
-        self.zxdg_decoration_manager_v1.clone()
-    }
-
-    fn zwlr_layershell_v1(&self) -> wl::Main<ZwlrLayerShellV1> {
+    fn zwlr_layershell_v1(&self) -> Option<wl::Main<ZwlrLayerShellV1>> {
         self.zwlr_layershell_v1.clone()
     }
 }

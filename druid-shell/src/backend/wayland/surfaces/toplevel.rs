@@ -1,5 +1,4 @@
 use wayland_client as wlc;
-use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_toplevel_decoration_v1 as toplevel_decorations;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 use wayland_protocols::xdg_shell::client::xdg_toplevel;
 
@@ -17,12 +16,8 @@ use super::Popup;
 
 struct Inner {
     wl_surface: surface::Surface,
-    #[allow(unused)]
     pub(super) xdg_surface: wlc::Main<xdg_surface::XdgSurface>,
     pub(super) xdg_toplevel: wlc::Main<xdg_toplevel::XdgToplevel>,
-    #[allow(unused)]
-    pub(super) zxdg_toplevel_decoration_v1:
-        wlc::Main<toplevel_decorations::ZxdgToplevelDecorationV1>,
 }
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
@@ -47,9 +42,6 @@ impl Surface {
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
         let xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
         let xdg_toplevel = xdg_surface.get_toplevel();
-        let zxdg_toplevel_decoration_v1 = compositor
-            .zxdg_decoration_manager_v1()
-            .get_toplevel_decoration(&xdg_toplevel);
 
         // register to receive xdg_surface events.
         xdg_surface.quick_assign({
@@ -66,6 +58,7 @@ impl Surface {
                 }
             }
         });
+
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
             let mut dim = initial_size;
@@ -97,20 +90,12 @@ impl Surface {
             }
         });
 
-        zxdg_toplevel_decoration_v1.quick_assign(move |_zxdg_toplevel_decoration_v1, event, _| {
-            tracing::info!("toplevel decoration unimplemented {:?}", event);
-        });
-
         let inner = Inner {
             wl_surface,
             xdg_toplevel,
             xdg_surface,
-            zxdg_toplevel_decoration_v1,
         };
 
-        inner
-            .zxdg_toplevel_decoration_v1
-            .set_mode(toplevel_decorations::Mode::ServerSide);
         if let Some(size) = min_size {
             inner
                 .xdg_toplevel
