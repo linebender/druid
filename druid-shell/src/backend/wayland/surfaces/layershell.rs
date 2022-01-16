@@ -194,7 +194,7 @@ impl Surface {
     ) -> Self {
         let compositor = CompositorHandle::new(c);
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
-        let ls_surface = compositor.zwlr_layershell_v1().get_layer_surface(
+        let ls_surface = compositor.zwlr_layershell_v1().unwrap().get_layer_surface(
             &wl_surface.inner.wl_surface.borrow(),
             None,
             config.layer,
@@ -320,15 +320,18 @@ impl Outputs for Surface {
             .wl_surface
             .replace(surface::Surface::replace(&sdata));
         let sdata = self.inner.wl_surface.borrow().inner.clone();
-        let replacedlayershell =
-            self.inner
-                .ls_surface
-                .replace(sdata.compositor.zwlr_layershell_v1().get_layer_surface(
+        let replacedlayershell = self.inner.ls_surface.replace(
+            sdata
+                .compositor
+                .zwlr_layershell_v1()
+                .unwrap()
+                .get_layer_surface(
                     &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
                     None,
                     self.inner.config.layer,
                     self.inner.config.namespace.to_string(),
-                ));
+                ),
+        );
 
         Surface::initialize(self);
         replacedlayershell.destroy();
