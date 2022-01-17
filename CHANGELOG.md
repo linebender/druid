@@ -64,6 +64,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
 - Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
 - `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
+- Add `Checkbox::from_label` constructor ([#2111] by [@maurerdietmar])
 
 ### Changed
 
@@ -532,6 +533,7 @@ Last release without a changelog :(
 [@klemensn]: https://github.com/klemensn
 [@agentsim]: https://github.com/agentsim
 [@jplatte]: https://github.com/jplatte
+[@maurerdietmar]: https://github.com/maurerdietmar
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -814,6 +816,7 @@ Last release without a changelog :(
 [#2036]: https://github.com/linebender/druid/pull/2036
 [#2064]: https://github.com/linebender/druid/pull/2064
 [#1979]: https://github.com/linebender/druid/pull/1979
+[#2111]: https://github.com/linebender/druid/pull/2111
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
