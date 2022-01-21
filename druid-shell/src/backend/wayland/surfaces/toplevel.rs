@@ -75,7 +75,7 @@ impl Surface {
                     height,
                     states,
                 } => {
-                    tracing::trace!(
+                    tracing::debug!(
                         "configure event {:?} {:?} {:?} {:?}",
                         width,
                         height,

@@ -116,7 +116,7 @@ impl GlobalEventDispatch for std::sync::Arc<Environment> {
     }
 }
 
-pub(super) fn new(dispatcher: Dispatcher) -> Result<std::sync::Arc<Environment>, error::Error> {
+pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
     let dispatcher = std::sync::Arc::new(dispatcher);
     let d = wlc::Display::connect_to_env()?;
 
@@ -157,13 +157,13 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<std::sync::Arc<Environment>,
         }
     });
 
-    let env = std::sync::Arc::new(Environment {
+    let env = Environment {
         queue: std::rc::Rc::new(std::cell::RefCell::new(queue)),
         display: d,
         registry,
         xdg_base,
         dispatcher,
-    });
+    };
 
     Ok(env)
 }

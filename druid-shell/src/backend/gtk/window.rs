@@ -346,14 +346,6 @@ impl WindowBuilder {
                     window.set_transient_for(Some(&parent_state.window));
                 }
             }
-
-            let override_redirect = match level {
-                WindowLevel::AppWindow => false,
-                WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
-            };
-            if let Some(window) = window.window() {
-                window.set_override_redirect(override_redirect);
-            }
         }
 
         let state = WindowState {
@@ -798,6 +790,16 @@ impl WindowBuilder {
             .window()
             .expect("realize didn't create window")
             .set_event_compression(false);
+
+        if let Some(level) = self.level {
+            let override_redirect = match level {
+                WindowLevel::AppWindow => false,
+                WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
+            };
+            if let Some(window) = win_state.window.window() {
+                window.set_override_redirect(override_redirect);
+            }
+        }
 
         let size = self.size;
         win_state.with_handler(|h| {

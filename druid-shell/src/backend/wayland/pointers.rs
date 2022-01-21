@@ -9,7 +9,7 @@ use crate::keyboard::Modifiers;
 use crate::kurbo::{Point, Vec2};
 use crate::mouse;
 
-use super::application::ApplicationData;
+use super::application::Data;
 
 // Button constants (linux specific)
 const BTN_LEFT: u32 = 0x110;
@@ -226,7 +226,7 @@ impl Pointer {
     }
 
     pub(super) fn consume(
-        appdata: std::sync::Arc<ApplicationData>,
+        appdata: std::sync::Arc<Data>,
         source: wl_pointer::WlPointer,
         event: wl_pointer::Event,
     ) {

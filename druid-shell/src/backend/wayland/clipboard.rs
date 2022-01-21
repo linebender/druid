@@ -92,7 +92,7 @@ impl std::fmt::Debug for Inner {
 
 #[derive(Debug, Clone)]
 pub struct Manager {
-    inner: std::sync::Arc<Inner>,
+    inner: std::rc::Rc<Inner>,
 }
 
 impl Manager {
@@ -114,7 +114,7 @@ impl Manager {
         });
 
         Ok(Self {
-            inner: std::sync::Arc::new(Inner {
+            inner: std::rc::Rc::new(Inner {
                 wobj: m,
                 wdsobj: ds,
                 display: display.clone(),

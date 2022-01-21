@@ -74,7 +74,7 @@ pub fn detect(
                     if interface.as_str() != "wl_output" {
                         return;
                     }
-                    tracing::info!("output removed event {:?} {:?}", registry, interface);
+                    tracing::debug!("output removed event {:?} {:?}", registry, interface);
                 }
             };
         }
@@ -134,6 +134,10 @@ impl XdgMeta {
     }
 
     fn modify(&self, meta: &mut outputs::Meta) {
+        if !self.handled {
+            return;
+        }
+
         let state = self.state.borrow();
         meta.name = state.name.clone();
         meta.description = state.description.clone();
