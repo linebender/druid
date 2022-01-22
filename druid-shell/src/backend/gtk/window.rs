@@ -1074,8 +1074,6 @@ impl WindowHandle {
                 (Restored, Minimized) => state.window.deiconify(),
                 (Restored, Restored) => (), // Unreachable
             }
-
-            state.window.unmaximize();
         }
     }
 

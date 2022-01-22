@@ -89,6 +89,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
 - `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
 - Closures passed to `Label::new` can now return any type that implements `Into<ArcStr>` ([#2064] by [@jplatte])
+- Removed line of code that prevented window miximalization. ([#2113] by [@Pavel-N])
 
 ### Deprecated
 
@@ -534,6 +535,7 @@ Last release without a changelog :(
 [@klemensn]: https://github.com/klemensn
 [@agentsim]: https://github.com/agentsim
 [@jplatte]: https://github.com/jplatte
+[@Pavel-N]: https://github.com/Pavel-N
 [@maurerdietmar]: https://github.com/maurerdietmar
 
 [#599]: https://github.com/linebender/druid/pull/599
