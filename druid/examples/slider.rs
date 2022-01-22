@@ -81,7 +81,7 @@ fn build_root_widget() -> impl Widget<AppState> {
                     .knob_style(KnobStyle::Wedge)
                     .axis(Axis::Vertical)
                     .with_step(0.25)
-                    .annotated(0.0, 0.0000000025)
+                    .annotated(1.0, 0.25)
                     .fix_height(250.0)
                     .lens(AppState::value)
                     .boxed()
