@@ -14,6 +14,12 @@ use super::Handle;
 use super::Outputs;
 use super::Popup;
 
+#[derive(Default)]
+struct Output {
+    preferred: Option<String>,
+    current: Option<outputs::Meta>,
+}
+
 struct Inner {
     config: Config,
     wl_surface: std::cell::RefCell<surface::Surface>,
@@ -21,6 +27,7 @@ struct Inner {
         std::cell::RefCell<wlc::Main<layershell::zwlr_layer_surface_v1::ZwlrLayerSurfaceV1>>,
     requires_initialization: std::cell::RefCell<bool>,
     available: std::cell::RefCell<bool>,
+    output: std::cell::RefCell<Output>,
 }
 
 impl Inner {
@@ -142,7 +149,6 @@ impl Config {
     }
 
     fn apply(&self, surface: &Surface) {
-        surface.initialize_dimensions(self.initial_size);
         let ls = surface.inner.ls_surface.borrow();
         ls.set_exclusive_zone(self.exclusive_zone);
         ls.set_anchor(self.anchor);
@@ -153,6 +159,10 @@ impl Config {
             self.margin.bottom,
             self.margin.left,
         );
+        ls.set_size(
+            self.initial_size.width as u32,
+            self.initial_size.height as u32,
+        );
     }
 }
 
@@ -162,7 +172,7 @@ impl Default for Config {
             layer: layershell::zwlr_layer_shell_v1::Layer::Overlay,
             initial_size: kurbo::Size::ZERO,
             keyboard_interactivity: layershell::zwlr_layer_surface_v1::KeyboardInteractivity::None,
-            anchor: layershell::zwlr_layer_surface_v1::Anchor::empty(),
+            anchor: layershell::zwlr_layer_surface_v1::Anchor::all(),
             exclusive_zone: 0,
             margin: Margin::default(),
             namespace: "druid",
@@ -198,6 +208,7 @@ impl Surface {
                 ls_surface: std::cell::RefCell::new(ls_surface),
                 requires_initialization: std::cell::RefCell::new(true),
                 available: std::cell::RefCell::new(false),
+                output: std::cell::RefCell::new(Default::default()),
             }),
         };
 
@@ -212,26 +223,9 @@ impl Surface {
         std::sync::Arc::<surface::Data>::from(self).with_handler(f)
     }
 
-    fn initialize_dimensions(&self, dim: kurbo::Size) {
-        self.inner
-            .ls_surface
-            .borrow()
-            .set_size(dim.width as u32, dim.height as u32);
-        self.inner
-            .wl_surface
-            .borrow()
-            .inner
-            .handler
-            .borrow_mut()
-            .size(dim);
-    }
-
     fn initialize(handle: &Surface) {
-        if !handle.inner.requires_initialization.replace(false) {
-            return;
-        }
-
-        tracing::info!("attempting to initialize layershell");
+        handle.inner.requires_initialization.replace(false);
+        tracing::debug!("attempting to initialize layershell");
 
         handle.inner.ls_surface.borrow().quick_assign({
             let handle = handle.clone();
@@ -272,6 +266,15 @@ impl Surface {
                 handle.inner.available.replace(true);
             }
             layershell::zwlr_layer_surface_v1::Event::Closed => {
+                if let Some(o) = handle.inner.wl_surface.borrow().output() {
+                    handle
+                        .inner
+                        .output
+                        .borrow_mut()
+                        .preferred
+                        .get_or_insert(o.name.clone());
+                    handle.inner.output.borrow_mut().current.get_or_insert(o);
+                }
                 handle.inner.ls_surface.borrow().destroy();
                 handle.inner.available.replace(false);
                 handle.inner.requires_initialization.replace(true);
@@ -284,22 +287,36 @@ impl Surface {
 impl Outputs for Surface {
     fn removed(&self, o: &outputs::Meta) {
         self.inner.wl_surface.borrow().removed(o);
+        self.inner.output.borrow_mut().current.take();
     }
 
     fn inserted(&self, o: &outputs::Meta) {
-        if !*self.inner.requires_initialization.borrow() {
+        let reinitialize = *self.inner.requires_initialization.borrow();
+        let reinitialize = self
+            .inner
+            .output
+            .borrow()
+            .preferred
+            .as_ref()
+            .map_or("", |name| name)
+            == o.name
+            || reinitialize;
+        if !reinitialize {
             tracing::debug!(
                 "skipping reinitialization output for layershell {:?} {:?}",
                 o.id(),
-                o
+                o.name,
             );
             return;
         }
 
-        tracing::debug!("reinitializing output for layershell {:?} {:?}", o.id(), o);
+        tracing::debug!(
+            "reinitializing output for layershell {:?} {:?}",
+            o.id(),
+            o.name
+        );
         let sdata = self.inner.wl_surface.borrow().inner.clone();
-        let replacedsurface = self
-            .inner
+        self.inner
             .wl_surface
             .replace(surface::Surface::replace(&sdata));
         let sdata = self.inner.wl_surface.borrow().inner.clone();
@@ -312,12 +329,9 @@ impl Outputs for Surface {
                     self.inner.config.layer,
                     self.inner.config.namespace.to_string(),
                 ));
-        Surface::initialize(self);
 
-        tracing::debug!("replaced surface {:p}", &replacedsurface);
-        tracing::debug!("current surface {:p}", &self.inner.wl_surface.borrow());
-        tracing::debug!("replaced layershell {:p}", &replacedlayershell);
-        tracing::debug!("current layershell {:p}", &self.inner.ls_surface.borrow());
+        Surface::initialize(self);
+        replacedlayershell.destroy();
     }
 }
 
@@ -382,11 +396,11 @@ impl Handle for Surface {
     }
 
     fn release(&self) {
-        return self.inner.wl_surface.borrow().release();
+        self.inner.wl_surface.borrow().release()
     }
 
     fn data(&self) -> Option<std::sync::Arc<surface::Data>> {
-        return self.inner.wl_surface.borrow().data();
+        self.inner.wl_surface.borrow().data()
     }
 }
 

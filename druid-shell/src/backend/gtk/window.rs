@@ -346,14 +346,6 @@ impl WindowBuilder {
                     window.set_transient_for(Some(&parent_state.window));
                 }
             }
-
-            let override_redirect = match level {
-                WindowLevel::AppWindow => false,
-                WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
-            };
-            if let Some(window) = window.window() {
-                window.set_override_redirect(override_redirect);
-            }
         }
 
         let state = WindowState {
@@ -799,6 +791,16 @@ impl WindowBuilder {
             .expect("realize didn't create window")
             .set_event_compression(false);
 
+        if let Some(level) = self.level {
+            let override_redirect = match level {
+                WindowLevel::AppWindow => false,
+                WindowLevel::Tooltip(_) | WindowLevel::DropDown(_) | WindowLevel::Modal(_) => true,
+            };
+            if let Some(window) = win_state.window.window() {
+                window.set_override_redirect(override_redirect);
+            }
+        }
+
         let size = self.size;
         win_state.with_handler(|h| {
             h.connect(&handle.clone().into());
@@ -1009,25 +1011,33 @@ impl WindowHandle {
         }
     }
 
-    /// The GTK implementation of content_insets differs from, e.g., the Windows one in that it
-    /// doesn't try to account for window decorations. Depending on the platform, GTK might not
-    /// even be aware of the size of the window decorations. And anyway, GTK's `Window::resize`
-    /// function [tries not to include] the window decorations, so it makes sense not to include
-    /// them here either.
-    ///
-    /// [tries not to include]: https://developer.gnome.org/gtk3/stable/GtkWidget.html#geometry-management
     pub fn content_insets(&self) -> Insets {
         if let Some(state) = self.state.upgrade() {
             let scale = state.scale.get();
             let (width_px, height_px) = state.window.size();
             let alloc_px = state.drawing_area.allocation();
-            let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
-            let alloc = Rect::from_origin_size(
-                (alloc_px.x as f64, alloc_px.y as f64),
-                (alloc_px.width as f64, alloc_px.height as f64),
-            )
-            .to_dp(scale);
-            window.to_rect() - alloc
+            let menu_height_px = height_px - alloc_px.height;
+
+            if let Some(window) = state.window.window() {
+                let frame = window.frame_extents();
+                let (pos_x, pos_y) = window.position();
+                Insets::new(
+                    (pos_x - frame.x) as f64,
+                    (pos_y - frame.y + menu_height_px) as f64,
+                    (frame.x + frame.width - (pos_x + width_px)) as f64,
+                    (frame.y + frame.height - (pos_y + height_px)) as f64,
+                )
+                .to_dp(scale)
+                .nonnegative()
+            } else {
+                let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
+                let alloc = Rect::from_origin_size(
+                    (alloc_px.x as f64, alloc_px.y as f64),
+                    (alloc_px.width as f64, alloc_px.height as f64),
+                )
+                .to_dp(scale);
+                window.to_rect() - alloc
+            }
         } else {
             Insets::ZERO
         }

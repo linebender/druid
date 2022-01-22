@@ -191,7 +191,7 @@ impl State {
         }
     }
 
-    pub fn key_event(&mut self, scancode: u32, state: KeyState) -> KeyEvent {
+    pub fn key_event(&mut self, scancode: u32, state: KeyState, repeat: bool) -> KeyEvent {
         let code = u16::try_from(scancode)
             .map(hardware_keycode_to_code)
             .unwrap_or(Code::Unidentified);
@@ -199,21 +199,22 @@ impl State {
         // TODO this is lazy - really should use xkb i.e. augment the get_logical_key method.
         let location = code_to_location(code);
 
-        let repeat = false;
         // TODO not sure how to get this
         let is_composing = false;
 
         let mut mods = Modifiers::empty();
         // Update xkb's state (e.g. return capitals if we've pressed shift)
         unsafe {
-            xkb_state_update_key(
-                self.state,
-                scancode,
-                match state {
-                    KeyState::Down => XKB_KEY_DOWN,
-                    KeyState::Up => XKB_KEY_UP,
-                },
-            );
+            if !repeat {
+                xkb_state_update_key(
+                    self.state,
+                    scancode,
+                    match state {
+                        KeyState::Down => XKB_KEY_DOWN,
+                        KeyState::Up => XKB_KEY_UP,
+                    },
+                );
+            }
             // compiler will unroll this loop
             // FIXME(msrv): remove .iter().cloned() when msrv is >= 1.53
             for (idx, mod_) in [
