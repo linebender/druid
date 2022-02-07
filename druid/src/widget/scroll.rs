@@ -46,7 +46,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// [horizontal](#method.horizontal) methods to limit scrolling to a specific axis.
     pub fn new(child: W) -> Scroll<T, W> {
         Scroll {
-            clip: ClipBox::new(child),
+            clip: ClipBox::new(child).managed(),
             scroll_component: ScrollComponent::new(),
         }
     }

@@ -104,6 +104,7 @@ pub struct Notification {
     payload: Arc<dyn Any>,
     source: WidgetId,
     route: WidgetId,
+    known_target: bool,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -343,11 +344,15 @@ pub mod sys {
     /// Widgets which hide their children, should always call `ctx.set_handled()` in response to
     /// avoid unintended behaviour from widgets further down the tree.
     /// If possible the widget should move its children to bring the area into view and then submit
-    /// a new notification with the region translated by the amount, the child it contained was
-    /// translated.
+    /// a new `SCROLL_TO_VIEW` notification with the same region relative to the new child position.
+    ///
+    /// When building a new widget using ClipBox take a look at [`ClipBox::managed`] and
+    /// [`ClipBox::default_scroll_to_view_handling`].
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    /// [`ClipBox::managed`]: crate::widget::ClipBox::managed()
+    /// [`ClipBox::default_scroll_to_view_handling`]: crate::widget::ClipBox::default_scroll_to_view_handling()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid-builtin.scroll-to");
 
     /// A change that has occured to text state, and needs to be
@@ -430,6 +435,7 @@ impl Command {
             payload: self.payload,
             source,
             route: source,
+            known_target: true,
         }
     }
 
@@ -550,6 +556,19 @@ impl Notification {
     /// [`Widget`]: crate::Widget
     pub fn source(&self) -> WidgetId {
         self.source
+    }
+
+    /// If set to false this notification will not produce a warning when reaching the root widget.
+    ///
+    /// The default is true.
+    pub fn known_target(mut self, known_target: bool) -> Self {
+        self.known_target = known_target;
+        self
+    }
+
+    /// Returns whether this notification was sent to a specific widget.
+    pub fn has_known_target(&self) -> bool {
+        self.known_target
     }
 
     /// Change the route id

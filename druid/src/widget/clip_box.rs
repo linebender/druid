@@ -133,6 +133,9 @@ pub struct ClipBox<T, W> {
     constrain_horizontal: bool,
     constrain_vertical: bool,
     must_fill: bool,
+
+    //This ClipBox is wrapped by a widget which manages the viewport_offset
+    managed: bool,
 }
 
 impl<T, W> ClipBox<T, W> {
@@ -170,6 +173,22 @@ impl<T, W> ClipBox<T, W> {
     /// the `ClipBox`.
     pub fn content_must_fill(mut self, must_fill: bool) -> Self {
         self.must_fill = must_fill;
+        self
+    }
+
+    /// Builder-style method to set whether this Clipbox's viewport_offset is managed by another
+    /// widget.
+    ///
+    /// This method should only be used when creating your own widget, which uses ClipBox
+    /// internally.
+    ///
+    /// When set the `ClipBox` will forward [`SCROLL_TO_VIEW`] notifications to its parent unchanged.
+    /// In this case the parent has to handle said notification itself. By default the ClipBox will
+    /// filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    pub fn managed(mut self) -> Self {
+        self.managed = true;
         self
     }
 
@@ -244,6 +263,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             constrain_horizontal: false,
             constrain_vertical: false,
             must_fill: false,
+            managed: false,
         }
     }
 
@@ -341,17 +361,38 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         });
         viewport_changed
     }
+
+    fn fixed_scroll_to_view_handling(&self, ctx: &mut EventCtx, global_highlight_rect: Rect) {
+        let global_viewport_rect = self.viewport_size().to_rect() + ctx.window_origin().to_vec2();
+        let clipped_highlight_rect = global_highlight_rect.intersect(global_viewport_rect);
+
+        if clipped_highlight_rect.size() > 0.0 {
+            ctx.submit_notification(SCROLL_TO_VIEW.with(clipped_highlight_rect));
+        }
+    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
     #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let viewport = ctx.size().to_rect();
-        let force_event = self.child.is_hot() || self.child.has_active();
-        if let Some(child_event) =
+        if let Event::Notification(notification) = event {
+            if let Some(global_highlight_rect) = notification.get(SCROLL_TO_VIEW) {
+                if !self.managed {
+                    // If the parent widget does not handle SCROLL_TO_VIEW notifications, we
+                    // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
+                    // to this ClipBox's viewport.
+                    ctx.set_handled();
+                    self.fixed_scroll_to_view_handling(ctx, *global_highlight_rect);
+                }
+            }
+        } else {
+            let viewport = ctx.size().to_rect();
+            let force_event = self.child.is_hot() || self.child.has_active();
+            if let Some(child_event) =
             event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
-        {
-            self.child.event(ctx, &child_event, data, env);
+            {
+                self.child.event(ctx, &child_event, data, env);
+            }
         }
     }
 
