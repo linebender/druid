@@ -366,7 +366,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         let global_viewport_rect = self.viewport_size().to_rect() + ctx.window_origin().to_vec2();
         let clipped_highlight_rect = global_highlight_rect.intersect(global_viewport_rect);
 
-        if clipped_highlight_rect.size() > 0.0 {
+        if clipped_highlight_rect.area() > 0.0 {
             ctx.submit_notification(SCROLL_TO_VIEW.with(clipped_highlight_rect));
         }
     }
@@ -389,7 +389,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
             let viewport = ctx.size().to_rect();
             let force_event = self.child.is_hot() || self.child.has_active();
             if let Some(child_event) =
-            event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
+                event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
             {
                 self.child.event(ctx, &child_event, data, env);
             }

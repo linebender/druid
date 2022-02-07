@@ -558,7 +558,10 @@ impl EventCtx<'_, '_> {
     // which would be a breaking change.
     pub fn submit_notification_unknown_target(&mut self, note: impl Into<Command>) {
         trace!("submit_notification");
-        let note = note.into().into_notification(self.widget_state.id).known_target(false);
+        let note = note
+            .into()
+            .into_notification(self.widget_state.id)
+            .known_target(false);
         self.notifications.push_back(note);
     }
 
@@ -733,7 +736,9 @@ impl EventCtx<'_, '_> {
     /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_notification_unknown_target(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
+        self.submit_notification_unknown_target(
+            SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()),
+        );
     }
 }
 

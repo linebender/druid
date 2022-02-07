@@ -22,11 +22,11 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use tracing::{instrument, trace};
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::kurbo::{Circle, Line};
 use crate::widget::prelude::*;
 use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Painter, Scope, ScopePolicy};
 use crate::{theme, Affine, Data, Insets, Lens, Point, SingleUse, WidgetExt, WidgetPod};
-use crate::commands::SCROLL_TO_VIEW;
 
 type TabsScope<TP> = Scope<TabsScopePolicy<TP>, Box<dyn Widget<TabsState<TP>>>>;
 type TabBodyPod<TP> = WidgetPod<<TP as TabsPolicy>::Input, <TP as TabsPolicy>::BodyWidget>;
@@ -581,20 +581,18 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
     #[instrument(name = "TabsBody", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
         if let Event::Notification(notification) = event {
-            if notification.is(SCROLL_TO_VIEW) &&
-                Some(notification.route()) != self.active_child(data).map(|w|w.id())
+            if notification.is(SCROLL_TO_VIEW)
+                && Some(notification.route()) != self.active_child(data).map(|w| w.id())
             {
                 // Ignore SCROLL_TO_VIEW requests from every widget except the active.
                 ctx.set_handled();
             }
-        } else {
-            if event.should_propagate_to_hidden() {
-                for child in self.child_pods() {
-                    child.event(ctx, event, &mut data.inner, env);
-                }
-            } else if let Some(child) = self.active_child(data) {
+        } else if event.should_propagate_to_hidden() {
+            for child in self.child_pods() {
                 child.event(ctx, event, &mut data.inner, env);
             }
+        } else if let Some(child) = self.active_child(data) {
+            child.event(ctx, event, &mut data.inner, env);
         }
 
         if let (Some(t_state), Event::AnimFrame(interval)) = (&mut self.transition_state, event) {

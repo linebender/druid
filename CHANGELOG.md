@@ -832,7 +832,7 @@ Last release without a changelog :(
 [#2117]: https://github.com/linebender/druid/pull/2117
 [#2117]: https://github.com/linebender/druid/pull/2141
 
-[Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...masteru
+[Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/linebender/druid/compare/v0.4.0...v0.5.0
