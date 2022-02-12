@@ -252,10 +252,6 @@ impl Application {
             wayland: std::rc::Rc::new(env),
         });
 
-        for m in outputs::current()? {
-            appdata.outputs.borrow_mut().insert(m.id(), m);
-        }
-
         // Collect the supported image formats.
         wl_shm.quick_assign(with_cloned!(appdata; move |d1, event, d3| {
             tracing::debug!("shared memory events {:?} {:?} {:?}", d1, event, d3);

@@ -291,30 +291,38 @@ impl Outputs for Surface {
     }
 
     fn inserted(&self, o: &outputs::Meta) {
+        let old = String::from(
+            self.inner
+                .output
+                .borrow()
+                .preferred
+                .as_ref()
+                .map_or("", |name| name),
+        );
+
         let reinitialize = *self.inner.requires_initialization.borrow();
-        let reinitialize = self
-            .inner
-            .output
-            .borrow()
-            .preferred
-            .as_ref()
-            .map_or("", |name| name)
-            == o.name
-            || reinitialize;
+        let reinitialize = old == o.name || reinitialize;
         if !reinitialize {
             tracing::debug!(
-                "skipping reinitialization output for layershell {:?} {:?}",
+                "skipping reinitialization output for layershell {:?} {:?} == {:?} || {:?} -> {:?}",
                 o.id(),
                 o.name,
+                old,
+                *self.inner.requires_initialization.borrow(),
+                reinitialize,
             );
             return;
         }
 
         tracing::debug!(
-            "reinitializing output for layershell {:?} {:?}",
+            "reinitializing output for layershell {:?} {:?} == {:?} || {:?} -> {:?}",
             o.id(),
-            o.name
+            o.name,
+            old,
+            *self.inner.requires_initialization.borrow(),
+            reinitialize,
         );
+
         let sdata = self.inner.wl_surface.borrow().inner.clone();
         self.inner
             .wl_surface
@@ -327,13 +335,14 @@ impl Outputs for Surface {
                 .unwrap()
                 .get_layer_surface(
                     &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
-                    None,
+                    o.output.as_ref(),
                     self.inner.config.layer,
                     self.inner.config.namespace.to_string(),
                 ),
         );
 
         Surface::initialize(self);
+
         replacedlayershell.destroy();
     }
 }
