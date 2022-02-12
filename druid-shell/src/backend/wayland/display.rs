@@ -145,7 +145,7 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
     // computation, network, ... This is good practice for all back-ends: it will improve
     // responsiveness.
     xdg_base.quick_assign(|xdg_base, event, ctx| {
-        tracing::info!(
+        tracing::debug!(
             "global xdg_base events {:?} {:?} {:?}",
             xdg_base,
             event,

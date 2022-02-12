@@ -35,9 +35,9 @@ impl Surface {
     pub fn new(
         c: impl Into<CompositorHandle>,
         handler: Box<dyn window::WinHandler>,
-        initial_size: kurbo::Size,
         min_size: Option<kurbo::Size>,
     ) -> Self {
+        let min_size = min_size.unwrap_or_else(|| kurbo::Size::from((1.0, 1.0)));
         let compositor = CompositorHandle::new(c);
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
         let xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
@@ -47,7 +47,7 @@ impl Surface {
         xdg_surface.quick_assign({
             let wl_surface = wl_surface.clone();
             move |xdg_surface, event, _| {
-                tracing::trace!("xdg_surface event configure {:?}", event);
+                tracing::debug!("xdg_surface event configure {:?}", event);
                 match event {
                     xdg_surface::Event::Configure { serial } => {
                         xdg_surface.ack_configure(serial);
@@ -61,7 +61,7 @@ impl Surface {
 
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
-            let mut dim = initial_size;
+            let dim = min_size;
             move |_xdg_toplevel, event, a3| match event {
                 xdg_toplevel::Event::Configure {
                     width,
@@ -75,11 +75,12 @@ impl Surface {
                         states,
                         a3
                     );
-                    // compositor is deferring to the client for determining the size
-                    // when values are zero.
-                    if width != 0 && height != 0 {
-                        dim = kurbo::Size::new(width as f64, height as f64);
-                    }
+
+                    let dim = kurbo::Size::new(
+                        (width as f64).max(dim.width),
+                        (height as f64).max(dim.height),
+                    );
+
                     wl_surface.update_dimensions(dim);
                 }
                 xdg_toplevel::Event::Close => {
@@ -96,11 +97,10 @@ impl Surface {
             xdg_surface,
         };
 
-        if let Some(size) = min_size {
-            inner
-                .xdg_toplevel
-                .set_min_size(size.width as i32, size.height as i32);
-        }
+        inner
+            .xdg_toplevel
+            .set_min_size(min_size.width as i32, min_size.height as i32);
+        inner.xdg_toplevel.set_maximized();
 
         let handle = Self {
             inner: std::sync::Arc::new(inner),
