@@ -123,6 +123,11 @@ impl Viewport {
         let new_origin = self.view_origin + Vec2::new(delta_x, delta_y);
         self.pan_to(new_origin)
     }
+
+    pub fn default_scroll_to_view_handling(&mut self, ctx: &mut EventCtx, global_highlight_rect: Rect) {
+        let global_viewport_rect = self.viewport_size().to_rect() + ctx.window_origin().to_vec2();
+
+    }
 }
 
 /// A widget exposing a rectangular view into its child, which can be used as a building block for
@@ -345,19 +350,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ) -> bool {
         let mut viewport_changed = false;
         self.with_port(|port| {
-            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-            let content_highlight_rect = global_highlight_rect - global_content_offset;
 
-            if port.pan_to_visible(content_highlight_rect) {
-                ctx.request_paint();
-                viewport_changed = true;
-            }
-
-            // This is a new value since view_origin has changed in the meantime
-            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-            ctx.submit_notification(
-                SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
-            );
         });
         viewport_changed
     }
