@@ -398,8 +398,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let mut major_pos = 0.0;
         let mut paint_rect = Rect::ZERO;
 
-        //
-        let mut any_changed = self.old_bc != *bc;
+        let mut bc_changed = self.old_bc != *bc;
         self.old_bc = *bc;
 
         let mut children = self.children.iter_mut();
@@ -412,7 +411,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                 }
             };
 
-            let child_size = if child.layout_requested() {
+            let child_size = if bc_changed || child.layout_requested() {
                 child.layout(ctx, &child_bc, child_data, env)
             } else {
                 child.layout_rect().size()
