@@ -243,6 +243,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.id
     }
 
+    /// This widget or any of its children has requested layout
+    pub fn layout_requested(&self) -> bool {
+        self.state.needs_layout
+    }
+
     /// Set the layout [`Rect`].
     ///
     /// This is soft-deprecated; you should use [`set_origin`] instead for new code.

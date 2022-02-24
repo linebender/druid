@@ -41,7 +41,9 @@ pub struct Split<T> {
     /// instead of re-centering the bar on the mouse.
     click_offset: f64,
     child1: WidgetPod<T, Box<dyn Widget<T>>>,
+    old_bc_1: BoxConstraints,
     child2: WidgetPod<T, Box<dyn Widget<T>>>,
+    old_bc_2: BoxConstraints,
 }
 
 impl<T> Split<T> {
@@ -66,7 +68,9 @@ impl<T> Split<T> {
             is_bar_hover: false,
             click_offset: 0.0,
             child1: WidgetPod::new(child1).boxed(),
+            old_bc_1: BoxConstraints::tight(Size::ZERO),
             child2: WidgetPod::new(child2).boxed(),
+            old_bc_2: BoxConstraints::tight(Size::ZERO),
         }
     }
 
@@ -465,8 +469,19 @@ impl<T: Data> Widget<T> for Split<T> {
                 )
             }
         };
-        let child1_size = self.child1.layout(ctx, &child1_bc, data, env);
-        let child2_size = self.child2.layout(ctx, &child2_bc, data, env);
+
+        let child1_size = if self.old_bc_1 != child1_bc || self.child1.layout_requested() {
+            self.child1.layout(ctx, &child1_bc, data, env)
+        } else {
+            self.child1.layout_rect().size()
+        };
+        self.old_bc_1 = child1_bc;
+        let child2_size = if self.old_bc_2 != child2_bc || self.child2.layout_requested() {
+            self.child2.layout(ctx, &child2_bc, data, env)
+        } else {
+            self.child2.layout_rect().size()
+        };
+        self.old_bc_2 = child2_bc;
 
         // Top-left align for both children, out of laziness.
         // Reduce our unsplit direction to the larger of the two widgets
