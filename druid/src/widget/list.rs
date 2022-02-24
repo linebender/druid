@@ -398,7 +398,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let mut major_pos = 0.0;
         let mut paint_rect = Rect::ZERO;
 
-        let mut bc_changed = self.old_bc != *bc;
+        let bc_changed = self.old_bc != *bc;
         self.old_bc = *bc;
 
         let mut children = self.children.iter_mut();

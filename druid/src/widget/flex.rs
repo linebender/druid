@@ -682,7 +682,6 @@ impl<T: Data> Widget<T> for Flex<T> {
         for child in &mut self.children {
             match child {
                 Child::Fixed { widget, alignment } => {
-
                     // The BoxConstrains of fixed-children only depends on the BoxConstrains of the
                     // Flex widget.
                     let child_size = if bc_changed || widget.layout_requested() {
@@ -746,7 +745,6 @@ impl<T: Data> Widget<T> for Flex<T> {
                     flex,
                     alignment,
                 } => {
-
                     // The BoxConstrains of flex-children depends on the size of every sibling, which
                     // received layout earlier. Therefore we use any_changed.
                     let child_size = if any_changed || widget.layout_requested() {
