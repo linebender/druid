@@ -736,7 +736,7 @@ impl EventCtx<'_, '_> {
     /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_notification_unknown_target(
+        self.submit_notification_without_warning(
             SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()),
         );
     }
