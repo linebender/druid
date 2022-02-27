@@ -18,7 +18,7 @@ use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
-use tracing::{instrument, trace, info, warn};
+use tracing::{info, instrument, trace, warn};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -132,12 +132,21 @@ impl Viewport {
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
-    pub fn default_scroll_to_view_handling(&mut self, ctx: &mut EventCtx, global_highlight_rect: Rect) -> bool {
+    pub fn default_scroll_to_view_handling(
+        &mut self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+    ) -> bool {
         let mut viewport_changed = false;
         let global_content_offset = ctx.window_origin().to_vec2() - self.view_origin.to_vec2();
-        let mut content_highlight_rect = global_highlight_rect - global_content_offset;
+        let content_highlight_rect = global_highlight_rect - global_content_offset;
 
-        if self.content_size.to_rect().intersect(content_highlight_rect) != content_highlight_rect {
+        if self
+            .content_size
+            .to_rect()
+            .intersect(content_highlight_rect)
+            != content_highlight_rect
+        {
             warn!("tried to bring area outside of the content to view!");
         }
 
@@ -161,7 +170,12 @@ impl Viewport {
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
-    pub fn fixed_scroll_to_view_handling(&self, ctx: &mut EventCtx, global_highlight_rect: Rect, source: WidgetId) {
+    pub fn fixed_scroll_to_view_handling(
+        &self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+        source: WidgetId,
+    ) {
         let global_viewport_rect = self.view_rect() + ctx.window_origin().to_vec2();
         let clipped_highlight_rect = global_highlight_rect.intersect(global_viewport_rect);
 
@@ -397,7 +411,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                     // to this ClipBox's viewport.
                     ctx.set_handled();
                     self.with_port(|port| {
-                        port.fixed_scroll_to_view_handling(ctx, *global_highlight_rect, notification.source());
+                        port.fixed_scroll_to_view_handling(
+                            ctx,
+                            *global_highlight_rect,
+                            notification.source(),
+                        );
                     });
                 }
             }

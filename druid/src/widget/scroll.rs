@@ -195,8 +195,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 if let Event::Notification(notification) = event {
                     if let Some(&global_highlight_rect) = notification.get(SCROLL_TO_VIEW) {
                         ctx.set_handled();
-                        let view_port_changed = port
-                            .default_scroll_to_view_handling(ctx, global_highlight_rect);
+                        let view_port_changed =
+                            port.default_scroll_to_view_handling(ctx, global_highlight_rect);
                         if view_port_changed {
                             scroll_component
                                 .reset_scrollbar_fade(|duration| ctx.request_timer(duration), env);
@@ -205,8 +205,6 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
                 }
             }
         });
-
-
     }
 
     #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
