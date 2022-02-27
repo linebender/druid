@@ -43,11 +43,12 @@ const MAIN_AXIS_ALIGNMENT_OPTIONS: [(&str, MainAxisAlignment); 6] = [
     ("Evenly", MainAxisAlignment::SpaceEvenly),
     ("Around", MainAxisAlignment::SpaceAround),
 ];
-const CROSS_AXIS_ALIGNMENT_OPTIONS: [(&str, CrossAxisAlignment); 4] = [
+const CROSS_AXIS_ALIGNMENT_OPTIONS: [(&str, CrossAxisAlignment); 5] = [
     ("Start", CrossAxisAlignment::Start),
     ("Center", CrossAxisAlignment::Center),
     ("End", CrossAxisAlignment::End),
     ("Baseline", CrossAxisAlignment::Baseline),
+    ("Fill", CrossAxisAlignment::Fill),
 ];
 const FLEX_TYPE_OPTIONS: [(&str, FlexType); 2] =
     [("Row", FlexType::Row), ("Column", FlexType::Column)];
