@@ -104,7 +104,7 @@ pub struct Notification {
     payload: Arc<dyn Any>,
     source: WidgetId,
     route: WidgetId,
-    known_target: bool,
+    warn_if_unused: bool,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -435,7 +435,7 @@ impl Command {
             payload: self.payload,
             source,
             route: source,
-            known_target: true,
+            warn_if_unused: true,
         }
     }
 
@@ -558,17 +558,17 @@ impl Notification {
         self.source
     }
 
-    /// If set to false this notification will not produce a warning when reaching the root widget.
+    /// Builder-style method to set warn_if_unused.
     ///
     /// The default is true.
-    pub fn known_target(mut self, known_target: bool) -> Self {
-        self.known_target = known_target;
+    pub fn warn_if_unused(mut self, warn_if_unused: bool) -> Self {
+        self.warn_if_unused = warn_if_unused;
         self
     }
 
-    /// Returns whether this notification was sent to a specific widget.
-    pub fn has_known_target(&self) -> bool {
-        self.known_target
+    /// Returns whether there should be a warning when no widget handles this notification.
+    pub fn warn_if_unused_set(&self) -> bool {
+        self.warn_if_unused
     }
 
     /// Change the route id

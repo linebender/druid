@@ -290,7 +290,7 @@ impl<T: Data> Window<T> {
                 self.root.event(&mut ctx, &event, data, env);
             }
 
-            ctx.notifications.retain(|n| n.has_known_target());
+            ctx.notifications.retain(|n| n.warn_if_unused_set());
             if !ctx.notifications.is_empty() {
                 info!("{} unhandled notifications:", ctx.notifications.len());
                 for (i, n) in ctx.notifications.iter().enumerate() {

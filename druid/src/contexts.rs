@@ -548,20 +548,20 @@ impl EventCtx<'_, '_> {
         self.notifications.push_back(note);
     }
 
-    /// Submit a [`Notification`] with unknown target.
+    /// Submit a [`Notification`] without warning.
     ///
-    /// In contrast to [`submit_notification`], calling this method will result in an
+    /// In contrast to [`submit_notification`], calling this method will not result in an
     /// "unhandled notification" warning.
     ///
     /// [`submit_notification`]: crate::EventCtx::submit_notification
     //TODO: decide if we should use a known_target flag on submit_notification instead,
     // which would be a breaking change.
-    pub fn submit_notification_unknown_target(&mut self, note: impl Into<Command>) {
+    pub fn submit_notification_without_warning(&mut self, note: impl Into<Command>) {
         trace!("submit_notification");
         let note = note
             .into()
             .into_notification(self.widget_state.id)
-            .known_target(false);
+            .warn_if_unused(false);
         self.notifications.push_back(note);
     }
 

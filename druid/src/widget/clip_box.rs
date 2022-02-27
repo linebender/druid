@@ -18,7 +18,7 @@ use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
-use tracing::{instrument, trace};
+use tracing::{instrument, trace, info};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -124,9 +124,20 @@ impl Viewport {
         self.pan_to(new_origin)
     }
 
-    pub fn default_scroll_to_view_handling(&mut self, ctx: &mut EventCtx, global_highlight_rect: Rect) {
-        let global_viewport_rect = self.viewport_size().to_rect() + ctx.window_origin().to_vec2();
-
+    pub fn default_scroll_to_view_handling(&mut self, ctx: &mut EventCtx, global_highlight_rect: Rect) -> bool {
+        let mut viewport_changed = false;
+        let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+        let content_highlight_rect = global_highlight_rect - global_content_offset;
+        if self.pan_to_visible(content_highlight_rect) {
+            ctx.request_paint();
+            viewport_changed = true;
+        }
+        // This is a new value since view_origin has changed in the meantime
+        let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
+        ctx.submit_notification(
+            SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
+        );
+        viewport_changed
     }
 }
 
@@ -178,22 +189,6 @@ impl<T, W> ClipBox<T, W> {
     /// the `ClipBox`.
     pub fn content_must_fill(mut self, must_fill: bool) -> Self {
         self.must_fill = must_fill;
-        self
-    }
-
-    /// Builder-style method to set whether this Clipbox's viewport_offset is managed by another
-    /// widget.
-    ///
-    /// This method should only be used when creating your own widget, which uses ClipBox
-    /// internally.
-    ///
-    /// When set the `ClipBox` will forward [`SCROLL_TO_VIEW`] notifications to its parent unchanged.
-    /// In this case the parent has to handle said notification itself. By default the ClipBox will
-    /// filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
-    ///
-    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
-    pub fn managed(mut self) -> Self {
-        self.managed = true;
         self
     }
 
@@ -261,7 +256,30 @@ impl<T, W> ClipBox<T, W> {
 
 impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Creates a new `ClipBox` wrapping `child`.
-    pub fn new(child: W) -> Self {
+    ///
+    /// This method should only be used when creating your own widget, which uses ClipBox
+    /// internally.
+    ///
+    /// `ClipBox` will forward [`SCROLL_TO_VIEW`] notifications to its parent unchanged.
+    /// In this case the parent has to handle said notification itself. By default the ClipBox will
+    /// filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    pub fn managed(child: W) -> Self {
+        ClipBox {
+            child: WidgetPod::new(child),
+            port: Default::default(),
+            constrain_horizontal: false,
+            constrain_vertical: false,
+            must_fill: false,
+            managed: true,
+        }
+    }
+
+    /// Creates a new unmanaged `ClipBox` wrapping `child`.
+    ///
+    /// This method should be used when you are using ClipBox in the widget-hierachie directly.
+    pub fn unmanaged(child: W) -> Self {
         ClipBox {
             child: WidgetPod::new(child),
             port: Default::default(),
@@ -355,12 +373,14 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         viewport_changed
     }
 
-    fn fixed_scroll_to_view_handling(&self, ctx: &mut EventCtx, global_highlight_rect: Rect) {
+    fn fixed_scroll_to_view_handling(&self, ctx: &mut EventCtx, global_highlight_rect: Rect, source: WidgetId) {
         let global_viewport_rect = self.viewport_size().to_rect() + ctx.window_origin().to_vec2();
         let clipped_highlight_rect = global_highlight_rect.intersect(global_viewport_rect);
 
         if clipped_highlight_rect.area() > 0.0 {
             ctx.submit_notification(SCROLL_TO_VIEW.with(clipped_highlight_rect));
+        } else {
+            info!("Hidden Widget({}) in unmanaged clip used SCROLL_TO_VIEW. The request is ignored!", source.to_raw());
         }
     }
 }
@@ -375,7 +395,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                     // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
                     // to this ClipBox's viewport.
                     ctx.set_handled();
-                    self.fixed_scroll_to_view_handling(ctx, *global_highlight_rect);
+                    self.fixed_scroll_to_view_handling(ctx, *global_highlight_rect, notification.source());
                 }
             }
         } else {
