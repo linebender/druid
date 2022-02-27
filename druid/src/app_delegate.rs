@@ -18,7 +18,7 @@ use std::any::{Any, TypeId};
 
 use crate::{
     commands, core::CommandQueue, ext_event::ExtEventHost, Command, Data, Env, Event, ExtEventSink,
-    Handled, SingleUse, Target, WindowDesc, WindowId,
+    Handled, SingleUse, Target, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A context passed in to [`AppDelegate`] functions.
@@ -128,7 +128,15 @@ pub trait AppDelegate<T: Data> {
     /// The handler for window creation events.
     /// This function is called after a window has been added,
     /// allowing you to customize the window creation behavior of your app.
-    fn window_added(&mut self, id: WindowId, data: &mut T, env: &Env, ctx: &mut DelegateCtx) {}
+    fn window_added(
+        &mut self,
+        id: WindowId,
+        handle: WindowHandle,
+        data: &mut T,
+        env: &Env,
+        ctx: &mut DelegateCtx,
+    ) {
+    }
 
     /// The handler for window deletion events.
     /// This function is called after a window has been removed.

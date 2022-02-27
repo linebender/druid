@@ -89,6 +89,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
 - `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
 - Closures passed to `Label::new` can now return any type that implements `Into<ArcStr>` ([#2064] by [@jplatte])
+- `AppDelegate::window_added` now receives the new window's `WindowHandle`. ([#2119] by [@zedseven])
 - Removed line of code that prevented window miximalization. ([#2113] by [@Pavel-N])
 
 ### Deprecated
@@ -536,6 +537,7 @@ Last release without a changelog :(
 [@klemensn]: https://github.com/klemensn
 [@agentsim]: https://github.com/agentsim
 [@jplatte]: https://github.com/jplatte
+[@zedseven]: https://github.com/zedseven
 [@Pavel-N]: https://github.com/Pavel-N
 [@maurerdietmar]: https://github.com/maurerdietmar
 
@@ -821,6 +823,7 @@ Last release without a changelog :(
 [#2036]: https://github.com/linebender/druid/pull/2036
 [#2064]: https://github.com/linebender/druid/pull/2064
 [#1979]: https://github.com/linebender/druid/pull/1979
+[#2119]: https://github.com/linebender/druid/pull/2119
 [#2111]: https://github.com/linebender/druid/pull/2111
 [#2117]: https://github.com/linebender/druid/pull/2117
 
