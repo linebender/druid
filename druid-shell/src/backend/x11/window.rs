@@ -269,7 +269,8 @@ impl WindowBuilder {
                 | EventMask::KEY_RELEASE
                 | EventMask::BUTTON_PRESS
                 | EventMask::BUTTON_RELEASE
-                | EventMask::POINTER_MOTION,
+                | EventMask::POINTER_MOTION
+                | EventMask::FOCUS_CHANGE,
         );
         if transparent {
             let colormap = conn.generate_id()?;
@@ -1165,6 +1166,14 @@ impl Window {
         };
         self.with_handler(|h| h.mouse_move(&mouse_event));
         Ok(())
+    }
+
+    pub fn handle_got_focus(&self) {
+        self.with_handler(|h| h.got_focus());
+    }
+
+    pub fn handle_lost_focus(&self) {
+        self.with_handler(|h| h.lost_focus());
     }
 
     pub fn handle_client_message(&self, client_message: &xproto::ClientMessageEvent) {

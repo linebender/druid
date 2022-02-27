@@ -670,6 +670,18 @@ impl Application {
                     .handle_property_notify(*ev)
                     .context("PROPERTY_NOTIFY event handling for primary")?;
             }
+            Event::FocusIn(ev) => {
+                let w = self
+                    .window(ev.event)
+                    .context("FOCUS_IN - failed to get window")?;
+                w.handle_got_focus();
+            }
+            Event::FocusOut(ev) => {
+                let w = self
+                    .window(ev.event)
+                    .context("FOCUS_OUT - failed to get window")?;
+                w.handle_lost_focus();
+            }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
                 // to copying pixels. This is blocked on

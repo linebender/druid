@@ -117,6 +117,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
 - `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
 - Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
+- X11: window focus events ([#1938] by [@Maan2003]
 
 ### Visual
 
@@ -809,6 +810,7 @@ Last release without a changelog :(
 [#1907]: https://github.com/linebender/druid/pull/1907
 [#1919]: https://github.com/linebender/druid/pull/1919
 [#1929]: https://github.com/linebender/druid/pull/1929
+[#1938]: https://github.com/linebender/druid/pull/1938
 [#1947]: https://github.com/linebender/druid/pull/1947
 [#1953]: https://github.com/linebender/druid/pull/1953
 [#1967]: https://github.com/linebender/druid/pull/1967
