@@ -222,7 +222,7 @@ impl<T: Clone> SpanSet<T> {
             .spans
             .iter()
             .position(|x| x.range.start >= span.range.start)
-            .unwrap_or_else(|| self.spans.len());
+            .unwrap_or(self.spans.len());
 
         // if we are inserting into the middle of an existing span we need
         // to add the trailing portion back afterwards.
