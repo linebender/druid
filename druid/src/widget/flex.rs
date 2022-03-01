@@ -890,11 +890,10 @@ impl<T: Data> Widget<T> for Flex<T> {
         let children_state = self
             .children
             .iter()
-            .map(|child| {
+            .filter_map(|child| {
                 let child_widget_pod = child.widget()?;
                 Some(child_widget_pod.widget().debug_state(data))
             })
-            .flatten()
             .collect();
         DebugState {
             display_name: self.short_type_name().to_string(),

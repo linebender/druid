@@ -48,8 +48,7 @@ pub(crate) fn get_monitors() -> Vec<Monitor> {
         .iter()
         .flat_map(|display: &Display| {
             (0..display.n_monitors())
-                .map(move |i| display.monitor(i).map(translate_gdk_monitor))
-                .flatten()
+                .filter_map(move |i| display.monitor(i).map(translate_gdk_monitor))
         })
         .collect()
 }
