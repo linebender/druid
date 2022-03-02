@@ -18,7 +18,7 @@ use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, WidgetPod};
-use tracing::{instrument, trace};
+use tracing::{info, instrument, trace, warn};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -123,6 +123,68 @@ impl Viewport {
         let new_origin = self.view_origin + Vec2::new(delta_x, delta_y);
         self.pan_to(new_origin)
     }
+
+    /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
+    ///
+    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// are called.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    pub fn default_scroll_to_view_handling(
+        &mut self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+    ) -> bool {
+        let mut viewport_changed = false;
+        let global_content_offset = ctx.window_origin().to_vec2() - self.view_origin.to_vec2();
+        let content_highlight_rect = global_highlight_rect - global_content_offset;
+
+        if self
+            .content_size
+            .to_rect()
+            .intersect(content_highlight_rect)
+            != content_highlight_rect
+        {
+            warn!("tried to bring area outside of the content to view!");
+        }
+
+        if self.pan_to_visible(content_highlight_rect) {
+            ctx.request_paint();
+            viewport_changed = true;
+        }
+        // This is a new value since view_origin has changed in the meantime
+        let global_content_offset = ctx.window_origin().to_vec2() - self.view_origin.to_vec2();
+        ctx.submit_notification_without_warning(
+            SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
+        );
+        viewport_changed
+    }
+
+    /// This method handles SCROLL_TO_VIEW by clipping the view_rect to the content rect.
+    ///
+    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// are called.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
+    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    pub fn fixed_scroll_to_view_handling(
+        &self,
+        ctx: &mut EventCtx,
+        global_highlight_rect: Rect,
+        source: WidgetId,
+    ) {
+        let global_viewport_rect = self.view_rect() + ctx.window_origin().to_vec2();
+        let clipped_highlight_rect = global_highlight_rect.intersect(global_viewport_rect);
+
+        if clipped_highlight_rect.area() > 0.0 {
+            ctx.submit_notification_without_warning(SCROLL_TO_VIEW.with(clipped_highlight_rect));
+        } else {
+            info!("Hidden Widget({}) in unmanaged clip requested SCROLL_TO_VIEW. The request is ignored.", source.to_raw());
+        }
+    }
 }
 
 /// A widget exposing a rectangular view into its child, which can be used as a building block for
@@ -133,6 +195,9 @@ pub struct ClipBox<T, W> {
     constrain_horizontal: bool,
     constrain_vertical: bool,
     must_fill: bool,
+
+    //This ClipBox is wrapped by a widget which manages the viewport_offset
+    managed: bool,
 }
 
 impl<T, W> ClipBox<T, W> {
@@ -237,13 +302,37 @@ impl<T, W> ClipBox<T, W> {
 
 impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Creates a new `ClipBox` wrapping `child`.
-    pub fn new(child: W) -> Self {
+    ///
+    /// This method should only be used when creating your own widget, which uses ClipBox
+    /// internally.
+    ///
+    /// `ClipBox` will forward [`SCROLL_TO_VIEW`] notifications to its parent unchanged.
+    /// In this case the parent has to handle said notification itself. By default the ClipBox will
+    /// filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
+    ///
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
+    pub fn managed(child: W) -> Self {
         ClipBox {
             child: WidgetPod::new(child),
             port: Default::default(),
             constrain_horizontal: false,
             constrain_vertical: false,
             must_fill: false,
+            managed: true,
+        }
+    }
+
+    /// Creates a new unmanaged `ClipBox` wrapping `child`.
+    ///
+    /// This method should be used when you are using ClipBox in the widget-hierachie directly.
+    pub fn unmanaged(child: W) -> Self {
+        ClipBox {
+            child: WidgetPod::new(child),
+            port: Default::default(),
+            constrain_horizontal: false,
+            constrain_vertical: false,
+            must_fill: false,
+            managed: false,
         }
     }
 
@@ -309,49 +398,35 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         self.child
             .set_viewport_offset(self.viewport_origin().to_vec2());
     }
-
-    /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
-    ///
-    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
-    /// are called.
-    ///
-    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
-    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
-    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
-    pub fn default_scroll_to_view_handling(
-        &mut self,
-        ctx: &mut EventCtx,
-        global_highlight_rect: Rect,
-    ) -> bool {
-        let mut viewport_changed = false;
-        self.with_port(|port| {
-            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-            let content_highlight_rect = global_highlight_rect - global_content_offset;
-
-            if port.pan_to_visible(content_highlight_rect) {
-                ctx.request_paint();
-                viewport_changed = true;
-            }
-
-            // This is a new value since view_origin has changed in the meantime
-            let global_content_offset = ctx.window_origin().to_vec2() - port.view_origin.to_vec2();
-            ctx.submit_notification(
-                SCROLL_TO_VIEW.with(content_highlight_rect + global_content_offset),
-            );
-        });
-        viewport_changed
-    }
 }
 
 impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
     #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let viewport = ctx.size().to_rect();
-        let force_event = self.child.is_hot() || self.child.has_active();
-        if let Some(child_event) =
-            event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
-        {
-            self.child.event(ctx, &child_event, data, env);
+        if let Event::Notification(notification) = event {
+            if let Some(global_highlight_rect) = notification.get(SCROLL_TO_VIEW) {
+                if !self.managed {
+                    // If the parent widget does not handle SCROLL_TO_VIEW notifications, we
+                    // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
+                    // to this ClipBox's viewport.
+                    ctx.set_handled();
+                    self.with_port(|port| {
+                        port.fixed_scroll_to_view_handling(
+                            ctx,
+                            *global_highlight_rect,
+                            notification.source(),
+                        );
+                    });
+                }
+            }
+        } else {
+            let viewport = ctx.size().to_rect();
+            let force_event = self.child.is_hot() || self.child.has_active();
+            if let Some(child_event) =
+                event.transform_scroll(self.viewport_origin().to_vec2(), viewport, force_event)
+            {
+                self.child.event(ctx, &child_event, data, env);
+            }
         }
     }
 

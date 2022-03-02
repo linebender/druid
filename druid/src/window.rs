@@ -290,11 +290,15 @@ impl<T: Data> Window<T> {
                 self.root.event(&mut ctx, &event, data, env);
             }
 
+            ctx.notifications.retain(|n| n.warn_if_unused_set());
             if !ctx.notifications.is_empty() {
                 info!("{} unhandled notifications:", ctx.notifications.len());
                 for (i, n) in ctx.notifications.iter().enumerate() {
                     info!("{}: {:?}", i, n);
                 }
+                info!(
+                    "if this was intended use EventCtx::submit_notification_unknown_target instead"
+                );
             }
             Handled::from(ctx.is_handled)
         };

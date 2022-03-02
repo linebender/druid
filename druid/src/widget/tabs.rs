@@ -22,6 +22,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use tracing::{instrument, trace};
 
+use crate::commands::SCROLL_TO_VIEW;
 use crate::kurbo::{Circle, Line};
 use crate::widget::prelude::*;
 use crate::widget::{Axis, Flex, Label, LabelText, LensScopeTransfer, Painter, Scope, ScopePolicy};
@@ -579,7 +580,14 @@ impl<TP: TabsPolicy> TabsBody<TP> {
 impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
     #[instrument(name = "TabsBody", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut TabsState<TP>, env: &Env) {
-        if event.should_propagate_to_hidden() {
+        if let Event::Notification(notification) = event {
+            if notification.is(SCROLL_TO_VIEW)
+                && Some(notification.route()) != self.active_child(data).map(|w| w.id())
+            {
+                // Ignore SCROLL_TO_VIEW requests from every widget except the active.
+                ctx.set_handled();
+            }
+        } else if event.should_propagate_to_hidden() {
             for child in self.child_pods() {
                 child.event(ctx, event, &mut data.inner, env);
             }

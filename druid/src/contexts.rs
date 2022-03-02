@@ -465,8 +465,11 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// If the widget is [`hidden`], this method has no effect.
     ///
+    /// This functionality is achieved by sending a [`SCROLL_TO_VIEW`] notification.
+    ///
     /// [`Scroll`]: crate::widget::Scroll
     /// [`hidden`]: crate::Event::should_propagate_to_hidden
+    /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
     pub fn scroll_to_view(&mut self) {
         self.scroll_area_to_view(self.size().to_rect())
     }
@@ -542,6 +545,23 @@ impl EventCtx<'_, '_> {
     pub fn submit_notification(&mut self, note: impl Into<Command>) {
         trace!("submit_notification");
         let note = note.into().into_notification(self.widget_state.id);
+        self.notifications.push_back(note);
+    }
+
+    /// Submit a [`Notification`] without warning.
+    ///
+    /// In contrast to [`submit_notification`], calling this method will not result in an
+    /// "unhandled notification" warning.
+    ///
+    /// [`submit_notification`]: crate::EventCtx::submit_notification
+    //TODO: decide if we should use a known_target flag on submit_notification instead,
+    // which would be a breaking change.
+    pub fn submit_notification_without_warning(&mut self, note: impl Into<Command>) {
+        trace!("submit_notification");
+        let note = note
+            .into()
+            .into_notification(self.widget_state.id)
+            .warn_if_unused(false);
         self.notifications.push_back(note);
     }
 
@@ -716,7 +736,9 @@ impl EventCtx<'_, '_> {
     /// [`hidden`]: crate::Event::should_propagate_to_hidden
     pub fn scroll_area_to_view(&mut self, area: Rect) {
         //TODO: only do something if this widget is not hidden
-        self.submit_notification(SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()));
+        self.submit_notification_without_warning(
+            SCROLL_TO_VIEW.with(area + self.window_origin().to_vec2()),
+        );
     }
 }
 

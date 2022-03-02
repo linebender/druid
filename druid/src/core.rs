@@ -849,7 +849,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     // Submit the SCROLL_TO notification if it was used from a update or lifecycle
                     // call.
                     let rect = cmd.get_unchecked(SCROLL_TO_VIEW);
-                    inner_ctx.submit_notification(SCROLL_TO_VIEW.with(*rect));
+                    inner_ctx.submit_notification_without_warning(SCROLL_TO_VIEW.with(*rect));
                     ctx.is_handled = true;
                 }
                 _ => {

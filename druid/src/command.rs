@@ -104,6 +104,7 @@ pub struct Notification {
     payload: Arc<dyn Any>,
     source: WidgetId,
     route: WidgetId,
+    warn_if_unused: bool,
 }
 
 /// A wrapper type for [`Command`] payloads that should only be used once.
@@ -343,11 +344,15 @@ pub mod sys {
     /// Widgets which hide their children, should always call `ctx.set_handled()` in response to
     /// avoid unintended behaviour from widgets further down the tree.
     /// If possible the widget should move its children to bring the area into view and then submit
-    /// a new notification with the region translated by the amount, the child it contained was
-    /// translated.
+    /// a new `SCROLL_TO_VIEW` notification with the same region relative to the new child position.
+    ///
+    /// When building a new widget using ClipBox take a look at [`ClipBox::managed`] and
+    /// [`Viewport::default_scroll_to_view_handling`].
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
+    /// [`ClipBox::managed`]: crate::widget::ClipBox::managed()
+    /// [`Viewport::default_scroll_to_view_handling`]: crate::widget::Viewport::default_scroll_to_view_handling()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid-builtin.scroll-to");
 
     /// A change that has occured to text state, and needs to be
@@ -430,6 +435,7 @@ impl Command {
             payload: self.payload,
             source,
             route: source,
+            warn_if_unused: true,
         }
     }
 
@@ -550,6 +556,19 @@ impl Notification {
     /// [`Widget`]: crate::Widget
     pub fn source(&self) -> WidgetId {
         self.source
+    }
+
+    /// Builder-style method to set warn_if_unused.
+    ///
+    /// The default is true.
+    pub fn warn_if_unused(mut self, warn_if_unused: bool) -> Self {
+        self.warn_if_unused = warn_if_unused;
+        self
+    }
+
+    /// Returns whether there should be a warning when no widget handles this notification.
+    pub fn warn_if_unused_set(&self) -> bool {
+        self.warn_if_unused
     }
 
     /// Change the route id
