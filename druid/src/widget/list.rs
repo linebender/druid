@@ -39,6 +39,7 @@ pub struct List<T> {
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     axis: Axis,
     spacing: KeyOrValue<f64>,
+    old_bc: BoxConstraints,
 }
 
 impl<T: Data> List<T> {
@@ -50,6 +51,7 @@ impl<T: Data> List<T> {
             children: Vec::new(),
             axis: Axis::Vertical,
             spacing: KeyOrValue::Concrete(0.),
+            old_bc: BoxConstraints::tight(Size::ZERO),
         }
     }
 
@@ -395,6 +397,10 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
         let mut minor = axis.minor(bc.min());
         let mut major_pos = 0.0;
         let mut paint_rect = Rect::ZERO;
+
+        let bc_changed = self.old_bc != *bc;
+        self.old_bc = *bc;
+
         let mut children = self.children.iter_mut();
         let child_bc = axis.constraints(bc, 0., f64::INFINITY);
         data.for_each(|child_data, _| {
@@ -404,7 +410,13 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
                     return;
                 }
             };
-            let child_size = child.layout(ctx, &child_bc, child_data, env);
+
+            let child_size = if bc_changed || child.layout_requested() {
+                child.layout(ctx, &child_bc, child_data, env)
+            } else {
+                child.layout_rect().size()
+            };
+
             let child_pos: Point = axis.pack(major_pos, 0.).into();
             child.set_origin(ctx, child_data, env, child_pos);
             paint_rect = paint_rect.union(child.paint_rect());

@@ -69,6 +69,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ClipBox::managed`, `Notification::warn_if_ununsed` and `Notification::warn_if_ununsed_set` ([#2141] by [@xarvic])
 - `ClipBox` and `Tabs` handle SCROLL_TO_VIEW ([#2141] by [@xarvic])
 - `EventCtx::submit_notification_without_warning` ([#2141] by [@xarvic])
+- `WidgetPod::requested_layout` ([#2145] by [@xarvic])
 
 ### Changed
 
@@ -95,6 +96,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `AppDelegate::window_added` now receives the new window's `WindowHandle`. ([#2119] by [@zedseven])
 - Removed line of code that prevented window miximalization. ([#2113] by [@Pavel-N])
 - Dont warn about unhandled `Notification`s which have `known_target` set to false ([#2141] by [@xarvic])
+- `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic]) 
 
 ### Deprecated
 
@@ -831,6 +833,7 @@ Last release without a changelog :(
 [#2111]: https://github.com/linebender/druid/pull/2111
 [#2117]: https://github.com/linebender/druid/pull/2117
 [#2117]: https://github.com/linebender/druid/pull/2141
+[#2145]: https://github.com/linebender/druid/pull/2145
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

@@ -142,6 +142,7 @@ pub struct Flex<T> {
     main_alignment: MainAxisAlignment,
     fill_major_axis: bool,
     children: Vec<Child<T>>,
+    old_bc: BoxConstraints,
 }
 
 /// Optional parameters for an item in a [`Flex`] container (row or column).
@@ -375,6 +376,7 @@ impl<T: Data> Flex<T> {
             cross_alignment: CrossAxisAlignment::Center,
             main_alignment: MainAxisAlignment::Start,
             fill_major_axis: false,
+            old_bc: BoxConstraints::tight(Size::ZERO),
         }
     }
 
@@ -668,28 +670,48 @@ impl<T: Data> Widget<T> for Flex<T> {
         let mut max_below_baseline = 0f64;
         let mut any_use_baseline = false;
 
+        // indicates that the box constrains for the following children have changed. Therefore they
+        // have to calculate layout again.
+        let bc_changed = self.old_bc != *bc;
+        let mut any_changed = bc_changed;
+        self.old_bc = *bc;
+
         // Measure non-flex children.
         let mut major_non_flex = 0.0;
         let mut flex_sum = 0.0;
         for child in &mut self.children {
             match child {
                 Child::Fixed { widget, alignment } => {
-                    let alignment = alignment.unwrap_or(self.cross_alignment);
-                    any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
+                    // The BoxConstrains of fixed-children only depends on the BoxConstrains of the
+                    // Flex widget.
+                    let child_size = if bc_changed || widget.layout_requested() {
+                        let alignment = alignment.unwrap_or(self.cross_alignment);
+                        any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
 
-                    let child_bc =
-                        self.direction
-                            .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
-                    let child_size = widget.layout(ctx, &child_bc, data, env);
+                        let old_size = widget.layout_rect().size();
+                        let child_bc =
+                            self.direction
+                                .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
+                        let child_size = widget.layout(ctx, &child_bc, data, env);
+
+                        if child_size.width.is_infinite() {
+                            tracing::warn!("A non-Flex child has an infinite width.");
+                        }
+
+                        if child_size.height.is_infinite() {
+                            tracing::warn!("A non-Flex child has an infinite height.");
+                        }
+
+                        if old_size != child_size {
+                            any_changed = true;
+                        }
+
+                        child_size
+                    } else {
+                        widget.layout_rect().size()
+                    };
+
                     let baseline_offset = widget.baseline_offset();
-
-                    if child_size.width.is_infinite() {
-                        tracing::warn!("A non-Flex child has an infinite width.");
-                    }
-
-                    if child_size.height.is_infinite() {
-                        tracing::warn!("A non-Flex child has an infinite height.");
-                    }
 
                     major_non_flex += self.direction.major(child_size).expand();
                     minor = minor.max(self.direction.minor(child_size).expand());
@@ -723,15 +745,29 @@ impl<T: Data> Widget<T> for Flex<T> {
                     flex,
                     alignment,
                 } => {
-                    let alignment = alignment.unwrap_or(self.cross_alignment);
-                    any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
+                    // The BoxConstrains of flex-children depends on the size of every sibling, which
+                    // received layout earlier. Therefore we use any_changed.
+                    let child_size = if any_changed || widget.layout_requested() {
+                        let alignment = alignment.unwrap_or(self.cross_alignment);
+                        any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
 
-                    let desired_major = (*flex) * px_per_flex + remainder;
-                    let actual_major = desired_major.round();
-                    remainder = desired_major - actual_major;
+                        let desired_major = (*flex) * px_per_flex + remainder;
+                        let actual_major = desired_major.round();
+                        remainder = desired_major - actual_major;
 
-                    let child_bc = self.direction.constraints(&loosened_bc, 0.0, actual_major);
-                    let child_size = widget.layout(ctx, &child_bc, data, env);
+                        let old_size = widget.layout_rect().size();
+                        let child_bc = self.direction.constraints(&loosened_bc, 0.0, actual_major);
+                        let child_size = widget.layout(ctx, &child_bc, data, env);
+
+                        if old_size != child_size {
+                            any_changed = true;
+                        }
+
+                        child_size
+                    } else {
+                        widget.layout_rect().size()
+                    };
+
                     let baseline_offset = widget.baseline_offset();
 
                     major_flex += self.direction.major(child_size).expand();
@@ -796,8 +832,13 @@ impl<T: Data> Widget<T> for Flex<T> {
                                 .direction
                                 .pack(self.direction.major(child_size), minor_dim)
                                 .into();
-                            let child_bc = BoxConstraints::tight(fill_size);
-                            widget.layout(ctx, &child_bc, data, env);
+                            if widget.layout_rect().size() != fill_size {
+                                let child_bc = BoxConstraints::tight(fill_size);
+                                //TODO: this is the second call of layout on the same child, which
+                                // is bad, because it can lead to exponential increase in layout calls
+                                // when used multiple times in the widget hierarchy.
+                                widget.layout(ctx, &child_bc, data, env);
+                            }
                             0.0
                         }
                         _ => {

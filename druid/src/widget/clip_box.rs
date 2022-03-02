@@ -195,6 +195,7 @@ pub struct ClipBox<T, W> {
     constrain_horizontal: bool,
     constrain_vertical: bool,
     must_fill: bool,
+    old_bc: BoxConstraints,
 
     //This ClipBox is wrapped by a widget which manages the viewport_offset
     managed: bool,
@@ -318,6 +319,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             constrain_horizontal: false,
             constrain_vertical: false,
             must_fill: false,
+            old_bc: BoxConstraints::tight(Size::ZERO),
             managed: true,
         }
     }
@@ -332,6 +334,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             constrain_horizontal: false,
             constrain_vertical: false,
             must_fill: false,
+            old_bc: BoxConstraints::tight(Size::ZERO),
             managed: false,
         }
     }
@@ -462,7 +465,15 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         let child_bc =
             BoxConstraints::new(min_child_size, Size::new(max_child_width, max_child_height));
 
-        let content_size = self.child.layout(ctx, &child_bc, data, env);
+        let bc_changed = child_bc != self.old_bc;
+        self.old_bc = child_bc;
+
+        let content_size = if bc_changed || self.child.layout_requested() {
+            self.child.layout(ctx, &child_bc, data, env)
+        } else {
+            self.child.layout_rect().size()
+        };
+
         self.port.content_size = content_size;
         self.child.set_origin(ctx, data, env, Point::ORIGIN);
 
