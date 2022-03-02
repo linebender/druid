@@ -347,7 +347,7 @@ pub mod sys {
     /// a new `SCROLL_TO_VIEW` notification with the same region relative to the new child position.
     ///
     /// When building a new widget using ClipBox take a look at [`ClipBox::managed`] and
-    /// [`ClipBox::default_scroll_to_view_handling`].
+    /// [`Viewport::default_scroll_to_view_handling`].
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
