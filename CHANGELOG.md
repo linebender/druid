@@ -66,9 +66,9 @@ You can find its changes [documented below](#070---2021-01-01).
 - `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
 - Add `Checkbox::from_label` constructor ([#2111] by [@maurerdietmar])
 - fix content_insets for gtk backend ([#2117] by [@maurerdietmar])
-- `ClipBox::managed`, `Notification::known_target` and `Notification::has_known_target` ([#2141] by [@xarvic])
+- `ClipBox::managed`, `Notification::warn_if_ununsed` and `Notification::warn_if_ununsed_set` ([#2141] by [@xarvic])
 - `ClipBox` and `Tabs` handle SCROLL_TO_VIEW ([#2141] by [@xarvic])
-- `EventCtx::submit_notification_unknown_target` ([#2141] by [@xarvic])
+- `EventCtx::submit_notification_without_warning` ([#2141] by [@xarvic])
 
 ### Changed
 

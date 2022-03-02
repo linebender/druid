@@ -352,7 +352,7 @@ pub mod sys {
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
     /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
     /// [`ClipBox::managed`]: crate::widget::ClipBox::managed()
-    /// [`ClipBox::default_scroll_to_view_handling`]: crate::widget::ClipBox::default_scroll_to_view_handling()
+    /// [`Viewport::default_scroll_to_view_handling`]: crate::widget::Viewport::default_scroll_to_view_handling()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid-builtin.scroll-to");
 
     /// A change that has occured to text state, and needs to be
