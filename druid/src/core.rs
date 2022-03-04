@@ -99,11 +99,6 @@ pub struct WidgetState {
     // The region that needs to be repainted, relative to the widget's bounds.
     pub(crate) invalid: Region,
 
-    // The part of this widget that is visible on the screen is offset by this
-    // much. This will be non-zero for widgets that are children of `Scroll`, or
-    // similar, and it is used for propagating invalid regions.
-    pub(crate) viewport_offset: Vec2,
-
     // TODO: consider using bitflags for the booleans.
     // `true` if a descendent of this widget changed its disabled state and should receive
     // LifeCycle::DisabledChanged or InternalLifeCycle::RouteDisabledChanged
@@ -273,22 +268,49 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
     pub fn set_origin(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, origin: Point) {
-        self.state.origin = origin;
         self.state.is_expecting_set_origin_call = false;
-        let layout_rect = self.layout_rect();
 
-        // if the widget has moved, it may have moved under the mouse, in which
-        // case we need to handle that.
-        if WidgetPod::set_hot_state(
-            &mut self.inner,
-            &mut self.state,
-            ctx.state,
-            layout_rect,
-            ctx.mouse_pos,
-            data,
-            env,
-        ) {
-            ctx.widget_state.merge_up(&mut self.state);
+        if origin != self.state.origin {
+            self.state.origin = origin;
+            self.state.needs_window_origin = true;
+            let layout_rect = self.layout_rect();
+
+            // if the widget has moved, it may have moved under the mouse, in which
+            // case we need to handle that.
+            if WidgetPod::set_hot_state(
+                &mut self.inner,
+                &mut self.state,
+                ctx.state,
+                layout_rect,
+                ctx.mouse_pos,
+                data,
+                env,
+            ) {
+                ctx.widget_state.merge_up(&mut self.state);
+            }
+        }
+    }
+
+    /// Set the origin of this widget, in the parent's coordinate space.
+    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, data: &T, env: &Env, origin: Point) {
+        if origin != self.state.origin {
+            self.state.origin = origin;
+            self.state.needs_window_origin = true;
+            let layout_rect = self.layout_rect();
+
+            // if the widget has moved, it may have moved under the mouse, in which
+            // case we need to handle that.
+            if WidgetPod::set_hot_state(
+                &mut self.inner,
+                &mut self.state,
+                ctx.state,
+                layout_rect,
+                ctx.mouse_pos,
+                data,
+                env,
+            ) {
+                ctx.widget_state.merge_up(&mut self.state);
+            }
         }
     }
 
@@ -303,31 +325,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`set_origin`]: WidgetPod::set_origin
     pub fn layout_rect(&self) -> Rect {
         self.state.layout_rect()
-    }
-
-    /// Set the viewport offset.
-    ///
-    /// This is relevant only for children of a scroll view (or similar). It must
-    /// be set by the parent widget whenever it modifies the position of its child
-    /// while painting it and propagating events. As a rule of thumb, you need this
-    /// if and only if you `Affine::translate` the paint context before painting
-    /// your child. For an example, see the implementation of [`Scroll`].
-    ///
-    /// [`Scroll`]: widget/struct.Scroll.html
-    pub fn set_viewport_offset(&mut self, offset: Vec2) {
-        if offset != self.state.viewport_offset {
-            self.state.needs_window_origin = true;
-        }
-        self.state.viewport_offset = offset;
-    }
-
-    /// The viewport offset.
-    ///
-    /// This will be the same value as set by [`set_viewport_offset`].
-    ///
-    /// [`set_viewport_offset`]: #method.viewport_offset
-    pub fn viewport_offset(&self) -> Vec2 {
-        self.state.viewport_offset
     }
 
     /// Get the widget's paint [`Rect`].
@@ -1014,9 +1011,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
                 InternalLifeCycle::ParentWindowOrigin => {
-                    self.state.parent_window_origin = ctx.widget_state.window_origin();
-                    self.state.needs_window_origin = false;
-                    true
+                    let new_parent_window_origin = ctx.widget_state.window_origin();
+                    if new_parent_window_origin != self.state.parent_window_origin {
+                        self.state.parent_window_origin = new_parent_window_origin;
+                        true
+                    } else {
+                        false
+                    }
                 }
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
@@ -1260,7 +1261,6 @@ impl WidgetState {
             is_expecting_set_origin_call: true,
             paint_insets: Insets::ZERO,
             invalid: Region::EMPTY,
-            viewport_offset: Vec2::ZERO,
             children_disabled_changed: false,
             ancestor_disabled: false,
             is_explicitly_disabled: false,
