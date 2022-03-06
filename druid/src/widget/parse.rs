@@ -67,7 +67,7 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
             Some(ref x) => {
                 // Its possible that the current self.state already represents the data value
                 // in that case we shouldn't clobber the self.state. This helps deal
-                // with types where parse()/to_string() round trips can loose information
+                // with types where parse()/to_string() round trips can lose information
                 // e.g. with floating point numbers, text of "1.0" becomes "1" in the
                 // round trip, and this makes it impossible to type in the . otherwise
                 match self.state.parse() {
