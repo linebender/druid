@@ -70,6 +70,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ClipBox` and `Tabs` handle SCROLL_TO_VIEW ([#2141] by [@xarvic])
 - `EventCtx::submit_notification_without_warning` ([#2141] by [@xarvic])
 - `WidgetPod::requested_layout` ([#2145] by [@xarvic])
+- Make `Parse` work better with floats and similar types ([#2148] by [@superfell])
 
 ### Changed
 
@@ -546,6 +547,7 @@ Last release without a changelog :(
 [@zedseven]: https://github.com/zedseven
 [@Pavel-N]: https://github.com/Pavel-N
 [@maurerdietmar]: https://github.com/maurerdietmar
+[@superfell]: https://github.com/superfell
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -834,6 +836,7 @@ Last release without a changelog :(
 [#2117]: https://github.com/linebender/druid/pull/2117
 [#2117]: https://github.com/linebender/druid/pull/2141
 [#2145]: https://github.com/linebender/druid/pull/2145
+[#2148]: https://github.com/linebender/druid/pull/2148
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

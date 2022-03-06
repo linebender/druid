@@ -64,9 +64,27 @@ impl<T: FromStr + Display + Data, W: Widget<String>> Widget<Option<T>> for Parse
     fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &Option<T>, data: &Option<T>, env: &Env) {
         let old = match *data {
             None => return, // Don't clobber the input
-            Some(ref x) => mem::replace(&mut self.state, x.to_string()),
+            Some(ref x) => {
+                // Its possible that the current self.state already represents the data value
+                // in that case we shouldn't clobber the self.state. This helps deal
+                // with types where parse()/to_string() round trips can lose information
+                // e.g. with floating point numbers, text of "1.0" becomes "1" in the
+                // round trip, and this makes it impossible to type in the . otherwise
+                match self.state.parse() {
+                    Err(_) => Some(mem::replace(&mut self.state, x.to_string())),
+                    Ok(v) => {
+                        if !Data::same(&v, x) {
+                            Some(mem::replace(&mut self.state, x.to_string()))
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
         };
-        self.widget.update(ctx, &old, &self.state, env)
+        // if old is None here, that means that self.state hasn't changed
+        let old_data = old.as_ref().unwrap_or(&self.state);
+        self.widget.update(ctx, old_data, &self.state, env)
     }
 
     #[instrument(name = "Parse", level = "trace", skip(self, ctx, bc, _data, env))]
