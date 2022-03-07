@@ -61,6 +61,7 @@ use crate::window::{
 use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
+use super::dialog;
 use super::menu::Menu;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
@@ -1557,23 +1558,22 @@ impl IdleHandle {
     }
 
     pub(crate) fn schedule_redraw(&self) {
-        self.queue.lock().unwrap().push(IdleKind::Redraw);
-        self.wake();
+        self.add_idle(IdleKind::Redraw);
     }
 
     pub fn add_idle_callback<F>(&self, callback: F)
     where
         F: FnOnce(&mut dyn WinHandler) + Send + 'static,
     {
-        self.queue
-            .lock()
-            .unwrap()
-            .push(IdleKind::Callback(Box::new(callback)));
-        self.wake();
+        self.add_idle(IdleKind::Callback(Box::new(callback)));
     }
 
     pub fn add_idle_token(&self, token: IdleToken) {
-        self.queue.lock().unwrap().push(IdleKind::Token(token));
+        self.add_idle(IdleKind::Token(token));
+    }
+
+    fn add_idle(&self, idle: IdleKind) {
+        self.queue.lock().unwrap().push(idle);
         self.wake();
     }
 }
@@ -1795,16 +1795,30 @@ impl WindowHandle {
         }
     }
 
-    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        // TODO(x11/file_dialogs): implement WindowHandle::open_file
-        warn!("WindowHandle::open_file is currently unimplemented for X11 backend.");
-        None
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(w) = self.window.upgrade() {
+            if let Some(idle) = self.get_idle_handle() {
+                Some(dialog::open_file(w.id, idle, options))
+            } else {
+                warn!("Couldn't open file because no idle handle available");
+                None
+            }
+        } else {
+            None
+        }
     }
 
-    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        // TODO(x11/file_dialogs): implement WindowHandle::save_as
-        warn!("WindowHandle::save_as is currently unimplemented for X11 backend.");
-        None
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        if let Some(w) = self.window.upgrade() {
+            if let Some(idle) = self.get_idle_handle() {
+                Some(dialog::save_file(w.id, idle, options))
+            } else {
+                warn!("Couldn't save file because no idle handle available");
+                None
+            }
+        } else {
+            None
+        }
     }
 
     pub fn show_context_menu(&self, _menu: Menu, _pos: Point) {
