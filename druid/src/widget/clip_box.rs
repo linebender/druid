@@ -339,56 +339,17 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         }
     }
 
-    /// Changes the viewport offset by `delta`.
-    ///
-    /// Returns true if the offset actually changed. Even if `delta` is non-zero, the offset might
-    /// not change. For example, if you try to move the viewport down but it is already at the
-    /// bottom of the child widget, then the offset will not change and this function will return
-    /// false.
-    pub fn pan_by(&mut self, ctx: &mut EventCtx, delta: Vec2) -> bool {
-        self.pan_to(ctx: &mut EventCtx, self.viewport_origin() + delta)
-    }
-
-    /// Changes the viewport offset on the specified axis to 'position'.
-    ///
-    /// The other axis will remain unchanged.
-    pub fn pan_to_on_axis(&mut self, ctx: &mut EventCtx, axis: Axis, position: f64) -> bool {
-        let new_origin = axis.pack(position, axis.minor_pos(self.viewport_origin()));
-        self.with_port(ctx, |ctx, port| {port.pan_to(new_origin.into());})
-    }
-
-    /// Sets the viewport origin to `pos`.
-    ///
-    /// Returns true if the position changed. Note that the valid values for the viewport origin
-    /// are constrained by the size of the child, and so the origin might not get set to exactly
-    /// `pos`.
-    pub fn pan_to(&mut self, ctx: &mut EventCtx, origin: Point) -> bool {
-        self.with_port(ctx, |ctx, port|{port.pan_to(origin);})
-    }
-
-    /// Adjust the viewport to display as much of the target region as is possible.
-    ///
-    /// Returns `true` if the viewport changes.
-    ///
-    /// This will move the viewport the smallest distance that fully shows
-    /// the target region. If the target region is larger than the viewport,
-    /// we will display the portion that fits, prioritizing the portion closest
-    /// to the origin.
-    pub fn pan_to_visible(&mut self, ctx: &mut EventCtx, region: Rect) -> bool {
-        self.with_port(ctx, |ctx, port|{port.pan_to_visible(region);})
-    }
-
     /// Modify the `ClipBox`'s viewport rectangle with a closure.
     ///
     /// The provided callback function can modify its argument, and when it is
     /// done then this `ClipBox` will be modified to have the new viewport rectangle.
-    pub fn with_port<F: FnOnce(&mut EventCtx, &mut Viewport)>(&mut self, ctx: &mut EventCtx, f: F) -> bool {
+    pub fn with_port<F: FnOnce(&mut EventCtx, &mut Viewport)>(&mut self, ctx: &mut EventCtx, data: T, env: &Env, f: F) -> bool {
         f(ctx, &mut self.port);
         let new_content_origin = -self.port.view_origin;
 
         if new_content_origin != self.child.layout_rect().origin() {
                 self.child
-                    .set_origin_dyn(ctx, new_content_origin);
+                    .set_origin_dyn(ctx, data, env, new_content_origin);
             true
         } else {
             false
@@ -406,7 +367,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                     // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
                     // to this ClipBox's viewport.
                     ctx.set_handled();
-                    self.with_port(ctx, |ctx, port| {
+                    self.with_port(ctx, data, env, |ctx, port| {
                         port.fixed_scroll_to_view_handling(
                             ctx,
                             *global_highlight_rect,
@@ -416,7 +377,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                 }
             }
         } else {
-            self.child.event(ctx, &child_event, data, env);
+            self.child.event(ctx, event, data, env);
         }
     }
 
@@ -462,11 +423,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         };
 
         self.port.content_size = content_size;
-        self.child.set_origin(ctx, data, env, Point::ORIGIN);
-
         self.port.view_size = bc.constrain(content_size);
-        let new_offset = self.port.clamp_view_origin(self.viewport_origin());
-        self.pan_to(new_offset);
+
+        let new_offset = -self.port.clamp_view_origin(-self.child.layout_rect().origin());
+        self.child.set_origin(ctx, data, env, new_offset);
+
         trace!("Computed sized: {}", self.viewport_size());
         self.viewport_size()
     }

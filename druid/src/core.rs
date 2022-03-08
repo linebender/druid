@@ -577,7 +577,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // set its origin.
         let child_mouse_pos = ctx
             .mouse_pos
-            .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());
+            .map(|pos| pos - self.layout_rect().origin().to_vec2());
         let prev_size = self.state.size;
 
         let mut child_ctx = LayoutCtx {
@@ -1011,13 +1011,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     }
                 }
                 InternalLifeCycle::ParentWindowOrigin => {
-                    let new_parent_window_origin = ctx.widget_state.window_origin();
-                    if new_parent_window_origin != self.state.parent_window_origin {
-                        self.state.parent_window_origin = new_parent_window_origin;
-                        true
-                    } else {
-                        false
-                    }
+                    let old_parent_window_origin = self.state.parent_window_origin;
+                    self.state.parent_window_origin = ctx.widget_state.window_origin();
+
+                    old_parent_window_origin != self.state.parent_window_origin || self.state.needs_window_origin
                 }
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
@@ -1304,7 +1301,7 @@ impl WidgetState {
             .layout_rect()
             .with_origin(Point::ORIGIN)
             .inset(self.paint_insets);
-        let offset = child_state.layout_rect().origin().to_vec2() - child_state.viewport_offset;
+        let offset = child_state.layout_rect().origin().to_vec2();
         for &r in child_state.invalid.rects() {
             let r = (r + offset).intersect(clip);
             if r.area() != 0.0 {
