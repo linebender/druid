@@ -98,6 +98,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Removed line of code that prevented window miximalization. ([#2113] by [@Pavel-N])
 - Dont warn about unhandled `Notification`s which have `known_target` set to false ([#2141] by [@xarvic])
 - `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic]) 
+- `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
 
 ### Deprecated
 
@@ -548,6 +549,7 @@ Last release without a changelog :(
 [@Pavel-N]: https://github.com/Pavel-N
 [@maurerdietmar]: https://github.com/maurerdietmar
 [@superfell]: https://github.com/superfell
+[@GoldsteinE]: https://github.com/GoldsteinE
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -837,6 +839,7 @@ Last release without a changelog :(
 [#2117]: https://github.com/linebender/druid/pull/2141
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
+[#2151]: https://github.com/linebender/druid/pull/2151
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

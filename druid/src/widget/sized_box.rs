@@ -19,7 +19,7 @@ use std::f64::INFINITY;
 use tracing::{instrument, trace, warn};
 
 use crate::widget::prelude::*;
-use crate::Data;
+use crate::{Data, KeyOrValue};
 
 /// A widget with predefined size.
 ///
@@ -32,8 +32,8 @@ use crate::Data;
 /// it will be treated as zero.
 pub struct SizedBox<T> {
     child: Option<Box<dyn Widget<T>>>,
-    width: Option<f64>,
-    height: Option<f64>,
+    width: Option<KeyOrValue<f64>>,
+    height: Option<KeyOrValue<f64>>,
 }
 
 impl<T> SizedBox<T> {
@@ -61,14 +61,14 @@ impl<T> SizedBox<T> {
     }
 
     /// Set container's width.
-    pub fn width(mut self, width: f64) -> Self {
-        self.width = Some(width);
+    pub fn width(mut self, width: impl Into<KeyOrValue<f64>>) -> Self {
+        self.width = Some(width.into());
         self
     }
 
     /// Set container's height.
-    pub fn height(mut self, height: f64) -> Self {
-        self.height = Some(height);
+    pub fn height(mut self, height: impl Into<KeyOrValue<f64>>) -> Self {
+        self.height = Some(height.into());
         self
     }
 
@@ -81,8 +81,8 @@ impl<T> SizedBox<T> {
     /// [`expand_height`]: #method.expand_height
     /// [`expand_width`]: #method.expand_width
     pub fn expand(mut self) -> Self {
-        self.width = Some(INFINITY);
-        self.height = Some(INFINITY);
+        self.width = Some(KeyOrValue::Concrete(INFINITY));
+        self.height = Some(KeyOrValue::Concrete(INFINITY));
         self
     }
 
@@ -90,7 +90,7 @@ impl<T> SizedBox<T> {
     ///
     /// This will force the child to have maximum width.
     pub fn expand_width(mut self) -> Self {
-        self.width = Some(INFINITY);
+        self.width = Some(KeyOrValue::Concrete(INFINITY));
         self
     }
 
@@ -98,23 +98,25 @@ impl<T> SizedBox<T> {
     ///
     /// This will force the child to have maximum height.
     pub fn expand_height(mut self) -> Self {
-        self.height = Some(INFINITY);
+        self.height = Some(KeyOrValue::Concrete(INFINITY));
         self
     }
 
-    fn child_constraints(&self, bc: &BoxConstraints) -> BoxConstraints {
+    fn child_constraints(&self, bc: &BoxConstraints, env: &Env) -> BoxConstraints {
         // if we don't have a width/height, we don't change that axis.
         // if we have a width/height, we clamp it on that axis.
-        let (min_width, max_width) = match self.width {
+        let (min_width, max_width) = match &self.width {
             Some(width) => {
+                let width = width.resolve(env);
                 let w = width.max(bc.min().width).min(bc.max().width);
                 (w, w)
             }
             None => (bc.min().width, bc.max().width),
         };
 
-        let (min_height, max_height) = match self.height {
+        let (min_height, max_height) = match &self.height {
             Some(height) => {
+                let height = height.resolve(env);
                 let h = height.max(bc.min().height).min(bc.max().height);
                 (h, h)
             }
@@ -128,8 +130,11 @@ impl<T> SizedBox<T> {
     }
 
     #[cfg(test)]
-    pub(crate) fn width_and_height(&self) -> (Option<f64>, Option<f64>) {
-        (self.width, self.height)
+    pub(crate) fn width_and_height(&self, env: &Env) -> (Option<f64>, Option<f64>) {
+        (
+            self.width.as_ref().map(|w| w.resolve(env)),
+            self.height.as_ref().map(|h| h.resolve(env)),
+        )
     }
 }
 
@@ -163,10 +168,19 @@ impl<T: Data> Widget<T> for SizedBox<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("SizedBox");
 
-        let child_bc = self.child_constraints(bc);
+        let child_bc = self.child_constraints(bc, env);
         let size = match self.child.as_mut() {
             Some(child) => child.layout(ctx, &child_bc, data, env),
-            None => bc.constrain((self.width.unwrap_or(0.0), self.height.unwrap_or(0.0))),
+            None => bc.constrain((
+                self.width
+                    .as_ref()
+                    .unwrap_or(&KeyOrValue::Concrete(0.0))
+                    .resolve(env),
+                self.height
+                    .as_ref()
+                    .unwrap_or(&KeyOrValue::Concrete(0.0))
+                    .resolve(env),
+            )),
         };
 
         trace!("Computed size: {}", size);
@@ -209,22 +223,32 @@ impl<T: Data> Widget<T> for SizedBox<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widget::Label;
+    use crate::{widget::Label, Key};
     use test_log::test;
 
     #[test]
     fn expand() {
+        let env = Env::empty();
         let expand = SizedBox::<()>::new(Label::new("hello!")).expand();
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
-        let child_bc = expand.child_constraints(&bc);
+        let child_bc = expand.child_constraints(&bc, &env);
         assert_eq!(child_bc.min(), Size::new(400., 400.,));
     }
 
     #[test]
     fn no_width() {
+        let mut env = Env::empty();
+
         let expand = SizedBox::<()>::new(Label::new("hello!")).height(200.);
         let bc = BoxConstraints::tight(Size::new(400., 400.)).loosen();
-        let child_bc = expand.child_constraints(&bc);
+        let child_bc = expand.child_constraints(&bc, &env);
+        assert_eq!(child_bc.min(), Size::new(0., 200.,));
+        assert_eq!(child_bc.max(), Size::new(400., 200.,));
+
+        const HEIGHT_KEY: Key<f64> = Key::new("test-no-width-height");
+        env.set(HEIGHT_KEY, 200.);
+        let expand = SizedBox::<()>::new(Label::new("hello!")).height(HEIGHT_KEY);
+        let child_bc = expand.child_constraints(&bc, &env);
         assert_eq!(child_bc.min(), Size::new(0., 200.,));
         assert_eq!(child_bc.max(), Size::new(400., 200.,));
     }
