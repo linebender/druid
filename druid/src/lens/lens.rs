@@ -279,6 +279,42 @@ where
     }
 }
 
+struct LensAdapter<GETTER, SETTER>
+{
+    pub getter: GETTER,
+    pub setter: SETTER,
+}
+
+impl<U, T, GETTER, SETTER> Lens<U, T> for LensAdapter<GETTER, SETTER>
+    where GETTER: Fn(&U) -> T,
+          SETTER: Fn(&mut U, T)
+{
+    fn with<V, F: FnOnce(&T) -> V>(&self, data: &U, f: F) -> V {
+        let value = (self.getter)(data);
+        f(&value)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut T) -> V>(&self, data: &mut U, f: F) -> V {
+        let mut value = (self.getter)(data);
+        let result = f(&mut value);
+        (self.setter)(data, value);
+        result
+    }
+}
+
+pub fn lens_of<U, T, GETTER, SETTER>(
+    getter: GETTER,
+    setter: SETTER,
+) -> impl Lens<U, T>
+    where GETTER: Fn(&U) -> T,
+          SETTER: Fn(&mut U, T)
+{
+    LensAdapter {
+        getter,
+        setter,
+    }
+}
+
 /// Construct a lens accessing a type's field
 ///
 /// This is a convenience macro for constructing `Field` lenses for fields or indexable elements.
