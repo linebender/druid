@@ -3,7 +3,6 @@
 use ashpd::desktop::file_chooser;
 use ashpd::WindowIdentifier;
 use futures::executor::block_on;
-use raw_window_handle::{RawWindowHandle, XcbHandle};
 use tracing::warn;
 
 use crate::{FileDialogOptions, FileDialogToken, FileInfo};
@@ -27,7 +26,7 @@ pub(crate) fn save_file(
 }
 
 fn dialog(
-    window: u32,
+    _window: u32,
     idle: IdleHandle,
     mut options: FileDialogOptions,
     open: bool,
@@ -36,12 +35,10 @@ fn dialog(
 
     std::thread::spawn(move || {
         if let Err(e) = block_on(async {
-            let mut handle = XcbHandle::empty();
-            handle.window = window;
-
             let conn = zbus::Connection::session().await?;
             let proxy = file_chooser::FileChooserProxy::new(&conn).await?;
-            let id = WindowIdentifier::from_raw_handle(&RawWindowHandle::Xcb(handle));
+            // TODO: use the window id. This requires changes in ashpd.
+            let id = WindowIdentifier::default();
             let multi = options.multi_selection;
 
             let title_owned = options.title.take();

@@ -23,7 +23,6 @@ x11 = [
     "futures",
     "nix",
     "pkg-config",
-    "raw-window-handle",
     "x11rb",
     "zbus",
 ]
@@ -100,8 +99,8 @@ foreign-types = "0.3.2"
 bitflags = "1.2.1"
 
 [target.'cfg(any(target_os="linux", target_os="openbsd"))'.dependencies]
+ashpd = { version = "0.2.6", optional = true }
 # TODO(x11/dependencies): only use feature "xcb" if using X11
-ashpd = { version = "0.2.6", optional = true , features = ["raw_handle"]}
 cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.14.0", default_features = false, optional = true }
 futures = { version = "0.3.21", optional = true, features = ["executor"]}
