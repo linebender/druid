@@ -1,7 +1,7 @@
 //! This module contains functions for opening file dialogs using DBus.
 
 use ashpd::desktop::file_chooser;
-use ashpd::WindowIdentifier;
+use ashpd::{zbus, WindowIdentifier};
 use futures::executor::block_on;
 use tracing::warn;
 
