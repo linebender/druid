@@ -14,7 +14,7 @@
 
 //! A clickable [`Controller`] widget.
 //!
-//! [`Controller`]: struct.Controller.html
+//! [`Controller`]: trait.Controller.html
 
 use crate::widget::Controller;
 use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
@@ -22,7 +22,7 @@ use tracing::{instrument, trace};
 
 /// A clickable [`Controller`] widget. Pass this and a child widget to a
 /// [`ControllerHost`] to make the child interactive. More conveniently, this is
-/// available as an `on_click` method via [`WidgetExt`]'.
+/// available as an [`on_click`] method via [`WidgetExt`].
 ///
 /// This is an alternative to the standard [`Button`] widget, for when you want
 /// to make an arbitrary widget clickable.
@@ -31,8 +31,9 @@ use tracing::{instrument, trace};
 /// mouse down, which can be useful for painting based on `ctx.is_active()`
 /// and `ctx.is_hot()`.
 ///
-/// [`Controller`]: struct.Controller.html
+/// [`Controller`]: trait.Controller.html
 /// [`ControllerHost`]: struct.ControllerHost.html
+/// [`on_click`]: ../trait.WidgetExt.html#method.on_click
 /// [`WidgetExt`]: ../trait.WidgetExt.html
 /// [`Button`]: struct.Button.html
 /// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged

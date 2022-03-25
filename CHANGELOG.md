@@ -141,6 +141,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
 - Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
+- Fix `Controller` links for `Click` ([#2158] by [@yrns])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -840,6 +841,7 @@ Last release without a changelog :(
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
 [#2151]: https://github.com/linebender/druid/pull/2151
+[#2158]: https://github.com/linebender/druid/pull/2158
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
