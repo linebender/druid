@@ -123,7 +123,7 @@ fn build_root_widget() -> impl Widget<AppState> {
     let line_break_chooser = Flex::column()
         .with_child(Label::new("Line break mode"))
         .with_spacer(SPACER_SIZE)
-        .with_child(RadioGroup::new(vec![
+        .with_child(RadioGroup::column(vec![
             ("Clip", LineBreaking::Clip),
             ("Wrap", LineBreaking::WordWrap),
             ("Overflow", LineBreaking::Overflow),
@@ -133,7 +133,7 @@ fn build_root_widget() -> impl Widget<AppState> {
     let alignment_picker = Flex::column()
         .with_child(Label::new("Justification"))
         .with_spacer(SPACER_SIZE)
-        .with_child(RadioGroup::new(vec![
+        .with_child(RadioGroup::column(vec![
             ("Start", TextAlignment::Start),
             ("End", TextAlignment::End),
             ("Center", TextAlignment::Center),

@@ -17,7 +17,7 @@
 use crate::debug_state::DebugState;
 use crate::kurbo::Circle;
 use crate::widget::prelude::*;
-use crate::widget::{CrossAxisAlignment, Flex, Label, LabelText};
+use crate::widget::{Axis, CrossAxisAlignment, Flex, Label, LabelText};
 use crate::{theme, Data, LinearGradient, UnitPoint};
 use tracing::{instrument, trace};
 
@@ -29,10 +29,28 @@ pub struct RadioGroup;
 
 impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
-    pub fn new<T: Data + PartialEq>(
+    /// along the vertical axis.
+    pub fn column<T: Data + PartialEq>(
         variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
     ) -> impl Widget<T> {
-        let mut col = Flex::column().cross_axis_alignment(CrossAxisAlignment::Start);
+        RadioGroup::for_axis(Axis::Vertical, variants)
+    }
+
+    /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
+    /// along the horizontal axis.
+    pub fn row<T: Data + PartialEq>(
+        variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
+    ) -> impl Widget<T> {
+        RadioGroup::for_axis(Axis::Horizontal, variants)
+    }
+
+    /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
+    /// along the specified axis.
+    pub fn for_axis<T: Data + PartialEq>(
+        axis: Axis,
+        variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T)>,
+    ) -> impl Widget<T> {
+        let mut col = Flex::for_axis(axis).cross_axis_alignment(CrossAxisAlignment::Start);
         let mut is_first = true;
         for (label, variant) in variants.into_iter() {
             if !is_first {
