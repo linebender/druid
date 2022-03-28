@@ -116,7 +116,7 @@ fn make_control_row() -> impl Widget<AppState> {
                 .with_child(Label::new("FillStrat:"))
                 .with_default_spacer()
                 .with_child(
-                    RadioGroup::new(FILL_STRAT_OPTIONS.to_vec()).lens(AppState::fill_strat),
+                    RadioGroup::column(FILL_STRAT_OPTIONS.to_vec()).lens(AppState::fill_strat),
                 ),
         )
         .with_default_spacer()
@@ -126,7 +126,7 @@ fn make_control_row() -> impl Widget<AppState> {
                 .with_child(Label::new("interpolation mode:"))
                 .with_default_spacer()
                 .with_child(
-                    RadioGroup::new(INTERPOLATION_MODE_OPTIONS.to_vec())
+                    RadioGroup::column(INTERPOLATION_MODE_OPTIONS.to_vec())
                         .lens(AppState::interpolation_mode),
                 ),
         )

@@ -99,6 +99,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Dont warn about unhandled `Notification`s which have `known_target` set to false ([#2141] by [@xarvic])
 - `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic]) 
 - `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
+- `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
 
 ### Deprecated
 
@@ -551,6 +552,7 @@ Last release without a changelog :(
 [@maurerdietmar]: https://github.com/maurerdietmar
 [@superfell]: https://github.com/superfell
 [@GoldsteinE]: https://github.com/GoldsteinE
+[@twitchyliquid64]: https://github.com/twitchyliquid64
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -841,6 +843,7 @@ Last release without a changelog :(
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
 [#2151]: https://github.com/linebender/druid/pull/2151
+[#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master

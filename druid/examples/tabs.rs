@@ -114,7 +114,7 @@ fn build_root_widget() -> impl Widget<AppState> {
 
     let axis_picker = group(
         "Tab bar axis",
-        RadioGroup::new(vec![
+        RadioGroup::column(vec![
             ("Horizontal", Axis::Horizontal),
             ("Vertical", Axis::Vertical),
         ])
@@ -123,7 +123,7 @@ fn build_root_widget() -> impl Widget<AppState> {
 
     let cross_picker = group(
         "Tab bar edge",
-        RadioGroup::new(vec![
+        RadioGroup::column(vec![
             ("Leading", TabsEdge::Leading),
             ("Trailing", TabsEdge::Trailing),
         ])
@@ -132,7 +132,7 @@ fn build_root_widget() -> impl Widget<AppState> {
 
     let transit_picker = group(
         "Transition",
-        RadioGroup::new(vec![
+        RadioGroup::column(vec![
             ("Instant", TabsTransition::Instant),
             (
                 "Slide",

@@ -145,7 +145,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 "Painter",
             ))
             .with_child(label_widget(
-                RadioGroup::new(vec![
+                RadioGroup::column(vec![
                     ("radio gaga", MyRadio::GaGa),
                     ("radio gugu", MyRadio::GuGu),
                     ("radio baabaa", MyRadio::BaaBaa),
