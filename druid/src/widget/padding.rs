@@ -126,4 +126,44 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let insets = self.insets.resolve(env);
+
+        let x_padding = insets.x_value();
+        let y_padding = insets.y_value();
+
+        let child_bc = bc.shrink((x_padding, y_padding));
+        let child_max_intrinsic_width = self
+            .child
+            .widget_mut()
+            .compute_max_intrinsic_width(ctx, &child_bc, data, env);
+        child_max_intrinsic_width + x_padding
+    }
+
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let insets = self.insets.resolve(env);
+
+        let x_padding = insets.x_value();
+        let y_padding = insets.y_value();
+
+        let child_bc = bc.shrink((x_padding, y_padding));
+        let child_max_intrinsic_height = self
+            .child
+            .widget_mut()
+            .compute_max_intrinsic_height(ctx, &child_bc, data, env);
+        child_max_intrinsic_height + y_padding
+    }
 }

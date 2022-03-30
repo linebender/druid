@@ -218,6 +218,68 @@ impl<T: Data> Widget<T> for SizedBox<T> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match (self.child.as_mut(), self.width.as_ref()) {
+            // It doesnt matter what child's width is if self.width is set.
+            (Some(c), Some(w)) => {
+                let w = w.resolve(env);
+                if w == f64::INFINITY {
+                    // If self.width is infinite, we fallback to child's width.
+                    c.compute_max_intrinsic_width(ctx, bc, data, env)
+                } else {
+                    w
+                }
+            }
+            (Some(c), None) => c.compute_max_intrinsic_width(ctx, bc, data, env),
+            (None, Some(w)) => {
+                let w = w.resolve(env);
+                if w == f64::INFINITY {
+                    // If self.width is infinite, we can only warn.
+                    warn!("SizedBox is without a child and its width is infinite. Either give SizedBox a child or make its width finite. ")
+                }
+                w
+            }
+            (None, None) => 0.,
+        }
+    }
+
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match (self.child.as_mut(), self.height.as_ref()) {
+            // It doesnt matter what child's height is if self.height is set.
+            (Some(c), Some(h)) => {
+                let h = h.resolve(env);
+                if h == f64::INFINITY {
+                    // If self.width is infinite, we fallback to child's width.
+                    c.compute_max_intrinsic_height(ctx, bc, data, env)
+                } else {
+                    h
+                }
+            }
+            (Some(c), None) => c.compute_max_intrinsic_height(ctx, bc, data, env),
+            (None, Some(h)) => {
+                let h = h.resolve(env);
+                if h == f64::INFINITY {
+                    // If self.height is infinite, we can only warn.
+                    warn!("SizedBox is without a child and its height is infinite. Either give SizedBox a child or make its height finite. ")
+                }
+                h
+            }
+            (None, None) => 0.,
+        }
+    }
 }
 
 #[cfg(test)]

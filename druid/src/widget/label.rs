@@ -537,6 +537,17 @@ impl<T: Data> Widget<T> for Label<T> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.label
+            .compute_max_intrinsic_width(ctx, bc, &self.current_text, env)
+    }
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
@@ -633,6 +644,26 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
             ctx.clip(label_size.to_rect());
         }
         self.draw_at(ctx, origin)
+    }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match self.line_break_mode {
+            LineBreaking::WordWrap => {
+                // Height is irrelevant for labels. So max preferred/intrinsic width of a label is the size
+                // it'd take without any word wrapping.
+                self.line_break_mode = LineBreaking::Clip;
+                let s = self.layout(ctx, bc, data, env);
+                self.line_break_mode = LineBreaking::WordWrap;
+                s.width
+            }
+            _ => self.layout(ctx, bc, data, env).width,
+        }
     }
 }
 

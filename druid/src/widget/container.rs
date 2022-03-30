@@ -139,6 +139,21 @@ impl<T: Data> Container<T> {
     pub(crate) fn border_is_some(&self) -> bool {
         self.border.is_some()
     }
+
+    /// max_intrinsic_size = child.max_intrinsic_size + container's border size * 2
+    fn compute_intrinsic<F>(&mut self, bc: &BoxConstraints, env: &Env, f: F) -> f64
+    where
+        F: FnOnce(&BoxConstraints, &mut Box<dyn Widget<T>>) -> f64,
+    {
+        let container_width = match &self.border {
+            Some(border) => border.width.resolve(env),
+            None => 0.0,
+        };
+        let child_bc = bc.shrink((2.0 * container_width, 2.0 * container_width));
+        let child_size = f(&child_bc, self.child.widget_mut());
+        let border_width_on_both_sides = container_width * 2.;
+        child_size + border_width_on_both_sides
+    }
 }
 
 impl<T: Data> Widget<T> for Container<T> {
@@ -241,5 +256,31 @@ impl<T: Data> Widget<T> for Container<T> {
             children: vec![self.child.widget().debug_state(data)],
             ..Default::default()
         }
+    }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let f = |bc: &BoxConstraints, child: &mut Box<dyn Widget<T>>| {
+            child.compute_max_intrinsic_width(ctx, bc, data, env)
+        };
+        self.compute_intrinsic(bc, env, f)
+    }
+
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let f = |bc: &BoxConstraints, child: &mut Box<dyn Widget<T>>| {
+            child.compute_max_intrinsic_height(ctx, bc, data, env)
+        };
+        self.compute_intrinsic(bc, env, f)
     }
 }

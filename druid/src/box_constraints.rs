@@ -270,6 +270,16 @@ impl BoxConstraints {
             }
         }
     }
+
+    /// Set max width to max_width
+    pub fn set_max_width(&mut self, max_width: f64) {
+        self.max.width = max_width;
+    }
+
+    /// Set max height to max_height
+    pub fn set_max_height(&mut self, max_height: f64) {
+        self.max.height = max_height;
+    }
 }
 
 #[cfg(test)]

@@ -171,4 +171,32 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        if bc.is_height_bounded() {
+            bc.max().height * self.ratio
+        } else {
+            self.child.compute_max_intrinsic_width(ctx, bc, data, env)
+        }
+    }
+
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        if bc.is_width_bounded() {
+            bc.max().width / self.ratio
+        } else {
+            self.child.compute_max_intrinsic_height(ctx, bc, data, env)
+        }
+    }
 }

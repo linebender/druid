@@ -142,6 +142,26 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.widget.compute_max_intrinsic_width(ctx, bc, data, env)
+    }
+
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.widget.compute_max_intrinsic_height(ctx, bc, data, env)
+    }
 }
 
 impl<W, C> WidgetWrapper for ControllerHost<W, C> {

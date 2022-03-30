@@ -222,6 +222,46 @@ pub trait Widget<T> {
             ..Default::default()
         }
     }
+
+    /// Max intrinsic/preferred width is the width a widget would take given infinite width constraint.
+    /// Height constraint might or might not be infinite. If it is not infinite, max intrinsic width
+    /// calculation must honor the constraint.
+    ///
+    /// AspectRatioBox is an example where height is used. If it is finite, max intrinsic width is *height * ratio*.
+    /// If height is infinite, child's max intrinsic width is calculated.
+    ///
+    /// Intrinsic is a *could-be* value. It's the value a widget *could* have given infinite constraints.
+    /// This does not mean the value returned by layout() would be the same.
+    ///
+    /// Make sure this function doesn't return an infinite value.
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let s = self.layout(ctx, bc, data, env);
+        s.width
+    }
+
+    /// Max intrinsic/preferred height is the height a widget would take given infinite height constraint.
+    /// Width constraint might or might not be infinite. If it is not infinite, max intrinsic height
+    /// calculation must honor the constraint.
+    ///
+    /// See [`compute_max_intrinsic_width`] for more details.
+    ///
+    /// [`compute_max_intrinsic_width`]: trait.Widget.html#method.compute_max_intrinsic_width
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let s = self.layout(ctx, bc, data, env);
+        s.height
+    }
 }
 
 impl WidgetId {
@@ -290,5 +330,29 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn debug_state(&self, data: &T) -> DebugState {
         self.deref().debug_state(data)
+    }
+
+    /// Signature same as layout.
+    fn compute_max_intrinsic_width(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.deref_mut()
+            .compute_max_intrinsic_width(ctx, bc, data, env)
+    }
+
+    /// Signature same as layout.
+    fn compute_max_intrinsic_height(
+        &mut self,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.deref_mut()
+            .compute_max_intrinsic_height(ctx, bc, data, env)
     }
 }
