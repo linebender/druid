@@ -24,6 +24,7 @@ use druid_shell::{
 
 mod element;
 mod elm;
+mod rusty;
 mod tree;
 mod vdom;
 mod window;
@@ -231,6 +232,14 @@ impl elm::AppLogic for ElmCountApp {
     }
 }
 
+fn rusty_counter(data: &mut u32) -> impl rusty::View<u32, ()> {
+    let mut col = rusty::Column::new();
+    col.add_child(rusty::Memoize::new(*data, |data| {
+        rusty::Button::new(format!("count: {}", data), |_action, data| *data += 1)
+    }));
+    col
+}
+
 fn main() {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
@@ -264,8 +273,12 @@ fn main() {
     };
     */
 
+    /*
     let elm_app_logic = ElmCountApp::default();
     let mut app_logic = elm::ElmApp::new(elm_app_logic);
+    */
+
+    let mut app_logic = rusty::RustyApp::new(0, rusty_counter);
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());

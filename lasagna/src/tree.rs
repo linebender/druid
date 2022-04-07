@@ -55,12 +55,19 @@ impl Id {
 }
 
 impl TreeStructure {
-    pub fn parent(&self, id: Id) -> Option<Id> {
-        None
+    pub fn new() -> TreeStructure {
+        let parent = HashMap::new();
+        let mut children = HashMap::new();
+        children.insert(None, Vec::new());
+        TreeStructure { parent, children }
+    }
+
+    pub fn parent(&self, id: Id) -> Option<Option<Id>> {
+        self.parent.get(&id).copied()
     }
 
     pub fn children(&self, id: Option<Id>) -> Option<&[Id]> {
-        None
+        todo!()
     }
 
     pub fn apply(&mut self, mutation: &Mutation) {
