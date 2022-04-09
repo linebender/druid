@@ -232,7 +232,7 @@ impl elm::AppLogic for ElmCountApp {
     }
 }
 
-fn rusty_counter(data: &mut u32) -> impl rusty::View<u32, ()> {
+fn rusty_counter(data: &mut u32) -> rusty::Column<u32, ()> {
     let mut col = rusty::Column::new();
     col.add_child(rusty::Memoize::new(*data, |data| {
         rusty::Button::new(format!("count: {}", data), |_action, data| *data += 1)

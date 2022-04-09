@@ -16,55 +16,171 @@
 
 use std::any::Any;
 use std::marker::PhantomData;
+use std::ops::Deref;
 
 use crate::element::{self, Action, ButtonCmd, Element};
 use crate::tree::{Id, Mutation, MutationEl, TreeStructure};
 
-pub struct RustyApp<T, V: View<T, ()>, F: FnMut(&mut T) -> V> {
+pub struct RustyApp<T, F: FnMut(&mut T) -> Column<T, ()>> {
     data: T,
     app: F,
-    old_tree: Option<OldNode>,
-    view: Option<V>,
+    view: Column<T, ()>,
+    state: Option<ColumnState>,
     structure: TreeStructure,
-    root_id: Id,
+    root_id: Option<Id>,
 }
 
+/// A view object representing a node in the UI.
+///
+/// This is the central trait for representing the UI; an app will generate
+/// a tree of these objects, which in turn will render the UI and handle
+/// event dispatch.
+///
+/// View objects are lightweight and transitory. Rendering proceeds by diffing
+/// the view against the previous version; this basic pattern is common to
+/// Elm, React, Flutter, and SwiftUI, among many others.
+///
+/// Views are parameterized by the "app state" and also an action (or "message"
+/// in Elm lingo) type, which is passed up the tree in event propagation. These
+/// types are used for event dispatch only, and are not needed for rendering.
+/// It is possible to implement the pure Elm architecture by having `T` empty
+/// except for one node at the top of the view tree, and relying exclusively
+/// on `A`.
 pub trait View<T, A> {
-    // Likely type changes:
-    // * OldNode will be an associated type
-    // * previous: Option<Self> will be provided for diff reference
-    fn reconcile(&self, old_node: &mut Option<OldNode>, child_mut: &mut Vec<MutationEl>);
+    /// The associated state for this view.
+    ///
+    /// Each view has an associated state object, which persists across renders.
+    type State;
 
+    /// Reconcile the view with the previous view, updating the element tree.
+    ///
+    /// On first render, `prev`, `id`, and `state` will be `None`. In that case,
+    /// this method creates a node for the element tree, and adds it to the
+    /// mutation as an `Insert` element. It also updates the `id` to the id of
+    /// the newly created element and initializes its state object.
+    ///
+    /// Subsequently, the previous view node is made available for diffing,
+    /// and there is mutable access to state.
+    ///
+    /// The main goal of this method is to produce a mutation corresponding to
+    /// the subtree of the element tree corresponding to this node. There is
+    /// flexibility regarding exactly how that mutation is produced. If there
+    /// is no change since the last reconcile pass, it can simply add a `Skip`
+    /// element. Or, the method may employ custom logic for creating the
+    /// mutation. Of course, the usual approach for container views is to
+    /// recurse to the children.
+    // consider State: Default rather than option
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<Self::State>,
+        child_mut: &mut Vec<MutationEl>,
+    );
+
+    /// Dispatch an event.
+    ///
+    /// An event is produced by the element tree as an id and an element
+    /// body, which has a type corresponding to the node in the element
+    /// tree.
+    ///
+    /// Dispatching is based on the id_path, which is a sequence of element
+    /// ids from this node to the node in the element tree that produced the
+    /// event. A container node is expected to retain the element ids of its
+    /// children in its state, then recursively call this method on the child,
+    /// trimming off one element from the id_path slice.
+    ///
+    /// Event processing has mutable access to the app state.
     // Some type changes to consider:
     // * maybe mut self?
-    // * old_node is mut?
+    // * state is mut?
     // * Always return A?
+    //   - maybe more ergonomic if A: Default?
     fn event(
         &self,
-        old_node: &OldNode,
+        state: &Self::State,
         id_path: &[Id],
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A>;
 }
 
-pub struct OldNode {
-    id: Id,
-    body: Box<dyn Any>,
+/// An internal trait for dynamic boxing of view objects.
+///
+/// Consider renaming to AnyView. Similar patterns exist in other crates (for
+/// example, ErasedVirtualDom in Panoramix). I'm searching for good docs.
+trait DynView<T, A> {
+    fn as_any(&self) -> &dyn Any;
+
+    fn dyn_reconcile(
+        &self,
+        prev: Option<&dyn DynView<T, A>>,
+        id: &mut Option<Id>,
+        state: &mut Option<Box<dyn Any>>,
+        child_mut: &mut Vec<MutationEl>,
+    );
+
+    fn dyn_event(
+        &self,
+        state: &dyn Any,
+        id_path: &[Id],
+        event_body: Box<dyn Any>,
+        app_state: &mut T,
+    ) -> Option<A>;
 }
 
-impl OldNode {
-    fn downcast<T: 'static>(&self) -> Option<(Id, &T)> {
-        let id = self.id;
-        self.body.downcast_ref().map(|body| (id, body))
+impl<T, A, V: View<T, A> + 'static> DynView<T, A> for V
+where
+    V::State: 'static,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
-    fn downcast_mut<T: 'static>(&mut self) -> Option<(Id, &mut T)> {
-        let id = self.id;
-        self.body.downcast_mut().map(|body| (id, body))
+    fn dyn_reconcile(
+        &self,
+        prev: Option<&dyn DynView<T, A>>,
+        id: &mut Option<Id>,
+        state: &mut Option<Box<dyn Any>>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        if let Some(prev) = prev {
+            if let Some(prev) = prev.as_any().downcast_ref() {
+                if let Some(state) = state {
+                    if let Some(state) = state.downcast_mut() {
+                        self.reconcile(Some(prev), id, state, child_mut);
+                        return;
+                    }
+                }
+            }
+            child_mut.push(MutationEl::Delete(1));
+            *id = None;
+        }
+        let mut child_state = None;
+        self.reconcile(None, id, &mut child_state, child_mut);
+        *state = Some(Box::new(child_state));
+    }
+
+    fn dyn_event(
+        &self,
+        state: &dyn Any,
+        id_path: &[Id],
+        event_body: Box<dyn Any>,
+        app_state: &mut T,
+    ) -> Option<A> {
+        if let Some(state) = state.downcast_ref::<Option<V::State>>() {
+            self.event(state.as_ref().unwrap(), id_path, event_body, app_state)
+        } else {
+            println!("downcast error in event");
+            None
+        }
     }
 }
 
+/// Your basic button.
+///
+/// This is currently very spare, but suffices to show setting of properties
+/// (the text) and delivering events (button clicks).
 pub struct Button<T, A> {
     text: String,
     // Callback might become a generic type parameter too.
@@ -73,19 +189,38 @@ pub struct Button<T, A> {
 
 pub struct ButtonAction;
 
-struct ButtonOld {
-    text: String,
-}
-
+/// A column of widgets.
+///
+/// This is currently implemented using dynamically typed (type-erased)
+/// children, which is not where we're headed. For most uses, we will have a
+/// `ViewTuple` trait, implemented by (V0, V1) etc, so that everything is
+/// statically typed. The dynamic size case will be handled by a column of
+/// widgets all of the same type.
+///
+/// However, the implementation does shed light on how to handle the
+/// dynamic case.
 pub struct Column<T, A> {
-    children: Vec<Box<dyn View<T, A>>>,
+    children: Vec<Box<dyn DynView<T, A>>>,
 }
 
 #[derive(Default)]
-struct ColumnOld {
-    children: Vec<Option<OldNode>>,
+pub struct ColumnState {
+    children: Vec<(Option<Id>, Option<Box<dyn Any>>)>,
 }
 
+/// An adapter between different app state and action types.
+///
+/// This is very similar to, and a generalization of, the [Html map] method
+/// in Elm. It also functions similarly to a lens (as in Druid).
+///
+/// The child can have a different app state type and action type, and the
+/// supplied callback can apply arbitrary logic.
+///
+/// Unlike Elm, the callback has mutable access to the (parent) app state, so
+/// it do things such as merge in changes made (by event processing of the
+/// child view) to the child app state, set a dirty flag, etc.
+///
+/// [Html map]: https://package.elm-lang.org/packages/elm/html/latest/Html#map
 // TODO: better name. "Map" is borrowed from elm.
 pub struct Map<U, B, F, C> {
     f: F,
@@ -95,18 +230,29 @@ pub struct Map<U, B, F, C> {
     phantom_b: PhantomData<B>,
 }
 
+/// A memoize node.
+///
+/// This node is given some data (which implements `Clone` and `PartialEq`),
+/// and skips re-rendering the child when that data has not changed. It always
+/// renders on first view.
+///
+/// It is more or less identical to [Html lazy] in Elm. We also anticipate
+/// similar nodes that will check pointer equality of `Rc`/`Arc`, and also a
+/// `bool` dirty parameter, which is explicitly set by the app.
+///
+/// [Html lazy]: https://package.elm-lang.org/packages/elm/html/latest/Html-Lazy
 pub struct Memoize<D, F> {
     data: D,
     child_cb: F,
 }
 
-struct MemoizeOld<D> {
-    data: D,
-    child: Option<OldNode>,
+pub struct MemoizeState<T, A, V: View<T, A>> {
+    view: V,
+    view_state: Option<V::State>,
 }
 
 impl<U, B, F, C: View<U, B>> Map<U, B, F, C> {
-    fn new(f: F, child: C) -> Self {
+    pub fn new(f: F, child: C) -> Self {
         Map {
             f,
             child,
@@ -119,65 +265,78 @@ impl<U, B, F, C: View<U, B>> Map<U, B, F, C> {
 impl<T, A, U, B, F: Fn(&mut T, &dyn FnOnce(&mut U) -> Option<B>) -> A, C: View<U, B>> View<T, A>
     for Map<U, B, F, C>
 {
-    fn reconcile(&self, old_node: &mut Option<OldNode>, child_mut: &mut Vec<MutationEl>) {
-        self.child.reconcile(old_node, child_mut);
+    type State = C::State;
+
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<C::State>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        self.child
+            .reconcile(prev.map(|m| &m.child), id, state, child_mut);
     }
 
     fn event(
         &self,
-        old_node: &OldNode,
+        state: &C::State,
         id_path: &[Id],
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
         let a = (self.f)(app_state, &|u| {
-            self.child.event(old_node, id_path, event_body, u)
+            self.child.event(state, id_path, event_body, u)
         });
         Some(a)
     }
 }
 
-impl<T, V: View<T, ()>, F: FnMut(&mut T) -> V> RustyApp<T, V, F> {
+impl<T, F: FnMut(&mut T) -> Column<T, ()>> RustyApp<T, F> {
     pub fn new(data: T, app: F) -> Self {
         // This is bogus, and possibly should be changed to be the
         // actual id of the root element, or there should be refactoring
         // so it's not needed.
         let dummy_id = Id::next();
-        let old_tree = Some(OldNode {
-            id: dummy_id,
-            body: Box::new(ColumnOld::default()),
-        });
         RustyApp {
             data,
             app,
-            old_tree,
-            view: None,
+            view: Column::new(),
+            state: Some(ColumnState::default()),
             structure: TreeStructure::new(),
-            root_id: dummy_id,
+            root_id: Some(dummy_id),
         }
     }
 
     pub fn run(&mut self, actions: Vec<Action>) -> Mutation {
-        if let (Some(view), Some(old_tree)) = (&self.view, &self.old_tree) {
-            let mut id_path = Vec::new();
-            for action in actions {
-                // get id path from structure
-                id_path.clear();
-                let mut id = Some(action.id);
-                while let Some(this_id) = id {
-                    id_path.push(this_id);
-                    id = self.structure.parent(this_id).flatten();
-                }
-                // This is a hack; rethink
-                id_path.push(self.root_id);
-                id_path.reverse();
-                view.event(old_tree, &id_path, action.action, &mut self.data);
+        let mut id_path = Vec::new();
+        for action in actions {
+            // get id path from structure
+            id_path.clear();
+            let mut id = Some(action.id);
+            while let Some(this_id) = id {
+                id_path.push(this_id);
+                id = self.structure.parent(this_id).flatten();
             }
+            // This is a hack; rethink
+            id_path.push(self.root_id.unwrap());
+            id_path.reverse();
+            self.view.event(
+                self.state.as_ref().unwrap(),
+                &id_path,
+                action.action,
+                &mut self.data,
+            );
         }
         let view = (self.app)(&mut self.data);
         let mut child_mut = Vec::new();
-        view.reconcile(&mut self.old_tree, &mut child_mut);
-        self.view = Some(view);
+        view.reconcile(
+            Some(&self.view),
+            &mut self.root_id,
+            &mut self.state,
+            &mut child_mut,
+        );
+        self.view = view;
         let mut_el = child_mut.pop().expect("empty root mutation");
         if let MutationEl::Update(mutation) = mut_el {
             self.structure.apply(&mutation);
@@ -201,9 +360,17 @@ impl<T, A> Button<T, A> {
 }
 
 impl<T, A> View<T, A> for Button<T, A> {
-    fn reconcile(&self, old_node: &mut Option<OldNode>, child_mut: &mut Vec<MutationEl>) {
-        if let Some((_id, ButtonOld { text })) = old_node.as_mut().and_then(OldNode::downcast_mut) {
-            if self.text == *text {
+    type State = ();
+
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<()>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        if let Some(prev) = prev {
+            if self.text == prev.text {
                 child_mut.push(MutationEl::Skip(1));
             } else {
                 let cmds = ButtonCmd::SetText(self.text.clone());
@@ -212,13 +379,9 @@ impl<T, A> View<T, A> for Button<T, A> {
                     child: Vec::new(),
                 };
                 child_mut.push(MutationEl::Update(mutation));
-                *text = self.text.clone();
             }
         } else {
-            if old_node.is_some() {
-                child_mut.push(MutationEl::Delete(1));
-            }
-            let id = Id::next();
+            let new_id = Id::next();
             let button = element::Button::default();
             let dyn_button: Box<dyn Element> = Box::new(button);
             // Note: we could create the button with the string rather than
@@ -229,25 +392,20 @@ impl<T, A> View<T, A> for Button<T, A> {
                 cmds: Some(Box::new(cmds)),
                 child: Vec::new(),
             };
-            *old_node = Some(OldNode {
-                id,
-                body: Box::new(ButtonOld {
-                    text: self.text.clone(),
-                }),
-            });
-            child_mut.push(MutationEl::Insert(id, Box::new(dyn_button), mutation));
+            *id = Some(new_id);
+            *state = Some(());
+            child_mut.push(MutationEl::Insert(new_id, Box::new(dyn_button), mutation));
         }
     }
 
     fn event(
         &self,
-        old_node: &OldNode,
-        id_path: &[Id],
+        _state: &(),
+        _id_path: &[Id],
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
-        if let Some(button_event) = event_body.downcast_ref::<()>() {
-            assert_eq!(old_node.id, id_path[0]);
+        if let Some(_button_event) = event_body.downcast_ref::<()>() {
             Some((self.callback)(ButtonAction, app_state))
         } else {
             None
@@ -256,21 +414,25 @@ impl<T, A> View<T, A> for Button<T, A> {
 }
 
 fn reconcile_vec<T, A>(
-    old_vec: &mut Vec<Option<OldNode>>,
-    view_vec: &[Box<dyn View<T, A>>],
+    prev: &[Box<dyn DynView<T, A>>],
+    children: &[Box<dyn DynView<T, A>>],
+    state: &mut Vec<(Option<Id>, Option<Box<dyn Any>>)>,
 ) -> Mutation {
     let mut child = Vec::new();
-    //let n = view_vec.len();
-    for (i, view) in view_vec.iter().enumerate() {
-        if let Some(old_node) = old_vec.get_mut(i) {
-            view.reconcile(old_node, &mut child);
+    for (i, view) in children.iter().enumerate() {
+        if let (Some(prev_child), Some((id, state))) = (prev.get(i), state.get_mut(i)) {
+            view.dyn_reconcile(Some(prev_child.deref()), id, state, &mut child);
         } else {
-            let mut old_node = None;
-            view.reconcile(&mut old_node, &mut child);
-            old_vec.push(old_node);
+            let mut id = None;
+            let mut child_state = None;
+            view.dyn_reconcile(None, &mut id, &mut child_state, &mut child);
+            state.push((id, child_state));
         }
     }
-    // TODO: delete n..
+    if prev.len() > children.len() {
+        state.truncate(children.len());
+        child.push(MutationEl::Delete(prev.len() - children.len()));
+    }
     Mutation { cmds: None, child }
 }
 
@@ -281,42 +443,62 @@ impl<T, A> Column<T, A> {
         }
     }
 
-    pub fn add_child(&mut self, child: impl View<T, A> + 'static) {
+    pub fn add_child<V: View<T, A> + 'static>(&mut self, child: V)
+    where
+        V::State: 'static,
+    {
         self.children.push(Box::new(child));
     }
 }
 
 impl<T, A> View<T, A> for Column<T, A> {
-    fn reconcile(&self, old_node: &mut Option<OldNode>, child_mut: &mut Vec<MutationEl>) {
-        if let Some((_id, ColumnOld { children })) =
-            old_node.as_mut().and_then(OldNode::downcast_mut)
-        {
-            let mutation = reconcile_vec(children, &self.children);
+    type State = ColumnState;
+
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<ColumnState>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        if let Some(prev) = prev {
+            let mutation = reconcile_vec(
+                &prev.children,
+                &self.children,
+                &mut state.as_mut().unwrap().children,
+            );
             child_mut.push(MutationEl::Update(mutation));
         } else {
-            // TODO: handle insert case
+            let new_id = Id::next();
+            let column = element::Column::default();
+            let dyn_column: Box<dyn Element> = Box::new(column);
+            let mut children = Vec::new();
+            let mutation = reconcile_vec(&[], &self.children, &mut children);
+            *id = Some(new_id);
+            *state = Some(ColumnState { children });
+            child_mut.push(MutationEl::Insert(new_id, Box::new(dyn_column), mutation));
         }
     }
 
     fn event(
         &self,
-        old_node: &OldNode,
+        state: &ColumnState,
         id_path: &[Id],
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
-        if let Some((_id, ColumnOld { children })) = old_node.downcast() {
-            // check id_path[0] == old_node.id?
-            let id = id_path[1];
-            for (i, node) in children.iter().enumerate() {
-                if let Some(node) = node {
-                    if node.id == id {
-                        return self.children[i].event(node, &id_path[1..], event_body, app_state);
-                    }
-                }
+        let id = id_path[1];
+        for (i, (child_id, child_state)) in state.children.iter().enumerate() {
+            if *child_id == Some(id) {
+                return self.children[i].dyn_event(
+                    child_state.as_ref().unwrap().deref(),
+                    &id_path[1..],
+                    event_body,
+                    app_state,
+                );
             }
-            println!("event id not found in children");
         }
+        println!("event id not found in children");
         None
     }
 }
@@ -330,58 +512,44 @@ impl<D, V, F: Fn(&D) -> V> Memoize<D, F> {
 impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T, A>
     for Memoize<D, F>
 {
-    fn reconcile(&self, old_node: &mut Option<OldNode>, child_mut: &mut Vec<MutationEl>) {
-        if let Some((_id, old)) = old_node
-            .as_mut()
-            .and_then(OldNode::downcast_mut::<MemoizeOld<D>>)
-        {
-            if old.data == self.data {
+    type State = MemoizeState<T, A, V>;
+
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<Self::State>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        if let Some(prev) = prev {
+            if prev.data == self.data {
                 child_mut.push(MutationEl::Skip(1));
             } else {
-                old.data = self.data.clone();
                 let view = (self.child_cb)(&self.data);
-                view.reconcile(&mut old.child, child_mut);
+                let state = state.as_mut().unwrap();
+                view.reconcile(Some(&state.view), id, &mut state.view_state, child_mut);
             }
         } else {
-            if old_node.is_some() {
-                child_mut.push(MutationEl::Delete(1));
-            }
-            let mut memo_old = MemoizeOld {
-                data: self.data.clone(),
-                child: None,
-            };
+            let mut view_state = None;
             let view = (self.child_cb)(&self.data);
-            view.reconcile(&mut memo_old.child, child_mut);
-            let id = if let Some(child_old) = &memo_old.child {
-                child_old.id
-            } else {
-                panic!("memoize child didn't create an id");
-            };
-            *old_node = Some(OldNode {
-                id,
-                body: Box::new(memo_old),
-            });
+            view.reconcile(None, id, &mut view_state, child_mut);
+            *state = Some(MemoizeState { view, view_state });
         }
     }
 
     fn event(
         &self,
-        old_node: &OldNode,
+        state: &Self::State,
         id_path: &[Id],
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
         let view = (self.child_cb)(&self.data);
-        if let Some((_id, child)) = old_node.downcast::<MemoizeOld<D>>() {
-            view.event(
-                child.child.as_ref().unwrap(),
-                id_path,
-                event_body,
-                app_state,
-            )
-        } else {
-            println!("memoize downcast failed");
-            None
-        }
+        view.event(
+            state.view_state.as_ref().unwrap(),
+            id_path,
+            event_body,
+            app_state,
+        )
     }
 }
