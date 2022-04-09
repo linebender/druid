@@ -237,6 +237,8 @@ fn rusty_counter(data: &mut u32) -> rusty::Column<u32, ()> {
     col.add_child(rusty::Memoize::new(*data, |data| {
         rusty::Button::new(format!("count: {}", data), |_action, data| *data += 1)
     }));
+    let button: Box<dyn rusty::DynView<_, _>> = Box::new(rusty::Button::new("reset", |_action, data| *data = 0 ));
+    col.add_child(button);
     col
 }
 

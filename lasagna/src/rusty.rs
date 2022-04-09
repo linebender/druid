@@ -109,7 +109,7 @@ pub trait View<T, A> {
 ///
 /// Consider renaming to AnyView. Similar patterns exist in other crates (for
 /// example, ErasedVirtualDom in Panoramix). I'm searching for good docs.
-trait DynView<T, A> {
+pub trait DynView<T, A> {
     fn as_any(&self) -> &dyn Any;
 
     fn dyn_reconcile(
@@ -174,6 +174,30 @@ where
             println!("downcast error in event");
             None
         }
+    }
+}
+
+impl<T: 'static, A: 'static> View<T, A> for Box<dyn DynView<T, A>> {
+    type State = Box<dyn Any>;
+
+    fn reconcile(
+        &self,
+        prev: Option<&Self>,
+        id: &mut Option<Id>,
+        state: &mut Option<Self::State>,
+        child_mut: &mut Vec<MutationEl>,
+    ) {
+        self.deref().dyn_reconcile(prev.map(|d| d.deref()), id, state, child_mut);
+    }
+
+    fn event(
+        &self,
+        state: &Self::State,
+        id_path: &[Id],
+        event_body: Box<dyn Any>,
+        app_state: &mut T,
+    ) -> Option<A> {
+        self.deref().dyn_event(state.deref(), id_path, event_body, app_state)
     }
 }
 
@@ -421,11 +445,11 @@ fn reconcile_vec<T, A>(
     let mut child = Vec::new();
     for (i, view) in children.iter().enumerate() {
         if let (Some(prev_child), Some((id, state))) = (prev.get(i), state.get_mut(i)) {
-            view.dyn_reconcile(Some(prev_child.deref()), id, state, &mut child);
+            view.deref().dyn_reconcile(Some(prev_child.deref()), id, state, &mut child);
         } else {
             let mut id = None;
             let mut child_state = None;
-            view.dyn_reconcile(None, &mut id, &mut child_state, &mut child);
+            view.deref().dyn_reconcile(None, &mut id, &mut child_state, &mut child);
             state.push((id, child_state));
         }
     }
@@ -490,7 +514,7 @@ impl<T, A> View<T, A> for Column<T, A> {
         let id = id_path[1];
         for (i, (child_id, child_state)) in state.children.iter().enumerate() {
             if *child_id == Some(id) {
-                return self.children[i].dyn_event(
+                return self.children[i].deref().dyn_event(
                     child_state.as_ref().unwrap().deref(),
                     &id_path[1..],
                     event_body,
@@ -525,9 +549,10 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
             if prev.data == self.data {
                 child_mut.push(MutationEl::Skip(1));
             } else {
-                let view = (self.child_cb)(&self.data);
                 let state = state.as_mut().unwrap();
+                let view = (self.child_cb)(&self.data);
                 view.reconcile(Some(&state.view), id, &mut state.view_state, child_mut);
+                state.view = view;
             }
         } else {
             let mut view_state = None;
