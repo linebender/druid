@@ -544,8 +544,7 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
-        let view = (self.child_cb)(&self.data);
-        view.event(
+        state.view.event(
             state.view_state.as_ref().unwrap(),
             id_path,
             event_body,
