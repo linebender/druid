@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::element::{self, Action, ButtonCmd, Element};
-use crate::tree::{Id, Mutation, MutationEl};
+use crate::tree::{ChildMutation, Id, Mutation, MutationEl};
 
 pub struct ElmApp<A: AppLogic> {
     app_logic: A,
@@ -49,7 +49,7 @@ pub trait Vdom<M, R = M> {
         mapper: &Arc<dyn Fn(M) -> R>,
         action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
         old_node: &mut Option<OldNode>,
-        child_mut: &mut Vec<MutationEl>,
+        child_mut: &mut ChildMutation,
     );
 }
 
@@ -115,7 +115,7 @@ impl<A: AppLogic> ElmApp<A> {
             }
         }
         let vdom = self.app_logic.view();
-        let mut child_mut = Vec::new();
+        let mut child_mut = ChildMutation::default();
         let mapper: Arc<dyn Fn(A::Msg) -> A::Msg> = Arc::new(|a| a);
         vdom.reconcile(
             &mapper,
@@ -147,7 +147,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for Button<M> {
         mapper: &Arc<dyn Fn(M) -> R>,
         action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
         old_node: &mut Option<OldNode>,
-        child_mut: &mut Vec<MutationEl>,
+        child_mut: &mut ChildMutation,
     ) {
         if let Some((id, ButtonOld { text })) = old_node.as_mut().and_then(OldNode::downcast) {
             if self.text == *text {
@@ -156,7 +156,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for Button<M> {
                 let cmds = ButtonCmd::SetText(self.text.clone());
                 let mutation = Mutation {
                     cmds: Some(Box::new(cmds)),
-                    child: Vec::new(),
+                    child: ChildMutation::default(),
                 };
                 child_mut.push(MutationEl::Update(mutation));
                 *text = self.text;
@@ -179,7 +179,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for Button<M> {
             let cmds = ButtonCmd::SetText(self.text.clone());
             let mutation = Mutation {
                 cmds: Some(Box::new(cmds)),
-                child: Vec::new(),
+                child: ChildMutation::default(),
             };
             *old_node = Some(OldNode {
                 id,
@@ -197,7 +197,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for Button<M> {
 fn reconcile_nil<R>(
     action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
     old_node: &mut Option<OldNode>,
-    child_mut: &mut Vec<MutationEl>,
+    child_mut: &mut ChildMutation,
 ) {
     if let Some(old) = old_node {
         child_mut.push(MutationEl::Delete(1));
@@ -216,7 +216,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for () {
         _mapper: &Arc<dyn Fn(M) -> R>,
         action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
         old_node: &mut Option<OldNode>,
-        child_mut: &mut Vec<MutationEl>,
+        child_mut: &mut ChildMutation,
     ) {
         reconcile_nil(action_map, old_node, child_mut);
     }
@@ -228,7 +228,7 @@ fn reconcile_vec<M: 'static, R: 'static>(
     mapper: &Arc<dyn Fn(M) -> R>,
     action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
 ) -> Mutation {
-    let mut child = Vec::new();
+    let mut child = ChildMutation::default();
     let n = vdom_vec.len();
     for (i, node) in vdom_vec.into_iter().enumerate() {
         if let Some(old_node) = old_vec.get_mut(i) {
@@ -263,7 +263,7 @@ impl<M: 'static, R: 'static> Vdom<M, R> for Column<M, R> {
         mapper: &Arc<dyn Fn(M) -> R>,
         action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
         old_node: &mut Option<OldNode>,
-        child_mut: &mut Vec<MutationEl>,
+        child_mut: &mut ChildMutation,
     ) {
         if let Some((_id, ColumnOld { children })) = old_node.as_mut().and_then(OldNode::downcast) {
             let mutation = reconcile_vec(children, self.children, mapper, action_map);
@@ -296,7 +296,7 @@ where
         mapper: &Arc<dyn Fn(M) -> R>,
         action_map: &mut HashMap<Id, Box<dyn FnMut(Box<dyn Any>) -> R>>,
         old_node: &mut Option<OldNode>,
-        child_mut: &mut Vec<MutationEl>,
+        child_mut: &mut ChildMutation,
     ) {
         let f = self.1;
         let mapper = mapper.clone();

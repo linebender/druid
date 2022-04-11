@@ -17,7 +17,7 @@ use std::any::Any;
 use druid_shell::kurbo::{Point, Size, Vec2};
 use druid_shell::piet::{Color, Piet, RenderContext, Text, TextLayoutBuilder};
 
-use crate::tree::{Id, Mutation, MutationEl};
+use crate::tree::{ChildMutation, Id, Mutation, MutationEl};
 
 /// The trait for (widget-like) render elements.
 ///
@@ -111,23 +111,25 @@ pub struct Column {
 impl Element for Column {
     fn mutate(&mut self, mutation: Mutation) {
         let mut i = 0;
-        for op in mutation.child {
-            match op {
-                MutationEl::Skip(n) => i += n,
-                MutationEl::Insert(id, child, child_mut) => {
-                    if let Ok(el) = child.downcast() {
-                        let mut pod = Pod::new(id, *el);
-                        pod.mutate(child_mut);
-                        self.children.insert(i, pod);
+        if let ChildMutation::Children(children) = mutation.child {
+            for op in children {
+                match op {
+                    MutationEl::Skip(n) => i += n,
+                    MutationEl::Insert(id, child, child_mut) => {
+                        if let Ok(el) = child.downcast() {
+                            let mut pod = Pod::new(id, *el);
+                            pod.mutate(child_mut);
+                            self.children.insert(i, pod);
+                            i += 1;
+                        }
+                    }
+                    MutationEl::Update(child_mut) => {
+                        self.children[i].mutate(child_mut);
                         i += 1;
                     }
-                }
-                MutationEl::Update(child_mut) => {
-                    self.children[i].mutate(child_mut);
-                    i += 1;
-                }
-                MutationEl::Delete(n) => {
-                    self.children.drain(i..i + n);
+                    MutationEl::Delete(n) => {
+                        self.children.drain(i..i + n);
+                    }
                 }
             }
         }

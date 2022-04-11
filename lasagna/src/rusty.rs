@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 
 use crate::element::{self, Action, ButtonCmd, Element};
-use crate::tree::{Id, Mutation, MutationEl, TreeStructure};
+use crate::tree::{ChildMutation, Id, Mutation, MutationEl, MutationFragment, TreeStructure};
 
 pub struct RustyApp<T, F: FnMut(&mut T) -> Column<T, ()>> {
     data: T,
@@ -75,8 +75,7 @@ pub trait View<T, A> {
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<Self::State>,
-        child_mut: &mut Vec<MutationEl>,
-    );
+    ) -> MutationFragment;
 
     /// Dispatch an event.
     ///
@@ -117,8 +116,7 @@ pub trait DynView<T, A> {
         prev: Option<&dyn DynView<T, A>>,
         id: &mut Option<Id>,
         state: &mut Option<Box<dyn Any>>,
-        child_mut: &mut Vec<MutationEl>,
-    );
+    ) -> MutationFragment;
 
     fn dyn_event(
         &self,
@@ -142,23 +140,24 @@ where
         prev: Option<&dyn DynView<T, A>>,
         id: &mut Option<Id>,
         state: &mut Option<Box<dyn Any>>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
+    ) -> MutationFragment {
+        let mut delete = false;
         if let Some(prev) = prev {
             if let Some(prev) = prev.as_any().downcast_ref() {
                 if let Some(state) = state {
                     if let Some(state) = state.downcast_mut() {
-                        self.reconcile(Some(prev), id, state, child_mut);
-                        return;
+                        return self.reconcile(Some(prev), id, state);
                     }
                 }
             }
-            child_mut.push(MutationEl::Delete(1));
+            delete = true;
             *id = None;
         }
         let mut child_state = None;
-        self.reconcile(None, id, &mut child_state, child_mut);
+        let mut fragment = self.reconcile(None, id, &mut child_state);
+        fragment.delete = delete;
         *state = Some(Box::new(child_state));
+        fragment
     }
 
     fn dyn_event(
@@ -185,9 +184,9 @@ impl<T: 'static, A: 'static> View<T, A> for Box<dyn DynView<T, A>> {
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<Self::State>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
-        self.deref().dyn_reconcile(prev.map(|d| d.deref()), id, state, child_mut);
+    ) -> MutationFragment {
+        self.deref()
+            .dyn_reconcile(prev.map(|d| d.deref()), id, state)
     }
 
     fn event(
@@ -197,7 +196,8 @@ impl<T: 'static, A: 'static> View<T, A> for Box<dyn DynView<T, A>> {
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
-        self.deref().dyn_event(state.deref(), id_path, event_body, app_state)
+        self.deref()
+            .dyn_event(state.deref(), id_path, event_body, app_state)
     }
 }
 
@@ -296,10 +296,8 @@ impl<T, A, U, B, F: Fn(&mut T, &dyn FnOnce(&mut U) -> Option<B>) -> A, C: View<U
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<C::State>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
-        self.child
-            .reconcile(prev.map(|m| &m.child), id, state, child_mut);
+    ) -> MutationFragment {
+        self.child.reconcile(prev.map(|m| &m.child), id, state)
     }
 
     fn event(
@@ -353,13 +351,9 @@ impl<T, F: FnMut(&mut T) -> Column<T, ()>> RustyApp<T, F> {
             );
         }
         let view = (self.app)(&mut self.data);
-        let mut child_mut = Vec::new();
-        view.reconcile(
-            Some(&self.view),
-            &mut self.root_id,
-            &mut self.state,
-            &mut child_mut,
-        );
+        let mut child_mut = ChildMutation::default();
+        let frag = view.reconcile(Some(&self.view), &mut self.root_id, &mut self.state);
+        child_mut.push(frag);
         self.view = view;
         let mut_el = child_mut.pop().expect("empty root mutation");
         if let MutationEl::Update(mutation) = mut_el {
@@ -391,18 +385,17 @@ impl<T, A> View<T, A> for Button<T, A> {
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<()>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
+    ) -> MutationFragment {
         if let Some(prev) = prev {
             if self.text == prev.text {
-                child_mut.push(MutationEl::Skip(1));
+                MutationEl::Skip(1).into()
             } else {
                 let cmds = ButtonCmd::SetText(self.text.clone());
                 let mutation = Mutation {
                     cmds: Some(Box::new(cmds)),
-                    child: Vec::new(),
+                    child: ChildMutation::default(),
                 };
-                child_mut.push(MutationEl::Update(mutation));
+                MutationEl::Update(mutation).into()
             }
         } else {
             let new_id = Id::next();
@@ -414,11 +407,11 @@ impl<T, A> View<T, A> for Button<T, A> {
             let cmds = ButtonCmd::SetText(self.text.clone());
             let mutation = Mutation {
                 cmds: Some(Box::new(cmds)),
-                child: Vec::new(),
+                child: ChildMutation::default(),
             };
             *id = Some(new_id);
             *state = Some(());
-            child_mut.push(MutationEl::Insert(new_id, Box::new(dyn_button), mutation));
+            MutationEl::Insert(new_id, Box::new(dyn_button), mutation).into()
         }
     }
 
@@ -441,15 +434,18 @@ fn reconcile_vec<T, A>(
     prev: &[Box<dyn DynView<T, A>>],
     children: &[Box<dyn DynView<T, A>>],
     state: &mut Vec<(Option<Id>, Option<Box<dyn Any>>)>,
-) -> Mutation {
-    let mut child = Vec::new();
+) -> ChildMutation {
+    let mut child = ChildMutation::default();
     for (i, view) in children.iter().enumerate() {
         if let (Some(prev_child), Some((id, state))) = (prev.get(i), state.get_mut(i)) {
-            view.deref().dyn_reconcile(Some(prev_child.deref()), id, state, &mut child);
+            child.push(
+                view.deref()
+                    .dyn_reconcile(Some(prev_child.deref()), id, state),
+            );
         } else {
             let mut id = None;
             let mut child_state = None;
-            view.deref().dyn_reconcile(None, &mut id, &mut child_state, &mut child);
+            child.push(view.deref().dyn_reconcile(None, &mut id, &mut child_state));
             state.push((id, child_state));
         }
     }
@@ -457,7 +453,7 @@ fn reconcile_vec<T, A>(
         state.truncate(children.len());
         child.push(MutationEl::Delete(prev.len() - children.len()));
     }
-    Mutation { cmds: None, child }
+    child
 }
 
 impl<T, A> Column<T, A> {
@@ -483,24 +479,24 @@ impl<T, A> View<T, A> for Column<T, A> {
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<ColumnState>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
+    ) -> MutationFragment {
         if let Some(prev) = prev {
-            let mutation = reconcile_vec(
+            let child = reconcile_vec(
                 &prev.children,
                 &self.children,
                 &mut state.as_mut().unwrap().children,
             );
-            child_mut.push(MutationEl::Update(mutation));
+            child.into_fragment()
         } else {
             let new_id = Id::next();
             let column = element::Column::default();
             let dyn_column: Box<dyn Element> = Box::new(column);
             let mut children = Vec::new();
-            let mutation = reconcile_vec(&[], &self.children, &mut children);
+            let child = reconcile_vec(&[], &self.children, &mut children);
             *id = Some(new_id);
             *state = Some(ColumnState { children });
-            child_mut.push(MutationEl::Insert(new_id, Box::new(dyn_column), mutation));
+            let mutation = Mutation { cmds: None, child };
+            MutationEl::Insert(new_id, Box::new(dyn_column), mutation).into()
         }
     }
 
@@ -543,22 +539,23 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         prev: Option<&Self>,
         id: &mut Option<Id>,
         state: &mut Option<Self::State>,
-        child_mut: &mut Vec<MutationEl>,
-    ) {
+    ) -> MutationFragment {
         if let Some(prev) = prev {
             if prev.data == self.data {
-                child_mut.push(MutationEl::Skip(1));
+                MutationEl::Skip(1).into()
             } else {
                 let state = state.as_mut().unwrap();
                 let view = (self.child_cb)(&self.data);
-                view.reconcile(Some(&state.view), id, &mut state.view_state, child_mut);
+                let frag = view.reconcile(Some(&state.view), id, &mut state.view_state);
                 state.view = view;
+                frag
             }
         } else {
             let mut view_state = None;
             let view = (self.child_cb)(&self.data);
-            view.reconcile(None, id, &mut view_state, child_mut);
+            let frag = view.reconcile(None, id, &mut view_state);
             *state = Some(MemoizeState { view, view_state });
+            frag
         }
     }
 

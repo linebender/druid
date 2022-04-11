@@ -17,7 +17,7 @@ use std::{any::Any, collections::HashMap, num::NonZeroU64};
 #[derive(Default)]
 pub struct Mutation {
     pub cmds: Option<Box<dyn Any>>,
-    pub child: Vec<MutationEl>,
+    pub child: ChildMutation,
 }
 
 pub enum MutationEl {
@@ -30,9 +30,102 @@ pub enum MutationEl {
     Delete(usize),
 }
 
+/// A fragment of a mutation.
+///
+/// This is intended to be the return type of a reconcile method, and does
+/// not allocate when the mutation consists entirely of skips.
+// Consider a shorter name?
+pub struct MutationFragment {
+    pub delete: bool,
+    el: MutationEl,
+}
+
+pub enum ChildMutation {
+    Skip(usize),
+    Children(Vec<MutationEl>),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Hash)]
 /// A stable identifier for an element.
 pub struct Id(NonZeroU64);
+
+impl Default for ChildMutation {
+    fn default() -> Self {
+        ChildMutation::Skip(0)
+    }
+}
+
+impl From<Vec<MutationEl>> for ChildMutation {
+    fn from(children: Vec<MutationEl>) -> Self {
+        ChildMutation::Children(children)
+    }
+}
+
+impl From<MutationEl> for MutationFragment {
+    fn from(el: MutationEl) -> Self {
+        MutationFragment { delete: false, el }
+    }
+}
+
+impl ChildMutation {
+    pub fn push(&mut self, frag: impl Into<MutationFragment>) {
+        let frag = frag.into();
+        if let ChildMutation::Skip(n) = self {
+            if let MutationFragment {
+                delete: false,
+                el: MutationEl::Skip(i),
+            } = &frag
+            {
+                *n += i;
+                return;
+            } else if *n == 0 {
+                *self = ChildMutation::Children(vec![]);
+            } else {
+                *self = ChildMutation::Children(vec![MutationEl::Skip(*n)]);
+            }
+        }
+        if let ChildMutation::Children(children) = self {
+            if frag.delete {
+                if let Some(MutationEl::Delete(n)) = children.last_mut() {
+                    *n += 1;
+                } else {
+                    children.push(MutationEl::Delete(1));
+                }
+            }
+            match (children.last_mut(), &frag.el) {
+                (_, MutationEl::Skip(0)) => (),
+                (Some(MutationEl::Delete(n)), MutationEl::Delete(i)) => *n += i,
+                (Some(MutationEl::Skip(n)), MutationEl::Skip(i)) => *n += i,
+                _ => children.push(frag.el),
+            }
+        }
+    }
+
+    pub fn pop(&mut self) -> Option<MutationEl> {
+        match self {
+            ChildMutation::Skip(_) => None,
+            ChildMutation::Children(children) => children.pop(),
+        }
+    }
+
+    // Create a fragment corresponding to the container that owns the children.
+    pub fn into_fragment(self) -> MutationFragment {
+        if matches!(self, ChildMutation::Skip(_)) {
+            MutationFragment {
+                delete: false,
+                el: MutationEl::Skip(1),
+            }
+        } else {
+            MutationFragment {
+                delete: false,
+                el: MutationEl::Update(Mutation {
+                    cmds: None,
+                    child: self,
+                }),
+            }
+        }
+    }
+}
 
 /// The pure structure of a tree.
 #[derive(Default)]
@@ -76,27 +169,29 @@ impl TreeStructure {
 
     fn apply_rec(&mut self, id: Option<Id>, mutation: &Mutation) {
         let mut i = 0;
-        for el in &mutation.child {
-            match el {
-                MutationEl::Skip(n) => i += n,
-                MutationEl::Insert(child_id, _, child_mut) => {
-                    self.children.get_mut(&id).unwrap().insert(i, *child_id);
-                    self.parent.insert(*child_id, id);
-                    self.children.insert(Some(*child_id), Vec::new());
-                    self.apply_rec(Some(*child_id), child_mut);
-                    i += 1;
-                }
-                MutationEl::Update(child_mut) => {
-                    let child_id = self.children.get(&id).unwrap()[i];
-                    self.apply_rec(Some(child_id), child_mut);
-                    i += 1;
-                }
-                MutationEl::Delete(n) => {
-                    for j in i..i + n {
-                        let child_id = self.children.get(&id).unwrap()[j];
-                        self.delete(child_id);
+        if let ChildMutation::Children(children) = &mutation.child {
+            for el in children {
+                match el {
+                    MutationEl::Skip(n) => i += n,
+                    MutationEl::Insert(child_id, _, child_mut) => {
+                        self.children.get_mut(&id).unwrap().insert(i, *child_id);
+                        self.parent.insert(*child_id, id);
+                        self.children.insert(Some(*child_id), Vec::new());
+                        self.apply_rec(Some(*child_id), child_mut);
+                        i += 1;
                     }
-                    self.children.get_mut(&id).unwrap().drain(i..i + n);
+                    MutationEl::Update(child_mut) => {
+                        let child_id = self.children.get(&id).unwrap()[i];
+                        self.apply_rec(Some(child_id), child_mut);
+                        i += 1;
+                    }
+                    MutationEl::Delete(n) => {
+                        for j in i..i + n {
+                            let child_id = self.children.get(&id).unwrap()[j];
+                            self.delete(child_id);
+                        }
+                        self.children.get_mut(&id).unwrap().drain(i..i + n);
+                    }
                 }
             }
         }

@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 
 use crate::element::{Action, Button, ButtonCmd, Column, Element};
-use crate::tree::{Id, Mutation, MutationEl};
+use crate::tree::{ChildMutation, Id, Mutation, MutationEl};
 
 pub enum VdomNode<T> {
     /// A placeholder to maintain object identity when using
@@ -79,7 +79,7 @@ impl<T> Reconciler<T> {
         vdom_vec: Vec<VdomNode<T>>,
         cbks: &mut Cbks<T>,
     ) -> Mutation {
-        let mut child = Vec::new();
+        let mut child = ChildMutation::default();
         let n = vdom_vec.len();
         for (i, node) in vdom_vec.into_iter().enumerate() {
             if let Some(old_node) = old_vec.get_mut(i) {
@@ -99,7 +99,7 @@ impl<T> Reconciler<T> {
     fn reconcile_node(
         old_node: &mut Option<OldNode>,
         vdom_node: VdomNode<T>,
-        child: &mut Vec<MutationEl>,
+        child: &mut ChildMutation,
         cbks: &mut Cbks<T>,
     ) {
         match vdom_node {
@@ -122,7 +122,7 @@ impl<T> Reconciler<T> {
                         let cmds = ButtonCmd::SetText(s.clone());
                         let mutation = Mutation {
                             cmds: Some(Box::new(cmds)),
-                            child: Vec::new(),
+                            child: ChildMutation::default(),
                         };
                         child.push(MutationEl::Update(mutation));
                         *old_s = s;
@@ -142,7 +142,7 @@ impl<T> Reconciler<T> {
                     let cmds = ButtonCmd::SetText(s.clone());
                     let mutation = Mutation {
                         cmds: Some(Box::new(cmds)),
-                        child: Vec::new(),
+                        child: ChildMutation::default(),
                     };
                     *old_node = Some(OldNode {
                         id,

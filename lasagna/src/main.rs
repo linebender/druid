@@ -150,14 +150,14 @@ impl ManualMutationCount {
         fn mk_button_mut(count: usize) -> Mutation {
             Mutation {
                 cmds: Some(Box::new(ButtonCmd::SetText(format!("count: {}", count)))),
-                child: vec![],
+                child: vec![].into(),
             }
         }
         if let Some(_button_id) = self.button_id {
             self.count += actions.len();
             Mutation {
                 cmds: None,
-                child: vec![MutationEl::Update(mk_button_mut(self.count))],
+                child: vec![MutationEl::Update(mk_button_mut(self.count))].into(),
             }
         } else {
             let id = Id::next();
@@ -170,7 +170,8 @@ impl ManualMutationCount {
                     id,
                     Box::new(boxed_button),
                     mk_button_mut(self.count),
-                )],
+                )]
+                .into(),
             }
         }
     }
@@ -237,7 +238,8 @@ fn rusty_counter(data: &mut u32) -> rusty::Column<u32, ()> {
     col.add_child(rusty::Memoize::new(*data, |data| {
         rusty::Button::new(format!("count: {}", data), |_action, data| *data += 1)
     }));
-    let button: Box<dyn rusty::DynView<_, _>> = Box::new(rusty::Button::new("reset", |_action, data| *data = 0 ));
+    let button: Box<dyn rusty::DynView<_, _>> =
+        Box::new(rusty::Button::new("reset", |_action, data| *data = 0));
     col.add_child(button);
     col
 }
