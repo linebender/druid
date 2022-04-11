@@ -15,10 +15,8 @@
 //! A new architecture for app logic
 
 use std::any::Any;
-use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::rc::Rc;
 
 use crate::element::{self, Action, ButtonCmd, Element};
 use crate::tree::{ChildMutation, Id, Mutation, MutationEl, MutationFragment, TreeStructure};
@@ -248,12 +246,25 @@ pub struct ColumnState {
 ///
 /// [Html map]: https://package.elm-lang.org/packages/elm/html/latest/Html#map
 // TODO: better name. "Map" is borrowed from elm.
-pub struct Map<U, B, F, C> {
+pub struct Map<T, A, U, B, F: Fn(&mut T, MapThunk<U, B, C>) -> A, C: View<U, B>> {
     f: F,
     child: C,
     // probably better to phantom the fn, but this shuts up the compiler
+    phantom_t: PhantomData<T>,
+    phantom_a: PhantomData<A>,
     phantom_u: PhantomData<U>,
     phantom_b: PhantomData<B>,
+}
+
+/// A "thunk" which dispatches an event to a map's child.
+///
+/// The closure passed to the Map should call this thunk with the child's
+/// app state.
+pub struct MapThunk<'a, U, B, C: View<U, B>> {
+    child: &'a C,
+    state: &'a C::State,
+    id_path: &'a [Id],
+    event_body: Box<dyn Any>,
 }
 
 /// A memoize node.
@@ -277,19 +288,28 @@ pub struct MemoizeState<T, A, V: View<T, A>> {
     view_state: Option<V::State>,
 }
 
-impl<U, B, F, C: View<U, B>> Map<U, B, F, C> {
+impl<T, A, U, B, F: Fn(&mut T, MapThunk<U, B, C>) -> A, C: View<U, B>> Map<T, A, U, B, F, C> {
     pub fn new(f: F, child: C) -> Self {
         Map {
             f,
             child,
+            phantom_t: Default::default(),
+            phantom_a: Default::default(),
             phantom_u: Default::default(),
             phantom_b: Default::default(),
         }
     }
 }
 
-impl<T, A, U, B, F: Fn(&mut T, &dyn Fn(&mut U) -> Option<B>) -> A, C: View<U, B>> View<T, A>
-    for Map<U, B, F, C>
+impl<'a, U, B, C: View<U, B>> MapThunk<'a, U, B, C> {
+    pub fn call(self, app_state: &mut U) -> Option<B> {
+        self.child
+            .event(self.state, self.id_path, self.event_body, app_state)
+    }
+}
+
+impl<T, A, U, B, F: Fn(&mut T, MapThunk<U, B, C>) -> A, C: View<U, B>> View<T, A>
+    for Map<T, A, U, B, F, C>
 {
     type State = C::State;
 
@@ -309,11 +329,13 @@ impl<T, A, U, B, F: Fn(&mut T, &dyn Fn(&mut U) -> Option<B>) -> A, C: View<U, B>
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
-        let event = Rc::new(RefCell::new(Some(event_body)));
-        let a = (self.f)(app_state, &|u| {
-            self.child
-                .event(state, id_path, event.borrow_mut().take().unwrap(), u)
-        });
+        let thunk = MapThunk {
+            child: &self.child,
+            state,
+            id_path,
+            event_body,
+        };
+        let a = (self.f)(app_state, thunk);
         Some(a)
     }
 }

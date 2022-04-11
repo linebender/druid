@@ -241,8 +241,8 @@ struct MyState {
 fn rusty_app(data: &mut MyState) -> rusty::Column<MyState, ()> {
     let mut col = rusty::Column::new();
     col.add_child(rusty::Map::new(
-        |state: &mut MyState, f: &dyn Fn(&mut u32) -> Option<()>| {
-            f(&mut state.data);
+        |state: &mut MyState, f| {
+            f.call(&mut state.data);
         },
         rusty_counter(&mut data.data),
     ));
