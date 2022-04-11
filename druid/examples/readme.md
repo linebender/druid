@@ -15,7 +15,7 @@ This example shows how to make a simple animation using `Event::AnimFrame`.
 ```
 cargo run --example async_event
 ```
-Demonstrates receiving data from some outside source, and updating the UI in response. This is similar to [blocking function](#Blocking Function) but here the data source is fully independent, and runs for the lifetime of the program.
+Demonstrates receiving data from some outside source, and updating the UI in response. This is similar to [blocking function](#blocking-function) but here the data source is fully independent, and runs for the lifetime of the program.
 
 ## Blocking Function
 ```
@@ -24,7 +24,7 @@ cargo run --example blocking_function
 Sometimes you need to fetch some data from disk or from the internet,
 but you should never block the UI thread with long running operations!
 Instead you should run this task in a separate thread, and have it send
-you the data as it arrives. This is very similar to [async event](#Async Event)
+you the data as it arrives. This is very similar to [async event](#async-event)
  except the event is initiated by the main thread.
 
 ## Cursor
@@ -60,7 +60,7 @@ For more info and prerequistes see [druid/examples/hello_web/README.md](druid/ex
 cd druid/examples/hello_web
 wasm-pack build --out-dir pkg --out-name hello_web
 ```
-[View at http://localhost:8000](http://localhost:8000].
+[View at http://localhost:8000](http://localhost:8000).
 
 This is an example of how to get almost any druid application can be used on the web. This is just the hello_world example but should work for all of them.
 
@@ -70,7 +70,7 @@ For more info and prerequistes see [druid/examples/web/README.md](druid/examples
 cd druid/examples/web
 wasm-pack build --out-dir pkg --out-name web
 ```
-[View at http://localhost:8000](http://localhost:8000].
+[View at http://localhost:8000](http://localhost:8000).
 
 Simple web app.
 
