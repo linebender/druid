@@ -233,6 +233,22 @@ impl elm::AppLogic for ElmCountApp {
     }
 }
 
+#[derive(Default)]
+struct MyState {
+    data: u32,
+}
+
+fn rusty_app(data: &mut MyState) -> rusty::Column<MyState, ()> {
+    let mut col = rusty::Column::new();
+    col.add_child(rusty::Map::new(
+        |state: &mut MyState, f: &dyn Fn(&mut u32) -> Option<()>| {
+            f(&mut state.data);
+        },
+        rusty_counter(&mut data.data),
+    ));
+    col
+}
+
 fn rusty_counter(data: &mut u32) -> rusty::Column<u32, ()> {
     let mut col = rusty::Column::new();
     col.add_child(rusty::Memoize::new(*data, |data| {
@@ -282,7 +298,7 @@ fn main() {
     let mut app_logic = elm::ElmApp::new(elm_app_logic);
     */
 
-    let mut app_logic = rusty::RustyApp::new(0, rusty_counter);
+    let mut app_logic = rusty::RustyApp::new(MyState::default(), rusty_app);
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());

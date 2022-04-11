@@ -15,8 +15,10 @@
 //! A new architecture for app logic
 
 use std::any::Any;
+use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::element::{self, Action, ButtonCmd, Element};
 use crate::tree::{ChildMutation, Id, Mutation, MutationEl, MutationFragment, TreeStructure};
@@ -286,7 +288,7 @@ impl<U, B, F, C: View<U, B>> Map<U, B, F, C> {
     }
 }
 
-impl<T, A, U, B, F: Fn(&mut T, &dyn FnOnce(&mut U) -> Option<B>) -> A, C: View<U, B>> View<T, A>
+impl<T, A, U, B, F: Fn(&mut T, &dyn Fn(&mut U) -> Option<B>) -> A, C: View<U, B>> View<T, A>
     for Map<U, B, F, C>
 {
     type State = C::State;
@@ -307,8 +309,10 @@ impl<T, A, U, B, F: Fn(&mut T, &dyn FnOnce(&mut U) -> Option<B>) -> A, C: View<U
         event_body: Box<dyn Any>,
         app_state: &mut T,
     ) -> Option<A> {
+        let event = Rc::new(RefCell::new(Some(event_body)));
         let a = (self.f)(app_state, &|u| {
-            self.child.event(state, id_path, event_body, u)
+            self.child
+                .event(state, id_path, event.borrow_mut().take().unwrap(), u)
         });
         Some(a)
     }
