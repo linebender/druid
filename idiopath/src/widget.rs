@@ -16,6 +16,7 @@ pub mod button;
 pub mod column;
 
 use std::any::Any;
+use std::ops::DerefMut;
 
 use druid_shell::kurbo::{Point, Size};
 use druid_shell::piet::Piet;
@@ -40,11 +41,31 @@ pub struct Geom {
 
 pub trait AnyWidget: Widget {
     fn as_any(&self) -> &dyn Any;
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 impl<W: Widget + 'static> AnyWidget for W {
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl Widget for Box<dyn AnyWidget> {
+    fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>) {
+        self.deref_mut().event(event, events);
+    }
+
+    fn layout(&mut self) -> Size {
+        self.deref_mut().layout()
+    }
+
+    fn paint(&mut self, ctx: &mut Piet, pos: Point) {
+        self.deref_mut().paint(ctx, pos);
     }
 }
 
@@ -52,8 +73,6 @@ impl<W: Widget + 'static> AnyWidget for W {
 pub enum RawEvent {
     MouseDown(Point),
 }
-
-pub struct BoxWidget(Box<dyn AnyWidget>);
 
 pub trait WidgetTuple {
     fn length(&self) -> usize;

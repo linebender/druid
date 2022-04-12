@@ -44,10 +44,7 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
     fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
         let view = (self.child_cb)(&self.data);
         let (id, view_state, element) = view.build(id_path);
-        let memoize_state = MemoizeState {
-            view,
-            view_state
-        };
+        let memoize_state = MemoizeState { view, view_state };
         (id, memoize_state, element)
     }
 
@@ -73,6 +70,8 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A {
-        state.view.event(id_path, &state.view_state, event, app_state)
+        state
+            .view
+            .event(id_path, &state.view_state, event, app_state)
     }
 }

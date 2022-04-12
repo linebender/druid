@@ -29,6 +29,7 @@ use druid_shell::{
     Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
     WindowHandle,
 };
+use view::any_view::AnyView;
 use view::button::Button;
 use view::View;
 use widget::Widget;
@@ -114,7 +115,9 @@ where
 }
 
 fn app_logic(data: &mut u32) -> impl View<u32, (), Element = impl Widget> {
-    Button::new(format!("count: {}", data), |data| *data += 1)
+    let button = Button::new(format!("count: {}", data), |data| *data += 1);
+    let boxed: Box<dyn AnyView<u32, ()>> = Box::new(button);
+    boxed
 }
 
 fn main() {

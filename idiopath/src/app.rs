@@ -43,7 +43,7 @@ where
         let mut id_path = IdPath::default();
         let view = (app_logic)(&mut data);
         let (id, state, element) = view.build(&mut id_path);
-        assert!(id_path.is_empty(), "id path imbalance");
+        assert!(id_path.is_empty(), "id path imbalance on build");
         App {
             data,
             app_logic,
@@ -76,6 +76,7 @@ where
             self.view
                 .event(id_path, &self.state, event.body, &mut self.data);
         }
+        // Re-rendering should be more lazy.
         let view = (self.app_logic)(&mut self.data);
         view.rebuild(
             &mut self.id_path,
@@ -84,6 +85,7 @@ where
             &mut self.state,
             &mut self.element,
         );
+        assert!(self.id_path.is_empty(), "id path imbalance on rebuild");
         self.view = view;
     }
 }
