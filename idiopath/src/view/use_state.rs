@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{marker::PhantomData, any::Any, rc::Rc};
+use std::{any::Any, marker::PhantomData, rc::Rc};
 
 use crate::id::{Id, IdPath};
 
@@ -42,13 +42,12 @@ pub struct UseStateState<T, A, S, V: View<(Rc<T>, S), A>> {
 impl<T, A, S, V, FInit: Fn() -> S, F: Fn(&mut S) -> V> UseState<T, A, S, V, FInit, F> {
     pub fn new(f_init: FInit, f: F) -> Self {
         let phantom = Default::default();
-        UseState {
-            f_init, f, phantom
-        }
+        UseState { f_init, f, phantom }
     }
 }
 
-impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View<Rc<T>, A> for UseState<T, A, S, V, FInit, F>
+impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View<Rc<T>, A>
+    for UseState<T, A, S, V, FInit, F>
 {
     type State = UseStateState<T, A, S, V>;
 
@@ -58,7 +57,11 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
         let mut state = (self.f_init)();
         let view = (self.f)(&mut state);
         let (id, view_state, element) = view.build(id_path);
-        let my_state = UseStateState { state: Some(state), view, view_state };
+        let my_state = UseStateState {
+            state: Some(state),
+            view,
+            view_state,
+        };
         (id, my_state, element)
     }
 
@@ -83,7 +86,9 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
         app_state: &mut Rc<T>,
     ) -> A {
         let mut local_state = (app_state.clone(), state.state.take().unwrap());
-        let a = state.view.event(id_path, &mut state.view_state, event, &mut local_state);
+        let a = state
+            .view
+            .event(id_path, &mut state.view_state, event, &mut local_state);
         let (local_app_state, my_state) = local_state;
         if !Rc::ptr_eq(app_state, &local_app_state) {
             *app_state = local_app_state

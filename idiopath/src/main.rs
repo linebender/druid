@@ -29,8 +29,11 @@ use druid_shell::{
     Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
     WindowHandle,
 };
+use view::adapt::Adapt;
 use view::any_view::AnyView;
 use view::button::Button;
+use view::column::Column;
+use view::memoize::Memoize;
 use view::View;
 use widget::Widget;
 
@@ -114,10 +117,39 @@ where
     }
 }
 
+/*
 fn app_logic(data: &mut u32) -> impl View<u32, (), Element = impl Widget> {
     let button = Button::new(format!("count: {}", data), |data| *data += 1);
     let boxed: Box<dyn AnyView<u32, ()>> = Box::new(button);
-    boxed
+    Column::new((boxed, Button::new("reset", |data| *data = 0)))
+}
+*/
+
+#[derive(Default)]
+struct AppData {
+    count: u32,
+}
+
+fn count_button(count: u32) -> impl View<u32, (), Element = impl Widget> {
+    Button::new(format!("count: {}", count), |data| *data += 1)
+}
+
+fn app_logic(data: &mut AppData) -> impl View<AppData, (), Element = impl Widget> {
+    Column::new((
+        Button::new(format!("count: {}", data.count), |data: &mut AppData| {
+            data.count += 1
+        }),
+        Button::new("reset", |data: &mut AppData| data.count = 0),
+        Memoize::new(data.count, |count| {
+            Button::new(format!("count: {}", count), |data: &mut AppData| {
+                data.count += 1
+            })
+        }),
+        Adapt::new(
+            |data: &mut AppData, thunk| thunk.call(&mut data.count),
+            count_button(data.count),
+        ),
+    ))
 }
 
 fn main() {
@@ -134,7 +166,7 @@ fn main() {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let app = App::new(0, app_logic);
+    let app = App::new(AppData::default(), app_logic);
     let druid_app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(druid_app.clone());
     let main_state = MainState::new(app);

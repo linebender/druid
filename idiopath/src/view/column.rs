@@ -27,6 +27,16 @@ pub struct Column<T, A, VT: ViewTuple<T, A>> {
     phantom: PhantomData<(T, A)>,
 }
 
+impl<T, A, VT: ViewTuple<T, A>> Column<T, A, VT>
+where
+    VT::Elements: WidgetTuple,
+{
+    pub fn new(children: VT) -> Self {
+        let phantom = Default::default();
+        Column { children, phantom }
+    }
+}
+
 impl<T, A, VT: ViewTuple<T, A>> View<T, A> for Column<T, A, VT>
 where
     VT::Elements: WidgetTuple,
