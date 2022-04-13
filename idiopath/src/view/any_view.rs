@@ -49,7 +49,7 @@ pub trait AnyView<T, A> {
     fn dyn_event(
         &self,
         id_path: &[Id],
-        state: &dyn Any,
+        state: &mut dyn Any,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A;
@@ -98,11 +98,11 @@ where
     fn dyn_event(
         &self,
         id_path: &[Id],
-        state: &dyn Any,
+        state: &mut dyn Any,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A {
-        if let Some(state) = state.downcast_ref() {
+        if let Some(state) = state.downcast_mut() {
             self.event(id_path, state, event, app_state)
         } else {
             // Possibly softer failure? Would require either Option<A> return or
@@ -136,11 +136,11 @@ impl<T, A> View<T, A> for Box<dyn AnyView<T, A>> {
     fn event(
         &self,
         id_path: &[Id],
-        state: &Self::State,
+        state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A {
         self.deref()
-            .dyn_event(id_path, state.deref(), event, app_state)
+            .dyn_event(id_path, state.deref_mut(), event, app_state)
     }
 }

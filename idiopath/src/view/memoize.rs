@@ -66,12 +66,12 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
     fn event(
         &self,
         id_path: &[Id],
-        state: &Self::State,
+        state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A {
         state
             .view
-            .event(id_path, &state.view_state, event, app_state)
+            .event(id_path, &mut state.view_state, event, app_state)
     }
 }

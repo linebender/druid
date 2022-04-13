@@ -42,7 +42,7 @@ pub trait View<T, A> {
     fn event(
         &self,
         id_path: &[Id],
-        state: &Self::State,
+        state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A;

@@ -30,7 +30,7 @@ pub struct Adapt<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U,
 /// app state.
 pub struct AdaptThunk<'a, U, B, C: View<U, B>> {
     child: &'a C,
-    state: &'a C::State,
+    state: &'a mut C::State,
     id_path: &'a [Id],
     event: Box<dyn Any>,
 }
@@ -77,7 +77,7 @@ impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> View<T,
     fn event(
         &self,
         id_path: &[Id],
-        state: &Self::State,
+        state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A {

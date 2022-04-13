@@ -37,7 +37,7 @@ pub trait ViewTuple<T, A> {
     fn event(
         &self,
         id_path: &[Id],
-        state: &Self::State,
+        state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A;
@@ -73,7 +73,7 @@ macro_rules! impl_view_tuple {
             fn event(
                 &self,
                 id_path: &[Id],
-                state: &Self::State,
+                state: &mut Self::State,
                 event: Box<dyn Any>,
                 app_state: &mut T,
             ) -> A {
@@ -81,7 +81,7 @@ macro_rules! impl_view_tuple {
                 let tl = &id_path[1..];
                 $(
                 if hd == state.$n[$s] {
-                    self.$s.event(tl, &state.$s, event, app_state)
+                    self.$s.event(tl, &mut state.$s, event, app_state)
                 } else )* {
                     panic!("inconsistent id_path")
                 }

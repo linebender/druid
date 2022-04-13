@@ -74,7 +74,7 @@ where
         for event in self.events.drain(..) {
             let id_path = &event.id_path[1..];
             self.view
-                .event(id_path, &self.state, event.body, &mut self.data);
+                .event(id_path, &mut self.state, event.body, &mut self.data);
         }
         // Re-rendering should be more lazy.
         let view = (self.app_logic)(&mut self.data);
