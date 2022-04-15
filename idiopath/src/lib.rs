@@ -22,7 +22,7 @@ struct Button {
 
 #[pyclass]
 struct PyView {
-    view: Box<dyn AnyView<PyObject, ()> + Send>,
+    view: Box<dyn AnyView<(), ()> + Send>,
 }
 
 #[pyfunction]
@@ -51,11 +51,9 @@ fn foo(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-fn run_cycle(py_app: &PyAny, py: Python) -> impl View<u32, (), Element = impl Widget> {
-    let result = py_app.call((), None).unwrap();
-    let b: PyResult<PyRef<PyView>> = result.extract();
-    println!("{}", b.is_ok());
-    crate::view::button::Button::new("hello", |_| println!("clicked"))
+fn run_cycle(py_app: &PyAny, py: Python) -> impl View<(), (), Element = impl Widget> {
+    let py_app = py_app.to_object(py);
+    py_app.call(py, (), None).unwrap()
 }
 
 mod app;
@@ -80,7 +78,7 @@ use view::any_view::AnyView;
 use view::column::Column;
 use view::memoize::Memoize;
 use view::View;
-use widget::Widget;
+use widget::{Widget, AnyWidget};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
@@ -176,7 +174,7 @@ fn py_main(py_app: PyObject) {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let app = App::new(0u32, move |data| {
+    let app = App::new((), move |_| {
         Python::with_gil(|py| run_cycle(py_app.as_ref(py), py))
     });
     let druid_app = Application::new().unwrap();
@@ -190,4 +188,47 @@ fn py_main(py_app: PyObject) {
     window.show();
 
     druid_app.run(None);
+}
+
+// idiopath trait implementations on Python objects
+
+impl View<(), ()> for PyObject {
+    type State = Box<dyn Any>;
+
+    type Element = Box<dyn AnyWidget>;
+
+    fn build(&self, id_path: &mut id::IdPath) -> (id::Id, Self::State, Self::Element) {
+        Python::with_gil(|py| {
+            let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
+            py_view.view.build(id_path)
+        })
+    }
+
+    fn rebuild(
+        &self,
+        id_path: &mut id::IdPath,
+        prev: &Self,
+        id: &mut id::Id,
+        state: &mut Self::State,
+        element: &mut Self::Element,
+    ) {
+        Python::with_gil(|py| {
+            let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
+            let prev: PyRef<PyView> = prev.as_ref(py).extract().unwrap();
+            py_view.view.rebuild(id_path, &prev.view, id, state, element)
+        })
+    }
+
+    fn event(
+        &self,
+        id_path: &[id::Id],
+        state: &mut Self::State,
+        event: Box<dyn Any>,
+        app_state: &mut (),
+    ) -> () {
+        Python::with_gil(|py| {
+            let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
+            py_view.view.event(id_path, state, event, app_state);
+        })
+    }
 }

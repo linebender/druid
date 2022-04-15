@@ -112,7 +112,7 @@ where
     }
 }
 
-impl<T, A> View<T, A> for Box<dyn AnyView<T, A>> {
+impl<T, A> View<T, A> for Box<dyn AnyView<T, A> + Send> {
     type State = Box<dyn Any>;
 
     type Element = Box<dyn AnyWidget>;
