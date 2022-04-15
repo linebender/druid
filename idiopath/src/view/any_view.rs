@@ -55,7 +55,7 @@ pub trait AnyView<T, A> {
     ) -> A;
 }
 
-impl<T, A, V: View<T, A> + 'static> AnyView<T, A> for V
+impl<T, A, V: View<T, A> + Send + 'static> AnyView<T, A> for V
 where
     V::State: 'static,
     V::Element: AnyWidget + 'static,

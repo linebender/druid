@@ -21,11 +21,11 @@ use super::View;
 pub struct Button<T, A> {
     label: String,
     // consider not boxing
-    callback: Box<dyn Fn(&mut T) -> A>,
+    callback: Box<dyn Fn(&mut T) -> A + Send>,
 }
 
 impl<T, A> Button<T, A> {
-    pub fn new(label: impl Into<String>, clicked: impl Fn(&mut T) -> A + 'static) -> Self {
+    pub fn new(label: impl Into<String>, clicked: impl Fn(&mut T) -> A + Send + 'static) -> Self {
         Button {
             label: label.into(),
             callback: Box::new(clicked),
