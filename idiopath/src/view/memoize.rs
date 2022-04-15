@@ -14,9 +14,9 @@
 
 use std::any::Any;
 
-use crate::id::{Id, IdPath};
+use crate::id::Id;
 
-use super::View;
+use super::{Cx, View};
 
 pub struct Memoize<D, F> {
     data: D,
@@ -41,16 +41,16 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
 
     type Element = V::Element;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let view = (self.child_cb)(&self.data);
-        let (id, view_state, element) = view.build(id_path);
+        let (id, view_state, element) = view.build(cx);
         let memoize_state = MemoizeState { view, view_state };
         (id, memoize_state, element)
     }
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
@@ -58,7 +58,7 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
     ) {
         if prev.data != self.data {
             let view = (self.child_cb)(&self.data);
-            view.rebuild(id_path, &state.view, id, &mut state.view_state, element);
+            view.rebuild(cx, &state.view, id, &mut state.view_state, element);
             state.view = view;
         }
     }

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid_shell::{kurbo::Point, piet::Piet};
+use druid_shell::{kurbo::Point, piet::Piet, WindowHandle};
 
 use crate::{
     event::Event,
-    id::{Id, IdPath},
-    view::View,
+    id::Id,
+    view::{Cx, View},
     widget::{RawEvent, Widget},
 };
 
@@ -32,7 +32,7 @@ where
     state: V::State,
     element: V::Element,
     events: Vec<Event>,
-    id_path: IdPath,
+    cx: Cx,
 }
 
 impl<T, V: View<T, ()>, F: FnMut(&mut T) -> V> App<T, V, F>
@@ -40,10 +40,10 @@ where
     V::Element: Widget,
 {
     pub fn new(mut data: T, mut app_logic: F) -> Self {
-        let mut id_path = IdPath::default();
+        let mut cx = Cx::new();
         let view = (app_logic)(&mut data);
-        let (id, state, element) = view.build(&mut id_path);
-        assert!(id_path.is_empty(), "id path imbalance on build");
+        let (id, state, element) = view.build(&mut cx);
+        assert!(cx.is_empty(), "id path imbalance on build");
         App {
             data,
             app_logic,
@@ -52,8 +52,12 @@ where
             state,
             element,
             events: Vec::new(),
-            id_path,
+            cx,
         }
+    }
+
+    pub fn connect(&mut self, window_handle: WindowHandle) {
+        self.cx.set_handle(window_handle.get_idle_handle());
     }
 
     pub fn paint(&mut self, piet: &mut Piet) {
@@ -79,13 +83,13 @@ where
         // Re-rendering should be more lazy.
         let view = (self.app_logic)(&mut self.data);
         view.rebuild(
-            &mut self.id_path,
+            &mut self.cx,
             &self.view,
             &mut self.id,
             &mut self.state,
             &mut self.element,
         );
-        assert!(self.id_path.is_empty(), "id path imbalance on rebuild");
+        assert!(self.cx.is_empty(), "id path imbalance on rebuild");
         self.view = view;
     }
 }

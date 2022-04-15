@@ -19,20 +19,26 @@ pub mod column;
 pub mod memoize;
 pub mod use_state;
 
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
-use crate::id::{Id, IdPath};
+use druid_shell::{WindowHandle, IdleHandle, IdleToken};
+use futures_task::{Waker, ArcWake};
+
+use crate::{
+    id::{Id, IdPath},
+    widget::Widget,
+};
 
 pub trait View<T, A> {
     type State;
 
-    type Element;
+    type Element: Widget;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element);
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element);
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
@@ -46,4 +52,58 @@ pub trait View<T, A> {
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A;
+}
+
+#[derive(Clone)]
+pub struct Cx {
+    id_path: IdPath,
+    idle_handle: Option<IdleHandle>,
+}
+
+struct MyWaker {
+    id_path: IdPath,
+    idle_handle: IdleHandle,
+}
+
+impl ArcWake for MyWaker {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
+        // The clone shouldn't be needed; schedule_idle should be &self I think
+        arc_self.idle_handle.clone().schedule_idle(IdleToken::new(42));
+    }
+}
+
+impl Cx {
+    pub fn new() -> Self {
+        Cx {
+            id_path: Vec::new(),
+            idle_handle: None,
+        }
+    }
+
+    pub fn push(&mut self, id: Id) {
+        self.id_path.push(id);
+    }
+
+    pub fn pop(&mut self) {
+        self.id_path.pop();
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.id_path.is_empty()
+    }
+
+    pub fn id_path(&self) -> &IdPath {
+        &self.id_path
+    }
+
+    pub(crate) fn set_handle(&mut self, idle_handle: Option<IdleHandle>) {
+        self.idle_handle = idle_handle;
+    }
+
+    pub fn waker(&self) -> Waker {
+        futures_task::waker(Arc::new(MyWaker {
+            id_path: self.id_path.clone(),
+            idle_handle: self.idle_handle.as_ref().unwrap().clone(),
+        }))
+    }
 }

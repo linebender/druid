@@ -6,3 +6,5 @@ edition = "2021"
 
 [dependencies]
 "druid-shell" = { path = "../druid-shell" }
+
+futures-task = "0.3"

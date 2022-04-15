@@ -14,9 +14,9 @@
 
 use std::{any::Any, marker::PhantomData};
 
-use crate::id::{Id, IdPath};
+use crate::id::Id;
 
-use super::View;
+use super::{Cx, View};
 
 pub struct Adapt<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> {
     f: F,
@@ -59,19 +59,19 @@ impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> View<T,
 
     type Element = C::Element;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
-        self.child.build(id_path)
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
+        self.child.build(cx)
     }
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
     ) {
-        self.child.rebuild(id_path, &prev.child, id, state, element);
+        self.child.rebuild(cx, &prev.child, id, state, element);
     }
 
     fn event(

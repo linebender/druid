@@ -27,10 +27,9 @@ use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
-    WindowHandle,
+    WindowHandle, IdleToken,
 };
 use view::adapt::Adapt;
-use view::any_view::AnyView;
 use view::button::Button;
 use view::column::Column;
 use view::memoize::Memoize;
@@ -55,6 +54,7 @@ where
 {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
+        self.app.connect(handle.clone());
     }
 
     fn prepare_paint(&mut self) {}
@@ -101,6 +101,10 @@ where
     fn as_any(&mut self) -> &mut dyn Any {
         self
     }
+
+    fn idle(&mut self, token: IdleToken) {
+        println!("idle handler was called, token = {:?}!", token);
+    }
 }
 
 impl<T, V: View<T, ()>, F: FnMut(&mut T) -> V> MainState<T, V, F>
@@ -130,11 +134,11 @@ struct AppData {
     count: u32,
 }
 
-fn count_button(count: u32) -> impl View<u32, (), Element = impl Widget> {
+fn count_button(count: u32) -> impl View<u32, ()> {
     Button::new(format!("count: {}", count), |data| *data += 1)
 }
 
-fn app_logic(data: &mut AppData) -> impl View<AppData, (), Element = impl Widget> {
+fn app_logic(data: &mut AppData) -> impl View<AppData, ()> {
     Column::new((
         Button::new(format!("count: {}", data.count), |data: &mut AppData| {
             data.count += 1
