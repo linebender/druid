@@ -14,9 +14,9 @@
 
 use std::any::Any;
 
-use crate::id::{Id, IdPath};
+use crate::id::Id;
 
-use super::View;
+use super::{Cx, View};
 
 pub struct Button<T, A> {
     label: String,
@@ -38,17 +38,17 @@ impl<T, A> View<T, A> for Button<T, A> {
 
     type Element = crate::widget::button::Button;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let id = Id::next();
-        id_path.push(id);
-        let element = crate::widget::button::Button::new(&id_path, self.label.clone());
-        id_path.pop();
+        cx.push(id);
+        let element = crate::widget::button::Button::new(cx.id_path(), self.label.clone());
+        cx.pop();
         (id, (), element)
     }
 
     fn rebuild(
         &self,
-        _id_path: &mut crate::id::IdPath,
+        _cx: &mut Cx,
         prev: &Self,
         _id: &mut crate::id::Id,
         _state: &mut Self::State,

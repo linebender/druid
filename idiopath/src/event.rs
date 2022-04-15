@@ -20,3 +20,12 @@ pub struct Event {
     pub id_path: IdPath,
     pub body: Box<dyn Any>,
 }
+
+impl Event {
+    pub fn new(id_path: IdPath, event: impl Any) -> Event {
+        Event {
+            id_path,
+            body: Box::new(event),
+        }
+    }
+}

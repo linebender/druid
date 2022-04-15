@@ -14,9 +14,9 @@
 
 use std::{any::Any, marker::PhantomData, rc::Rc};
 
-use crate::id::{Id, IdPath};
+use crate::id::Id;
 
-use super::View;
+use super::{Cx, View};
 
 /// An implementation of the "use_state" pattern familiar in reactive UI.
 ///
@@ -53,10 +53,10 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
 
     type Element = V::Element;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let mut state = (self.f_init)();
         let view = (self.f)(&mut state);
-        let (id, view_state, element) = view.build(id_path);
+        let (id, view_state, element) = view.build(cx);
         let my_state = UseStateState {
             state: Some(state),
             view,
@@ -67,14 +67,14 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         _prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
     ) {
         let view = (self.f)(state.state.as_mut().unwrap());
-        view.rebuild(id_path, &state.view, id, &mut state.view_state, element);
+        view.rebuild(cx, &state.view, id, &mut state.view_state, element);
         state.view = view;
     }
 

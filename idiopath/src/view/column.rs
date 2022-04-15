@@ -14,13 +14,9 @@
 
 use std::{any::Any, marker::PhantomData};
 
-use crate::{
-    id::{Id, IdPath},
-    view_tuple::ViewTuple,
-    widget::WidgetTuple,
-};
+use crate::{id::Id, view_tuple::ViewTuple, widget::WidgetTuple};
 
-use super::View;
+use super::{Cx, View};
 
 pub struct Column<T, A, VT: ViewTuple<T, A>> {
     children: VT,
@@ -45,27 +41,27 @@ where
 
     type Element = crate::widget::column::Column<VT::Elements>;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let id = Id::next();
-        id_path.push(id);
-        let (state, elements) = self.children.build(id_path);
-        id_path.pop();
+        cx.push(id);
+        let (state, elements) = self.children.build(cx);
+        cx.pop();
         let column = crate::widget::column::Column::new(elements);
         (id, state, column)
     }
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
     ) {
-        id_path.push(*id);
+        cx.push(*id);
         self.children
-            .rebuild(id_path, &prev.children, state, element.children_mut());
-        id_path.pop();
+            .rebuild(cx, &prev.children, state, element.children_mut());
+        cx.pop();
     }
 
     fn event(

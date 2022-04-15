@@ -43,11 +43,7 @@ impl Button {
 
 impl Widget for Button {
     fn event(&mut self, _event: &super::RawEvent, events: &mut Vec<Event>) {
-        let body = Box::new(());
-        events.push(Event {
-            id_path: self.id_path.clone(),
-            body,
-        })
+        events.push(Event::new(self.id_path.clone(), ()));
     }
 
     fn layout(&mut self) -> Size {

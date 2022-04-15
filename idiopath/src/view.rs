@@ -21,18 +21,21 @@ pub mod use_state;
 
 use std::any::Any;
 
-use crate::id::{Id, IdPath};
+use crate::{
+    id::{Id, IdPath},
+    widget::Widget,
+};
 
 pub trait View<T, A> {
     type State;
 
-    type Element;
+    type Element: Widget;
 
-    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element);
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element);
 
     fn rebuild(
         &self,
-        id_path: &mut IdPath,
+        cx: &mut Cx,
         prev: &Self,
         id: &mut Id,
         state: &mut Self::State,
@@ -46,4 +49,33 @@ pub trait View<T, A> {
         event: Box<dyn Any>,
         app_state: &mut T,
     ) -> A;
+}
+
+#[derive(Clone)]
+pub struct Cx {
+    id_path: IdPath,
+}
+
+impl Cx {
+    pub fn new() -> Self {
+        Cx {
+            id_path: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, id: Id) {
+        self.id_path.push(id);
+    }
+
+    pub fn pop(&mut self) {
+        self.id_path.pop();
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.id_path.is_empty()
+    }
+
+    pub fn id_path(&self) -> &IdPath {
+        &self.id_path
+    }
 }

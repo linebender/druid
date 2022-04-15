@@ -30,7 +30,6 @@ use druid_shell::{
     WindowHandle,
 };
 use view::adapt::Adapt;
-use view::any_view::AnyView;
 use view::button::Button;
 use view::column::Column;
 use view::memoize::Memoize;
@@ -55,6 +54,7 @@ where
 {
     fn connect(&mut self, handle: &WindowHandle) {
         self.handle = handle.clone();
+        self.app.connect(handle.clone());
     }
 
     fn prepare_paint(&mut self) {}
@@ -130,11 +130,11 @@ struct AppData {
     count: u32,
 }
 
-fn count_button(count: u32) -> impl View<u32, (), Element = impl Widget> {
+fn count_button(count: u32) -> impl View<u32, ()> {
     Button::new(format!("count: {}", count), |data| *data += 1)
 }
 
-fn app_logic(data: &mut AppData) -> impl View<AppData, (), Element = impl Widget> {
+fn app_logic(data: &mut AppData) -> impl View<AppData, ()> {
     Column::new((
         Button::new(format!("count: {}", data.count), |data: &mut AppData| {
             data.count += 1

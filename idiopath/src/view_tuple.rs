@@ -15,8 +15,8 @@
 use std::any::Any;
 
 use crate::{
-    id::{Id, IdPath},
-    view::View,
+    id::Id,
+    view::{Cx, View},
 };
 
 pub trait ViewTuple<T, A> {
@@ -24,15 +24,9 @@ pub trait ViewTuple<T, A> {
 
     type Elements;
 
-    fn build(&self, id_path: &mut IdPath) -> (Self::State, Self::Elements);
+    fn build(&self, cx: &mut Cx) -> (Self::State, Self::Elements);
 
-    fn rebuild(
-        &self,
-        id_path: &mut IdPath,
-        prev: &Self,
-        state: &mut Self::State,
-        els: &mut Self::Elements,
-    );
+    fn rebuild(&self, cx: &mut Cx, prev: &Self, state: &mut Self::State, els: &mut Self::Elements);
 
     fn event(
         &self,
@@ -50,8 +44,8 @@ macro_rules! impl_view_tuple {
 
             type Elements = ( $( $t::Element, )* );
 
-            fn build(&self, id_path: &mut IdPath) -> (Self::State, Self::Elements) {
-                let b = ( $( self.$s.build(id_path), )* );
+            fn build(&self, cx: &mut Cx) -> (Self::State, Self::Elements) {
+                let b = ( $( self.$s.build(cx), )* );
                 let state = ( $( b.$s.1, )* [ $( b.$s.0 ),* ]);
                 let els = ( $( b.$s.2, )* );
                 (state, els)
@@ -59,14 +53,14 @@ macro_rules! impl_view_tuple {
 
             fn rebuild(
                 &self,
-                id_path: &mut IdPath,
+                cx: &mut Cx,
                 prev: &Self,
                 state: &mut Self::State,
                 els: &mut Self::Elements,
             ) {
                 $(
                 self.$s
-                    .rebuild(id_path, &prev.$s, &mut state.$n[$s], &mut state.$s, &mut els.$s);
+                    .rebuild(cx, &prev.$s, &mut state.$n[$s], &mut state.$s, &mut els.$s);
                 )*
             }
 
