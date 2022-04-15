@@ -18,5 +18,16 @@ use crate::id::IdPath;
 
 pub struct Event {
     pub id_path: IdPath,
-    pub body: Box<dyn Any>,
+    pub body: Box<dyn Any + Send>,
+}
+
+pub struct AsyncWake;
+
+impl Event {
+    pub fn new(id_path: IdPath, event: impl Any + Send) -> Event {
+        Event {
+            id_path,
+            body: Box::new(event),
+        }
+    }
 }

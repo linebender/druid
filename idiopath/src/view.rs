@@ -16,15 +16,18 @@ pub mod adapt;
 pub mod any_view;
 pub mod button;
 pub mod column;
+pub mod future;
 pub mod memoize;
 pub mod use_state;
 
 use std::{any::Any, sync::Arc};
 
-use druid_shell::{WindowHandle, IdleHandle, IdleToken};
-use futures_task::{Waker, ArcWake};
+use druid_shell::{IdleHandle, IdleToken};
+use futures_task::{ArcWake, Waker};
 
 use crate::{
+    app::WakeQueue,
+    event::{AsyncWake, Event},
     id::{Id, IdPath},
     widget::Widget,
 };
@@ -58,25 +61,35 @@ pub trait View<T, A> {
 pub struct Cx {
     id_path: IdPath,
     idle_handle: Option<IdleHandle>,
+    wake_queue: WakeQueue,
 }
 
 struct MyWaker {
     id_path: IdPath,
     idle_handle: IdleHandle,
+    wake_queue: WakeQueue,
 }
 
 impl ArcWake for MyWaker {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        // The clone shouldn't be needed; schedule_idle should be &self I think
-        arc_self.idle_handle.clone().schedule_idle(IdleToken::new(42));
+        println!("path = {:?}", arc_self.id_path);
+        let event = Event::new(arc_self.id_path.clone(), AsyncWake);
+        if arc_self.wake_queue.push_event(event) {
+            // The clone shouldn't be needed; schedule_idle should be &self I think
+            arc_self
+                .idle_handle
+                .clone()
+                .schedule_idle(IdleToken::new(42));
+        }
     }
 }
 
 impl Cx {
-    pub fn new() -> Self {
+    pub fn new(wake_queue: &WakeQueue) -> Self {
         Cx {
             id_path: Vec::new(),
             idle_handle: None,
+            wake_queue: wake_queue.clone(),
         }
     }
 
@@ -104,6 +117,7 @@ impl Cx {
         futures_task::waker(Arc::new(MyWaker {
             id_path: self.id_path.clone(),
             idle_handle: self.idle_handle.as_ref().unwrap().clone(),
+            wake_queue: self.wake_queue.clone(),
         }))
     }
 }

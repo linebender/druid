@@ -8,3 +8,4 @@ edition = "2021"
 "druid-shell" = { path = "../druid-shell" }
 
 futures-task = "0.3"
+tokio = { version = "1", features = ["full"] }

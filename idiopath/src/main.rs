@@ -20,18 +20,20 @@ mod view_tuple;
 mod widget;
 
 use std::any::Any;
+use std::time::Duration;
 
 use app::App;
 use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
-    Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
-    WindowHandle, IdleToken,
+    Application, Cursor, HotKey, IdleToken, Menu, MouseEvent, Region, SysMods, WinHandler,
+    WindowBuilder, WindowHandle,
 };
 use view::adapt::Adapt;
 use view::button::Button;
 use view::column::Column;
+use view::future::FutureView;
 use view::memoize::Memoize;
 use view::View;
 use widget::Widget;
@@ -104,6 +106,10 @@ where
 
     fn idle(&mut self, token: IdleToken) {
         println!("idle handler was called, token = {:?}!", token);
+        self.app.wake_async();
+        // Properly, the app should invalidate only when the appearance changes.
+        // But this is a quick and dirty demo!
+        self.handle.invalidate();
     }
 }
 
@@ -153,10 +159,18 @@ fn app_logic(data: &mut AppData) -> impl View<AppData, ()> {
             |data: &mut AppData, thunk| thunk.call(&mut data.count),
             count_button(data.count),
         ),
+        FutureView::new(
+            || tokio::spawn(async {
+                tokio::time::sleep(Duration::from_millis(1000)).await;
+                42
+            }),
+            |value| Button::new(format!("{:?}", value), |_| ()),
+        ),
     ))
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
     file_menu.add_item(
