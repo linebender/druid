@@ -49,7 +49,7 @@ In the simplest case, the app builds the entire view tree, which is diffed again
 When a subtree is a pure function of some data, as is the case for the button above, it makes sense to *memoize.* The data is compared to the previous version, and only when it's changed is the view tree build. The signature of the memoize node is nearly identical to [Html.lazy] in Elm:
 
 ```rust
-n app_logic(data: &mut AppData) -> impl View<AppData, (), Element = impl Widget> {
+fn app_logic(data: &mut AppData) -> impl View<AppData, (), Element = impl Widget> {
     Memoize::new(data.count, |count| {
         Button::new(format!("count: {}", count), |data: &mut AppData| {
             data.count += 1
