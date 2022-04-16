@@ -26,7 +26,7 @@ pub(crate) fn save_file(
 }
 
 fn dialog(
-    _window: u32,
+    window: u32,
     idle: IdleHandle,
     mut options: FileDialogOptions,
     open: bool,
@@ -37,8 +37,7 @@ fn dialog(
         if let Err(e) = block_on(async {
             let conn = zbus::Connection::session().await?;
             let proxy = file_chooser::FileChooserProxy::new(&conn).await?;
-            // TODO: use the window id. This requires changes in ashpd.
-            let id = WindowIdentifier::default();
+            let id = WindowIdentifier::from_xid(window as u64);
             let multi = options.multi_selection;
 
             let title_owned = options.title.take();
