@@ -1,59 +1,70 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use id::{Id, IdPath};
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
+use view::button::Button;
+use view_tuple::ViewTuple;
 
 #[pyfunction]
-fn ui(py_app: PyObject) -> PyResult<String> {
-    /*
-    Python::with_gil(|py| {
-        let result = py_app.call(py, (), None).unwrap();
-        let b: PyResult<PyRef<Button>> = result.as_ref(py).extract();
-        if let Ok(button) = b {
-            println!("button label is {}", button.label);
-        }
-    });
-    */
-    py_main(py_app);
+fn ui(init_state: PyObject, py_app: PyObject) -> PyResult<String> {
+    py_main(init_state, py_app);
     Ok("hello".to_string())
 }
 
 #[pyclass]
-struct Button {
-    label: String,
-}
-
-#[pyclass]
 struct PyView {
-    view: Box<dyn AnyView<(), ()> + Send>,
+    view: Box<dyn AnyView<PyObject, PyObject> + Send>,
 }
 
 #[pyfunction]
-fn button(label: String) -> PyView {
-    let view = crate::view::button::Button::new(label, |_data| println!("clicked"));
+fn button(label: String, callback: PyObject) -> PyView {
+    let view = Button::new(label, move |data: &mut PyObject| {
+        println!("clicked");
+        Python::with_gil(|py| callback.call1(py, (&*data,)).unwrap().to_object(py))
+    });
     PyView {
         view: Box::new(view),
     }
 }
 
-#[pymethods]
-impl Button {
-    #[new]
-    fn new(label: String) -> Self {
-        println!("label is {}", label);
-        Button { label }
-    }
+#[pyfunction(children = "*")]
+fn column(children: &PyTuple) -> PyView {
+    // Note: maybe better to type this as PyTuple instead of PyObject, and
+    // avoid downcasting in the ViewTuple impl.
+    let children = Python::with_gil(|py| children.to_object(py));
+    let view = Column::new(children);
+    PyView { view: Box::new(view) }
 }
 
 #[pymodule]
 fn foo(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ui, m)?)?;
     m.add_function(wrap_pyfunction!(button, m)?)?;
-    m.add_class::<Button>()?;
+    m.add_function(wrap_pyfunction!(column, m)?)?;
     m.add_class::<PyView>()?;
     Ok(())
 }
 
-fn run_cycle(py_app: &PyAny, py: Python) -> impl View<(), (), Element = impl Widget> {
+fn run_cycle(
+    py_app: &PyAny,
+    data: &PyAny,
+    py: Python,
+) -> impl View<PyObject, PyObject, Element = impl Widget> {
     let py_app = py_app.to_object(py);
-    py_app.call(py, (), None).unwrap()
+    py_app.call1(py, (data,)).unwrap()
 }
 
 mod app;
@@ -78,7 +89,7 @@ use view::any_view::AnyView;
 use view::column::Column;
 use view::memoize::Memoize;
 use view::View;
-use widget::{Widget, AnyWidget};
+use widget::{AnyWidget, Widget};
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
@@ -160,7 +171,7 @@ where
     }
 }
 
-fn py_main(py_app: PyObject) {
+fn py_main(init_state: PyObject, py_app: PyObject) {
     //tracing_subscriber::fmt().init();
     let mut file_menu = Menu::new();
     file_menu.add_item(
@@ -174,8 +185,14 @@ fn py_main(py_app: PyObject) {
     menubar.add_dropdown(Menu::new(), "Application", true);
     menubar.add_dropdown(file_menu, "&File", true);
 
-    let app = App::new((), move |_| {
-        Python::with_gil(|py| run_cycle(py_app.as_ref(py), py))
+    let app = App::new(init_state, move |data| {
+        let py_view_tree = Python::with_gil(|py| run_cycle(py_app.as_ref(py), data.as_ref(py), py));
+        Adapt::new(
+            |data: &mut PyObject, child| {
+                child.call(data);
+            },
+            py_view_tree,
+        )
     });
     let druid_app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(druid_app.clone());
@@ -192,12 +209,14 @@ fn py_main(py_app: PyObject) {
 
 // idiopath trait implementations on Python objects
 
-impl View<(), ()> for PyObject {
+impl View<PyObject, PyObject> for PyObject {
     type State = Box<dyn Any>;
 
     type Element = Box<dyn AnyWidget>;
 
-    fn build(&self, id_path: &mut id::IdPath) -> (id::Id, Self::State, Self::Element) {
+    fn build(&self, id_path: &mut IdPath) -> (Id, Self::State, Self::Element) {
+        // Note: the View trait will probably grow a context, which would also be
+        // a good place to hold the GIL, so we don't need to acquire it every time.
         Python::with_gil(|py| {
             let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
             py_view.view.build(id_path)
@@ -206,29 +225,108 @@ impl View<(), ()> for PyObject {
 
     fn rebuild(
         &self,
-        id_path: &mut id::IdPath,
+        id_path: &mut IdPath,
         prev: &Self,
-        id: &mut id::Id,
+        id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
     ) {
         Python::with_gil(|py| {
             let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
             let prev: PyRef<PyView> = prev.as_ref(py).extract().unwrap();
-            py_view.view.rebuild(id_path, &prev.view, id, state, element)
+            py_view
+                .view
+                .rebuild(id_path, &prev.view, id, state, element)
         })
     }
 
     fn event(
         &self,
-        id_path: &[id::Id],
+        id_path: &[Id],
         state: &mut Self::State,
         event: Box<dyn Any>,
-        app_state: &mut (),
-    ) -> () {
+        app_state: &mut PyObject,
+    ) -> PyObject {
         Python::with_gil(|py| {
             let py_view: PyRef<PyView> = self.as_ref(py).extract().unwrap();
-            py_view.view.event(id_path, state, event, app_state);
+            py_view.view.event(id_path, state, event, app_state)
         })
+    }
+}
+
+impl ViewTuple<PyObject, PyObject> for PyObject {
+    type State = Vec<(Id, Box<dyn Any>)>;
+
+    type Elements = Vec<Box<dyn AnyWidget>>;
+
+    fn build(&self, id_path: &mut IdPath) -> (Self::State, Self::Elements) {
+        Python::with_gil(|py| {
+            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
+            let n = py_tuple.len();
+            let mut state = Vec::with_capacity(n);
+            let mut elements = Vec::with_capacity(n);
+            for child in py_tuple {
+                let (id, child_state, child_view) = View::build(&child.to_object(py), id_path);
+                state.push((id, child_state));
+                elements.push(child_view);
+            }
+            (state, elements)
+        })
+    }
+
+    fn rebuild(
+        &self,
+        id_path: &mut IdPath,
+        prev: &Self,
+        state: &mut Self::State,
+        els: &mut Self::Elements,
+    ) {
+        Python::with_gil(|py| {
+            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
+            let prev_tuple: &PyTuple = prev.as_ref(py).downcast().unwrap();
+            // Note: we're not dealing with the tuple changing size, but we could.
+            for (i, child) in py_tuple.iter().enumerate() {
+                let (child_id, child_state) = &mut state[i];
+                View::rebuild(
+                    &child.to_object(py),
+                    id_path,
+                    &prev_tuple.get_item(i).unwrap().to_object(py),
+                    child_id,
+                    child_state,
+                    &mut els[i],
+                );
+            }
+        });
+    }
+
+    fn event(
+        &self,
+        id_path: &[Id],
+        state: &mut Self::State,
+        event: Box<dyn Any>,
+        app_state: &mut PyObject,
+    ) -> PyObject {
+        let hd = id_path[0];
+        let tl = &id_path[1..];
+        let mut found = None;
+        Python::with_gil(|py| {
+            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
+            for (i, child) in py_tuple.iter().enumerate() {
+                if hd == state[i].0 {
+                    found = Some((i, child.to_object(py)));
+                    break;
+                }
+            }
+        });
+        // We have to release the GIL here to avoid double-free of event (could
+        // also be solved by interior mutability). Interesting question: should
+        // we have the same pattern for the other methods?
+        //
+        // How expensive is it to constantly re-acquire the GIL?
+        if let Some((i, child)) = found {
+            View::event(&child, tl, &mut state[i].1, event, app_state)            
+        } else {
+            panic!("child of Python ViewTuple not found");
+        }
     }
 }

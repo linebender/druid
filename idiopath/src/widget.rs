@@ -112,3 +112,18 @@ impl_widget_tuple!(8;
     W0, W1, W2, W3, W4, W5, W6, W7;
     0, 1, 2, 3, 4, 5, 6, 7
 );
+
+// Note: the name of the trait should perhaps be changed to WidgetSeq because
+// the length may in fact be variable.
+impl<W: AnyWidget> WidgetTuple for Vec<W> {
+    fn length(&self) -> usize {
+        self.len()
+    }
+
+    fn widgets_mut(&mut self) -> Vec<&mut dyn AnyWidget> {
+        self.iter_mut().map(|w| {
+            let dyn_w: &mut dyn AnyWidget = &mut *w;
+            dyn_w
+        }).collect()
+    }
+}
