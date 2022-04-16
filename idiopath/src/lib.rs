@@ -41,10 +41,7 @@ fn button(label: String, callback: PyObject) -> PyView {
 }
 
 #[pyfunction(children = "*")]
-fn column(children: &PyTuple) -> PyView {
-    // Note: maybe better to type this as PyTuple instead of PyObject, and
-    // avoid downcasting in the ViewTuple impl.
-    let children = Python::with_gil(|py| children.to_object(py));
+fn column(children: Py<PyTuple>) -> PyView {
     let view = Column::new(children);
     PyView { view: Box::new(view) }
 }
@@ -87,7 +84,6 @@ use druid_shell::{
 use view::adapt::Adapt;
 use view::any_view::AnyView;
 use view::column::Column;
-use view::memoize::Memoize;
 use view::View;
 use widget::{AnyWidget, Widget};
 
@@ -254,18 +250,17 @@ impl View<PyObject, PyObject> for PyObject {
     }
 }
 
-impl ViewTuple<PyObject, PyObject> for PyObject {
+impl ViewTuple<PyObject, PyObject> for Py<PyTuple> {
     type State = Vec<(Id, Box<dyn Any>)>;
 
     type Elements = Vec<Box<dyn AnyWidget>>;
 
     fn build(&self, id_path: &mut IdPath) -> (Self::State, Self::Elements) {
         Python::with_gil(|py| {
-            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
-            let n = py_tuple.len();
+            let n = self.as_ref(py).len();
             let mut state = Vec::with_capacity(n);
             let mut elements = Vec::with_capacity(n);
-            for child in py_tuple {
+            for child in self.as_ref(py) {
                 let (id, child_state, child_view) = View::build(&child.to_object(py), id_path);
                 state.push((id, child_state));
                 elements.push(child_view);
@@ -282,15 +277,13 @@ impl ViewTuple<PyObject, PyObject> for PyObject {
         els: &mut Self::Elements,
     ) {
         Python::with_gil(|py| {
-            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
-            let prev_tuple: &PyTuple = prev.as_ref(py).downcast().unwrap();
             // Note: we're not dealing with the tuple changing size, but we could.
-            for (i, child) in py_tuple.iter().enumerate() {
+            for (i, child) in self.as_ref(py).iter().enumerate() {
                 let (child_id, child_state) = &mut state[i];
                 View::rebuild(
                     &child.to_object(py),
                     id_path,
-                    &prev_tuple.get_item(i).unwrap().to_object(py),
+                    &prev.as_ref(py).get_item(i).unwrap().to_object(py),
                     child_id,
                     child_state,
                     &mut els[i],
@@ -310,8 +303,7 @@ impl ViewTuple<PyObject, PyObject> for PyObject {
         let tl = &id_path[1..];
         let mut found = None;
         Python::with_gil(|py| {
-            let py_tuple: &PyTuple = self.as_ref(py).downcast().unwrap();
-            for (i, child) in py_tuple.iter().enumerate() {
+            for (i, child) in self.as_ref(py).iter().enumerate() {
                 if hd == state[i].0 {
                     found = Some((i, child.to_object(py)));
                     break;
