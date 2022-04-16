@@ -48,48 +48,49 @@ fn dialog(
                 (false, _) => "Save File",
             };
             let title = title_owned.as_deref().unwrap_or(title);
+            let open_result;
+            let save_result;
+            let uris = if open {
+                open_result = proxy.open_file(&id, title, options.into()).await?;
+                open_result.uris()
+            } else {
+                save_result = proxy.save_file(&id, title, options.into()).await?;
+                save_result.uris()
+            };
 
-            let callback = move |uris: &[String]| {
-                let mut paths = uris.iter().filter_map(|s| {
-                    s.strip_prefix("file://").or_else(|| {
-                        warn!("expected path '{}' to start with 'file://'", s);
-                        None
-                    })
-                });
-                if multi && open {
-                    let infos = paths
-                        .map(|p| FileInfo {
-                            path: p.into(),
-                            format: None,
-                        })
-                        .collect();
-                    idle.add_idle_callback(move |handler| handler.open_files(tok, infos));
-                } else if !multi {
-                    if uris.len() > 2 {
-                        warn!(
-                            "expected one path (got {}), returning only the first",
-                            uris.len()
-                        );
-                    }
-                    let info = paths.next().map(|p| FileInfo {
+            let mut paths = uris.iter().filter_map(|s| {
+                s.strip_prefix("file://").or_else(|| {
+                    warn!("expected path '{}' to start with 'file://'", s);
+                    None
+                })
+            });
+            if multi && open {
+                let infos = paths
+                    .map(|p| FileInfo {
                         path: p.into(),
                         format: None,
-                    });
-                    if open {
-                        idle.add_idle_callback(move |handler| handler.open_file(tok, info));
-                    } else {
-                        idle.add_idle_callback(move |handler| handler.save_as(tok, info));
-                    }
-                } else {
-                    warn!("cannot save multiple paths");
+                    })
+                    .collect();
+                idle.add_idle_callback(move |handler| handler.open_files(tok, infos));
+            } else if !multi {
+                if uris.len() > 2 {
+                    warn!(
+                        "expected one path (got {}), returning only the first",
+                        uris.len()
+                    );
                 }
-            };
-
-            if open {
-                callback(proxy.open_file(&id, title, options.into()).await?.uris());
+                let info = paths.next().map(|p| FileInfo {
+                    path: p.into(),
+                    format: None,
+                });
+                if open {
+                    idle.add_idle_callback(move |handler| handler.open_file(tok, info));
+                } else {
+                    idle.add_idle_callback(move |handler| handler.save_as(tok, info));
+                }
             } else {
-                callback(proxy.save_file(&id, title, options.into()).await?.uris());
-            };
+                warn!("cannot save multiple paths");
+            }
 
             Ok(()) as ashpd::Result<()>
         }) {
