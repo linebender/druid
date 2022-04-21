@@ -200,7 +200,7 @@ impl Application {
         let len_with_null =
             unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as _) as usize };
         let locale = if len_with_null > 0 {
-            buf.get(..len_with_null - 1).and_then(FromWide::from_wide)
+            buf.get(..len_with_null - 1).and_then(FromWide::to_string)
         } else {
             None
         };
