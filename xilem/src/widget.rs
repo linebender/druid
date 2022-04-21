@@ -20,6 +20,8 @@ pub mod layout_observer;
 mod raw_event;
 pub mod text;
 pub mod vstack;
+pub mod interactive;
+pub mod label;
 
 use std::any::Any;
 use std::ops::{Deref, DerefMut};

@@ -13,6 +13,10 @@
 // limitations under the License.
 
 use xilem::{button, v_stack, Adapt, App, AppLauncher, LayoutObserver, Memoize, View};
+use xilem::interactive::{Interactive, ClickController, ClickEvents, InteractiveExt, LeftClick};
+use xilem::label::Label;
+use xilem::EventResult;
+
 
 #[derive(Default)]
 struct AppData {
@@ -25,6 +29,26 @@ fn count_button(count: u32) -> impl View<u32> {
 
 fn app_logic(data: &mut AppData) -> impl View<AppData> {
     v_stack((
+        Interactive::<ClickController>::new(
+            Label::new(format!("this is a clickable label: {}", data.count)),
+            |event, _controller, data: &mut AppData| {
+                data.count += 1;
+                match event {
+                    ClickEvents::LeftClick => println!("LeftClick"),
+                    ClickEvents::MiddleClick => println!("MiddleClick"),
+                    ClickEvents::RightClick => println!("RightClick"),
+                };
+                EventResult::Nop
+            }
+        ),
+
+        format!("this is another clickable label: {}", data.count)
+            .handle_event::<LeftClick, _>(|data: &mut AppData| {
+                data.count += 1;
+                println!("simple click handler");
+                EventResult::Nop
+            }),
+
         format!("count: {}", data.count),
         button("reset", |data: &mut AppData| data.count = 0),
         Memoize::new(data.count, |count| {

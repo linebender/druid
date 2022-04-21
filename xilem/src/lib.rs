@@ -35,3 +35,7 @@ pub use view::vstack::v_stack;
 pub use view::View;
 pub use widget::align::{AlignmentAxis, AlignmentProxy, HorizAlignment, VertAlignment};
 pub use widget::Widget;
+
+pub use view::interactive;
+pub use event::EventResult;
+pub use view::label;

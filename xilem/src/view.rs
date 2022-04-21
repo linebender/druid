@@ -20,6 +20,8 @@ pub mod memoize;
 pub mod text;
 pub mod use_state;
 pub mod vstack;
+pub mod interactive;
+pub mod label;
 
 use std::any::Any;
 
