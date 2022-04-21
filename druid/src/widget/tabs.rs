@@ -566,7 +566,7 @@ impl<TP: TabsPolicy> TabsBody<TP> {
 
     // Doesn't take self to allow separate borrowing
     fn child(
-        children: &mut Vec<(TP::Key, TabBodyPod<TP>)>,
+        children: &mut [(TP::Key, TabBodyPod<TP>)],
         idx: usize,
     ) -> Option<&mut TabBodyPod<TP>> {
         children.get_mut(idx).map(|x| &mut x.1)
