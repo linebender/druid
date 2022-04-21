@@ -80,7 +80,7 @@ impl Clipboard {
                 None
             } else {
                 let unic_str = GlobalLock(handle) as LPWSTR;
-                let result = unic_str.from_wide();
+                let result = unic_str.to_string();
                 GlobalUnlock(handle);
                 result
             }

@@ -59,7 +59,7 @@ fn hresult_description(hr: HRESULT) -> Option<String> {
             return None;
         }
 
-        let result = message_buffer.from_wide();
+        let result = message_buffer.to_string();
         LocalFree(message_buffer as HLOCAL);
         result
     }
