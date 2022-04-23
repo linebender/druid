@@ -32,6 +32,8 @@
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/linebender/druid/screenshots/images/doc_logo.png"
 )]
+// This is overeager right now, see https://github.com/rust-lang/rust-clippy/issues/8494
+#![allow(clippy::iter_overeager_cloned)]
 
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.

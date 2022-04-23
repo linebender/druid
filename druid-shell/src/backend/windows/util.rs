@@ -84,7 +84,7 @@ pub trait FromWide {
         OsStringExt::from_wide(self.to_u16_slice())
     }
 
-    fn from_wide(&self) -> Option<String> {
+    fn to_string(&self) -> Option<String> {
         String::from_utf16(self.to_u16_slice()).ok()
     }
 }

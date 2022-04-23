@@ -1569,7 +1569,7 @@ unsafe fn choose_adapter(factory: *mut IDXGIFactory2) -> *mut IDXGIAdapter {
         debug!(
             "{:?}: desc = {:?}, vram = {}",
             adapter,
-            (&mut desc.Description[0] as LPWSTR).from_wide(),
+            (&mut desc.Description[0] as LPWSTR).to_string(),
             desc.DedicatedVideoMemory
         );
         i += 1;
