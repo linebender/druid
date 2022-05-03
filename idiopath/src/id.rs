@@ -28,6 +28,7 @@ impl Id {
         Id(WIDGET_ID_COUNTER.next_nonzero())
     }
 
+    #[allow(unused)]
     pub fn to_raw(self) -> u64 {
         self.0.into()
     }

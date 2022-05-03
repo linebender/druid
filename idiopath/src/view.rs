@@ -26,7 +26,7 @@ use crate::{
     widget::Widget,
 };
 
-pub trait View<T, A> {
+pub trait View<T, A = ()> {
     type State;
 
     type Element: Widget;
@@ -77,5 +77,26 @@ impl Cx {
 
     pub fn id_path(&self) -> &IdPath {
         &self.id_path
+    }
+
+    /// Run some logic with an id added to the id path.
+    ///
+    /// This is an ergonomic helper that ensures proper nesting of the id path.
+    pub fn with_id<T, F: FnOnce(&mut Cx) -> T>(&mut self, id: Id, f: F) -> T {
+        self.push(id);
+        let result = f(self);
+        self.pop();
+        result
+    }
+
+    /// Allocate a new id and run logic with the new id added to the id path.
+    ///
+    /// Also an ergonomic helper.
+    pub fn with_new_id<T, F: FnOnce(&mut Cx) -> T>(&mut self, f: F) -> (Id, T) {
+        let id = Id::next();
+        self.push(id);
+        let result = f(self);
+        self.pop();
+        (id, result)
     }
 }

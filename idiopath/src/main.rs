@@ -38,7 +38,7 @@ use widget::Widget;
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
-struct MainState<T, V: View<T, ()>, F: FnMut(&mut T) -> V>
+struct MainState<T, V: View<T>, F: FnMut(&mut T) -> V>
 where
     V::Element: Widget,
 {
@@ -47,7 +47,7 @@ where
     app: App<T, V, F>,
 }
 
-impl<T: 'static, V: View<T, ()> + 'static, F: FnMut(&mut T) -> V + 'static> WinHandler
+impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> WinHandler
     for MainState<T, V, F>
 where
     V::Element: Widget,
@@ -103,7 +103,7 @@ where
     }
 }
 
-impl<T, V: View<T, ()>, F: FnMut(&mut T) -> V> MainState<T, V, F>
+impl<T, V: View<T>, F: FnMut(&mut T) -> V> MainState<T, V, F>
 where
     V::Element: Widget,
 {
@@ -130,11 +130,11 @@ struct AppData {
     count: u32,
 }
 
-fn count_button(count: u32) -> impl View<u32, ()> {
+fn count_button(count: u32) -> impl View<u32> {
     Button::new(format!("count: {}", count), |data| *data += 1)
 }
 
-fn app_logic(data: &mut AppData) -> impl View<AppData, ()> {
+fn app_logic(data: &mut AppData) -> impl View<AppData> {
     Column::new((
         Button::new(format!("count: {}", data.count), |data: &mut AppData| {
             data.count += 1

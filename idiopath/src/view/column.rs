@@ -42,10 +42,7 @@ where
     type Element = crate::widget::column::Column<VT::Elements>;
 
     fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
-        let id = Id::next();
-        cx.push(id);
-        let (state, elements) = self.children.build(cx);
-        cx.pop();
+        let (id, (state, elements)) = cx.with_new_id(|cx| self.children.build(cx));
         let column = crate::widget::column::Column::new(elements);
         (id, state, column)
     }
@@ -58,10 +55,10 @@ where
         state: &mut Self::State,
         element: &mut Self::Element,
     ) {
-        cx.push(*id);
-        self.children
-            .rebuild(cx, &prev.children, state, element.children_mut());
-        cx.pop();
+        cx.with_id(*id, |cx| {
+            self.children
+                .rebuild(cx, &prev.children, state, element.children_mut())
+        });
     }
 
     fn event(

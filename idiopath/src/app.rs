@@ -21,7 +21,7 @@ use crate::{
     widget::{RawEvent, Widget},
 };
 
-pub struct App<T, V: View<T, ()>, F: FnMut(&mut T) -> V>
+pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V>
 where
     V::Element: Widget,
 {
@@ -35,7 +35,7 @@ where
     cx: Cx,
 }
 
-impl<T, V: View<T, ()>, F: FnMut(&mut T) -> V> App<T, V, F>
+impl<T, V: View<T>, F: FnMut(&mut T) -> V> App<T, V, F>
 where
     V::Element: Widget,
 {

@@ -40,6 +40,7 @@ pub struct UseStateState<T, A, S, V: View<(Rc<T>, S), A>> {
 }
 
 impl<T, A, S, V, FInit: Fn() -> S, F: Fn(&mut S) -> V> UseState<T, A, S, V, FInit, F> {
+    #[allow(unused)]
     pub fn new(f_init: FInit, f: F) -> Self {
         let phantom = Default::default();
         UseState { f_init, f, phantom }

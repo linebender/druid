@@ -29,7 +29,7 @@ use super::{Cx, View};
 /// be well beyond the capability of Rust's type system. If type-erased
 /// views with other bounds are needed, the best approach is probably
 /// duplication of the code, probably with a macro.
-pub trait AnyView<T, A> {
+pub trait AnyView<T, A = ()> {
     fn as_any(&self) -> &dyn Any;
 
     fn dyn_build(&self, cx: &mut Cx) -> (Id, Box<dyn Any>, Box<dyn AnyWidget>);
