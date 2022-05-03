@@ -51,9 +51,12 @@ impl<T, A> View<T, A> for Button<T, A> {
         _id: &mut crate::id::Id,
         _state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
+    ) -> bool {
         if prev.label != self.label {
             element.set_label(self.label.clone());
+            true
+        } else {
+            false
         }
     }
 

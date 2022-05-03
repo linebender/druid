@@ -41,7 +41,7 @@ pub trait AnyView<T, A = ()> {
         id: &mut Id,
         state: &mut Box<dyn Any>,
         element: &mut Box<dyn AnyWidget>,
-    );
+    ) -> bool;
 
     fn dyn_event(
         &self,
@@ -73,22 +73,25 @@ where
         id: &mut Id,
         state: &mut Box<dyn Any>,
         element: &mut Box<dyn AnyWidget>,
-    ) {
+    ) -> bool {
         if let Some(prev) = prev.as_any().downcast_ref() {
             if let Some(state) = state.downcast_mut() {
                 if let Some(element) = element.deref_mut().as_any_mut().downcast_mut() {
-                    self.rebuild(cx, prev, id, state, element);
+                    self.rebuild(cx, prev, id, state, element)
                 } else {
                     println!("downcast of element failed in dyn_event");
+                    false
                 }
             } else {
                 println!("downcast of state failed in dyn_event");
+                false
             }
         } else {
             let (new_id, new_state, new_element) = self.build(cx);
             *id = new_id;
             *state = Box::new(new_state);
             *element = Box::new(new_element);
+            true
         }
     }
 
@@ -125,9 +128,9 @@ impl<T, A> View<T, A> for Box<dyn AnyView<T, A>> {
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
+    ) -> bool {
         self.deref()
-            .dyn_rebuild(cx, prev.deref(), id, state, element);
+            .dyn_rebuild(cx, prev.deref(), id, state, element)
     }
 
     fn event(

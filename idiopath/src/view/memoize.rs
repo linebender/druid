@@ -55,11 +55,14 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
+    ) -> bool {
         if prev.data != self.data {
             let view = (self.child_cb)(&self.data);
-            view.rebuild(cx, &state.view, id, &mut state.view_state, element);
+            let changed = view.rebuild(cx, &state.view, id, &mut state.view_state, element);
             state.view = view;
+            changed
+        } else {
+            false
         }
     }
 

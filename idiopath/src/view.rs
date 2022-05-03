@@ -26,13 +26,34 @@ use crate::{
     widget::Widget,
 };
 
+/// A view object representing a node in the UI.
+///
+/// This is a central trait for representing UI. An app will generate a tree of
+/// these objects (the view tree) as the primary interface for expressing UI.
+/// The view tree is transitory and is retained only long enough to dispatch
+/// events and then serve as a reference for diffing for the next view tree.
+///
+/// The framework will then run methods on these views to create the associated
+/// state tree and widget tree, as well as incremental updates and event
+/// propagation.
+/// 
+/// The `View` trait is parameterized by `T`, which is known as the "app state",
+/// and also a type for actions which are passed up the tree in event
+/// propagation. During event handling, mutable access to the app state is
+/// given to view nodes, which in turn can make expose it to callbacks.
 pub trait View<T, A = ()> {
+    /// Associated state for the view.
     type State;
 
+    /// The associated widget for the view.
     type Element: Widget;
 
+    /// Build the associated widget and initialize state.
     fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element);
 
+    /// Update the associated widget.
+    ///
+    /// Returns `true` when anything has changed.
     fn rebuild(
         &self,
         cx: &mut Cx,
@@ -40,8 +61,12 @@ pub trait View<T, A = ()> {
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    );
+    ) -> bool;
 
+    /// Propagate an event.
+    ///
+    /// Handle an event, propagating to children if needed. Here, `id_path` is a slice
+    /// of ids beginning at a child of this view.
     fn event(
         &self,
         id_path: &[Id],

@@ -26,7 +26,13 @@ pub trait ViewTuple<T, A> {
 
     fn build(&self, cx: &mut Cx) -> (Self::State, Self::Elements);
 
-    fn rebuild(&self, cx: &mut Cx, prev: &Self, state: &mut Self::State, els: &mut Self::Elements);
+    fn rebuild(
+        &self,
+        cx: &mut Cx,
+        prev: &Self,
+        state: &mut Self::State,
+        els: &mut Self::Elements,
+    ) -> bool;
 
     fn event(
         &self,
@@ -57,11 +63,13 @@ macro_rules! impl_view_tuple {
                 prev: &Self,
                 state: &mut Self::State,
                 els: &mut Self::Elements,
-            ) {
+            ) -> bool {
+                let mut changed = false;
                 $(
-                self.$s
+                changed |= self.$s
                     .rebuild(cx, &prev.$s, &mut state.$n[$s], &mut state.$s, &mut els.$s);
                 )*
+                changed
             }
 
             fn event(

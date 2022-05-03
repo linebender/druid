@@ -73,10 +73,11 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
+    ) -> bool {
         let view = (self.f)(state.state.as_mut().unwrap());
-        view.rebuild(cx, &state.view, id, &mut state.view_state, element);
+        let changed = view.rebuild(cx, &state.view, id, &mut state.view_state, element);
         state.view = view;
+        changed
     }
 
     fn event(

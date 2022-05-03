@@ -54,11 +54,11 @@ where
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
+    ) -> bool {
         cx.with_id(*id, |cx| {
             self.children
                 .rebuild(cx, &prev.children, state, element.children_mut())
-        });
+        })
     }
 
     fn event(

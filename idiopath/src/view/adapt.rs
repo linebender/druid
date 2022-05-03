@@ -70,8 +70,8 @@ impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> View<T,
         id: &mut Id,
         state: &mut Self::State,
         element: &mut Self::Element,
-    ) {
-        self.child.rebuild(cx, &prev.child, id, state, element);
+    ) -> bool {
+        self.child.rebuild(cx, &prev.child, id, state, element)
     }
 
     fn event(
