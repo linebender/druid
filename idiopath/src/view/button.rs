@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use crate::id::Id;
+use crate::{event::EventResult, id::Id};
 
 use super::{Cx, View};
 
@@ -66,7 +66,7 @@ impl<T, A> View<T, A> for Button<T, A> {
         _state: &mut Self::State,
         _event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
-        (self.callback)(app_state)
+    ) -> EventResult<A> {
+        EventResult::Action((self.callback)(app_state))
     }
 }

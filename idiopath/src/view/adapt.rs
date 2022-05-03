@@ -14,11 +14,11 @@
 
 use std::{any::Any, marker::PhantomData};
 
-use crate::id::Id;
+use crate::{event::EventResult, id::Id};
 
 use super::{Cx, View};
 
-pub struct Adapt<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> {
+pub struct Adapt<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A>, C: View<U, B>> {
     f: F,
     child: C,
     phantom: PhantomData<(T, A, U, B)>,
@@ -35,7 +35,9 @@ pub struct AdaptThunk<'a, U, B, C: View<U, B>> {
     event: Box<dyn Any>,
 }
 
-impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> Adapt<T, A, U, B, F, C> {
+impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A>, C: View<U, B>>
+    Adapt<T, A, U, B, F, C>
+{
     pub fn new(f: F, child: C) -> Self {
         Adapt {
             f,
@@ -46,13 +48,13 @@ impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> Adapt<T
 }
 
 impl<'a, U, B, C: View<U, B>> AdaptThunk<'a, U, B, C> {
-    pub fn call(self, app_state: &mut U) -> B {
+    pub fn call(self, app_state: &mut U) -> EventResult<B> {
         self.child
             .event(self.id_path, self.state, self.event, app_state)
     }
 }
 
-impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> View<T, A>
+impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A>, C: View<U, B>> View<T, A>
     for Adapt<T, A, U, B, F, C>
 {
     type State = C::State;
@@ -80,7 +82,7 @@ impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> A, C: View<U, B>> View<T,
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
+    ) -> EventResult<A> {
         let thunk = AdaptThunk {
             child: &self.child,
             state,

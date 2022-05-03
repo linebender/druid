@@ -22,6 +22,7 @@ pub mod use_state;
 use std::any::Any;
 
 use crate::{
+    event::EventResult,
     id::{Id, IdPath},
     widget::Widget,
 };
@@ -36,7 +37,7 @@ use crate::{
 /// The framework will then run methods on these views to create the associated
 /// state tree and widget tree, as well as incremental updates and event
 /// propagation.
-/// 
+///
 /// The `View` trait is parameterized by `T`, which is known as the "app state",
 /// and also a type for actions which are passed up the tree in event
 /// propagation. During event handling, mutable access to the app state is
@@ -73,7 +74,7 @@ pub trait View<T, A = ()> {
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A;
+    ) -> EventResult<A>;
 }
 
 #[derive(Clone)]

@@ -14,7 +14,7 @@
 
 use std::any::Any;
 
-use crate::id::Id;
+use crate::{event::EventResult, id::Id};
 
 use super::{Cx, View};
 
@@ -26,6 +26,7 @@ pub struct Memoize<D, F> {
 pub struct MemoizeState<T, A, V: View<T, A>> {
     view: V,
     view_state: V::State,
+    dirty: bool,
 }
 
 impl<D, V, F: Fn(&D) -> V> Memoize<D, F> {
@@ -44,7 +45,11 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
     fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let view = (self.child_cb)(&self.data);
         let (id, view_state, element) = view.build(cx);
-        let memoize_state = MemoizeState { view, view_state };
+        let memoize_state = MemoizeState {
+            view,
+            view_state,
+            dirty: false,
+        };
         (id, memoize_state, element)
     }
 
@@ -56,7 +61,7 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         state: &mut Self::State,
         element: &mut Self::Element,
     ) -> bool {
-        if prev.data != self.data {
+        if std::mem::take(&mut state.dirty) || prev.data != self.data {
             let view = (self.child_cb)(&self.data);
             let changed = view.rebuild(cx, &state.view, id, &mut state.view_state, element);
             state.view = view;
@@ -72,9 +77,13 @@ impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
-        state
+    ) -> EventResult<A> {
+        let r = state
             .view
-            .event(id_path, &mut state.view_state, event, app_state)
+            .event(id_path, &mut state.view_state, event, app_state);
+        if matches!(r, EventResult::RequestRebuild) {
+            state.dirty = true;
+        }
+        r
     }
 }

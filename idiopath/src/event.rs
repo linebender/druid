@@ -21,6 +21,35 @@ pub struct Event {
     pub body: Box<dyn Any>,
 }
 
+/// A result wrapper type for event handlers.
+pub enum EventResult<A> {
+    /// The event handler was invoked and returned an action.
+    Action(A),
+    /// The event handler received a change request that requests a rebuild.
+    #[allow(unused)]
+    RequestRebuild,
+    /// The event handler discarded the event.
+    #[allow(unused)]
+    Nop,
+    /// The event was addressed to an id path no longer in the tree.
+    ///
+    /// This is a normal outcome for async operation when the tree is changing
+    /// dynamically, but otherwise indicates a logic error.
+    Stale,
+}
+
+impl<A> EventResult<A> {
+    #[allow(unused)]
+    pub fn map<B>(self, f: impl FnOnce(A) -> B) -> EventResult<B> {
+        match self {
+            EventResult::Action(a) => EventResult::Action(f(a)),
+            EventResult::RequestRebuild => EventResult::RequestRebuild,
+            EventResult::Stale => EventResult::Stale,
+            EventResult::Nop => EventResult::Nop,
+        }
+    }
+}
+
 impl Event {
     pub fn new(id_path: IdPath, event: impl Any) -> Event {
         Event {

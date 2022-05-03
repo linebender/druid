@@ -15,6 +15,7 @@
 use std::any::Any;
 
 use crate::{
+    event::EventResult,
     id::Id,
     view::{Cx, View},
 };
@@ -40,7 +41,7 @@ pub trait ViewTuple<T, A> {
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A;
+    ) -> EventResult<A>;
 }
 
 macro_rules! impl_view_tuple {
@@ -78,14 +79,14 @@ macro_rules! impl_view_tuple {
                 state: &mut Self::State,
                 event: Box<dyn Any>,
                 app_state: &mut T,
-            ) -> A {
+            ) -> EventResult<A> {
                 let hd = id_path[0];
                 let tl = &id_path[1..];
                 $(
                 if hd == state.$n[$s] {
                     self.$s.event(tl, &mut state.$s, event, app_state)
                 } else )* {
-                    panic!("inconsistent id_path")
+                    crate::event::EventResult::Stale
                 }
             }
         }

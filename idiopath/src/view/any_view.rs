@@ -16,7 +16,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{id::Id, widget::AnyWidget};
+use crate::{event::EventResult, id::Id, widget::AnyWidget};
 
 use super::{Cx, View};
 
@@ -49,7 +49,7 @@ pub trait AnyView<T, A = ()> {
         state: &mut dyn Any,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A;
+    ) -> EventResult<A>;
 }
 
 impl<T, A, V: View<T, A> + 'static> AnyView<T, A> for V
@@ -101,12 +101,11 @@ where
         state: &mut dyn Any,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
+    ) -> EventResult<A> {
         if let Some(state) = state.downcast_mut() {
             self.event(id_path, state, event, app_state)
         } else {
-            // Possibly softer failure? Would require either Option<A> return or
-            // Default bound on A.
+            // Possibly softer failure?
             panic!("downcast error in dyn_event");
         }
     }
@@ -139,7 +138,7 @@ impl<T, A> View<T, A> for Box<dyn AnyView<T, A>> {
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
+    ) -> EventResult<A> {
         self.deref()
             .dyn_event(id_path, state.deref_mut(), event, app_state)
     }

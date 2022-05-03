@@ -14,7 +14,7 @@
 
 use std::{any::Any, marker::PhantomData};
 
-use crate::{id::Id, view_tuple::ViewTuple, widget::WidgetTuple};
+use crate::{event::EventResult, id::Id, view_tuple::ViewTuple, widget::WidgetTuple};
 
 use super::{Cx, View};
 
@@ -67,7 +67,7 @@ where
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut T,
-    ) -> A {
+    ) -> EventResult<A> {
         self.children.event(id_path, state, event, app_state)
     }
 }

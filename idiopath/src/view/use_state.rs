@@ -14,7 +14,7 @@
 
 use std::{any::Any, marker::PhantomData, rc::Rc};
 
-use crate::id::Id;
+use crate::{event::EventResult, id::Id};
 
 use super::{Cx, View};
 
@@ -86,7 +86,7 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
         state: &mut Self::State,
         event: Box<dyn Any>,
         app_state: &mut Rc<T>,
-    ) -> A {
+    ) -> EventResult<A> {
         let mut local_state = (app_state.clone(), state.state.take().unwrap());
         let a = state
             .view
