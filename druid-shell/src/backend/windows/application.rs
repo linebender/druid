@@ -89,9 +89,8 @@ impl Application {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
         {
-            unsafe {
                 let class_name = CLASS_NAME.to_wide();
-                let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
+                let icon = unsafe { LoadIconW(0 as HINSTANCE, IDI_APPLICATION) };
                 let wnd = WNDCLASSW {
                     style: 0,
                     lpfnWndProc: Some(window::win_proc_dispatch),
@@ -104,11 +103,10 @@ impl Application {
                     lpszMenuName: 0 as LPCWSTR,
                     lpszClassName: class_name.as_ptr(),
                 };
-                let class_atom = RegisterClassW(&wnd);
+                let class_atom = unsafe { RegisterClassW(&wnd) };
                 if class_atom == 0 {
                     panic!("Error registering class");
                 }
-            }
         }
         Ok(())
     }
