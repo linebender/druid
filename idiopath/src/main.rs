@@ -16,33 +16,29 @@ mod app;
 mod event;
 mod id;
 mod view;
-mod view_tuple;
+mod view_seq;
 mod widget;
 
 use std::any::Any;
 
 use app::App;
 use druid_shell::kurbo::Size;
-use druid_shell::piet::{Color, RenderContext};
 
 use druid_shell::{
     Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
     WindowHandle,
 };
 use view::adapt::Adapt;
-use view::button::Button;
-use view::column::Column;
+use view::button::button;
+use view::column::column;
 use view::memoize::Memoize;
 use view::View;
 use widget::Widget;
-
-const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
 struct MainState<T, V: View<T>, F: FnMut(&mut T) -> V>
 where
     V::Element: Widget,
 {
-    size: Size,
     handle: WindowHandle,
     app: App<T, V, F>,
 }
@@ -60,8 +56,6 @@ where
     fn prepare_paint(&mut self) {}
 
     fn paint(&mut self, piet: &mut druid_shell::piet::Piet, _: &Region) {
-        let rect = self.size.to_rect();
-        piet.fill(rect, &BG_COLOR);
         self.app.paint(piet);
     }
 
@@ -87,7 +81,7 @@ where
     fn mouse_up(&mut self, _event: &MouseEvent) {}
 
     fn size(&mut self, size: Size) {
-        self.size = size;
+        self.app.size(size);
     }
 
     fn request_close(&mut self) {
@@ -109,7 +103,6 @@ where
 {
     fn new(app: App<T, V, F>) -> Self {
         let state = MainState {
-            size: Default::default(),
             handle: Default::default(),
             app,
         };
@@ -131,17 +124,17 @@ struct AppData {
 }
 
 fn count_button(count: u32) -> impl View<u32> {
-    Button::new(format!("count: {}", count), |data| *data += 1)
+    button(format!("count: {}", count), |data| *data += 1)
 }
 
 fn app_logic(data: &mut AppData) -> impl View<AppData> {
-    Column::new((
-        Button::new(format!("count: {}", data.count), |data: &mut AppData| {
+    column((
+        button(format!("count: {}", data.count), |data: &mut AppData| {
             data.count += 1
         }),
-        Button::new("reset", |data: &mut AppData| data.count = 0),
+        button("reset", |data: &mut AppData| data.count = 0),
         Memoize::new(data.count, |count| {
-            Button::new(format!("count: {}", count), |data: &mut AppData| {
+            button(format!("count: {}", count), |data: &mut AppData| {
                 data.count += 1
             })
         }),

@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid_shell::{kurbo::Point, piet::Piet, WindowHandle};
+use druid_shell::kurbo::Size;
+use druid_shell::piet::{Color, Piet, RenderContext};
+use druid_shell::{kurbo::Point, WindowHandle};
 
+use crate::widget::{CxState, LayoutCx, PaintCx, WidgetState};
 use crate::{
     event::Event,
     id::Id,
@@ -32,8 +35,13 @@ where
     state: Option<V::State>,
     element: Option<V::Element>,
     events: Vec<Event>,
+    window_handle: WindowHandle,
+    root_state: WidgetState,
+    size: Size,
     cx: Cx,
 }
+
+const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
 impl<T, V: View<T>, F: FnMut(&mut T) -> V> App<T, V, F>
 where
@@ -49,6 +57,9 @@ where
             state: None,
             element: None,
             events: Vec::new(),
+            window_handle: Default::default(),
+            root_state: Default::default(),
+            size: Default::default(),
             cx,
         }
     }
@@ -64,16 +75,29 @@ where
         }
     }
 
-    pub fn connect(&mut self, _window_handle: WindowHandle) {
+    pub fn connect(&mut self, window_handle: WindowHandle) {
+        self.window_handle = window_handle.clone();
         // This will be needed for wiring up async but is a stub for now.
         //self.cx.set_handle(window_handle.get_idle_handle());
     }
 
+    pub fn size(&mut self, size: Size) {
+        self.size = size;
+    }
+
     pub fn paint(&mut self, piet: &mut Piet) {
+        let rect = self.size.to_rect();
+        piet.fill(rect, &BG_COLOR);
+
         self.ensure_app();
         let element = self.element.as_mut().unwrap();
-        element.layout();
-        element.paint(piet, Point::ZERO);
+        let text = piet.text();
+        let mut cx_state = CxState::new(&self.window_handle, text.clone());
+        let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
+        let proposed_size = self.size;
+        element.layout(&mut layout_cx, proposed_size);
+        let mut paint_cx = PaintCx::new(&mut cx_state, piet);
+        element.paint(&mut paint_cx);
     }
 
     pub fn mouse_down(&mut self, point: Point) {

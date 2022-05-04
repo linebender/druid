@@ -79,11 +79,11 @@ where
                 if let Some(element) = element.deref_mut().as_any_mut().downcast_mut() {
                     self.rebuild(cx, prev, id, state, element)
                 } else {
-                    println!("downcast of element failed in dyn_event");
+                    println!("downcast of element failed in dyn_rebuild");
                     false
                 }
             } else {
-                println!("downcast of state failed in dyn_event");
+                println!("downcast of state failed in dyn_rebuild");
                 false
             }
         } else {

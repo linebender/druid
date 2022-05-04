@@ -18,21 +18,22 @@ use crate::{
     event::EventResult,
     id::Id,
     view::{Cx, View},
+    widget::Pod,
 };
 
-pub trait ViewTuple<T, A> {
+pub trait ViewSequence<T, A> {
     type State;
 
     type Elements;
 
-    fn build(&self, cx: &mut Cx) -> (Self::State, Self::Elements);
+    fn build(&self, cx: &mut Cx) -> (Self::State, Vec<Pod>);
 
     fn rebuild(
         &self,
         cx: &mut Cx,
         prev: &Self,
         state: &mut Self::State,
-        els: &mut Self::Elements,
+        els: &mut Vec<Pod>,
     ) -> bool;
 
     fn event(
@@ -45,16 +46,18 @@ pub trait ViewTuple<T, A> {
 }
 
 macro_rules! impl_view_tuple {
-    ( $n: tt; $( $t:ident),* ; $( $s:tt ),* ) => {
-        impl<T, A, $( $t: View<T, A> ),* > ViewTuple<T, A> for ( $( $t, )* ) {
+    ( $n: tt; $( $t:ident),* ; $( $i:tt ),* ) => {
+        impl<T, A, $( $t: View<T, A> ),* > ViewSequence<T, A> for ( $( $t, )* )
+            where $( <$t as View<T, A>>::Element: 'static ),*
+        {
             type State = ( $( $t::State, )* [Id; $n]);
 
             type Elements = ( $( $t::Element, )* );
 
-            fn build(&self, cx: &mut Cx) -> (Self::State, Self::Elements) {
-                let b = ( $( self.$s.build(cx), )* );
-                let state = ( $( b.$s.1, )* [ $( b.$s.0 ),* ]);
-                let els = ( $( b.$s.2, )* );
+            fn build(&self, cx: &mut Cx) -> (Self::State, Vec<Pod>) {
+                let b = ( $( self.$i.build(cx), )* );
+                let state = ( $( b.$i.1, )* [ $( b.$i.0 ),* ]);
+                let els = vec![ $( Pod::new(b.$i.2) ),* ];
                 (state, els)
             }
 
@@ -63,12 +66,17 @@ macro_rules! impl_view_tuple {
                 cx: &mut Cx,
                 prev: &Self,
                 state: &mut Self::State,
-                els: &mut Self::Elements,
+                els: &mut Vec<Pod>,
             ) -> bool {
                 let mut changed = false;
                 $(
-                changed |= self.$s
-                    .rebuild(cx, &prev.$s, &mut state.$n[$s], &mut state.$s, &mut els.$s);
+                if self.$i
+                    .rebuild(cx, &prev.$i, &mut state.$n[$i], &mut state.$i,
+                        els[$i].downcast_mut().unwrap())
+                {
+                    els[$i].request_update();
+                    changed = true;
+                }
                 )*
                 changed
             }
@@ -83,8 +91,8 @@ macro_rules! impl_view_tuple {
                 let hd = id_path[0];
                 let tl = &id_path[1..];
                 $(
-                if hd == state.$n[$s] {
-                    self.$s.event(tl, &mut state.$s, event, app_state)
+                if hd == state.$n[$i] {
+                    self.$i.event(tl, &mut state.$i, event, app_state)
                 } else )* {
                     crate::event::EventResult::Stale
                 }

@@ -14,32 +14,33 @@
 
 use std::{any::Any, marker::PhantomData};
 
-use crate::{event::EventResult, id::Id, view_tuple::ViewTuple, widget::WidgetTuple};
+use crate::{event::EventResult, id::Id, view_seq::ViewSequence, widget::WidgetTuple};
 
 use super::{Cx, View};
 
-pub struct Column<T, A, VT: ViewTuple<T, A>> {
+pub struct Column<T, A, VT: ViewSequence<T, A>> {
     children: VT,
     phantom: PhantomData<(T, A)>,
 }
 
-impl<T, A, VT: ViewTuple<T, A>> Column<T, A, VT>
-where
-    VT::Elements: WidgetTuple,
-{
+pub fn column<T, A, VT: ViewSequence<T, A>>(children: VT) -> Column<T, A, VT> {
+    Column::new(children)
+}
+
+impl<T, A, VT: ViewSequence<T, A>> Column<T, A, VT> {
     pub fn new(children: VT) -> Self {
         let phantom = Default::default();
         Column { children, phantom }
     }
 }
 
-impl<T, A, VT: ViewTuple<T, A>> View<T, A> for Column<T, A, VT>
+impl<T, A, VT: ViewSequence<T, A>> View<T, A> for Column<T, A, VT>
 where
     VT::Elements: WidgetTuple,
 {
     type State = VT::State;
 
-    type Element = crate::widget::column::Column<VT::Elements>;
+    type Element = crate::widget::column::Column;
 
     fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let (id, (state, elements)) = cx.with_new_id(|cx| self.children.build(cx));

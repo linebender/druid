@@ -14,12 +14,12 @@
 
 use druid_shell::{
     kurbo::{Point, Size},
-    piet::{Color, Piet, RenderContext, Text, TextLayoutBuilder},
+    piet::{Color, RenderContext, Text, TextLayoutBuilder},
 };
 
 use crate::{event::Event, id::IdPath};
 
-use super::Widget;
+use super::{LayoutCx, PaintCx, Widget};
 
 #[derive(Default)]
 
@@ -46,17 +46,17 @@ impl Widget for Button {
         events.push(Event::new(self.id_path.clone(), ()));
     }
 
-    fn layout(&mut self) -> Size {
+    fn layout(&mut self, _cx: &mut LayoutCx, _proposed_size: Size) -> Size {
         Size::new(100., 20.)
     }
 
-    fn paint(&mut self, ctx: &mut Piet, pos: Point) {
+    fn paint(&mut self, ctx: &mut PaintCx) {
         let layout = ctx
             .text()
             .new_text_layout(self.label.clone())
             .text_color(Color::WHITE)
             .build()
             .unwrap();
-        ctx.draw_text(&layout, pos);
+        ctx.draw_text(&layout, Point::ZERO);
     }
 }

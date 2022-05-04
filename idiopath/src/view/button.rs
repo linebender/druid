@@ -24,6 +24,13 @@ pub struct Button<T, A> {
     callback: Box<dyn Fn(&mut T) -> A>,
 }
 
+pub fn button<T, A>(
+    label: impl Into<String>,
+    clicked: impl Fn(&mut T) -> A + 'static,
+) -> Button<T, A> {
+    Button::new(label, clicked)
+}
+
 impl<T, A> Button<T, A> {
     pub fn new(label: impl Into<String>, clicked: impl Fn(&mut T) -> A + 'static) -> Self {
         Button {
