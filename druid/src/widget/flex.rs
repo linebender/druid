@@ -686,17 +686,13 @@ impl<T: Data> Flex<T> {
         // flex children
         if space_per_flex > 0.0 {
             for child in self.children.iter_mut() {
-                match child {
-                    Child::Flex { widget, flex, .. } => {
-                        let main_axis_available_space = *flex * space_per_flex;
-                        let size_on_cross_axis = f2(main_axis_available_space, ctx, *bc, widget);
-                        max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
-                    }
-                    Child::FlexedSpacer(_, _) => {
-                        //sj_todo
-                        todo!("how to use this?");
-                    }
-                    _ => {}
+                // We ignore Child::FlexedSpacer because its cross size is irrelevant.
+                // Its flex matters only on main axis. But here we are interested in cross size of
+                // each flex child.
+                if let Child::Flex { widget, flex, .. } = child {
+                    let main_axis_available_space = *flex * space_per_flex;
+                    let size_on_cross_axis = f2(main_axis_available_space, ctx, *bc, widget);
+                    max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
                 }
             }
         }
@@ -733,9 +729,8 @@ impl<T: Data> Flex<T> {
                     }
                     total = total.add(s);
                 }
-                Child::FlexedSpacer(_, _) => {
-                    //sj_todo
-                    todo!("how to use this?");
+                Child::FlexedSpacer(flex, _) => {
+                    total_flex += *flex;
                 }
             }
         }
