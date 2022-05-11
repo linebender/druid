@@ -15,9 +15,10 @@
 pub mod adapt;
 pub mod any_view;
 pub mod button;
-pub mod column;
 pub mod memoize;
+pub mod text;
 pub mod use_state;
+pub mod vstack;
 
 use std::any::Any;
 

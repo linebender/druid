@@ -30,8 +30,8 @@ use druid_shell::{
 };
 use view::adapt::Adapt;
 use view::button::button;
-use view::column::column;
 use view::memoize::Memoize;
+use view::vstack::v_stack;
 use view::View;
 use widget::Widget;
 
@@ -128,10 +128,8 @@ fn count_button(count: u32) -> impl View<u32> {
 }
 
 fn app_logic(data: &mut AppData) -> impl View<AppData> {
-    column((
-        button(format!("count: {}", data.count), |data: &mut AppData| {
-            data.count += 1
-        }),
+    v_stack((
+        format!("count: {}", data.count),
         button("reset", |data: &mut AppData| data.count = 0),
         Memoize::new(data.count, |count| {
             button(format!("count: {}", count), |data: &mut AppData| {

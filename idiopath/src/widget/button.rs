@@ -19,7 +19,7 @@ use druid_shell::{
 
 use crate::{event::Event, id::IdPath};
 
-use super::{LayoutCx, PaintCx, Widget};
+use super::{LayoutCx, PaintCx, UpdateCx, Widget};
 
 #[derive(Default)]
 
@@ -41,13 +41,24 @@ impl Button {
     }
 }
 
+const FIXED_SIZE: Size = Size::new(100., 20.);
+
 impl Widget for Button {
+    fn update(&mut self, cx: &mut UpdateCx) {
+        // TODO: probably want to request layout when string changes
+    }
+
     fn event(&mut self, _event: &super::RawEvent, events: &mut Vec<Event>) {
         events.push(Event::new(self.id_path.clone(), ()));
     }
 
+    fn prelayout(&mut self, _cx: &mut LayoutCx) -> (Size, Size) {
+        // TODO: do text layout here.
+        (FIXED_SIZE, FIXED_SIZE)
+    }
+
     fn layout(&mut self, _cx: &mut LayoutCx, _proposed_size: Size) -> Size {
-        Size::new(100., 20.)
+        FIXED_SIZE
     }
 
     fn paint(&mut self, ctx: &mut PaintCx) {

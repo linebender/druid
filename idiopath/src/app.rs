@@ -16,7 +16,7 @@ use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
 use druid_shell::{kurbo::Point, WindowHandle};
 
-use crate::widget::{CxState, LayoutCx, PaintCx, WidgetState};
+use crate::widget::{CxState, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
 use crate::{
     event::Event,
     id::Id,
@@ -24,19 +24,16 @@ use crate::{
     widget::{RawEvent, Widget},
 };
 
-pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V>
-where
-    V::Element: Widget,
-{
+pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V> {
     data: T,
     app_logic: F,
     view: Option<V>,
     id: Option<Id>,
     state: Option<V::State>,
-    element: Option<V::Element>,
     events: Vec<Event>,
     window_handle: WindowHandle,
     root_state: WidgetState,
+    root_pod: Option<Pod>,
     size: Size,
     cx: Cx,
 }
@@ -45,7 +42,7 @@ const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
 impl<T, V: View<T>, F: FnMut(&mut T) -> V> App<T, V, F>
 where
-    V::Element: Widget,
+    V::Element: Widget + 'static,
 {
     pub fn new(data: T, app_logic: F) -> Self {
         let cx = Cx::new();
@@ -55,7 +52,7 @@ where
             view: None,
             id: None,
             state: None,
-            element: None,
+            root_pod: None,
             events: Vec::new(),
             window_handle: Default::default(),
             root_state: Default::default(),
@@ -68,10 +65,11 @@ where
         if self.view.is_none() {
             let view = (self.app_logic)(&mut self.data);
             let (id, state, element) = view.build(&mut self.cx);
+            let root_pod = Pod::new(element);
             self.view = Some(view);
             self.id = Some(id);
             self.state = Some(state);
-            self.element = Some(element);
+            self.root_pod = Some(root_pod);
         }
     }
 
@@ -90,14 +88,17 @@ where
         piet.fill(rect, &BG_COLOR);
 
         self.ensure_app();
-        let element = self.element.as_mut().unwrap();
+        let root_pod = self.root_pod.as_mut().unwrap();
         let text = piet.text();
         let mut cx_state = CxState::new(&self.window_handle, text.clone());
+        let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
+        root_pod.update(&mut update_cx);
         let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
+        root_pod.prelayout(&mut layout_cx);
         let proposed_size = self.size;
-        element.layout(&mut layout_cx, proposed_size);
+        root_pod.layout(&mut layout_cx, proposed_size);
         let mut paint_cx = PaintCx::new(&mut cx_state, piet);
-        element.paint(&mut paint_cx);
+        root_pod.paint(&mut paint_cx);
     }
 
     pub fn mouse_down(&mut self, point: Point) {
@@ -106,8 +107,8 @@ where
 
     fn event(&mut self, event: RawEvent) {
         self.ensure_app();
-        let element = self.element.as_mut().unwrap();
-        element.event(&event, &mut self.events);
+        let root_pod = self.root_pod.as_mut().unwrap();
+        root_pod.event(&event, &mut self.events);
         self.run_app_logic();
     }
 
@@ -123,14 +124,19 @@ where
         }
         // Re-rendering should be more lazy.
         let view = (self.app_logic)(&mut self.data);
-        view.rebuild(
-            &mut self.cx,
-            self.view.as_ref().unwrap(),
-            self.id.as_mut().unwrap(),
-            self.state.as_mut().unwrap(),
-            self.element.as_mut().unwrap(),
-        );
-        assert!(self.cx.is_empty(), "id path imbalance on rebuild");
+        if let Some(element) = self.root_pod.as_mut().unwrap().downcast_mut() {
+            let changed = view.rebuild(
+                &mut self.cx,
+                self.view.as_ref().unwrap(),
+                self.id.as_mut().unwrap(),
+                self.state.as_mut().unwrap(),
+                element,
+            );
+            if changed {
+                self.root_pod.as_mut().unwrap().request_update();
+            }
+            assert!(self.cx.is_empty(), "id path imbalance on rebuild");
+        }
         self.view = Some(view);
     }
 }

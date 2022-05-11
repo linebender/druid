@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod align;
 pub mod button;
-pub mod column;
+pub mod text;
+pub mod vstack;
 
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
@@ -26,13 +28,32 @@ use druid_shell::WindowHandle;
 
 use crate::event::Event;
 
+use self::align::{AlignResult, OneAlignment};
+
 /// A basic widget trait.
 pub trait Widget {
     fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>);
 
+    fn update(&mut self, cx: &mut UpdateCx);
+
+    /// Compute intrinsic sizes.
+    ///
+    /// This method will be called once on widget creation and then on
+    /// REQUEST_UPDATE.
+    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size);
+
+    /// Compute size given proposed size.
+    ///
+    /// The value will be memoized given the proposed size, invalidated
+    /// on REQUEST_UPDATE. It can count on prelayout being completed.
     fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size;
 
-    fn paint(&mut self, ctx: &mut PaintCx);
+    /// Query for an alignment.
+    ///
+    /// This method can count on layout already having been completed.
+    fn align(&self, cx: &mut AlignCx, alignment: &OneAlignment) {}
+
+    fn paint(&mut self, cx: &mut PaintCx);
 }
 
 // These contexts loosely follow Druid.
@@ -41,9 +62,19 @@ pub struct CxState<'a> {
     text: PietText,
 }
 
+pub struct UpdateCx<'a, 'b> {
+    cx_state: &'a mut CxState<'b>,
+    widget_state: &'a mut WidgetState,
+}
+
 pub struct LayoutCx<'a, 'b> {
     cx_state: &'a mut CxState<'b>,
     widget_state: &'a mut WidgetState,
+}
+
+pub struct AlignCx<'a> {
+    widget_state: &'a WidgetState,
+    align_result: &'a mut AlignResult,
 }
 
 pub struct PaintCx<'a, 'b, 'c> {
@@ -57,6 +88,9 @@ bitflags! {
         const REQUEST_UPDATE = 1;
         const REQUEST_LAYOUT = 2;
         const REQUEST_PAINT = 4;
+
+        const UPWARD_FLAGS = Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
+        const INIT_FLAGS = Self::REQUEST_UPDATE.bits | Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
     }
 }
 
@@ -66,18 +100,17 @@ pub struct Pod {
     widget: Box<dyn AnyWidget>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct WidgetState {
     flags: PodFlags,
     origin: Point,
-    size: Size,
+    /// The minimum intrinsic size of the widget.
+    min_size: Size,
+    /// The maximum intrinsic size of the widget.
+    max_size: Size,
+    /// The size proposed by the widget's container.
     proposed_size: Size,
-}
-
-// consider renaming, may get other stuff
-#[derive(Default)]
-pub struct Geom {
-    // probably want id?
+    /// The size of the widget.
     size: Size,
 }
 
@@ -100,6 +133,14 @@ impl<W: Widget + 'static> AnyWidget for W {
 impl Widget for Box<dyn AnyWidget> {
     fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>) {
         self.deref_mut().event(event, events);
+    }
+
+    fn update(&mut self, cx: &mut UpdateCx) {
+        self.deref_mut().update(cx);
+    }
+
+    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+        self.deref_mut().prelayout(cx)
     }
 
     fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size {
@@ -161,12 +202,35 @@ impl<'a> CxState<'a> {
     }
 }
 
+impl<'a, 'b> UpdateCx<'a, 'b> {
+    pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
+        UpdateCx {
+            cx_state,
+            widget_state: root_state,
+        }
+    }
+
+    pub fn request_layout(&mut self) {
+        self.widget_state.flags |= PodFlags::REQUEST_LAYOUT;
+    }
+}
+
 impl<'a, 'b> LayoutCx<'a, 'b> {
     pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
         LayoutCx {
             cx_state,
             widget_state: root_state,
         }
+    }
+
+    pub fn text(&mut self) -> &mut PietText {
+        &mut self.cx_state.text
+    }
+}
+
+impl<'a> AlignCx<'a> {
+    pub fn aggregate(&mut self, alignment: &OneAlignment, value: f64) {
+        alignment.aggregate(&mut self.align_result, value);
     }
 }
 
@@ -196,10 +260,44 @@ impl<'c> DerefMut for PaintCx<'_, '_, 'c> {
     }
 }
 
+impl WidgetState {
+    fn merge_up(&mut self, child_state: &mut WidgetState) {
+        self.flags |= child_state.flags & PodFlags::UPWARD_FLAGS;
+    }
+
+    fn request(&mut self, flags: PodFlags) {
+        self.flags |= flags
+    }
+
+    fn get_alignment(&self, widget: &dyn AnyWidget, alignment: &OneAlignment) -> f64 {
+        match alignment {
+            // Note: will have to swap left/right when we do BiDi.
+            OneAlignment::Horiz(align::HorizAlignment::Leading) => 0.0,
+            OneAlignment::Horiz(align::HorizAlignment::Center) => self.size.width * 0.5,
+            OneAlignment::Horiz(align::HorizAlignment::Trailing) => self.size.width,
+            OneAlignment::Vert(align::VertAlignment::Top) => 0.0,
+            OneAlignment::Vert(align::VertAlignment::Center) => self.size.height * 0.5,
+            OneAlignment::Vert(align::VertAlignment::Bottom) => self.size.height,
+            _ => {
+                let mut align_result = AlignResult::default();
+                let mut align_cx = AlignCx {
+                    widget_state: self,
+                    align_result: &mut align_result,
+                };
+                widget.align(&mut align_cx, alignment);
+                align_result.reap(alignment)
+            }
+        }
+    }
+}
+
 impl Pod {
     pub fn new(widget: impl Widget + 'static) -> Self {
         Pod {
-            state: Default::default(),
+            state: WidgetState {
+                flags: PodFlags::INIT_FLAGS,
+                ..Default::default()
+            },
             widget: Box::new(widget),
         }
     }
@@ -209,21 +307,66 @@ impl Pod {
     }
 
     pub fn request_update(&mut self) {
-        self.state.flags |= PodFlags::REQUEST_UPDATE;
+        self.state.request(PodFlags::REQUEST_UPDATE);
     }
 
     pub fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>) {
         self.widget.event(event, events);
     }
 
+    /// Propagate an update cycle.
+    pub fn update(&mut self, cx: &mut UpdateCx) {
+        if self.state.flags.contains(PodFlags::REQUEST_UPDATE) {
+            let mut child_cx = UpdateCx {
+                cx_state: cx.cx_state,
+                widget_state: &mut self.state,
+            };
+            self.widget.update(&mut child_cx);
+            self.state.flags.remove(PodFlags::REQUEST_UPDATE);
+            cx.widget_state.merge_up(&mut self.state);
+        }
+    }
+
+    pub fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+        if self.state.flags.contains(PodFlags::REQUEST_LAYOUT) {
+            let mut child_cx = LayoutCx {
+                cx_state: cx.cx_state,
+                widget_state: &mut self.state,
+            };
+            let (min_size, max_size) = self.widget.prelayout(&mut child_cx);
+            self.state.min_size = min_size;
+            self.state.max_size = max_size;
+            // Don't remove REQUEST_LAYOUT here, that will be done in layout.
+        }
+        (self.state.min_size, self.state.max_size)
+    }
+
     pub fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size {
-        let mut child_cx = LayoutCx {
-            cx_state: cx.cx_state,
-            widget_state: &mut self.state,
+        if self.state.flags.contains(PodFlags::REQUEST_LAYOUT)
+            || proposed_size != self.state.proposed_size
+        {
+            let mut child_cx = LayoutCx {
+                cx_state: cx.cx_state,
+                widget_state: &mut self.state,
+            };
+            let new_size = self.widget.layout(&mut child_cx, proposed_size);
+            self.state.proposed_size = proposed_size;
+            self.state.size = new_size;
+            self.state.flags.remove(PodFlags::REQUEST_LAYOUT);
+        }
+        self.state.size
+    }
+
+    /// Propagate alignment query to children.
+    ///
+    /// This call aggregates all instances of the alignment, so cost may be
+    /// proportional to the number of descendants.
+    pub fn align(&mut self, cx: &mut AlignCx, alignment: &OneAlignment) {
+        let mut child_cx = AlignCx {
+            widget_state: &self.state,
+            align_result: cx.align_result,
         };
-        let new_size = self.widget.layout(&mut child_cx, proposed_size);
-        self.state.size = new_size;
-        new_size
+        self.widget.align(&mut child_cx, alignment);
     }
 
     pub fn paint(&mut self, cx: &mut PaintCx) {
@@ -232,5 +375,13 @@ impl Pod {
                 .transform(Affine::translate(self.state.origin.to_vec2()));
             self.widget.paint(cx);
         });
+    }
+
+    pub fn height_flexibility(&self) -> f64 {
+        self.state.max_size.height - self.state.min_size.height
+    }
+
+    pub fn get_alignment(&self, alignment: &OneAlignment) -> f64 {
+        self.state.get_alignment(&self.widget, alignment)
     }
 }

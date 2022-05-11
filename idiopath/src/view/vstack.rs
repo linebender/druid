@@ -18,33 +18,33 @@ use crate::{event::EventResult, id::Id, view_seq::ViewSequence, widget::WidgetTu
 
 use super::{Cx, View};
 
-pub struct Column<T, A, VT: ViewSequence<T, A>> {
+pub struct VStack<T, A, VT: ViewSequence<T, A>> {
     children: VT,
     phantom: PhantomData<(T, A)>,
 }
 
-pub fn column<T, A, VT: ViewSequence<T, A>>(children: VT) -> Column<T, A, VT> {
-    Column::new(children)
+pub fn v_stack<T, A, VT: ViewSequence<T, A>>(children: VT) -> VStack<T, A, VT> {
+    VStack::new(children)
 }
 
-impl<T, A, VT: ViewSequence<T, A>> Column<T, A, VT> {
+impl<T, A, VT: ViewSequence<T, A>> VStack<T, A, VT> {
     pub fn new(children: VT) -> Self {
         let phantom = Default::default();
-        Column { children, phantom }
+        VStack { children, phantom }
     }
 }
 
-impl<T, A, VT: ViewSequence<T, A>> View<T, A> for Column<T, A, VT>
+impl<T, A, VT: ViewSequence<T, A>> View<T, A> for VStack<T, A, VT>
 where
     VT::Elements: WidgetTuple,
 {
     type State = VT::State;
 
-    type Element = crate::widget::column::Column;
+    type Element = crate::widget::vstack::VStack;
 
     fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
         let (id, (state, elements)) = cx.with_new_id(|cx| self.children.build(cx));
-        let column = crate::widget::column::Column::new(elements);
+        let column = crate::widget::vstack::VStack::new(elements);
         (id, state, column)
     }
 
