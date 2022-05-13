@@ -48,27 +48,47 @@ pub struct AlignResult {
 
 impl HorizAlignment {
     fn aggregate(&self, result: &mut AlignResult, value: f64) {
-        result.count += 1;
         match self {
-            HorizAlignment::Leading => result.value = result.value.min(value),
-            HorizAlignment::Trailing => result.value = result.value.max(value),
+            HorizAlignment::Leading => {
+                if result.count == 0 {
+                    result.value = value
+                } else {
+                    result.value = result.value.min(value)
+                }
+            }
+            HorizAlignment::Trailing => {
+                if result.count == 0 {
+                    result.value = value
+                } else {
+                    result.value = result.value.max(value)
+                }
+            }
             _ => result.value += value,
         }
+        result.count += 1;
     }
 }
 
 impl VertAlignment {
     fn aggregate(&self, result: &mut AlignResult, value: f64) {
-        result.count += 1;
         match self {
             VertAlignment::Top | VertAlignment::FirstBaseline => {
-                result.value = result.value.min(value)
+                if result.count == 0 {
+                    result.value = value
+                } else {
+                    result.value = result.value.min(value)
+                }
             }
             VertAlignment::Bottom | VertAlignment::LastBaseline => {
-                result.value = result.value.max(value)
+                if result.count == 0 {
+                    result.value = value
+                } else {
+                    result.value = result.value.max(value)
+                }
             }
             _ => result.value += value,
         }
+        result.count += 1;
     }
 }
 
