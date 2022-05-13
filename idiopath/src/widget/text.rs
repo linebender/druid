@@ -20,7 +20,7 @@ use druid_shell::{
 use crate::event::Event;
 
 use super::{
-    align::{FirstBaseline, LastBaseline, OneAlignment, VertAlignment},
+    align::{FirstBaseline, LastBaseline, SingleAlignment, VertAlignment},
     AlignCx, LayoutCx, PaintCx, UpdateCx, Widget,
 };
 
@@ -89,12 +89,12 @@ impl Widget for TextWidget {
         }
     }
 
-    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {
-        if alignment.id == FirstBaseline.id() {
+    fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {
+        if alignment.id() == FirstBaseline.id() {
             if let Some(metric) = self.layout.as_ref().unwrap().line_metric(0) {
                 cx.aggregate(alignment, metric.baseline);
             }
-        } else if alignment.id == LastBaseline.id() {
+        } else if alignment.id() == LastBaseline.id() {
             let i = self.layout.as_ref().unwrap().line_count() - 1;
             if let Some(metric) = self.layout.as_ref().unwrap().line_metric(i) {
                 cx.aggregate(alignment, metric.y_offset + metric.baseline);

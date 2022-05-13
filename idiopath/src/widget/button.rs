@@ -61,6 +61,8 @@ impl Widget for Button {
         FIXED_SIZE
     }
 
+    // TODO: alignment
+
     fn paint(&mut self, ctx: &mut PaintCx) {
         let layout = ctx
             .text()

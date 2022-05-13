@@ -29,8 +29,8 @@ use druid_shell::WindowHandle;
 use crate::event::Event;
 
 use self::align::{
-    AlignResult, Bottom, HorizAlignment, HorizCenter, Leading, OneAlignment, Top, Trailing,
-    VertAlignment, VertCenter,
+    AlignResult, Bottom, HorizAlignment, HorizCenter, Leading, SingleAlignment, Top, Trailing,
+    VertAlignment, VertCenter, AlignmentAxis,
 };
 
 /// A basic widget trait.
@@ -54,7 +54,7 @@ pub trait Widget {
     /// Query for an alignment.
     ///
     /// This method can count on layout already having been completed.
-    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {}
+    fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {}
 
     fn paint(&mut self, cx: &mut PaintCx);
 }
@@ -78,6 +78,7 @@ pub struct LayoutCx<'a, 'b> {
 pub struct AlignCx<'a> {
     widget_state: &'a WidgetState,
     align_result: &'a mut AlignResult,
+    origin: Point,
 }
 
 pub struct PaintCx<'a, 'b, 'c> {
@@ -232,8 +233,12 @@ impl<'a, 'b> LayoutCx<'a, 'b> {
 }
 
 impl<'a> AlignCx<'a> {
-    pub fn aggregate(&mut self, alignment: OneAlignment, value: f64) {
-        self.align_result.aggregate(alignment, value);
+    pub fn aggregate(&mut self, alignment: SingleAlignment, value: f64) {
+        let origin_value = match alignment.axis() {
+            AlignmentAxis::Horizontal => self.origin.x,
+            AlignmentAxis::Vertical => self.origin.y,
+        };
+        self.align_result.aggregate(alignment, value + origin_value);
     }
 }
 
@@ -272,22 +277,26 @@ impl WidgetState {
         self.flags |= flags
     }
 
-    fn get_alignment(&self, widget: &dyn AnyWidget, alignment: OneAlignment) -> f64 {
-        if alignment.id == Leading.id() || alignment.id == Top.id() {
+    /// Get alignment value.
+    ///
+    /// The value is in the coordinate system of the parent widget.
+    fn get_alignment(&self, widget: &dyn AnyWidget, alignment: SingleAlignment) -> f64 {
+        if alignment.id() == Leading.id() || alignment.id() == Top.id() {
             0.0
-        } else if alignment.id == HorizCenter.id() {
+        } else if alignment.id() == HorizCenter.id() {
             self.size.width * 0.5
-        } else if alignment.id == Trailing.id() {
+        } else if alignment.id() == Trailing.id() {
             self.size.width
-        } else if alignment.id == VertCenter.id() {
+        } else if alignment.id() == VertCenter.id() {
             self.size.height * 0.5
-        } else if alignment.id == Bottom.id() {
+        } else if alignment.id() == Bottom.id() {
             self.size.height
         } else {
             let mut align_result = AlignResult::default();
             let mut align_cx = AlignCx {
                 widget_state: self,
                 align_result: &mut align_result,
+                origin: self.origin,
             };
             widget.align(&mut align_cx, alignment);
             align_result.reap(alignment)
@@ -365,10 +374,11 @@ impl Pod {
     ///
     /// This call aggregates all instances of the alignment, so cost may be
     /// proportional to the number of descendants.
-    pub fn align(&mut self, cx: &mut AlignCx, alignment: OneAlignment) {
+    pub fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {
         let mut child_cx = AlignCx {
             widget_state: &self.state,
             align_result: cx.align_result,
+            origin: cx.origin + self.state.origin.to_vec2(),
         };
         self.widget.align(&mut child_cx, alignment);
     }
@@ -385,7 +395,9 @@ impl Pod {
         self.state.max_size.height - self.state.min_size.height
     }
 
-    pub fn get_alignment(&self, alignment: OneAlignment) -> f64 {
+    /// The returned value is in the coordinate space of the parent that
+    /// owns this pod.
+    pub fn get_alignment(&self, alignment: SingleAlignment) -> f64 {
         self.state.get_alignment(&self.widget, alignment)
     }
 }

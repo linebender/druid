@@ -1,3 +1,5 @@
+use druid_shell::kurbo::Point;
+
 use super::{AlignCx, AnyWidget, Widget, WidgetState};
 
 // Copyright 2022 The Druid Authors.
@@ -19,6 +21,12 @@ pub enum AlignmentMerge {
     Min,
     Mean,
     Max,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum AlignmentAxis {
+    Horizontal,
+    Vertical,
 }
 
 pub trait HorizAlignment: 'static {
@@ -97,23 +105,58 @@ impl VertAlignment for LastBaseline {
 }
 
 #[derive(Clone, Copy)]
-pub struct OneAlignment {
-    pub id: std::any::TypeId,
+pub struct SingleAlignment {
+    id: std::any::TypeId,
     merge: AlignmentMerge,
+    axis: AlignmentAxis,
 }
 
-impl OneAlignment {
-    pub fn from_horiz(h: &impl HorizAlignment) -> OneAlignment {
-        OneAlignment {
+impl SingleAlignment {
+    pub fn id(&self) -> std::any::TypeId {
+        self.id
+    }
+
+    pub fn axis(&self) -> AlignmentAxis {
+        self.axis
+    }
+
+    // Maybe these should all be dyn
+    pub fn from_horiz(h: &impl HorizAlignment) -> SingleAlignment {
+        SingleAlignment {
             id: h.id(),
             merge: h.merge(),
+            axis: AlignmentAxis::Horizontal,
         }
     }
 
-    pub fn from_vert(v: &impl VertAlignment) -> OneAlignment {
-        OneAlignment {
+    pub fn from_dyn_horiz(h: &dyn HorizAlignment) -> SingleAlignment {
+        SingleAlignment {
+            id: h.id(),
+            merge: h.merge(),
+            axis: AlignmentAxis::Horizontal,
+        }
+    }
+
+    pub fn from_vert(v: &impl VertAlignment) -> SingleAlignment {
+        SingleAlignment {
             id: v.id(),
             merge: v.merge(),
+            axis: AlignmentAxis::Vertical,
+        }
+    }
+
+    pub fn from_dyn_vert(v: &dyn VertAlignment) -> SingleAlignment {
+        SingleAlignment {
+            id: v.id(),
+            merge: v.merge(),
+            axis: AlignmentAxis::Vertical,
+        }
+    }
+
+    pub fn apply_offset(&self, offset: Point, value: f64) -> f64 {
+        match self.axis {
+            AlignmentAxis::Horizontal => value + offset.x,
+            AlignmentAxis::Vertical => value + offset.y,
         }
     }
 }
@@ -125,7 +168,7 @@ pub struct AlignResult {
 }
 
 impl AlignResult {
-    pub fn aggregate(&mut self, alignment: OneAlignment, value: f64) {
+    pub fn aggregate(&mut self, alignment: SingleAlignment, value: f64) {
         match alignment.merge {
             AlignmentMerge::Max => {
                 if self.count == 0 {
@@ -146,7 +189,7 @@ impl AlignResult {
         self.count += 1;
     }
 
-    pub fn reap(&self, alignment: OneAlignment) -> f64 {
+    pub fn reap(&self, alignment: SingleAlignment) -> f64 {
         match alignment.merge {
             AlignmentMerge::Mean => {
                 if self.count == 0 {
@@ -174,8 +217,16 @@ struct AlignmentGuide<F> {
 }
 
 impl<'a> AlignmentProxy<'a> {
-    pub fn get_alignment(&self, alignment: OneAlignment) -> f64 {
+    pub fn get_alignment(&self, alignment: SingleAlignment) -> f64 {
         self.widget_state.get_alignment(self.widget, alignment)
+    }
+
+    pub fn get_horiz(&self, alignment: &dyn HorizAlignment) -> f64 {
+        self.get_alignment(SingleAlignment::from_dyn_horiz(alignment))
+    }
+
+    pub fn get_vert(&self, alignment: &dyn VertAlignment) -> f64 {
+        self.get_alignment(SingleAlignment::from_dyn_vert(alignment))
     }
 
     pub fn width(&self) -> f64 {
@@ -211,7 +262,7 @@ impl<F: Fn(AlignmentProxy) -> f64 + 'static> Widget for AlignmentGuide<F> {
         self.child.layout(cx, proposed_size)
     }
 
-    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {
+    fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {
         if alignment.id == self.alignment_id {
             let proxy = AlignmentProxy {
                 widget_state: cx.widget_state,
