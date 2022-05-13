@@ -28,7 +28,10 @@ use druid_shell::WindowHandle;
 
 use crate::event::Event;
 
-use self::align::{AlignResult, OneAlignment};
+use self::align::{
+    AlignResult, Bottom, HorizAlignment, HorizCenter, Leading, OneAlignment, Top, Trailing,
+    VertAlignment, VertCenter,
+};
 
 /// A basic widget trait.
 pub trait Widget {
@@ -51,7 +54,7 @@ pub trait Widget {
     /// Query for an alignment.
     ///
     /// This method can count on layout already having been completed.
-    fn align(&self, cx: &mut AlignCx, alignment: &OneAlignment) {}
+    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {}
 
     fn paint(&mut self, cx: &mut PaintCx);
 }
@@ -229,8 +232,8 @@ impl<'a, 'b> LayoutCx<'a, 'b> {
 }
 
 impl<'a> AlignCx<'a> {
-    pub fn aggregate(&mut self, alignment: &OneAlignment, value: f64) {
-        alignment.aggregate(&mut self.align_result, value);
+    pub fn aggregate(&mut self, alignment: OneAlignment, value: f64) {
+        self.align_result.aggregate(alignment, value);
     }
 }
 
@@ -269,24 +272,25 @@ impl WidgetState {
         self.flags |= flags
     }
 
-    fn get_alignment(&self, widget: &dyn AnyWidget, alignment: &OneAlignment) -> f64 {
-        match alignment {
-            // Note: will have to swap left/right when we do BiDi.
-            OneAlignment::Horiz(align::HorizAlignment::Leading) => 0.0,
-            OneAlignment::Horiz(align::HorizAlignment::Center) => self.size.width * 0.5,
-            OneAlignment::Horiz(align::HorizAlignment::Trailing) => self.size.width,
-            OneAlignment::Vert(align::VertAlignment::Top) => 0.0,
-            OneAlignment::Vert(align::VertAlignment::Center) => self.size.height * 0.5,
-            OneAlignment::Vert(align::VertAlignment::Bottom) => self.size.height,
-            _ => {
-                let mut align_result = AlignResult::default();
-                let mut align_cx = AlignCx {
-                    widget_state: self,
-                    align_result: &mut align_result,
-                };
-                widget.align(&mut align_cx, alignment);
-                align_result.reap(alignment)
-            }
+    fn get_alignment(&self, widget: &dyn AnyWidget, alignment: OneAlignment) -> f64 {
+        if alignment.id == Leading.id() || alignment.id == Top.id() {
+            0.0
+        } else if alignment.id == HorizCenter.id() {
+            self.size.width * 0.5
+        } else if alignment.id == Trailing.id() {
+            self.size.width
+        } else if alignment.id == VertCenter.id() {
+            self.size.height * 0.5
+        } else if alignment.id == Bottom.id() {
+            self.size.height
+        } else {
+            let mut align_result = AlignResult::default();
+            let mut align_cx = AlignCx {
+                widget_state: self,
+                align_result: &mut align_result,
+            };
+            widget.align(&mut align_cx, alignment);
+            align_result.reap(alignment)
         }
     }
 }
@@ -361,7 +365,7 @@ impl Pod {
     ///
     /// This call aggregates all instances of the alignment, so cost may be
     /// proportional to the number of descendants.
-    pub fn align(&mut self, cx: &mut AlignCx, alignment: &OneAlignment) {
+    pub fn align(&mut self, cx: &mut AlignCx, alignment: OneAlignment) {
         let mut child_cx = AlignCx {
             widget_state: &self.state,
             align_result: cx.align_result,
@@ -381,7 +385,7 @@ impl Pod {
         self.state.max_size.height - self.state.min_size.height
     }
 
-    pub fn get_alignment(&self, alignment: &OneAlignment) -> f64 {
+    pub fn get_alignment(&self, alignment: OneAlignment) -> f64 {
         self.state.get_alignment(&self.widget, alignment)
     }
 }

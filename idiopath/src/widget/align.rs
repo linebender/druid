@@ -14,30 +14,108 @@ use super::{AlignCx, AnyWidget, Widget, WidgetState};
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum HorizAlignment {
-    // Note: actually "left" until we do BiDi.
-    Leading,
-    Center,
-    Trailing,
-    // We might switch to TinyStr.
-    Custom(&'static str),
+#[derive(Clone, Copy, PartialEq)]
+pub enum AlignmentMerge {
+    Min,
+    Mean,
+    Max,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum VertAlignment {
-    Top,
-    Center,
-    Bottom,
-    FirstBaseline,
-    LastBaseline,
-    Custom(&'static str),
+pub trait HorizAlignment: 'static {
+    fn id(&self) -> std::any::TypeId {
+        std::any::TypeId::of::<Self>()
+    }
+
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Mean
+    }
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum OneAlignment {
-    Horiz(HorizAlignment),
-    Vert(VertAlignment),
+pub trait VertAlignment: 'static {
+    fn id(&self) -> std::any::TypeId {
+        std::any::TypeId::of::<Self>()
+    }
+
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Mean
+    }
+}
+
+pub struct Leading;
+
+impl HorizAlignment for Leading {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Min
+    }
+}
+pub struct HorizCenter;
+
+impl HorizAlignment for HorizCenter {}
+
+pub struct Trailing;
+
+impl HorizAlignment for Trailing {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Max
+    }
+}
+
+pub struct Top;
+
+impl VertAlignment for Top {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Min
+    }
+}
+
+pub struct VertCenter;
+
+impl VertAlignment for VertCenter {}
+
+pub struct Bottom;
+
+impl VertAlignment for Bottom {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Max
+    }
+}
+
+pub struct FirstBaseline;
+
+impl VertAlignment for FirstBaseline {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Min
+    }
+}
+
+pub struct LastBaseline;
+
+impl VertAlignment for LastBaseline {
+    fn merge(&self) -> AlignmentMerge {
+        AlignmentMerge::Max
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct OneAlignment {
+    pub id: std::any::TypeId,
+    merge: AlignmentMerge,
+}
+
+impl OneAlignment {
+    pub fn from_horiz(h: &impl HorizAlignment) -> OneAlignment {
+        OneAlignment {
+            id: h.id(),
+            merge: h.merge(),
+        }
+    }
+
+    pub fn from_vert(v: &impl VertAlignment) -> OneAlignment {
+        OneAlignment {
+            id: v.id(),
+            merge: v.merge(),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -46,68 +124,31 @@ pub struct AlignResult {
     count: usize,
 }
 
-impl HorizAlignment {
-    fn aggregate(&self, result: &mut AlignResult, value: f64) {
-        match self {
-            HorizAlignment::Leading => {
-                if result.count == 0 {
-                    result.value = value
-                } else {
-                    result.value = result.value.min(value)
-                }
-            }
-            HorizAlignment::Trailing => {
-                if result.count == 0 {
-                    result.value = value
-                } else {
-                    result.value = result.value.max(value)
-                }
-            }
-            _ => result.value += value,
-        }
-        result.count += 1;
-    }
-}
-
-impl VertAlignment {
-    fn aggregate(&self, result: &mut AlignResult, value: f64) {
-        match self {
-            VertAlignment::Top | VertAlignment::FirstBaseline => {
-                if result.count == 0 {
-                    result.value = value
-                } else {
-                    result.value = result.value.min(value)
-                }
-            }
-            VertAlignment::Bottom | VertAlignment::LastBaseline => {
-                if result.count == 0 {
-                    result.value = value
-                } else {
-                    result.value = result.value.max(value)
-                }
-            }
-            _ => result.value += value,
-        }
-        result.count += 1;
-    }
-}
-
-impl OneAlignment {
-    pub fn aggregate(&self, result: &mut AlignResult, value: f64) {
-        match self {
-            Self::Horiz(h) => h.aggregate(result, value),
-            Self::Vert(v) => v.aggregate(result, value),
-        }
-    }
-}
-
 impl AlignResult {
-    pub fn reap(&self, alignment: &OneAlignment) -> f64 {
-        match alignment {
-            OneAlignment::Horiz(HorizAlignment::Center)
-            | OneAlignment::Horiz(HorizAlignment::Custom(_))
-            | OneAlignment::Vert(VertAlignment::Center)
-            | OneAlignment::Vert(VertAlignment::Custom(_)) => {
+    pub fn aggregate(&mut self, alignment: OneAlignment, value: f64) {
+        match alignment.merge {
+            AlignmentMerge::Max => {
+                if self.count == 0 {
+                    self.value = value;
+                } else {
+                    self.value = self.value.max(value)
+                }
+            }
+            AlignmentMerge::Min => {
+                if self.count == 0 {
+                    self.value = value;
+                } else {
+                    self.value = self.value.min(value)
+                }
+            }
+            AlignmentMerge::Mean => self.value += value,
+        }
+        self.count += 1;
+    }
+
+    pub fn reap(&self, alignment: OneAlignment) -> f64 {
+        match alignment.merge {
+            AlignmentMerge::Mean => {
                 if self.count == 0 {
                     0.0
                 } else {
@@ -127,13 +168,13 @@ struct AlignmentProxy<'a> {
 }
 
 struct AlignmentGuide<F> {
-    alignment: OneAlignment,
+    alignment_id: std::any::TypeId,
     callback: F,
     child: Box<dyn AnyWidget>,
 }
 
 impl<'a> AlignmentProxy<'a> {
-    pub fn get_alignment(&self, alignment: &OneAlignment) -> f64 {
+    pub fn get_alignment(&self, alignment: OneAlignment) -> f64 {
         self.widget_state.get_alignment(self.widget, alignment)
     }
 
@@ -170,14 +211,14 @@ impl<F: Fn(AlignmentProxy) -> f64 + 'static> Widget for AlignmentGuide<F> {
         self.child.layout(cx, proposed_size)
     }
 
-    fn align(&self, cx: &mut AlignCx, alignment: &OneAlignment) {
-        if *alignment == self.alignment {
+    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {
+        if alignment.id == self.alignment_id {
             let proxy = AlignmentProxy {
                 widget_state: cx.widget_state,
                 widget: self,
             };
             let value = (self.callback)(proxy);
-            alignment.aggregate(cx.align_result, value);
+            cx.align_result.aggregate(alignment, value);
         } else {
             self.child.align(cx, alignment);
         }

@@ -20,7 +20,7 @@ use druid_shell::{
 use crate::event::Event;
 
 use super::{
-    align::{OneAlignment, VertAlignment},
+    align::{FirstBaseline, LastBaseline, OneAlignment, VertAlignment},
     AlignCx, LayoutCx, PaintCx, UpdateCx, Widget,
 };
 
@@ -48,13 +48,13 @@ impl TextWidget {
 }
 
 impl Widget for TextWidget {
+    fn event(&mut self, _event: &super::RawEvent, _events: &mut Vec<Event>) {}
+
     fn update(&mut self, cx: &mut UpdateCx) {
         // All changes potentially require layout. Note: we could be finer
         // grained, maybe color changes wouldn't.
         cx.request_layout();
     }
-
-    fn event(&mut self, _event: &super::RawEvent, _events: &mut Vec<Event>) {}
 
     fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         let layout = cx
@@ -89,20 +89,16 @@ impl Widget for TextWidget {
         }
     }
 
-    fn align(&self, cx: &mut AlignCx, alignment: &OneAlignment) {
-        match alignment {
-            &OneAlignment::Vert(VertAlignment::FirstBaseline) => {
-                if let Some(metric) = self.layout.as_ref().unwrap().line_metric(0) {
-                    cx.aggregate(alignment, metric.baseline);
-                }
+    fn align(&self, cx: &mut AlignCx, alignment: OneAlignment) {
+        if alignment.id == FirstBaseline.id() {
+            if let Some(metric) = self.layout.as_ref().unwrap().line_metric(0) {
+                cx.aggregate(alignment, metric.baseline);
             }
-            &OneAlignment::Vert(VertAlignment::LastBaseline) => {
-                let i = self.layout.as_ref().unwrap().line_count() - 1;
-                if let Some(metric) = self.layout.as_ref().unwrap().line_metric(i) {
-                    cx.aggregate(alignment, metric.y_offset + metric.baseline);
-                }
+        } else if alignment.id == LastBaseline.id() {
+            let i = self.layout.as_ref().unwrap().line_count() - 1;
+            if let Some(metric) = self.layout.as_ref().unwrap().line_metric(i) {
+                cx.aggregate(alignment, metric.y_offset + metric.baseline);
             }
-            _ => (),
         }
     }
 

@@ -17,19 +17,19 @@ use druid_shell::kurbo::{Point, Rect, Size};
 use crate::event::Event;
 
 use super::{
-    align::{HorizAlignment, OneAlignment},
+    align::{HorizCenter, OneAlignment},
     LayoutCx, PaintCx, Pod, RawEvent, UpdateCx, Widget,
 };
 
 pub struct VStack {
     children: Vec<Pod>,
-    alignment: HorizAlignment,
+    alignment: OneAlignment,
     spacing: f64,
 }
 
 impl VStack {
     pub fn new(children: Vec<Pod>) -> Self {
-        let alignment = HorizAlignment::Center;
+        let alignment = OneAlignment::from_horiz(&HorizCenter);
         let spacing = 0.0;
         VStack {
             children,
@@ -91,11 +91,10 @@ impl Widget for VStack {
             height_remaining -= height_remaining - child_size.height;
             n_remaining -= 1;
         }
-        let one_alignment = OneAlignment::Horiz(self.alignment.clone());
         let alignments: Vec<f64> = self
             .children
             .iter()
-            .map(|child| child.get_alignment(&one_alignment))
+            .map(|child| child.get_alignment(self.alignment))
             .collect();
         let max_align = alignments
             .iter()
