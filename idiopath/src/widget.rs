@@ -35,7 +35,7 @@ use self::align::{
 
 /// A basic widget trait.
 pub trait Widget {
-    fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>);
+    fn event(&mut self, cx: &mut EventCx, event: &RawEvent);
 
     fn update(&mut self, cx: &mut UpdateCx);
 
@@ -63,6 +63,12 @@ pub trait Widget {
 pub struct CxState<'a> {
     window: &'a WindowHandle,
     text: PietText,
+    events: &'a mut Vec<Event>,
+}
+
+pub struct EventCx<'a, 'b> {
+    cx_state: &'a mut CxState<'b>,
+    widget_state: &'a mut WidgetState,
 }
 
 pub struct UpdateCx<'a, 'b> {
@@ -135,8 +141,8 @@ impl<W: Widget + 'static> AnyWidget for W {
 }
 
 impl Widget for Box<dyn AnyWidget> {
-    fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>) {
-        self.deref_mut().event(event, events);
+    fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
+        self.deref_mut().event(cx, event);
     }
 
     fn update(&mut self, cx: &mut UpdateCx) {
@@ -201,8 +207,25 @@ impl_widget_tuple!(8;
 );
 
 impl<'a> CxState<'a> {
-    pub fn new(window: &'a WindowHandle, text: PietText) -> Self {
-        CxState { window, text }
+    pub fn new(window: &'a WindowHandle, events: &'a mut Vec<Event>) -> Self {
+        CxState {
+            window,
+            text: window.text(),
+            events,
+        }
+    }
+}
+
+impl<'a, 'b> EventCx<'a, 'b> {
+    pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
+        EventCx {
+            cx_state,
+            widget_state: root_state,
+        }
+    }
+
+    pub fn add_event(&mut self, event: Event) {
+        self.cx_state.events.push(event);
     }
 }
 
@@ -324,8 +347,8 @@ impl Pod {
         self.state.request(PodFlags::REQUEST_UPDATE);
     }
 
-    pub fn event(&mut self, event: &RawEvent, events: &mut Vec<Event>) {
-        self.widget.event(event, events);
+    pub fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
+        self.widget.event(cx, event);
     }
 
     /// Propagate an update cycle.

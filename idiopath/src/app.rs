@@ -16,7 +16,7 @@ use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
 use druid_shell::{kurbo::Point, WindowHandle};
 
-use crate::widget::{CxState, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
+use crate::widget::{CxState, EventCx, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
 use crate::{
     event::Event,
     id::Id,
@@ -89,8 +89,7 @@ where
 
         self.ensure_app();
         let root_pod = self.root_pod.as_mut().unwrap();
-        let text = piet.text();
-        let mut cx_state = CxState::new(&self.window_handle, text.clone());
+        let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
         let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
         root_pod.update(&mut update_cx);
         let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
@@ -108,7 +107,9 @@ where
     fn event(&mut self, event: RawEvent) {
         self.ensure_app();
         let root_pod = self.root_pod.as_mut().unwrap();
-        root_pod.event(&event, &mut self.events);
+        let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
+        let mut event_cx = EventCx::new(&mut cx_state, &mut self.root_state);
+        root_pod.event(&mut event_cx, &event);
         self.run_app_logic();
     }
 

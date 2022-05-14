@@ -1,7 +1,3 @@
-use druid_shell::kurbo::Point;
-
-use super::{AlignCx, AnyWidget, Widget, WidgetState};
-
 // Copyright 2022 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +11,10 @@ use super::{AlignCx, AnyWidget, Widget, WidgetState};
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+use druid_shell::kurbo::Point;
+
+use super::{AlignCx, AnyWidget, EventCx, Widget, WidgetState};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum AlignmentMerge {
@@ -241,8 +241,8 @@ impl<'a> AlignmentProxy<'a> {
 }
 
 impl<F: Fn(AlignmentProxy) -> f64 + 'static> Widget for AlignmentGuide<F> {
-    fn event(&mut self, event: &super::RawEvent, events: &mut Vec<crate::event::Event>) {
-        self.child.event(event, events);
+    fn event(&mut self, cx: &mut EventCx, event: &super::RawEvent) {
+        self.child.event(cx, event);
     }
 
     fn update(&mut self, cx: &mut super::UpdateCx) {

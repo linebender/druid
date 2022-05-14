@@ -14,11 +14,9 @@
 
 use druid_shell::kurbo::{Point, Rect, Size};
 
-use crate::event::Event;
-
 use super::{
     align::{Center, SingleAlignment},
-    LayoutCx, PaintCx, Pod, RawEvent, UpdateCx, Widget,
+    EventCx, LayoutCx, PaintCx, Pod, RawEvent, UpdateCx, Widget,
 };
 
 pub struct VStack {
@@ -44,14 +42,14 @@ impl VStack {
 }
 
 impl Widget for VStack {
-    fn event(&mut self, event: &super::RawEvent, events: &mut Vec<Event>) {
+    fn event(&mut self, cx: &mut EventCx, event: &super::RawEvent) {
         match event {
             RawEvent::MouseDown(p) => {
                 for child in &mut self.children {
                     let rect = Rect::from_origin_size(child.state.origin, child.state.size);
                     if rect.contains(*p) {
                         let child_event = RawEvent::MouseDown(*p - child.state.origin.to_vec2());
-                        child.event(&child_event, events);
+                        child.event(cx, &child_event);
                         break;
                     }
                 }

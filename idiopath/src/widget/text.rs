@@ -17,11 +17,9 @@ use druid_shell::{
     piet::{Color, PietTextLayout, RenderContext, Text, TextLayout, TextLayoutBuilder},
 };
 
-use crate::event::Event;
-
 use super::{
     align::{FirstBaseline, LastBaseline, SingleAlignment, VertAlignment},
-    AlignCx, LayoutCx, PaintCx, UpdateCx, Widget,
+    AlignCx, EventCx, LayoutCx, PaintCx, UpdateCx, Widget,
 };
 
 pub struct TextWidget {
@@ -48,7 +46,7 @@ impl TextWidget {
 }
 
 impl Widget for TextWidget {
-    fn event(&mut self, _event: &super::RawEvent, _events: &mut Vec<Event>) {}
+    fn event(&mut self, _cx: &mut EventCx, _event: &super::RawEvent) {}
 
     fn update(&mut self, cx: &mut UpdateCx) {
         // All changes potentially require layout. Note: we could be finer
