@@ -15,6 +15,7 @@
 pub mod adapt;
 pub mod any_view;
 pub mod button;
+pub mod layout_observer;
 pub mod memoize;
 pub mod text;
 pub mod use_state;

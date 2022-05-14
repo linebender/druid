@@ -30,6 +30,7 @@ use druid_shell::{
 };
 use view::adapt::Adapt;
 use view::button::button;
+use view::layout_observer::LayoutObserver;
 use view::memoize::Memoize;
 use view::vstack::v_stack;
 use view::View;
@@ -140,6 +141,7 @@ fn app_logic(data: &mut AppData) -> impl View<AppData> {
             |data: &mut AppData, thunk| thunk.call(&mut data.count),
             count_button(data.count),
         ),
+        LayoutObserver::new(|size| format!("size: {:?}", size)),
     ))
 }
 

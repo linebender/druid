@@ -14,6 +14,7 @@
 
 pub mod align;
 pub mod button;
+pub mod layout_observer;
 pub mod text;
 pub mod vstack;
 
@@ -214,6 +215,10 @@ impl<'a> CxState<'a> {
             events,
         }
     }
+
+    pub(crate) fn has_events(&self) -> bool {
+        !self.events.is_empty()
+    }
 }
 
 impl<'a, 'b> EventCx<'a, 'b> {
@@ -252,6 +257,10 @@ impl<'a, 'b> LayoutCx<'a, 'b> {
 
     pub fn text(&mut self) -> &mut PietText {
         &mut self.cx_state.text
+    }
+
+    pub fn add_event(&mut self, event: Event) {
+        self.cx_state.events.push(event);
     }
 }
 
@@ -330,12 +339,16 @@ impl WidgetState {
 
 impl Pod {
     pub fn new(widget: impl Widget + 'static) -> Self {
+        Self::new_from_box(Box::new(widget))
+    }
+
+    pub fn new_from_box(widget: Box<dyn AnyWidget>) -> Self {
         Pod {
             state: WidgetState {
                 flags: PodFlags::INIT_FLAGS,
                 ..Default::default()
             },
-            widget: Box::new(widget),
+            widget,
         }
     }
 

@@ -88,16 +88,25 @@ where
         piet.fill(rect, &BG_COLOR);
 
         self.ensure_app();
-        let root_pod = self.root_pod.as_mut().unwrap();
-        let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
-        let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
-        root_pod.update(&mut update_cx);
-        let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
-        root_pod.prelayout(&mut layout_cx);
-        let proposed_size = self.size;
-        root_pod.layout(&mut layout_cx, proposed_size);
-        let mut paint_cx = PaintCx::new(&mut cx_state, piet);
-        root_pod.paint(&mut paint_cx);
+        loop {
+            let root_pod = self.root_pod.as_mut().unwrap();
+            let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
+            let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
+            root_pod.update(&mut update_cx);
+            let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
+            root_pod.prelayout(&mut layout_cx);
+            let proposed_size = self.size;
+            root_pod.layout(&mut layout_cx, proposed_size);
+            if cx_state.has_events() {
+                // We might want some debugging here if the number of iterations
+                // becomes extreme.
+                self.run_app_logic();
+            } else {
+                let mut paint_cx = PaintCx::new(&mut cx_state, piet);
+                root_pod.paint(&mut paint_cx);
+                break;
+            }
+        }
     }
 
     pub fn mouse_down(&mut self, point: Point) {

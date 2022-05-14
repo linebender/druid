@@ -73,6 +73,9 @@ impl Widget for VStack {
             max_size.width = max_size.width.max(child_max.width);
             max_size.height += child_max.height;
         }
+        let spacing = self.spacing * (self.children.len() - 1) as f64;
+        min_size.height += spacing;
+        max_size.height += spacing;
         (min_size, max_size)
     }
 
@@ -80,15 +83,17 @@ impl Widget for VStack {
         // First, sort children in order of increasing flexibility
         let mut child_order: Vec<_> = (0..self.children.len()).collect();
         child_order.sort_by_key(|ix| self.children[*ix].height_flexibility().to_bits());
+        // Offer remaining height to each child
         let mut n_remaining = self.children.len();
         let mut height_remaining = proposed_size.height - (n_remaining - 1) as f64 * self.spacing;
         for ix in child_order {
             let child_height = (height_remaining / n_remaining as f64).max(0.0);
             let child_proposed = Size::new(proposed_size.width, child_height);
             let child_size = self.children[ix].layout(cx, child_proposed);
-            height_remaining -= height_remaining - child_size.height;
+            height_remaining -= child_size.height;
             n_remaining -= 1;
         }
+        // Get alignments from children
         let alignments: Vec<f64> = self
             .children
             .iter()
@@ -99,15 +104,20 @@ impl Widget for VStack {
             .copied()
             .reduce(f64::max)
             .unwrap_or_default();
+        // Place children, using computed height and alignments
         let mut size = Size::default();
         let mut y = 0.0;
-        for (child, align) in self.children.iter_mut().zip(alignments) {
+        for (i, (child, align)) in self.children.iter_mut().zip(alignments).enumerate() {
+            if i != 0 {
+                y += self.spacing;
+            }
             let child_size = child.state.size;
-            child.state.origin = Point::new(max_align - align, y);
-            size.width = size.width.max(child_size.width);
-            size.height += child_size.height;
-            y += child_size.height + self.spacing;
+            let origin = Point::new(max_align - align, y);
+            child.state.origin = origin;
+            size.width = size.width.max(child_size.width + origin.x);
+            y += child_size.height;
         }
+        size.height = y;
         size
     }
 
