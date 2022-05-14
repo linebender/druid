@@ -56,9 +56,15 @@ impl HorizAlignment for Leading {
         AlignmentMerge::Min
     }
 }
-pub struct HorizCenter;
 
-impl HorizAlignment for HorizCenter {}
+/// Center alignment.
+///
+/// Note that this alignment can be used for both horizontal and vertical
+/// alignment.
+pub struct Center;
+
+impl HorizAlignment for Center {}
+impl VertAlignment for Center {}
 
 pub struct Trailing;
 
@@ -75,10 +81,6 @@ impl VertAlignment for Top {
         AlignmentMerge::Min
     }
 }
-
-pub struct VertCenter;
-
-impl VertAlignment for VertCenter {}
 
 pub struct Bottom;
 

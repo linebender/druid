@@ -17,7 +17,7 @@ use druid_shell::kurbo::{Point, Rect, Size};
 use crate::event::Event;
 
 use super::{
-    align::{HorizCenter, SingleAlignment},
+    align::{Center, SingleAlignment},
     LayoutCx, PaintCx, Pod, RawEvent, UpdateCx, Widget,
 };
 
@@ -29,7 +29,7 @@ pub struct VStack {
 
 impl VStack {
     pub fn new(children: Vec<Pod>) -> Self {
-        let alignment = SingleAlignment::from_horiz(&HorizCenter);
+        let alignment = SingleAlignment::from_horiz(&Center);
         let spacing = 0.0;
         VStack {
             children,

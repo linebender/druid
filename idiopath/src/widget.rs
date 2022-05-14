@@ -29,8 +29,8 @@ use druid_shell::WindowHandle;
 use crate::event::Event;
 
 use self::align::{
-    AlignResult, Bottom, HorizAlignment, HorizCenter, Leading, SingleAlignment, Top, Trailing,
-    VertAlignment, VertCenter, AlignmentAxis,
+    AlignResult, AlignmentAxis, Bottom, Center, HorizAlignment, Leading, SingleAlignment, Top,
+    Trailing, VertAlignment,
 };
 
 /// A basic widget trait.
@@ -283,12 +283,13 @@ impl WidgetState {
     fn get_alignment(&self, widget: &dyn AnyWidget, alignment: SingleAlignment) -> f64 {
         if alignment.id() == Leading.id() || alignment.id() == Top.id() {
             0.0
-        } else if alignment.id() == HorizCenter.id() {
-            self.size.width * 0.5
+        } else if alignment.id() == <Center as HorizAlignment>::id(&Center) {
+            match alignment.axis() {
+                AlignmentAxis::Horizontal => self.size.width * 0.5,
+                AlignmentAxis::Vertical => self.size.height * 0.5,
+            }
         } else if alignment.id() == Trailing.id() {
             self.size.width
-        } else if alignment.id() == VertCenter.id() {
-            self.size.height * 0.5
         } else if alignment.id() == Bottom.id() {
             self.size.height
         } else {
