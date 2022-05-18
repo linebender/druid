@@ -1424,6 +1424,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
 }
 
 unsafe impl Send for IdleHandle {}
+unsafe impl Sync for IdleHandle {}
 
 impl IdleHandle {
     fn add_idle(&self, idle: IdleKind) {
