@@ -1,4 +1,4 @@
-use std::{alloc::Layout, any::Any, marker::PhantomData};
+use std::{any::Any, marker::PhantomData};
 
 // Copyright 2022 The Druid Authors.
 //

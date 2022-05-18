@@ -44,7 +44,7 @@ impl Button {
 const FIXED_SIZE: Size = Size::new(100., 20.);
 
 impl Widget for Button {
-    fn update(&mut self, cx: &mut UpdateCx) {
+    fn update(&mut self, _cx: &mut UpdateCx) {
         // TODO: probably want to request layout when string changes
     }
 

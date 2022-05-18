@@ -207,7 +207,7 @@ impl AlignResult {
 // AlignmentGuide widget
 
 /// A proxy that can be queried for alignments.
-struct AlignmentProxy<'a> {
+pub struct AlignmentProxy<'a> {
     widget_state: &'a WidgetState,
     widget: &'a dyn AnyWidget,
 }

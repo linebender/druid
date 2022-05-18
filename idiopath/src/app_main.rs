@@ -12,29 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app;
-mod event;
-mod id;
-mod view;
-mod view_seq;
-mod widget;
-
 use std::any::Any;
 
-use app::App;
-use druid_shell::kurbo::Size;
-
 use druid_shell::{
-    Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler, WindowBuilder,
-    WindowHandle,
+    kurbo::Size, Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler,
+    WindowBuilder, WindowHandle,
 };
-use view::adapt::Adapt;
-use view::button::button;
-use view::layout_observer::LayoutObserver;
-use view::memoize::Memoize;
-use view::vstack::v_stack;
-use view::View;
-use widget::Widget;
+
+use crate::{app::App, View, Widget};
+
+// This is a bit of a hack just to get a window launched. The real version
+// would deal with multiple windows and have other ways to configure things.
+pub struct AppLauncher<T, V: View<T>, F: FnMut(&mut T) -> V> {
+    title: String,
+    app: App<T, V, F>,
+}
 
 struct MainState<T, V: View<T>, F: FnMut(&mut T) -> V>
 where
@@ -42,6 +34,45 @@ where
 {
     handle: WindowHandle,
     app: App<T, V, F>,
+}
+
+const QUIT_MENU_ID: u32 = 0x100;
+
+impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> AppLauncher<T, V, F> {
+    pub fn new(app: App<T, V, F>) -> Self {
+        AppLauncher {
+            title: "Xilem app".into(),
+            app,
+        }
+    }
+
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = title.into();
+        self
+    }
+
+    pub fn run(self) {
+        let mut file_menu = Menu::new();
+        file_menu.add_item(
+            QUIT_MENU_ID,
+            "E&xit",
+            Some(&HotKey::new(SysMods::Cmd, "q")),
+            true,
+            false,
+        );
+        let mut menubar = Menu::new();
+        menubar.add_dropdown(Menu::new(), "Application", true);
+        menubar.add_dropdown(file_menu, "&File", true);
+        let druid_app = Application::new().unwrap();
+        let mut builder = WindowBuilder::new(druid_app.clone());
+        let main_state = MainState::new(self.app);
+        builder.set_handler(Box::new(main_state));
+        builder.set_title(self.title);
+        builder.set_menu(menubar);
+        let window = builder.build().unwrap();
+        window.show();
+        druid_app.run(None);
+    }
 }
 
 impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> WinHandler
@@ -62,7 +93,7 @@ where
 
     fn command(&mut self, id: u32) {
         match id {
-            0x100 => {
+            QUIT_MENU_ID => {
                 self.handle.close();
                 Application::global().quit()
             }
@@ -109,66 +140,4 @@ where
         };
         state
     }
-}
-
-/*
-fn app_logic(data: &mut u32) -> impl View<u32, (), Element = impl Widget> {
-    let button = Button::new(format!("count: {}", data), |data| *data += 1);
-    let boxed: Box<dyn AnyView<u32, ()>> = Box::new(button);
-    Column::new((boxed, Button::new("reset", |data| *data = 0)))
-}
-*/
-
-#[derive(Default)]
-struct AppData {
-    count: u32,
-}
-
-fn count_button(count: u32) -> impl View<u32> {
-    button(format!("count: {}", count), |data| *data += 1)
-}
-
-fn app_logic(data: &mut AppData) -> impl View<AppData> {
-    v_stack((
-        format!("count: {}", data.count),
-        button("reset", |data: &mut AppData| data.count = 0),
-        Memoize::new(data.count, |count| {
-            button(format!("count: {}", count), |data: &mut AppData| {
-                data.count += 1
-            })
-        }),
-        Adapt::new(
-            |data: &mut AppData, thunk| thunk.call(&mut data.count),
-            count_button(data.count),
-        ),
-        LayoutObserver::new(|size| format!("size: {:?}", size)),
-    ))
-}
-
-fn main() {
-    //tracing_subscriber::fmt().init();
-    let mut file_menu = Menu::new();
-    file_menu.add_item(
-        0x100,
-        "E&xit",
-        Some(&HotKey::new(SysMods::Cmd, "q")),
-        true,
-        false,
-    );
-    let mut menubar = Menu::new();
-    menubar.add_dropdown(Menu::new(), "Application", true);
-    menubar.add_dropdown(file_menu, "&File", true);
-
-    let app = App::new(AppData::default(), app_logic);
-    let druid_app = Application::new().unwrap();
-    let mut builder = WindowBuilder::new(druid_app.clone());
-    let main_state = MainState::new(app);
-    builder.set_handler(Box::new(main_state));
-    builder.set_title("Idiopath");
-    builder.set_menu(menubar);
-
-    let window = builder.build().unwrap();
-    window.show();
-
-    druid_app.run(None);
 }
