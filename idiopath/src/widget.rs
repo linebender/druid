@@ -14,20 +14,22 @@
 
 pub mod align;
 pub mod button;
+mod contexts;
+mod core;
 pub mod layout_observer;
 pub mod text;
 pub mod vstack;
 
 use std::any::Any;
-use std::ops::{Deref, DerefMut};
-
-use bitflags::bitflags;
+use std::ops::DerefMut;
 
 use druid_shell::kurbo::{Affine, Point, Size};
 use druid_shell::piet::{Piet, PietText, RenderContext};
 use druid_shell::WindowHandle;
 
-use crate::event::Event;
+pub use self::contexts::{AlignCx, CxState, EventCx, LayoutCx, PaintCx, UpdateCx};
+pub use self::core::Pod;
+pub(crate) use self::core::{PodFlags, WidgetState};
 
 use self::align::{
     AlignResult, AlignmentAxis, Bottom, Center, HorizAlignment, Leading, SingleAlignment, Top,
@@ -58,71 +60,6 @@ pub trait Widget {
     fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {}
 
     fn paint(&mut self, cx: &mut PaintCx);
-}
-
-// These contexts loosely follow Druid.
-pub struct CxState<'a> {
-    window: &'a WindowHandle,
-    text: PietText,
-    events: &'a mut Vec<Event>,
-}
-
-pub struct EventCx<'a, 'b> {
-    cx_state: &'a mut CxState<'b>,
-    widget_state: &'a mut WidgetState,
-}
-
-pub struct UpdateCx<'a, 'b> {
-    cx_state: &'a mut CxState<'b>,
-    widget_state: &'a mut WidgetState,
-}
-
-pub struct LayoutCx<'a, 'b> {
-    cx_state: &'a mut CxState<'b>,
-    widget_state: &'a mut WidgetState,
-}
-
-pub struct AlignCx<'a> {
-    widget_state: &'a WidgetState,
-    align_result: &'a mut AlignResult,
-    origin: Point,
-}
-
-pub struct PaintCx<'a, 'b, 'c> {
-    cx_state: &'a mut CxState<'b>,
-    piet: &'a mut Piet<'c>,
-}
-
-bitflags! {
-    #[derive(Default)]
-    struct PodFlags: u32 {
-        const REQUEST_UPDATE = 1;
-        const REQUEST_LAYOUT = 2;
-        const REQUEST_PAINT = 4;
-
-        const UPWARD_FLAGS = Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
-        const INIT_FLAGS = Self::REQUEST_UPDATE.bits | Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
-    }
-}
-
-/// A pod that contains a widget (in a container).
-pub struct Pod {
-    state: WidgetState,
-    widget: Box<dyn AnyWidget>,
-}
-
-#[derive(Default, Debug)]
-pub struct WidgetState {
-    flags: PodFlags,
-    origin: Point,
-    /// The minimum intrinsic size of the widget.
-    min_size: Size,
-    /// The maximum intrinsic size of the widget.
-    max_size: Size,
-    /// The size proposed by the widget's container.
-    proposed_size: Size,
-    /// The size of the widget.
-    size: Size,
 }
 
 pub trait AnyWidget: Widget {
@@ -206,99 +143,6 @@ impl_widget_tuple!(8;
     W0, W1, W2, W3, W4, W5, W6, W7;
     0, 1, 2, 3, 4, 5, 6, 7
 );
-
-impl<'a> CxState<'a> {
-    pub fn new(window: &'a WindowHandle, events: &'a mut Vec<Event>) -> Self {
-        CxState {
-            window,
-            text: window.text(),
-            events,
-        }
-    }
-
-    pub(crate) fn has_events(&self) -> bool {
-        !self.events.is_empty()
-    }
-}
-
-impl<'a, 'b> EventCx<'a, 'b> {
-    pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
-        EventCx {
-            cx_state,
-            widget_state: root_state,
-        }
-    }
-
-    pub fn add_event(&mut self, event: Event) {
-        self.cx_state.events.push(event);
-    }
-}
-
-impl<'a, 'b> UpdateCx<'a, 'b> {
-    pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
-        UpdateCx {
-            cx_state,
-            widget_state: root_state,
-        }
-    }
-
-    pub fn request_layout(&mut self) {
-        self.widget_state.flags |= PodFlags::REQUEST_LAYOUT;
-    }
-}
-
-impl<'a, 'b> LayoutCx<'a, 'b> {
-    pub fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
-        LayoutCx {
-            cx_state,
-            widget_state: root_state,
-        }
-    }
-
-    pub fn text(&mut self) -> &mut PietText {
-        &mut self.cx_state.text
-    }
-
-    pub fn add_event(&mut self, event: Event) {
-        self.cx_state.events.push(event);
-    }
-}
-
-impl<'a> AlignCx<'a> {
-    pub fn aggregate(&mut self, alignment: SingleAlignment, value: f64) {
-        let origin_value = match alignment.axis() {
-            AlignmentAxis::Horizontal => self.origin.x,
-            AlignmentAxis::Vertical => self.origin.y,
-        };
-        self.align_result.aggregate(alignment, value + origin_value);
-    }
-}
-
-impl<'a, 'b, 'c> PaintCx<'a, 'b, 'c> {
-    pub fn new(cx_state: &'a mut CxState<'b>, piet: &'a mut Piet<'c>) -> Self {
-        PaintCx { cx_state, piet }
-    }
-
-    pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCx)) {
-        self.piet.save().unwrap();
-        f(self);
-        self.piet.restore().unwrap();
-    }
-}
-
-impl<'c> Deref for PaintCx<'_, '_, 'c> {
-    type Target = Piet<'c>;
-
-    fn deref(&self) -> &Self::Target {
-        self.piet
-    }
-}
-
-impl<'c> DerefMut for PaintCx<'_, '_, 'c> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.piet
-    }
-}
 
 impl WidgetState {
     fn merge_up(&mut self, child_state: &mut WidgetState) {
