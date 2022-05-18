@@ -2236,6 +2236,7 @@ impl WindowHandle {
 
 // There is a tiny risk of things going wrong when hwnd is sent across threads.
 unsafe impl Send for IdleHandle {}
+unsafe impl Sync for IdleHandle {}
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop
