@@ -1,5 +1,7 @@
 # An experimental Rust architecture for reactive UI
 
+Note: this README is a bit out of date. To understand more of what's going on, please read the blog post, [Xilem: an architecture for UI in Rust].
+
 This repo contains an experimental architecture, implemented with a toy UI. At a very high level, it combines ideas from Flutter, SwiftUI, and Elm. Like all of these, it uses lightweight view objects, diffing them to provide minimal updates to a retained UI. Like SwiftUI, it is strongly typed.
 
 ## Overall program flow
@@ -75,3 +77,4 @@ The type erasure of View nodes is not an easy trick, as the trait has two associ
 [Rc::make_mut]: https://doc.rust-lang.org/std/rc/struct.Rc.html#method.make_mut
 [AnyView]: https://developer.apple.com/documentation/swiftui/anyview
 [Panoramix]: https://github.com/PoignardAzur/panoramix
+[Xilem: an architecture for UI in Rust]: https://raphlinus.github.io/rust/gui/2022/05/07/ui-architecture.html

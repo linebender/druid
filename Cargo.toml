@@ -7,7 +7,7 @@ members = [
     "druid/examples/web",
     "druid/examples/hello_web",
     "druid/examples/value_formatting",
-    "idiopath",
+    "xilem",
 ]
 default-members = [
     "druid",

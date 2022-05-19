@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use idiopath::{button, v_stack, Adapt, App, AppLauncher, LayoutObserver, Memoize, View};
+use xilem::{button, v_stack, Adapt, App, AppLauncher, LayoutObserver, Memoize, View};
 
 #[derive(Default)]
 struct AppData {
