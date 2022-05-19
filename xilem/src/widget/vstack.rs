@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid_shell::kurbo::{Point, Rect, Size};
+use druid_shell::kurbo::{Point, Size};
 
 use super::{
     align::{Center, SingleAlignment},
-    EventCx, LayoutCx, PaintCx, Pod, RawEvent, UpdateCx, Widget,
+    EventCx, LayoutCx, PaintCx, Pod, UpdateCx, Widget,
 };
 
 pub struct VStack {
@@ -43,17 +43,8 @@ impl VStack {
 
 impl Widget for VStack {
     fn event(&mut self, cx: &mut EventCx, event: &super::RawEvent) {
-        match event {
-            RawEvent::MouseDown(p) => {
-                for child in &mut self.children {
-                    let rect = Rect::from_origin_size(child.state.origin, child.state.size);
-                    if rect.contains(*p) {
-                        let child_event = RawEvent::MouseDown(*p - child.state.origin.to_vec2());
-                        child.event(cx, &child_event);
-                        break;
-                    }
-                }
-            }
+        for child in &mut self.children {
+            child.event(cx, event);
         }
     }
 

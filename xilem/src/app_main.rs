@@ -19,7 +19,7 @@ use druid_shell::{
     WindowBuilder, WindowHandle,
 };
 
-use crate::{app::App, View, Widget};
+use crate::{app::App, widget::RawEvent, View, Widget};
 
 // This is a bit of a hack just to get a window launched. The real version
 // would deal with multiple windows and have other ways to configure things.
@@ -28,6 +28,7 @@ pub struct AppLauncher<T, V: View<T>, F: FnMut(&mut T) -> V> {
     app: App<T, V, F>,
 }
 
+// The logic of this struct is mostly parallel to DruidHandler in win_handler.rs.
 struct MainState<T, V: View<T>, F: FnMut(&mut T) -> V>
 where
     V::Element: Widget,
@@ -101,16 +102,26 @@ where
         }
     }
 
-    fn mouse_move(&mut self, _event: &MouseEvent) {
-        self.handle.set_cursor(&Cursor::Arrow);
-    }
-
     fn mouse_down(&mut self, event: &MouseEvent) {
-        self.app.mouse_down(event.pos);
+        self.app.window_event(RawEvent::MouseDown(event.into()));
         self.handle.invalidate();
     }
 
-    fn mouse_up(&mut self, _event: &MouseEvent) {}
+    fn mouse_up(&mut self, event: &MouseEvent) {
+        self.app.window_event(RawEvent::MouseUp(event.into()));
+        self.handle.invalidate();
+    }
+
+    fn mouse_move(&mut self, event: &MouseEvent) {
+        self.app.window_event(RawEvent::MouseMove(event.into()));
+        self.handle.invalidate();
+        self.handle.set_cursor(&Cursor::Arrow);
+    }
+
+    fn wheel(&mut self, event: &MouseEvent) {
+        self.app.window_event(RawEvent::MouseWheel(event.into()));
+        self.handle.invalidate();
+    }
 
     fn size(&mut self, size: Size) {
         self.app.size(size);

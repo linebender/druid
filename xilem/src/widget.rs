@@ -17,17 +17,19 @@ pub mod button;
 mod contexts;
 mod core;
 pub mod layout_observer;
+mod raw_event;
 pub mod text;
 pub mod vstack;
 
 use std::any::Any;
 use std::ops::DerefMut;
 
-use druid_shell::kurbo::{Point, Size};
+use druid_shell::kurbo::Size;
 
 pub use self::contexts::{AlignCx, CxState, EventCx, LayoutCx, PaintCx, UpdateCx};
 pub use self::core::Pod;
 pub(crate) use self::core::{PodFlags, WidgetState};
+pub use self::raw_event::RawEvent;
 
 use self::align::SingleAlignment;
 
@@ -94,11 +96,6 @@ impl Widget for Box<dyn AnyWidget> {
     fn paint(&mut self, cx: &mut PaintCx) {
         self.deref_mut().paint(cx);
     }
-}
-
-#[derive(Debug)]
-pub enum RawEvent {
-    MouseDown(Point),
 }
 
 pub trait WidgetTuple {

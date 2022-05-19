@@ -19,7 +19,7 @@
 
 use bitflags::bitflags;
 use druid_shell::{
-    kurbo::{Affine, Point, Size},
+    kurbo::{Affine, Point, Rect, Size},
     piet::RenderContext,
 };
 
@@ -30,7 +30,7 @@ use super::{
         AlignResult, AlignmentAxis, Bottom, Center, HorizAlignment, Leading, SingleAlignment, Top,
         Trailing, VertAlignment,
     },
-    AlignCx, AnyWidget, EventCx, LayoutCx, PaintCx, RawEvent, UpdateCx,
+    AlignCx, AnyWidget, CxState, EventCx, LayoutCx, PaintCx, RawEvent, UpdateCx,
 };
 
 bitflags! {
@@ -40,7 +40,10 @@ bitflags! {
         const REQUEST_LAYOUT = 2;
         const REQUEST_PAINT = 4;
 
-        const UPWARD_FLAGS = Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
+        const IS_HOT = 8;
+        const HAS_ACTIVE = 16;
+
+        const UPWARD_FLAGS = Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits | Self::HAS_ACTIVE.bits;
         const INIT_FLAGS = Self::REQUEST_UPDATE.bits | Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
     }
 }
@@ -125,8 +128,86 @@ impl Pod {
         self.state.request(PodFlags::REQUEST_UPDATE);
     }
 
+    /// Propagate a platform event. As in Druid, a great deal of the event
+    /// dispatching logic is in this function.
     pub fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
-        self.widget.event(cx, event);
+        let rect = Rect::from_origin_size(self.state.origin, self.state.size);
+        let mut modified_event = None;
+        let had_active = self.state.flags.contains(PodFlags::HAS_ACTIVE);
+        let recurse = match event {
+            RawEvent::MouseDown(mouse_event) => {
+                Pod::set_hot_state(
+                    &mut self.widget,
+                    &mut self.state,
+                    cx.cx_state,
+                    rect,
+                    Some(mouse_event.pos),
+                );
+                if had_active || self.state.flags.contains(PodFlags::IS_HOT) {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos -= self.state.origin.to_vec2();
+                    modified_event = Some(RawEvent::MouseDown(mouse_event));
+                    true
+                } else {
+                    false
+                }
+            }
+            RawEvent::MouseUp(mouse_event) => {
+                Pod::set_hot_state(
+                    &mut self.widget,
+                    &mut self.state,
+                    cx.cx_state,
+                    rect,
+                    Some(mouse_event.pos),
+                );
+                if had_active || self.state.flags.contains(PodFlags::IS_HOT) {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos -= self.state.origin.to_vec2();
+                    modified_event = Some(RawEvent::MouseUp(mouse_event));
+                    true
+                } else {
+                    false
+                }
+            }
+            RawEvent::MouseMove(mouse_event) => {
+                let hot_changed = Pod::set_hot_state(
+                    &mut self.widget,
+                    &mut self.state,
+                    cx.cx_state,
+                    rect,
+                    Some(mouse_event.pos),
+                );
+                if had_active || self.state.flags.contains(PodFlags::IS_HOT) || hot_changed {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos -= self.state.origin.to_vec2();
+                    modified_event = Some(RawEvent::MouseUp(mouse_event));
+                    true
+                } else {
+                    false
+                }
+            }
+            RawEvent::MouseWheel(mouse_event) => {
+                Pod::set_hot_state(
+                    &mut self.widget,
+                    &mut self.state,
+                    cx.cx_state,
+                    rect,
+                    Some(mouse_event.pos),
+                );
+                if had_active || self.state.flags.contains(PodFlags::IS_HOT) {
+                    let mut mouse_event = mouse_event.clone();
+                    mouse_event.pos -= self.state.origin.to_vec2();
+                    modified_event = Some(RawEvent::MouseWheel(mouse_event));
+                    true
+                } else {
+                    false
+                }
+            }
+        };
+        if recurse {
+            self.widget
+                .event(cx, modified_event.as_ref().unwrap_or(event));
+        }
     }
 
     /// Propagate an update cycle.
@@ -201,5 +282,25 @@ impl Pod {
     /// owns this pod.
     pub fn get_alignment(&self, alignment: SingleAlignment) -> f64 {
         self.state.get_alignment(&self.widget, alignment)
+    }
+
+    // Return true if hot state has changed
+    fn set_hot_state(
+        _widget: &mut dyn AnyWidget,
+        state: &mut WidgetState,
+        _cx_state: &mut CxState,
+        rect: Rect,
+        mouse_pos: Option<Point>,
+    ) -> bool {
+        let had_hot = state.flags.contains(PodFlags::IS_HOT);
+        state.flags.set(
+            PodFlags::IS_HOT,
+            match mouse_pos {
+                Some(pos) => rect.contains(pos),
+                None => false,
+            },
+        );
+        had_hot != state.flags.contains(PodFlags::IS_HOT)
+        // TODO: propagate hot changed (is a lifecycle method in Druid)
     }
 }

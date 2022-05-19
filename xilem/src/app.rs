@@ -14,7 +14,7 @@
 
 use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
-use druid_shell::{kurbo::Point, WindowHandle};
+use druid_shell::WindowHandle;
 
 use crate::widget::{CxState, EventCx, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
 use crate::{
@@ -109,11 +109,7 @@ where
         }
     }
 
-    pub fn mouse_down(&mut self, point: Point) {
-        self.event(RawEvent::MouseDown(point));
-    }
-
-    fn event(&mut self, event: RawEvent) {
+    pub fn window_event(&mut self, event: RawEvent) {
         self.ensure_app();
         let root_pod = self.root_pod.as_mut().unwrap();
         let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
