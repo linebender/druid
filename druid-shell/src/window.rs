@@ -174,9 +174,6 @@ pub struct WindowHandle(pub(crate) backend::WindowHandle);
 
 impl WindowHandle {
     /// Make this window visible.
-    ///
-    /// This is part of the initialization process; it should only be called
-    /// once, when a window is first created.
     pub fn show(&self) {
         self.0.show()
     }
@@ -184,6 +181,11 @@ impl WindowHandle {
     /// Close the window.
     pub fn close(&self) {
         self.0.close()
+    }
+
+    /// Hide the window
+    pub fn hide(&self) {
+        self.0.hide()
     }
 
     /// Set whether the window should be resizable

@@ -324,6 +324,12 @@ impl<T: Data> InnerAppState<T> {
         }
     }
 
+    fn hide_window(&mut self, id: WindowId) {
+        if let Some(win) = self.windows.get_mut(id) {
+            win.handle.hide();
+        }
+    }
+
     fn configure_window(&mut self, config: &WindowConfig, id: WindowId) {
         if let Some(win) = self.windows.get_mut(id) {
             config.apply_to_handle(&mut win.handle);
@@ -689,12 +695,16 @@ impl<T: Data> AppState<T> {
                 }
             }
             T::Window(id) if cmd.is(sys_cmd::SHOW_WINDOW) => self.show_window(id),
+            T::Window(id) if cmd.is(sys_cmd::HIDE_WINDOW) => self.hide_window(id),
             T::Window(id) if cmd.is(sys_cmd::PASTE) => self.do_paste(id),
             _ if cmd.is(sys_cmd::CLOSE_WINDOW) => {
                 tracing::warn!("CLOSE_WINDOW command must target a window.")
             }
             _ if cmd.is(sys_cmd::SHOW_WINDOW) => {
                 tracing::warn!("SHOW_WINDOW command must target a window.")
+            }
+            _ if cmd.is(sys_cmd::HIDE_WINDOW) => {
+                tracing::warn!("HIDE_WINDOW command must target a window.")
             }
             _ if cmd.is(sys_cmd::SHOW_OPEN_PANEL) => {
                 tracing::warn!("SHOW_OPEN_PANEL command must target a window.")
@@ -846,6 +856,10 @@ impl<T: Data> AppState<T> {
 
     fn show_window(&mut self, id: WindowId) {
         self.inner.borrow_mut().show_window(id);
+    }
+
+    fn hide_window(&mut self, id: WindowId) {
+        self.inner.borrow_mut().hide_window(id);
     }
 
     fn configure_window(&mut self, cmd: Command, id: WindowId) {

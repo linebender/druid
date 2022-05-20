@@ -160,6 +160,7 @@ enum DeferredOp {
     SetSize(Size),
     SetResizable(bool),
     SetWindowState(window::WindowState),
+    ShowWindow(bool),
     ReleaseMouseCapture,
 }
 
@@ -618,6 +619,16 @@ impl MyWndProc {
                         ShowWindow(hwnd, show);
                     }
                 }
+                DeferredOp::ShowWindow(should_show) => {
+                    let show = if should_show {
+                        SW_SHOW
+                    } else {
+                        SW_HIDE
+                    };
+                    unsafe {
+                        ShowWindow(hwnd, show);
+                    }
+                }
                 DeferredOp::SaveAs(options, token) => {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
@@ -758,6 +769,9 @@ impl WndProc for MyWndProc {
                 Some(0)
             }
             WM_ACTIVATE => {
+                // Check if the low-order word is not 0
+                // If it were 0, then that means we are being deactivated, in which case we do nothing.
+                // If it is != 0, then we have been activated.
                 if LOWORD(wparam as u32) as u32 != 0 {
                     unsafe {
                         if !self.has_titlebar() && !self.is_transparent() {
@@ -1804,6 +1818,7 @@ impl WindowHandle {
         }
     }
 
+    /// Closes the window.
     pub fn close(&self) {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -1813,10 +1828,14 @@ impl WindowHandle {
         }
     }
 
+    /// Hides the window.
+    pub fn hide(&self) {
+        self.defer(DeferredOp::ShowWindow(false));
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        //FIXME: implementation goes here
-        warn!("bring_to_front_and_focus not yet implemented on windows");
+        self.defer(DeferredOp::ShowWindow(true));
     }
 
     pub fn request_anim_frame(&self) {

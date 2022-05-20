@@ -220,6 +220,13 @@ pub mod sys {
     /// will automatically target the window containing the widget.
     pub const SHOW_WINDOW: Selector = Selector::new("druid-builtin.show-window");
 
+    /// The selector for a command to hide a specific window
+    ///
+    /// The command must target a specific window.
+    /// When calling `submit_command` on a `Widget`s context, passing `None` as target
+    /// will automatically target the window containing the widget.
+    pub const HIDE_WINDOW: Selector = Selector::new("druid-builtin.hide-window");
+
     /// Apply the configuration payload to an existing window. The target should be a WindowId.
     pub const CONFIGURE_WINDOW: Selector<WindowConfig> =
         Selector::new("druid-builtin.configure-window");

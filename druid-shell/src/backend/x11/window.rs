@@ -853,6 +853,12 @@ impl Window {
         }
     }
 
+    fn hide(&self) {
+        if !self.destroyed() {
+            log_x11!(self.app.connection().unmap_window(self.id));
+        }
+    }
+
     fn close(&self) {
         self.destroy();
     }
@@ -922,16 +928,14 @@ impl Window {
             return;
         }
 
-        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = self.app.connection();
+
+        // This has no effect if we are already "mapped" but it shows the application if it was previously hidden
+        log_x11!(conn.map_window(self.id));
+
         log_x11!(conn.configure_window(
             self.id,
             &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
-        ));
-        log_x11!(conn.set_input_focus(
-            xproto::InputFocus::POINTER_ROOT,
-            self.id,
-            xproto::Time::CURRENT_TIME,
         ));
     }
 
@@ -1603,6 +1607,14 @@ impl WindowHandle {
         }
     }
 
+    pub fn hide(&self) {
+        if let Some(w) = self.window.upgrade() {
+            w.hide();
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
+    }
+
     pub fn close(&self) {
         if let Some(w) = self.window.upgrade() {
             w.close();
@@ -1938,4 +1950,26 @@ fn make_cursor(
     conn.render_free_picture(picture)?;
 
     Ok(Cursor::Custom(CustomCursor(cursor)))
+}
+
+/// Gets an internal atom from the connection by name
+///
+/// If only_if_exists is false, then the atom will be created if it doesn't exist. If it is true,
+/// then an error will be returned if it doesn't exist
+fn get_internal_atom(
+    conn: &XCBConnection,
+    name: &str,
+    only_if_exists: bool,
+) -> Result<xproto::Atom, Box<dyn std::error::Error>> {
+    let mut name_bytes = Vec::new();
+    name_bytes.extend(name.as_bytes());
+    name_bytes.push(0);
+
+    match conn.intern_atom(only_if_exists, &name_bytes) {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => Ok(reply.atom),
+            Err(err) => Err(Box::new(err)),
+        },
+        Err(err) => Err(Box::new(err)),
+    }
 }
