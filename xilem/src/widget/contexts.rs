@@ -44,6 +44,11 @@ pub struct EventCx<'a, 'b> {
     pub(crate) widget_state: &'a mut WidgetState,
 }
 
+pub struct LifeCycleCx<'a, 'b> {
+    pub(crate) cx_state: &'a mut CxState<'b>,
+    pub(crate) widget_state: &'a mut WidgetState,
+}
+
 pub struct UpdateCx<'a, 'b> {
     pub(crate) cx_state: &'a mut CxState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
@@ -89,6 +94,19 @@ impl<'a, 'b> EventCx<'a, 'b> {
 
     pub fn add_event(&mut self, event: Event) {
         self.cx_state.events.push(event);
+    }
+}
+
+impl<'a, 'b> LifeCycleCx<'a, 'b> {
+    pub(crate) fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
+        LifeCycleCx {
+            cx_state,
+            widget_state: root_state,
+        }
+    }
+
+    pub fn request_paint(&mut self) {
+        self.widget_state.flags |= PodFlags::REQUEST_PAINT;
     }
 }
 

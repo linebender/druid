@@ -14,7 +14,7 @@
 
 use druid_shell::kurbo::Point;
 
-use super::{AlignCx, AnyWidget, EventCx, Widget, WidgetState};
+use super::{contexts::LifeCycleCx, AlignCx, AnyWidget, EventCx, LifeCycle, Widget, WidgetState};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum AlignmentMerge {
@@ -243,6 +243,10 @@ impl<'a> AlignmentProxy<'a> {
 impl<F: Fn(AlignmentProxy) -> f64 + 'static> Widget for AlignmentGuide<F> {
     fn event(&mut self, cx: &mut EventCx, event: &super::RawEvent) {
         self.child.event(cx, event);
+    }
+
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        self.child.lifecycle(cx, event);
     }
 
     fn update(&mut self, cx: &mut super::UpdateCx) {

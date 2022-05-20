@@ -19,7 +19,8 @@ use druid_shell::{
 
 use super::{
     align::{FirstBaseline, LastBaseline, SingleAlignment, VertAlignment},
-    AlignCx, EventCx, LayoutCx, PaintCx, UpdateCx, Widget,
+    contexts::LifeCycleCx,
+    AlignCx, EventCx, LayoutCx, LifeCycle, PaintCx, RawEvent, UpdateCx, Widget,
 };
 
 pub struct TextWidget {
@@ -46,7 +47,9 @@ impl TextWidget {
 }
 
 impl Widget for TextWidget {
-    fn event(&mut self, _cx: &mut EventCx, _event: &super::RawEvent) {}
+    fn event(&mut self, _cx: &mut EventCx, _event: &RawEvent) {}
+
+    fn lifecycle(&mut self, _cx: &mut LifeCycleCx, _event: &LifeCycle) {}
 
     fn update(&mut self, cx: &mut UpdateCx) {
         // All changes potentially require layout. Note: we could be finer

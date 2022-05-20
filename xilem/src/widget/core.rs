@@ -30,7 +30,8 @@ use super::{
         AlignResult, AlignmentAxis, Bottom, Center, HorizAlignment, Leading, SingleAlignment, Top,
         Trailing, VertAlignment,
     },
-    AlignCx, AnyWidget, CxState, EventCx, LayoutCx, PaintCx, RawEvent, UpdateCx,
+    contexts::LifeCycleCx,
+    AlignCx, AnyWidget, CxState, EventCx, LayoutCx, LifeCycle, PaintCx, RawEvent, UpdateCx,
 };
 
 bitflags! {
@@ -210,6 +211,19 @@ impl Pod {
         }
     }
 
+    pub fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        let recurse = match event {
+            LifeCycle::HotChanged(_) => false,
+        };
+        let mut child_cx = LifeCycleCx {
+            cx_state: cx.cx_state,
+            widget_state: &mut self.state,
+        };
+        if recurse {
+            self.widget.lifecycle(&mut child_cx, event);
+        }
+    }
+
     /// Propagate an update cycle.
     pub fn update(&mut self, cx: &mut UpdateCx) {
         if self.state.flags.contains(PodFlags::REQUEST_UPDATE) {
@@ -286,21 +300,27 @@ impl Pod {
 
     // Return true if hot state has changed
     fn set_hot_state(
-        _widget: &mut dyn AnyWidget,
-        state: &mut WidgetState,
-        _cx_state: &mut CxState,
+        widget: &mut dyn AnyWidget,
+        widget_state: &mut WidgetState,
+        cx_state: &mut CxState,
         rect: Rect,
         mouse_pos: Option<Point>,
     ) -> bool {
-        let had_hot = state.flags.contains(PodFlags::IS_HOT);
-        state.flags.set(
-            PodFlags::IS_HOT,
-            match mouse_pos {
-                Some(pos) => rect.contains(pos),
-                None => false,
-            },
-        );
-        had_hot != state.flags.contains(PodFlags::IS_HOT)
-        // TODO: propagate hot changed (is a lifecycle method in Druid)
+        let had_hot = widget_state.flags.contains(PodFlags::IS_HOT);
+        let is_hot = match mouse_pos {
+            Some(pos) => rect.contains(pos),
+            None => false,
+        };
+        widget_state.flags.set(PodFlags::IS_HOT, is_hot);
+        if had_hot != is_hot {
+            let hot_changed_event = LifeCycle::HotChanged(is_hot);
+            let mut child_cx = LifeCycleCx {
+                cx_state,
+                widget_state,
+            };
+            widget.lifecycle(&mut child_cx, &hot_changed_event);
+            return true;
+        }
+        false
     }
 }

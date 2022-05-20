@@ -26,16 +26,23 @@ use std::ops::DerefMut;
 
 use druid_shell::kurbo::Size;
 
+use self::contexts::LifeCycleCx;
 pub use self::contexts::{AlignCx, CxState, EventCx, LayoutCx, PaintCx, UpdateCx};
 pub use self::core::Pod;
 pub(crate) use self::core::{PodFlags, WidgetState};
-pub use self::raw_event::RawEvent;
+pub use self::raw_event::{LifeCycle, RawEvent};
 
 use self::align::SingleAlignment;
 
 /// A basic widget trait.
 pub trait Widget {
     fn event(&mut self, cx: &mut EventCx, event: &RawEvent);
+
+    /// Propagate a lifecycle event.
+    ///
+    /// I am not convinced this needs to be distinct from `event`. For the
+    /// moment, we're following existing Druid.
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle);
 
     fn update(&mut self, cx: &mut UpdateCx);
 
@@ -79,6 +86,10 @@ impl<W: Widget + 'static> AnyWidget for W {
 impl Widget for Box<dyn AnyWidget> {
     fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
         self.deref_mut().event(cx, event);
+    }
+
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        self.deref_mut().lifecycle(cx, event);
     }
 
     fn update(&mut self, cx: &mut UpdateCx) {

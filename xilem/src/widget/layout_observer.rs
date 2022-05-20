@@ -21,8 +21,8 @@ use druid_shell::kurbo::Size;
 use crate::{event::Event, id::IdPath};
 
 use super::{
-    align::SingleAlignment, AlignCx, AnyWidget, EventCx, LayoutCx, PaintCx, Pod, RawEvent,
-    UpdateCx, Widget,
+    align::SingleAlignment, contexts::LifeCycleCx, AlignCx, AnyWidget, EventCx, LayoutCx,
+    LifeCycle, PaintCx, Pod, RawEvent, UpdateCx, Widget,
 };
 
 pub struct LayoutObserver {
@@ -61,6 +61,12 @@ impl Widget for LayoutObserver {
     fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
         if let Some(child) = &mut self.child {
             child.event(cx, event);
+        }
+    }
+
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        if let Some(child) = &mut self.child {
+            child.lifecycle(cx, event);
         }
     }
 

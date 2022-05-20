@@ -1,4 +1,7 @@
-use druid_shell::{kurbo::{Point, Vec2}, Modifiers, MouseButtons, MouseButton};
+use druid_shell::{
+    kurbo::{Point, Vec2},
+    Modifiers, MouseButton, MouseButtons,
+};
 
 // Copyright 2022 The Druid Authors.
 //
@@ -34,6 +37,10 @@ pub struct MouseEvent {
     pub focus: bool,
     pub button: MouseButton,
     pub wheel_delta: Vec2,
+}
+
+pub enum LifeCycle {
+    HotChanged(bool),
 }
 
 impl<'a> From<&'a druid_shell::MouseEvent> for MouseEvent {

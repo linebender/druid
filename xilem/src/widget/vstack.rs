@@ -16,7 +16,8 @@ use druid_shell::kurbo::{Point, Size};
 
 use super::{
     align::{Center, SingleAlignment},
-    EventCx, LayoutCx, PaintCx, Pod, UpdateCx, Widget,
+    contexts::LifeCycleCx,
+    EventCx, LayoutCx, LifeCycle, PaintCx, Pod, RawEvent, UpdateCx, Widget,
 };
 
 pub struct VStack {
@@ -42,9 +43,15 @@ impl VStack {
 }
 
 impl Widget for VStack {
-    fn event(&mut self, cx: &mut EventCx, event: &super::RawEvent) {
+    fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
         for child in &mut self.children {
             child.event(cx, event);
+        }
+    }
+
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        for child in &mut self.children {
+            child.lifecycle(cx, event);
         }
     }
 

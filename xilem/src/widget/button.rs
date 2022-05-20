@@ -19,7 +19,9 @@ use druid_shell::{
 
 use crate::{event::Event, id::IdPath};
 
-use super::{EventCx, LayoutCx, PaintCx, RawEvent, UpdateCx, Widget};
+use super::{
+    contexts::LifeCycleCx, EventCx, LayoutCx, LifeCycle, PaintCx, RawEvent, UpdateCx, Widget,
+};
 
 #[derive(Default)]
 
@@ -53,6 +55,12 @@ impl Widget for Button {
             RawEvent::MouseDown(_) => cx.add_event(Event::new(self.id_path.clone(), ())),
             _ => (),
         };
+    }
+
+    fn lifecycle(&mut self, cx: &mut LifeCycleCx, event: &LifeCycle) {
+        match event {
+            LifeCycle::HotChanged(_) => cx.request_paint(),
+        }
     }
 
     fn prelayout(&mut self, _cx: &mut LayoutCx) -> (Size, Size) {
