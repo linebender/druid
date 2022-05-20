@@ -39,6 +39,7 @@ pub struct MouseEvent {
     pub wheel_delta: Vec2,
 }
 
+#[derive(Debug)]
 pub enum LifeCycle {
     HotChanged(bool),
 }

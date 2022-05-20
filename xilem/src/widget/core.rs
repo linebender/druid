@@ -42,7 +42,8 @@ bitflags! {
         const REQUEST_PAINT = 4;
 
         const IS_HOT = 8;
-        const HAS_ACTIVE = 16;
+        const IS_ACTIVE = 16;
+        const HAS_ACTIVE = 32;
 
         const UPWARD_FLAGS = Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits | Self::HAS_ACTIVE.bits;
         const INIT_FLAGS = Self::REQUEST_UPDATE.bits | Self::REQUEST_LAYOUT.bits | Self::REQUEST_PAINT.bits;
@@ -181,7 +182,7 @@ impl Pod {
                 if had_active || self.state.flags.contains(PodFlags::IS_HOT) || hot_changed {
                     let mut mouse_event = mouse_event.clone();
                     mouse_event.pos -= self.state.origin.to_vec2();
-                    modified_event = Some(RawEvent::MouseUp(mouse_event));
+                    modified_event = Some(RawEvent::MouseMove(mouse_event));
                     true
                 } else {
                     false
@@ -206,8 +207,17 @@ impl Pod {
             }
         };
         if recurse {
+            let mut inner_cx = EventCx {
+                cx_state: cx.cx_state,
+                widget_state: &mut self.state,
+            };
             self.widget
-                .event(cx, modified_event.as_ref().unwrap_or(event));
+                .event(&mut inner_cx, modified_event.as_ref().unwrap_or(event));
+            self.state.flags.set(
+                PodFlags::HAS_ACTIVE,
+                self.state.flags.contains(PodFlags::IS_ACTIVE),
+            );
+            cx.widget_state.merge_up(&mut self.state);
         }
     }
 
@@ -221,6 +231,7 @@ impl Pod {
         };
         if recurse {
             self.widget.lifecycle(&mut child_cx, event);
+            cx.widget_state.merge_up(&mut self.state);
         }
     }
 
@@ -284,7 +295,12 @@ impl Pod {
         cx.with_save(|cx| {
             cx.piet
                 .transform(Affine::translate(self.state.origin.to_vec2()));
-            self.widget.paint(cx);
+            let mut inner_cx = PaintCx {
+                cx_state: cx.cx_state,
+                widget_state: &mut self.state,
+                piet: cx.piet,
+            };
+            self.widget.paint(&mut inner_cx);
         });
     }
 

@@ -20,7 +20,7 @@
 use std::ops::{Deref, DerefMut};
 
 use druid_shell::{
-    kurbo::Point,
+    kurbo::{Point, Size},
     piet::{Piet, PietText, RenderContext},
     WindowHandle,
 };
@@ -67,6 +67,7 @@ pub struct AlignCx<'a> {
 
 pub struct PaintCx<'a, 'b, 'c> {
     pub(crate) cx_state: &'a mut CxState<'b>,
+    pub(crate) widget_state: &'a WidgetState,
     pub(crate) piet: &'a mut Piet<'c>,
 }
 
@@ -95,16 +96,17 @@ impl<'a, 'b> EventCx<'a, 'b> {
     pub fn add_event(&mut self, event: Event) {
         self.cx_state.events.push(event);
     }
+
+    pub fn set_active(&mut self, is_active: bool) {
+        self.widget_state.flags.set(PodFlags::IS_ACTIVE, is_active);
+    }
+
+    pub fn is_hot(&self) -> bool {
+        self.widget_state.flags.contains(PodFlags::IS_HOT)
+    }
 }
 
 impl<'a, 'b> LifeCycleCx<'a, 'b> {
-    pub(crate) fn new(cx_state: &'a mut CxState<'b>, root_state: &'a mut WidgetState) -> Self {
-        LifeCycleCx {
-            cx_state,
-            widget_state: root_state,
-        }
-    }
-
     pub fn request_paint(&mut self) {
         self.widget_state.flags |= PodFlags::REQUEST_PAINT;
     }
@@ -138,6 +140,17 @@ impl<'a, 'b> LayoutCx<'a, 'b> {
     pub fn add_event(&mut self, event: Event) {
         self.cx_state.events.push(event);
     }
+
+    /// Access to minimum intrinsic size.
+    ///
+    /// Note: this shouldn't be called from prelayout.
+    pub fn min_size(&self) -> Size {
+        self.widget_state.min_size
+    }
+
+    pub fn max_size(&self) -> Size {
+        self.widget_state.max_size
+    }
 }
 
 impl<'a> AlignCx<'a> {
@@ -148,17 +161,41 @@ impl<'a> AlignCx<'a> {
         };
         self.align_result.aggregate(alignment, value + origin_value);
     }
+
+    pub fn size(&self) -> Size {
+        self.widget_state.size
+    }
 }
 
 impl<'a, 'b, 'c> PaintCx<'a, 'b, 'c> {
-    pub fn new(cx_state: &'a mut CxState<'b>, piet: &'a mut Piet<'c>) -> Self {
-        PaintCx { cx_state, piet }
+    pub(crate) fn new(
+        cx_state: &'a mut CxState<'b>,
+        widget_state: &'a mut WidgetState,
+        piet: &'a mut Piet<'c>,
+    ) -> Self {
+        PaintCx {
+            cx_state,
+            widget_state,
+            piet,
+        }
     }
 
     pub fn with_save(&mut self, f: impl FnOnce(&mut PaintCx)) {
         self.piet.save().unwrap();
         f(self);
         self.piet.restore().unwrap();
+    }
+
+    pub fn is_hot(&self) -> bool {
+        self.widget_state.flags.contains(PodFlags::IS_HOT)
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.widget_state.flags.contains(PodFlags::IS_ACTIVE)
+    }
+
+    pub fn size(&self) -> Size {
+        self.widget_state.size
     }
 }
 

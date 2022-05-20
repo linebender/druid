@@ -22,7 +22,7 @@ pub mod text;
 pub mod vstack;
 
 use std::any::Any;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 use druid_shell::kurbo::Size;
 
@@ -102,6 +102,10 @@ impl Widget for Box<dyn AnyWidget> {
 
     fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size {
         self.deref_mut().layout(cx, proposed_size)
+    }
+
+    fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {
+        self.deref().align(cx, alignment);
     }
 
     fn paint(&mut self, cx: &mut PaintCx) {

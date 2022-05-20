@@ -102,7 +102,7 @@ where
                 // becomes extreme.
                 self.run_app_logic();
             } else {
-                let mut paint_cx = PaintCx::new(&mut cx_state, piet);
+                let mut paint_cx = PaintCx::new(&mut cx_state, &mut self.root_state, piet);
                 root_pod.paint(&mut paint_cx);
                 break;
             }
