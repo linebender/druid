@@ -12,6 +12,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Added
 
+- Allow hiding/showing a window programmatically ([#2191] by [@newcomb-luke])
 - Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
 - System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
 - Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
@@ -846,6 +847,7 @@ Last release without a changelog :(
 [#2151]: https://github.com/linebender/druid/pull/2151
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
+[#2191]: https://github.com/linebender/druid/pull/2191
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
