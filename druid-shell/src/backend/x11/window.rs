@@ -938,7 +938,7 @@ impl Window {
             self.id,
             &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
         ));
-        
+
         log_x11!(conn.set_input_focus(
             xproto::InputFocus::POINTER_ROOT,
             self.id,
@@ -1957,26 +1957,4 @@ fn make_cursor(
     conn.render_free_picture(picture)?;
 
     Ok(Cursor::Custom(CustomCursor(cursor)))
-}
-
-/// Gets an intern atom from the connection by name
-///
-/// If only_if_exists is false, then the atom will be created if it doesn't exist. If it is true,
-/// then an error will be returned if it doesn't exist
-fn get_intern_atom(
-    conn: &XCBConnection,
-    name: &str,
-    only_if_exists: bool,
-) -> Result<xproto::Atom, Box<dyn std::error::Error>> {
-    let mut name_bytes = Vec::new();
-    name_bytes.extend(name.as_bytes());
-    name_bytes.push(0);
-
-    match conn.intern_atom(only_if_exists, &name_bytes) {
-        Ok(cookie) => match cookie.reply() {
-            Ok(reply) => Ok(reply.atom),
-            Err(err) => Err(Box::new(err)),
-        },
-        Err(err) => Err(Box::new(err)),
-    }
 }

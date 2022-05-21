@@ -27,7 +27,7 @@ use x11rb::protocol::present::ConnectionExt as _;
 use x11rb::protocol::render::{self, ConnectionExt as _, Pictformat};
 use x11rb::protocol::xfixes::ConnectionExt as _;
 use x11rb::protocol::xproto::{
-    self, Screen, ConnectionExt, CreateWindowAux, EventMask, Timestamp, Visualtype, WindowClass,
+    self, ConnectionExt, CreateWindowAux, EventMask, Timestamp, Visualtype, WindowClass,
 };
 use x11rb::protocol::Event;
 use x11rb::resource_manager::Database as ResourceDb;
@@ -127,8 +127,6 @@ pub(crate) struct Application {
     ///
     /// [1]: https://github.com/psychon/x11rb/blob/41ab6610f44f5041e112569684fc58cd6d690e57/src/event_loop_integration.rs.
     marker: std::marker::PhantomData<*mut XCBConnection>,
-    /// The screen in which our application resides
-    screen: Rc<Screen>,
 
     /// The type of visual used by the root window
     root_visual_type: Visualtype,
@@ -309,10 +307,10 @@ impl Application {
             .setup()
             .roots
             .get(screen_num)
-            .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?.clone();
-        let root_visual_type = util::get_visual_from_screen(&screen)
+            .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
+        let root_visual_type = util::get_visual_from_screen(screen)
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
-        let argb_visual_type = util::get_argb_visual_type(&*connection, &screen)?;
+        let argb_visual_type = util::get_argb_visual_type(&*connection, screen)?;
 
         let timestamp = Rc::new(Cell::new(x11rb::CURRENT_TIME));
         let pending_events = Default::default();
@@ -333,11 +331,8 @@ impl Application {
             Rc::clone(&timestamp),
         );
 
-        let screen = Rc::new(screen);
-
         Ok(Application {
             connection,
-            screen,
             rdb,
             screen_num,
             window_id,
@@ -473,11 +468,6 @@ impl Application {
     #[inline]
     pub(crate) fn connection(&self) -> &Rc<XCBConnection> {
         &self.connection
-    }
-
-    #[inline]
-    pub(crate) fn screen(&self) -> &Rc<Screen> {
-        &self.screen
     }
 
     #[inline]
