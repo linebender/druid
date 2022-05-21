@@ -620,11 +620,7 @@ impl MyWndProc {
                     }
                 }
                 DeferredOp::ShowWindow(should_show) => {
-                    let show = if should_show {
-                        SW_SHOW
-                    } else {
-                        SW_HIDE
-                    };
+                    let show = if should_show { SW_SHOW } else { SW_HIDE };
                     unsafe {
                         ShowWindow(hwnd, show);
                     }

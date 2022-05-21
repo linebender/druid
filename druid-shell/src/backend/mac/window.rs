@@ -1033,7 +1033,7 @@ impl WindowHandle {
     pub fn hide(&self) {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];
-            let () = msg_send![window, orderOut:self];
+            let () = msg_send![window, orderOut: self];
         }
     }
 
