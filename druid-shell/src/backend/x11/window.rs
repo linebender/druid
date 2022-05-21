@@ -930,122 +930,20 @@ impl Window {
 
         let conn = self.app.connection();
 
-        // log_x11!(conn.unmap_window(self.id));
-
-        // conn.flush().unwrap();
-
-        // std::thread::sleep(std::time::Duration::from_millis(50));
-
-        /*
         // This has no effect if we are already "mapped" but it shows the application if it was previously hidden
         log_x11!(conn.map_window(self.id));
-        */
 
-        /*
+        // Ask nicely to have our window to be at the top of the window stack
         log_x11!(conn.configure_window(
             self.id,
             &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
         ));
-        */
-
-        let root = self.app.screen().root;
-
-        let net_active_window = get_intern_atom(conn, "WM_CHANGE_STATE", true).unwrap();
-
-        let state_max_horz = get_intern_atom(conn, "_NET_WM_STATE_MAXIMIZED_HORZ", true).unwrap();
-        let state_max_vert = get_intern_atom(conn, "_NET_WM_STATE_MAXIMIZED_VERT", true).unwrap();
-
-        let values: [u32; 5] = [
-            1, // Source: Application = 1
-            state_max_horz, // Timestamp
-            state_max_vert, // Currently active window (none)
-            1,
-            0
-        ];
-
-        let data = xproto::ClientMessageData::from(values);
-
-        let event = xproto::ClientMessageEvent {
-            response_type: xproto::CLIENT_MESSAGE_EVENT,
-            format: 32,
-            sequence: 0,
-            window: self.id,
-            type_: net_active_window,
-            data,
-        };
-
-        log_x11!(conn.send_event(
-            false,
-            root,
-            xproto::EventMask::SUBSTRUCTURE_NOTIFY | xproto::EventMask::SUBSTRUCTURE_REDIRECT,
-            event
+        
+        log_x11!(conn.set_input_focus(
+            xproto::InputFocus::POINTER_ROOT,
+            self.id,
+            xproto::Time::CURRENT_TIME,
         ));
-
-        conn.flush().unwrap();
-
-        // log_x11!(conn.map_window(self.id));
-
-        /*
-        let root = conn.query_tree(self.id).unwrap().reply().unwrap().root;
-
-        let net_active_window = get_internal_atom(conn, "_NET_ACTIVE_WINDOW", true).unwrap();
-
-        let values: [u32; 5] = [
-            1, // Source: Application = 1
-            30, // Timestamp
-            0, // Currently active window (none)
-            0,
-            0
-        ];
-
-        let data = xproto::ClientMessageData::from(values);
-
-        let event = xproto::ClientMessageEvent {
-            response_type: xproto::CLIENT_MESSAGE_EVENT,
-            format: 32,
-            sequence: 0,
-            window: self.id,
-            type_: net_active_window,
-            data,
-        };
-
-        log_x11!(conn.send_event(
-            false,
-            root,
-            xproto::EventMask::SUBSTRUCTURE_NOTIFY | xproto::EventMask::SUBSTRUCTURE_REDIRECT,
-            event
-        ));
-
-        let net_wm_state = get_internal_atom(conn, "_NET_WM_STATE", true).unwrap();
-
-        let net_wm_state_focused = get_internal_atom(conn, "_NET_WM_STATE_DEMANDS_ATTENTION", true).unwrap();
-
-        let values: [u32; 5] = [
-            1, // _NET_WM_STATE_ADD
-            net_wm_state_focused, // First property (_NET_WM_STATE_FOCUSED)
-            0, // Second property (none)
-            1, // Source: Application = 1
-            0
-        ];
-
-        let data = xproto::ClientMessageData::from(values);
-
-        let event = xproto::ClientMessageEvent {
-            response_type: xproto::CLIENT_MESSAGE_EVENT,
-            format: 32,
-            sequence: 0,
-            window: self.id,
-            type_: net_wm_state,
-            data,
-        };
-
-        log_x11!(conn.send_event(
-            false,
-            root,
-            xproto::EventMask::SUBSTRUCTURE_NOTIFY | xproto::EventMask::SUBSTRUCTURE_REDIRECT,
-            event
-        ));
-        */
     }
 
     fn add_invalid_rect(&self, rect: Rect) -> Result<(), Error> {
