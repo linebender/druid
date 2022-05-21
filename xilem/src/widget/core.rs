@@ -133,6 +133,9 @@ impl Pod {
     /// Propagate a platform event. As in Druid, a great deal of the event
     /// dispatching logic is in this function.
     pub fn event(&mut self, cx: &mut EventCx, event: &RawEvent) {
+        if cx.is_handled {
+            return;
+        }
         let rect = Rect::from_origin_size(self.state.origin, self.state.size);
         let mut modified_event = None;
         let had_active = self.state.flags.contains(PodFlags::HAS_ACTIVE);
@@ -210,9 +213,11 @@ impl Pod {
             let mut inner_cx = EventCx {
                 cx_state: cx.cx_state,
                 widget_state: &mut self.state,
+                is_handled: false,
             };
             self.widget
                 .event(&mut inner_cx, modified_event.as_ref().unwrap_or(event));
+            cx.is_handled |= inner_cx.is_handled;
             self.state.flags.set(
                 PodFlags::HAS_ACTIVE,
                 self.state.flags.contains(PodFlags::IS_ACTIVE),
@@ -291,16 +296,20 @@ impl Pod {
         self.widget.align(&mut child_cx, alignment);
     }
 
+    pub fn paint_raw(&mut self, cx: &mut PaintCx) {
+        let mut inner_cx = PaintCx {
+            cx_state: cx.cx_state,
+            widget_state: &mut self.state,
+            piet: cx.piet,
+        };
+        self.widget.paint(&mut inner_cx);
+    }
+
     pub fn paint(&mut self, cx: &mut PaintCx) {
         cx.with_save(|cx| {
             cx.piet
                 .transform(Affine::translate(self.state.origin.to_vec2()));
-            let mut inner_cx = PaintCx {
-                cx_state: cx.cx_state,
-                widget_state: &mut self.state,
-                piet: cx.piet,
-            };
-            self.widget.paint(&mut inner_cx);
+            self.paint_raw(cx);
         });
     }
 

@@ -17,7 +17,7 @@ use druid_shell::{
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RawEvent {
     MouseDown(MouseEvent),
     MouseUp(MouseEvent),

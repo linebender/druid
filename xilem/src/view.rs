@@ -17,6 +17,7 @@ pub mod any_view;
 pub mod button;
 pub mod layout_observer;
 pub mod memoize;
+pub mod scroll_view;
 pub mod text;
 pub mod use_state;
 pub mod vstack;

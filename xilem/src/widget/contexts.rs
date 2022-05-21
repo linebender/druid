@@ -42,6 +42,7 @@ pub struct CxState<'a> {
 pub struct EventCx<'a, 'b> {
     pub(crate) cx_state: &'a mut CxState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) is_handled: bool,
 }
 
 pub struct LifeCycleCx<'a, 'b> {
@@ -90,6 +91,7 @@ impl<'a, 'b> EventCx<'a, 'b> {
         EventCx {
             cx_state,
             widget_state: root_state,
+            is_handled: false,
         }
     }
 
@@ -103,6 +105,14 @@ impl<'a, 'b> EventCx<'a, 'b> {
 
     pub fn is_hot(&self) -> bool {
         self.widget_state.flags.contains(PodFlags::IS_HOT)
+    }
+
+    pub fn set_handled(&mut self, is_handled: bool) {
+        self.is_handled = is_handled;
+    }
+
+    pub fn is_handled(&self) -> bool {
+        self.is_handled
     }
 }
 

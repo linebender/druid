@@ -18,6 +18,7 @@ mod contexts;
 mod core;
 pub mod layout_observer;
 mod raw_event;
+pub mod scroll_view;
 pub mod text;
 pub mod vstack;
 

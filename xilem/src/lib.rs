@@ -31,6 +31,7 @@ pub use view::adapt::Adapt;
 pub use view::button::button;
 pub use view::layout_observer::LayoutObserver;
 pub use view::memoize::Memoize;
+pub use view::scroll_view::scroll_view;
 pub use view::vstack::v_stack;
 pub use view::View;
 pub use widget::align::{AlignmentAxis, AlignmentProxy, HorizAlignment, VertAlignment};
