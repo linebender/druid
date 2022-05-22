@@ -634,14 +634,14 @@ impl<T: Data> Flex<T> {
     /// * Computes intrinsic cross axis size with main axis bounded from previous step.
     ///
     /// It returns the max of all intrinsic cross axis sizes.
-    fn do_opposite<F1, F2>(
+    fn measure_cross_intrinsic<F1, F2>(
         &mut self,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         env: &Env,
         initial_available_size_on_main_axis: f64,
-        mut f1: F1,
-        mut f2: F2,
+        mut calculate_size_on_main_axis: F1,
+        mut calculate_size_on_cross_axis: F2,
     ) -> f64
     where
         F1: FnMut(
@@ -664,9 +664,11 @@ impl<T: Data> Flex<T> {
         for child in self.children.iter_mut() {
             match child {
                 Child::Fixed { widget, .. } => {
-                    let size_on_main_axis = f1(available_size_on_main_axis, ctx, *bc, widget);
+                    let size_on_main_axis =
+                        calculate_size_on_main_axis(available_size_on_main_axis, ctx, *bc, widget);
                     available_size_on_main_axis -= size_on_main_axis;
-                    let size_on_cross_axis = f2(size_on_main_axis, ctx, *bc, widget);
+                    let size_on_cross_axis =
+                        calculate_size_on_cross_axis(size_on_main_axis, ctx, *bc, widget);
                     max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
                 }
                 Child::FixedSpacer(kv, _) => {
@@ -691,7 +693,8 @@ impl<T: Data> Flex<T> {
                 // each flex child.
                 if let Child::Flex { widget, flex, .. } = child {
                     let main_axis_available_space = *flex * space_per_flex;
-                    let size_on_cross_axis = f2(main_axis_available_space, ctx, *bc, widget);
+                    let size_on_cross_axis =
+                        calculate_size_on_cross_axis(main_axis_available_space, ctx, *bc, widget);
                     max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
                 }
             }
@@ -703,7 +706,7 @@ impl<T: Data> Flex<T> {
     /// [`Axis::Horizontal`] or intrinsic height of a [`Axis::Vertical`].
     ///
     /// It returns sum of intrinsic sizes on main axis of each child.
-    fn do_same<F>(&mut self, env: &Env, mut f: F) -> f64
+    fn measure_main_intrinsic<F>(&mut self, env: &Env, mut calculate_size_on_main_axis: F) -> f64
     where
         F: FnMut(&mut WidgetPod<T, Box<dyn Widget<T>>>) -> f64,
     {
@@ -713,11 +716,11 @@ impl<T: Data> Flex<T> {
         for child in self.children.iter_mut() {
             match child {
                 Child::Fixed { widget, .. } => {
-                    let s = f(widget);
+                    let s = calculate_size_on_main_axis(widget);
                     total = total.add(s);
                 }
                 Child::Flex { widget, flex, .. } => {
-                    let flex_fraction = f(widget) / *flex;
+                    let flex_fraction = calculate_size_on_main_axis(widget) / *flex;
                     total_flex += *flex;
                     max_flex_fraction = max_flex_fraction.max(flex_fraction);
                 }
@@ -1068,7 +1071,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                         .widget_mut()
                         .compute_max_intrinsic_width(ctx, bc, data, env)
                 };
-                self.do_same(env, f)
+                self.measure_main_intrinsic(env, f)
             }
             Axis::Vertical => {
                 let hh = |available: f64,
@@ -1096,7 +1099,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 };
 
                 // only data is captured in above closures
-                self.do_opposite(ctx, bc, env, bc.max().height, hh, hw)
+                self.measure_cross_intrinsic(ctx, bc, env, bc.max().height, hh, hw)
             }
         }
     }
@@ -1134,7 +1137,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                 };
 
                 // only data is captured in above closures
-                self.do_opposite(ctx, bc, env, bc.max().width, ww, wh)
+                self.measure_cross_intrinsic(ctx, bc, env, bc.max().width, ww, wh)
             }
             Axis::Vertical => {
                 let f = |widget: &mut WidgetPod<T, Box<dyn Widget<T>>>| {
@@ -1142,7 +1145,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                         .widget_mut()
                         .compute_max_intrinsic_height(ctx, bc, data, env)
                 };
-                self.do_same(env, f)
+                self.measure_main_intrinsic(env, f)
             }
         }
     }

@@ -43,14 +43,11 @@ impl<T: Data> Widget<T> for IntrinsicWidth<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let mut bc1 = *bc;
-        //sj_todo make height bounded (height of screen?) while width unbounded
-        bc1.set_max_height(700.);
+        let mut bc = *bc;
+        let iw = self.child.compute_max_intrinsic_width(ctx, &bc, data, env);
+        bc.set_max_width(iw);
 
-        let iw = self.child.compute_max_intrinsic_width(ctx, &bc1, data, env);
-        bc1.set_max_width(iw);
-
-        self.child.layout(ctx, &bc1, data, env)
+        self.child.layout(ctx, &bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
