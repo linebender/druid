@@ -31,7 +31,8 @@ use super::{
         Trailing, VertAlignment,
     },
     contexts::LifeCycleCx,
-    AlignCx, AnyWidget, CxState, EventCx, LayoutCx, LifeCycle, PaintCx, RawEvent, UpdateCx,
+    AlignCx, AnyWidget, CxState, EventCx, LayoutCx, LifeCycle, PaintCx, PreparePaintCx, RawEvent,
+    UpdateCx,
 };
 
 bitflags! {
@@ -303,6 +304,10 @@ impl Pod {
             piet: cx.piet,
         };
         self.widget.paint(&mut inner_cx);
+    }
+
+    pub fn prepare_paint(&mut self, cx: &mut PreparePaintCx, visible: Rect) {
+        self.widget.prepare_paint(cx, visible);
     }
 
     pub fn paint(&mut self, cx: &mut PaintCx) {

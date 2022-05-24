@@ -25,7 +25,8 @@ use druid_shell::{
 use crate::Widget;
 
 use super::{
-    contexts::LifeCycleCx, EventCx, LayoutCx, LifeCycle, PaintCx, Pod, RawEvent, UpdateCx,
+    contexts::LifeCycleCx, EventCx, LayoutCx, LifeCycle, PaintCx, Pod, PreparePaintCx, RawEvent,
+    UpdateCx,
 };
 
 pub struct ScrollView {
@@ -101,13 +102,19 @@ impl Widget for ScrollView {
 
     fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size {
         let child_proposed = Size::new(proposed_size.width, 1e9);
-        self.child.layout(cx, child_proposed)
+        let child_size = self.child.layout(cx, child_proposed);
+        Size::new(child_size.width, proposed_size.height)
+    }
+
+    fn prepare_paint(&mut self, cx: &mut PreparePaintCx, visible: Rect) {
+        let child_visible = visible + Vec2::new(0.0, self.offset);
+        self.child.prepare_paint(cx, child_visible);
     }
 
     fn paint(&mut self, cx: &mut PaintCx) {
         cx.with_save(|cx| {
             let size = cx.size();
-            cx.clip(Rect::from_origin_size(Point::ZERO, size));
+            cx.clip(size.to_rect());
             cx.transform(Affine::translate((0.0, -self.offset)));
             self.child.paint_raw(cx);
         });

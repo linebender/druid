@@ -17,6 +17,7 @@ pub mod button;
 mod contexts;
 mod core;
 pub mod layout_observer;
+pub mod list;
 mod raw_event;
 pub mod scroll_view;
 pub mod text;
@@ -25,10 +26,10 @@ pub mod vstack;
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 
-use druid_shell::kurbo::Size;
+use druid_shell::kurbo::{Rect, Size};
 
 use self::contexts::LifeCycleCx;
-pub use self::contexts::{AlignCx, CxState, EventCx, LayoutCx, PaintCx, UpdateCx};
+pub use self::contexts::{AlignCx, CxState, EventCx, LayoutCx, PaintCx, PreparePaintCx, UpdateCx};
 pub use self::core::Pod;
 pub(crate) use self::core::{PodFlags, WidgetState};
 pub use self::raw_event::{LifeCycle, RawEvent};
@@ -65,6 +66,18 @@ pub trait Widget {
     #[allow(unused)]
     fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {}
 
+    /// Prepare for painting.
+    ///
+    /// This method is currently a bit of a hack. It's similar to the one in
+    /// Druid, which is for incremental repaint, but the primary purpose of
+    /// this one is virtualized scrolling.
+    ///
+    /// The fact that `cx` is LayoutCx is just laziness, it should have its
+    /// own cx. And the main methods on that cx should be for region-based
+    /// invalidation.
+    #[allow(unused)]
+    fn prepare_paint(&mut self, cx: &mut LayoutCx, visible: Rect) {}
+
     fn paint(&mut self, cx: &mut PaintCx);
 }
 
@@ -72,6 +85,8 @@ pub trait AnyWidget: Widget {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    fn type_name(&self) -> &'static str;
 }
 
 impl<W: Widget + 'static> AnyWidget for W {
@@ -81,6 +96,10 @@ impl<W: Widget + 'static> AnyWidget for W {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
     }
 }
 
@@ -107,6 +126,10 @@ impl Widget for Box<dyn AnyWidget> {
 
     fn align(&self, cx: &mut AlignCx, alignment: SingleAlignment) {
         self.deref().align(cx, alignment);
+    }
+
+    fn prepare_paint(&mut self, cx: &mut PreparePaintCx, visible: Rect) {
+        self.deref_mut().prepare_paint(cx, visible)
     }
 
     fn paint(&mut self, cx: &mut PaintCx) {

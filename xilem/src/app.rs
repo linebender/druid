@@ -98,14 +98,23 @@ where
             let proposed_size = self.size;
             root_pod.layout(&mut layout_cx, proposed_size);
             if cx_state.has_events() {
+                // Rerun app logic, primarily for LayoutObserver
                 // We might want some debugging here if the number of iterations
                 // becomes extreme.
                 self.run_app_logic();
-            } else {
-                let mut paint_cx = PaintCx::new(&mut cx_state, &mut self.root_state, piet);
-                root_pod.paint(&mut paint_cx);
-                break;
+                continue;
             }
+            let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
+            let visible = root_pod.state.size.to_rect();
+            root_pod.prepare_paint(&mut layout_cx, visible);
+            if cx_state.has_events() {
+                // Rerun app logic, primarily for virtualized scrolling
+                self.run_app_logic();
+                continue;
+            }
+            let mut paint_cx = PaintCx::new(&mut cx_state, &mut self.root_state, piet);
+            root_pod.paint(&mut paint_cx);
+            break;
         }
     }
 

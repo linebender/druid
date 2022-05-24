@@ -16,6 +16,7 @@ pub mod adapt;
 pub mod any_view;
 pub mod button;
 pub mod layout_observer;
+pub mod list;
 pub mod memoize;
 pub mod scroll_view;
 pub mod text;

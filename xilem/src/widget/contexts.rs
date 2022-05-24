@@ -163,6 +163,9 @@ impl<'a, 'b> LayoutCx<'a, 'b> {
     }
 }
 
+// This is laziness, should be a separate cx with invalidate methods
+pub type PreparePaintCx<'a, 'b> = LayoutCx<'a, 'b>;
+
 impl<'a> AlignCx<'a> {
     pub fn aggregate(&mut self, alignment: SingleAlignment, value: f64) {
         let origin_value = match alignment.axis() {
