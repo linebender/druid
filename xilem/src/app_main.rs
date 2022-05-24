@@ -15,8 +15,8 @@
 use std::any::Any;
 
 use druid_shell::{
-    kurbo::Size, Application, Cursor, HotKey, Menu, MouseEvent, Region, SysMods, WinHandler,
-    WindowBuilder, WindowHandle,
+    kurbo::Size, Application, Cursor, HotKey, IdleToken, Menu, MouseEvent, Region, SysMods,
+    WinHandler, WindowBuilder, WindowHandle,
 };
 
 use crate::{app::App, widget::RawEvent, View, Widget};
@@ -133,6 +133,12 @@ where
 
     fn destroy(&mut self) {
         Application::global().quit()
+    }
+
+    fn idle(&mut self, _token: IdleToken) {
+        self.app.wake_async();
+        // TODO: wire up invalidation through widget hierarchy
+        self.handle.invalidate();
     }
 
     fn as_any(&mut self) -> &mut dyn Any {

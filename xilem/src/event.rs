@@ -38,6 +38,8 @@ pub enum EventResult<A> {
     Stale,
 }
 
+pub struct AsyncWake;
+
 impl<A> EventResult<A> {
     #[allow(unused)]
     pub fn map<B>(self, f: impl FnOnce(A) -> B) -> EventResult<B> {

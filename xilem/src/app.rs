@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::{Arc, Mutex};
+
 use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
 use druid_shell::WindowHandle;
 
+use crate::event::AsyncWake;
+use crate::id::IdPath;
 use crate::widget::{CxState, EventCx, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
 use crate::{
     event::Event,
@@ -36,7 +40,11 @@ pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V> {
     root_pod: Option<Pod>,
     size: Size,
     cx: Cx,
+    wake_queue: WakeQueue,
 }
+
+#[derive(Clone, Default)]
+pub struct WakeQueue(Arc<Mutex<Vec<IdPath>>>);
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
@@ -45,7 +53,8 @@ where
     V::Element: Widget + 'static,
 {
     pub fn new(data: T, app_logic: F) -> Self {
-        let cx = Cx::new();
+        let wake_queue = Default::default();
+        let cx = Cx::new(&wake_queue);
         App {
             data,
             app_logic,
@@ -58,6 +67,7 @@ where
             root_state: Default::default(),
             size: Default::default(),
             cx,
+            wake_queue,
         }
     }
 
@@ -76,7 +86,7 @@ where
     pub fn connect(&mut self, window_handle: WindowHandle) {
         self.window_handle = window_handle.clone();
         // This will be needed for wiring up async but is a stub for now.
-        //self.cx.set_handle(window_handle.get_idle_handle());
+        self.cx.set_handle(window_handle.get_idle_handle());
     }
 
     pub fn size(&mut self, size: Size) {
@@ -153,5 +163,26 @@ where
             assert!(self.cx.is_empty(), "id path imbalance on rebuild");
         }
         self.view = Some(view);
+    }
+
+    pub fn wake_async(&mut self) {
+        for id_path in self.wake_queue.take() {
+            self.events.push(Event::new(id_path, AsyncWake));
+        }
+        self.run_app_logic();
+    }
+}
+
+impl WakeQueue {
+    // Returns true if the queue was empty.
+    pub fn push_wake(&self, id_path: IdPath) -> bool {
+        let mut queue = self.0.lock().unwrap();
+        let was_empty = queue.is_empty();
+        queue.push(id_path);
+        was_empty
+    }
+
+    pub fn take(&self) -> Vec<IdPath> {
+        std::mem::replace(&mut self.0.lock().unwrap(), Vec::new())
     }
 }

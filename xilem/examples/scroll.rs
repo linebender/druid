@@ -18,7 +18,8 @@ fn app_logic(_: &mut ()) -> impl View<()> {
     scroll_view(list(1000, 20.0, |i| format!("{}", i)))
 }
 
-pub fn main() {
+#[tokio::main]
+async fn main() {
     let app = App::new((), app_logic);
     AppLauncher::new(app).run();
 }
