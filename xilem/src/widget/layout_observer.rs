@@ -70,9 +70,9 @@ impl Widget for LayoutObserver {
         }
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         if let Some(child) = &mut self.child {
-            let _ = child.prelayout(cx);
+            let _ = child.measure(cx);
         }
         (Size::ZERO, Size::new(1e9, 1e9))
     }

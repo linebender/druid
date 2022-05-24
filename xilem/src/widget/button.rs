@@ -81,7 +81,7 @@ impl Widget for Button {
         }
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         let padding = Size::new(LABEL_INSETS.x_value(), LABEL_INSETS.y_value());
         let min_height = 24.0;
         let layout = cx

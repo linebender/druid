@@ -94,7 +94,7 @@ where
             let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
             root_pod.update(&mut update_cx);
             let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
-            root_pod.prelayout(&mut layout_cx);
+            root_pod.measure(&mut layout_cx);
             let proposed_size = self.size;
             root_pod.layout(&mut layout_cx, proposed_size);
             if cx_state.has_events() {

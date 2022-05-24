@@ -94,8 +94,8 @@ impl Widget for ScrollView {
         self.child.update(cx);
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
-        let _ = self.child.prelayout(cx);
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+        let _ = self.child.measure(cx);
         (Size::ZERO, Size::new(1e9, 1e9))
     }
 

@@ -61,11 +61,11 @@ impl Widget for VStack {
         }
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         let mut min_size = Size::ZERO;
         let mut max_size = Size::ZERO;
         for child in &mut self.children {
-            let (child_min, child_max) = child.prelayout(cx);
+            let (child_min, child_max) = child.measure(cx);
             min_size.width = min_size.width.max(child_min.width);
             min_size.height += child_min.height;
             max_size.width = max_size.width.max(child_max.width);

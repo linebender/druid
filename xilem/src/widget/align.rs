@@ -253,11 +253,11 @@ impl<F: Fn(AlignmentProxy) -> f64 + 'static> Widget for AlignmentGuide<F> {
         self.child.update(cx);
     }
 
-    fn prelayout(
+    fn measure(
         &mut self,
         cx: &mut super::LayoutCx,
     ) -> (druid_shell::kurbo::Size, druid_shell::kurbo::Size) {
-        self.child.prelayout(cx)
+        self.child.measure(cx)
     }
 
     fn layout(

@@ -51,7 +51,7 @@ pub trait Widget {
     ///
     /// This method will be called once on widget creation and then on
     /// REQUEST_UPDATE.
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size);
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size);
 
     /// Compute size given proposed size.
     ///
@@ -97,8 +97,8 @@ impl Widget for Box<dyn AnyWidget> {
         self.deref_mut().update(cx);
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
-        self.deref_mut().prelayout(cx)
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+        self.deref_mut().measure(cx)
     }
 
     fn layout(&mut self, cx: &mut LayoutCx, proposed_size: Size) -> Size {

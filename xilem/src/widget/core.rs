@@ -253,13 +253,13 @@ impl Pod {
         }
     }
 
-    pub fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+    pub fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         if self.state.flags.contains(PodFlags::REQUEST_LAYOUT) {
             let mut child_cx = LayoutCx {
                 cx_state: cx.cx_state,
                 widget_state: &mut self.state,
             };
-            let (min_size, max_size) = self.widget.prelayout(&mut child_cx);
+            let (min_size, max_size) = self.widget.measure(&mut child_cx);
             self.state.min_size = min_size;
             self.state.max_size = max_size;
             // Don't remove REQUEST_LAYOUT here, that will be done in layout.

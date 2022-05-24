@@ -57,7 +57,7 @@ impl Widget for TextWidget {
         cx.request_layout();
     }
 
-    fn prelayout(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
+    fn measure(&mut self, cx: &mut LayoutCx) -> (Size, Size) {
         let layout = cx
             .text()
             .new_text_layout(self.text.clone())
