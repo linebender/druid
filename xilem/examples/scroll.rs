@@ -32,7 +32,8 @@ fn app_logic(_: &mut ()) -> impl View<()> {
     }))
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let app = App::new((), app_logic);
     AppLauncher::new(app).run();
 }

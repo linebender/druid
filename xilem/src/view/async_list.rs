@@ -25,7 +25,7 @@ use std::{
 };
 
 use futures_task::{Context, Poll};
-use smol::Task;
+use tokio::task::{JoinHandle, Unconstrained};
 
 use crate::{event::EventResult, id::Id, widget::Pod};
 
@@ -43,8 +43,8 @@ pub struct AsyncListState<T, A, V: View<T, A>> {
     remove_req: Vec<usize>,
     requested: HashSet<usize>,
     items: BTreeMap<usize, ItemState<T, A, V>>,
-    pending: HashMap<Id, (usize, Task<V>)>,
-    waking: Vec<(Id, usize, Task<V>)>,
+    pending: HashMap<Id, (usize, Unconstrained<JoinHandle<V>>)>,
+    waking: Vec<(Id, usize, Unconstrained<JoinHandle<V>>)>,
 }
 
 struct ItemState<T, A, V: View<T, A>> {
@@ -112,7 +112,8 @@ where
                 state.requested.insert(i);
                 // spawn a task to run the callback
                 let future = (self.callback)(i);
-                let join_handle = smol::spawn(Box::pin(future));
+                let join_handle = tokio::spawn(Box::pin(future));
+                let join_handle = tokio::task::unconstrained(join_handle);
                 let id = Id::next();
                 state.waking.push((id, i, join_handle));
             }
@@ -125,7 +126,7 @@ where
                 match poll_result {
                     Poll::Ready(v) => {
                         if state.requested.remove(&i) {
-                            let child_view = v;
+                            let child_view = v.unwrap();
                             let (child_id, child_state, child_element) = child_view.build(cx);
                             element.set_child(i, Pod::new(child_element));
                             state.items.insert(
