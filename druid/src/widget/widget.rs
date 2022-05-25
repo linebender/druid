@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use druid::widget::Axis;
 use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
@@ -223,44 +224,35 @@ pub trait Widget<T> {
         }
     }
 
-    /// Max intrinsic/preferred width is the width a widget would take given infinite width constraint.
-    /// Height constraint might or might not be infinite. If it is not infinite, max intrinsic width
-    /// calculation must honor the constraint.
+    /// Computes max intrinsic/preferred dimension of a widget on the provided axis.
+    /// Max intrinsic/preferred dimension is the dimension the widget could take, provided infinite
+    /// constraint on that axis.
     ///
-    /// AspectRatioBox is an example where height is used. If it is finite, max intrinsic width is *height * ratio*.
-    /// If height is infinite, child's max intrinsic width is calculated.
+    /// If axis == Axis::Horizontal, widget is being asked to calculate max intrinsic width.
+    /// If axis == Axis::Vertical, widget is being asked to calculate max intrinsic height.
+    ///
+    /// Box constrains must be honored in intrinsics computation.
+    ///
+    /// AspectRatioBox is an example where constrains are honored. If height is finite, max intrinsic
+    /// width is *height * ratio*.
+    /// Only when height is infinite, child's max intrinsic width is calculated.
     ///
     /// Intrinsic is a *could-be* value. It's the value a widget *could* have given infinite constraints.
     /// This does not mean the value returned by layout() would be the same.
     ///
     /// Make sure this function doesn't return an infinite value.
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        let s = self.layout(ctx, bc, data, env);
-        s.width
-    }
-
-    /// Max intrinsic/preferred height is the height a widget would take given infinite height constraint.
-    /// Width constraint might or might not be infinite. If it is not infinite, max intrinsic height
-    /// calculation must honor the constraint.
-    ///
-    /// See [`compute_max_intrinsic_width`] for more details.
-    ///
-    /// [`compute_max_intrinsic_width`]: trait.Widget.html#method.compute_max_intrinsic_width
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        let s = self.layout(ctx, bc, data, env);
-        s.height
+        match axis {
+            Axis::Horizontal => self.layout(ctx, bc, data, env).width,
+            Axis::Vertical => self.layout(ctx, bc, data, env).height,
+        }
     }
 }
 
@@ -332,27 +324,15 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
         self.deref().debug_state(data)
     }
 
-    /// Signature same as layout.
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
         self.deref_mut()
-            .compute_max_intrinsic_width(ctx, bc, data, env)
-    }
-
-    /// Signature same as layout.
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        self.deref_mut()
-            .compute_max_intrinsic_height(ctx, bc, data, env)
+            .compute_max_intrinsic(axis, ctx, bc, data, env)
     }
 }

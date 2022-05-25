@@ -15,6 +15,7 @@
 //! The fundamental druid types.
 
 use crate::kurbo::Size;
+use druid::widget::Axis;
 
 /// Constraints for layout.
 ///
@@ -271,14 +272,51 @@ impl BoxConstraints {
         }
     }
 
-    /// Set max width to max_width
-    pub fn set_max_width(&mut self, max_width: f64) {
-        self.max.width = max_width;
+    /// Sets the max on a given axis to infinity.
+    pub fn unbound_max(&self, axis: Axis) -> Self {
+        match axis {
+            Axis::Horizontal => self.unbound_max_width(),
+            Axis::Vertical => self.unbound_max_height(),
+        }
     }
 
-    /// Set max height to max_height
-    pub fn set_max_height(&mut self, max_height: f64) {
-        self.max.height = max_height;
+    /// Sets max width to infinity.
+    pub fn unbound_max_width(&self) -> Self {
+        let mut max = self.max();
+        max.width = f64::INFINITY;
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Sets max height to infinity.
+    pub fn unbound_max_height(&self) -> Self {
+        let mut max = self.max();
+        max.height = f64::INFINITY;
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Shrinks the max dimension on the given axis.
+    /// Does NOT shrink beyond min.
+    pub fn shrink_max_to(&self, axis: Axis, dim: f64) -> Self {
+        match axis {
+            Axis::Horizontal => self.shrink_max_width_to(dim),
+            Axis::Vertical => self.shrink_max_height_to(dim),
+        }
+    }
+
+    /// Shrinks the max width to dim.
+    /// Does NOT shrink beyond min width.
+    pub fn shrink_max_width_to(&self, dim: f64) -> Self {
+        let mut max = self.max();
+        max.width = f64::max(dim, self.min().width);
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Shrinks the max height to dim.
+    /// Does NOT shrink beyond min height.
+    pub fn shrink_max_height_to(&self, dim: f64) -> Self {
+        let mut max = self.max();
+        max.height = f64::max(dim, self.min().height);
+        BoxConstraints::new(self.min(), max)
     }
 }
 

@@ -14,6 +14,7 @@
 
 use crate::debug_state::DebugState;
 
+use crate::widget::Axis;
 use druid::widget::prelude::*;
 use druid::Data;
 use tracing::{instrument, warn};
@@ -172,31 +173,29 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
         }
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        if bc.is_height_bounded() {
-            bc.max().height * self.ratio
-        } else {
-            self.child.compute_max_intrinsic_width(ctx, bc, data, env)
-        }
-    }
-
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        if bc.is_width_bounded() {
-            bc.max().width / self.ratio
-        } else {
-            self.child.compute_max_intrinsic_height(ctx, bc, data, env)
+        match axis {
+            Axis::Horizontal => {
+                if bc.is_height_bounded() {
+                    bc.max().height * self.ratio
+                } else {
+                    self.child.compute_max_intrinsic(axis, ctx, bc, data, env)
+                }
+            }
+            Axis::Vertical => {
+                if bc.is_width_bounded() {
+                    bc.max().width / self.ratio
+                } else {
+                    self.child.compute_max_intrinsic(axis, ctx, bc, data, env)
+                }
+            }
         }
     }
 }

@@ -16,7 +16,7 @@
 
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
-use crate::widget::WidgetWrapper;
+use crate::widget::{Axis, WidgetWrapper};
 
 /// A trait for types that modify behaviour of a child widget.
 ///
@@ -143,24 +143,15 @@ impl<T, W: Widget<T>, C: Controller<T, W>> Widget<T> for ControllerHost<W, C> {
         }
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        self.widget.compute_max_intrinsic_width(ctx, bc, data, env)
-    }
-
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        self.widget.compute_max_intrinsic_height(ctx, bc, data, env)
+        self.widget.compute_max_intrinsic(axis, ctx, bc, data, env)
     }
 }
 

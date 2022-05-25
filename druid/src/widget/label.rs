@@ -23,6 +23,7 @@ use crate::debug_state::DebugState;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
+use crate::widget::Axis;
 use crate::{
     ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment,
     TextLayout,
@@ -538,15 +539,16 @@ impl<T: Data> Widget<T> for Label<T> {
         }
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         _data: &T,
         env: &Env,
     ) -> f64 {
         self.label
-            .compute_max_intrinsic_width(ctx, bc, &self.current_text, env)
+            .compute_max_intrinsic(axis, ctx, bc, &self.current_text, env)
     }
 }
 
@@ -646,8 +648,9 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         self.draw_at(ctx, origin)
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        _axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,

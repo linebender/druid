@@ -1,5 +1,6 @@
 use druid::Data;
 
+use crate::widget::Axis;
 use crate::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Size,
     UpdateCtx, Widget,
@@ -43,41 +44,40 @@ impl<T: Data> Widget<T> for IntrinsicWidth<T> {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let mut bc = *bc;
-        let iw = self.child.compute_max_intrinsic_width(ctx, &bc, data, env);
-        bc.set_max_width(iw);
+        let iw = self
+            .child
+            .compute_max_intrinsic(Axis::Horizontal, ctx, bc, data, env);
+        let new_bc = bc.shrink_max_width_to(iw);
 
-        self.child.layout(ctx, &bc, data, env)
+        self.child.layout(ctx, &new_bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         self.child.paint(ctx, data, env);
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        self.child.compute_max_intrinsic_width(ctx, bc, data, env)
-    }
-
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        if !bc.is_width_bounded() {
-            let mut bc = *bc;
-            let w = self.child.compute_max_intrinsic_width(ctx, &bc, data, env);
-            bc.set_max_width(w);
-            self.child.compute_max_intrinsic_height(ctx, &bc, data, env)
-        } else {
-            self.child.compute_max_intrinsic_height(ctx, bc, data, env)
+        match axis {
+            Axis::Horizontal => self.child.compute_max_intrinsic(axis, ctx, bc, data, env),
+            Axis::Vertical => {
+                if !bc.is_width_bounded() {
+                    let w = self
+                        .child
+                        .compute_max_intrinsic(Axis::Horizontal, ctx, bc, data, env);
+                    let new_bc = bc.shrink_max_width_to(w);
+                    self.child
+                        .compute_max_intrinsic(axis, ctx, &new_bc, data, env)
+                } else {
+                    self.child.compute_max_intrinsic(axis, ctx, bc, data, env)
+                }
+            }
         }
     }
 }

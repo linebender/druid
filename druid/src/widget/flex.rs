@@ -626,119 +626,6 @@ impl<T: Data> Flex<T> {
         let new_child = Child::FlexedSpacer(flex, 0.0);
         self.children.push(new_child);
     }
-
-    /// This function calculates max intrinsic cross axis size of opposite direction. Ie. calculate
-    /// intrinsic width of [`Axis::Vertical`] or intrinsic height of a [`Axis::Horizontal`].
-    /// This function for each child:
-    /// * Computes intrinsic main axis size with infinite cross axis. Then,
-    /// * Computes intrinsic cross axis size with main axis bounded from previous step.
-    ///
-    /// It returns the max of all intrinsic cross axis sizes.
-    fn measure_cross_intrinsic<F1, F2>(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        env: &Env,
-        initial_available_size_on_main_axis: f64,
-        mut calculate_size_on_main_axis: F1,
-        mut calculate_size_on_cross_axis: F2,
-    ) -> f64
-    where
-        F1: FnMut(
-            f64,
-            &mut LayoutCtx,
-            BoxConstraints,
-            &mut WidgetPod<T, Box<dyn Widget<T>>>,
-        ) -> f64,
-        F2: FnMut(
-            f64,
-            &mut LayoutCtx,
-            BoxConstraints,
-            &mut WidgetPod<T, Box<dyn Widget<T>>>,
-        ) -> f64,
-    {
-        let mut max_size_on_cross_axis: f64 = 0.;
-        let mut available_size_on_main_axis = initial_available_size_on_main_axis;
-        let mut total_flex = 0.;
-        //non-flex children
-        for child in self.children.iter_mut() {
-            match child {
-                Child::Fixed { widget, .. } => {
-                    let size_on_main_axis =
-                        calculate_size_on_main_axis(available_size_on_main_axis, ctx, *bc, widget);
-                    available_size_on_main_axis -= size_on_main_axis;
-                    let size_on_cross_axis =
-                        calculate_size_on_cross_axis(size_on_main_axis, ctx, *bc, widget);
-                    max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
-                }
-                Child::FixedSpacer(kv, _) => {
-                    let mut s = kv.resolve(env);
-                    if s < 0.0 {
-                        tracing::warn!("Length provided to fixed spacer was less than 0");
-                        s = 0.;
-                    }
-                    max_size_on_cross_axis = max_size_on_cross_axis.max(s);
-                }
-                Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => total_flex += *flex,
-            }
-        }
-
-        let space_per_flex = available_size_on_main_axis / total_flex;
-
-        // flex children
-        if space_per_flex > 0.0 {
-            for child in self.children.iter_mut() {
-                // We ignore Child::FlexedSpacer because its cross size is irrelevant.
-                // Its flex matters only on main axis. But here we are interested in cross size of
-                // each flex child.
-                if let Child::Flex { widget, flex, .. } = child {
-                    let main_axis_available_space = *flex * space_per_flex;
-                    let size_on_cross_axis =
-                        calculate_size_on_cross_axis(main_axis_available_space, ctx, *bc, widget);
-                    max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
-                }
-            }
-        }
-        max_size_on_cross_axis
-    }
-
-    /// This function calculates intrinsic size on main axis. Ie. it calculate intrinsic width of
-    /// [`Axis::Horizontal`] or intrinsic height of a [`Axis::Vertical`].
-    ///
-    /// It returns sum of intrinsic sizes on main axis of each child.
-    fn measure_main_intrinsic<F>(&mut self, env: &Env, mut calculate_size_on_main_axis: F) -> f64
-    where
-        F: FnMut(&mut WidgetPod<T, Box<dyn Widget<T>>>) -> f64,
-    {
-        let mut total: f64 = 0.;
-        let mut max_flex_fraction: f64 = 0.;
-        let mut total_flex = 0.;
-        for child in self.children.iter_mut() {
-            match child {
-                Child::Fixed { widget, .. } => {
-                    let s = calculate_size_on_main_axis(widget);
-                    total = total.add(s);
-                }
-                Child::Flex { widget, flex, .. } => {
-                    let flex_fraction = calculate_size_on_main_axis(widget) / *flex;
-                    total_flex += *flex;
-                    max_flex_fraction = max_flex_fraction.max(flex_fraction);
-                }
-                Child::FixedSpacer(kv, _) => {
-                    let mut s = kv.resolve(env);
-                    if s < 0.0 {
-                        tracing::warn!("Length provided to fixed spacer was less than 0");
-                        s = 0.;
-                    }
-                    total = total.add(s);
-                }
-                Child::FlexedSpacer(flex, _) => {
-                    total_flex += *flex;
-                }
-            }
-        }
-        total + max_flex_fraction * total_flex
-    }
 }
 
 impl<T: Data> Widget<T> for Flex<T> {
@@ -1057,95 +944,109 @@ impl<T: Data> Widget<T> for Flex<T> {
         }
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        match self.direction {
-            Axis::Horizontal => {
-                let f = |widget: &mut WidgetPod<T, Box<dyn Widget<T>>>| {
-                    widget
-                        .widget_mut()
-                        .compute_max_intrinsic_width(ctx, bc, data, env)
-                };
-                self.measure_main_intrinsic(env, f)
+        match (self.direction, axis) {
+            (Axis::Vertical, Axis::Horizontal) | (Axis::Horizontal, Axis::Vertical) => {
+                // Direction axis and sizing axis are different.
+                // We compute max(child dim in cross axis).
+                let mut max_size_on_cross_axis: f64 = 0.;
+                let mut available_size_on_main_axis = self.direction.major(bc.max());
+                let mut total_flex = 0.;
+                for child in self.children.iter_mut() {
+                    match child {
+                        Child::Fixed { widget, .. } => {
+                            let new_bc = bc
+                                .unbound_max(axis)
+                                .shrink_max_to(self.direction, available_size_on_main_axis);
+                            let size_on_main_axis = widget.widget_mut().compute_max_intrinsic(
+                                self.direction,
+                                ctx,
+                                &new_bc,
+                                data,
+                                env,
+                            );
+                            let new_bc = new_bc.shrink_max_to(self.direction, size_on_main_axis);
+                            let size_on_cross_axis = widget
+                                .widget_mut()
+                                .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                            available_size_on_main_axis -= size_on_main_axis;
+                            max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                        }
+                        Child::FixedSpacer(kv, _) => {
+                            let mut s = kv.resolve(env);
+                            if s < 0.0 {
+                                tracing::warn!("Length provided to fixed spacer was less than 0");
+                                s = 0.;
+                            }
+                            max_size_on_cross_axis = max_size_on_cross_axis.max(s);
+                        }
+                        Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => {
+                            total_flex += *flex
+                        }
+                    }
+                }
+                let space_per_flex = available_size_on_main_axis / total_flex;
+
+                if space_per_flex > 0.0 {
+                    for child in self.children.iter_mut() {
+                        // We ignore Child::FlexedSpacer because its cross size is irrelevant.
+                        // Its flex matters only on main axis. But here we are interested in cross size of
+                        // each flex child.
+                        if let Child::Flex { widget, flex, .. } = child {
+                            let main_axis_available_space = *flex * space_per_flex;
+                            let new_bc = bc.shrink_max_to(axis, main_axis_available_space);
+                            let size_on_cross_axis = widget
+                                .widget_mut()
+                                .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                            max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                        }
+                    }
+                }
+                max_size_on_cross_axis
             }
-            Axis::Vertical => {
-                let hh = |available: f64,
-                          ctx: &mut LayoutCtx,
-                          mut bc: BoxConstraints,
-                          widget: &mut WidgetPod<T, Box<dyn Widget<T>>>|
-                 -> f64 {
-                    bc.set_max_width(f64::INFINITY);
-                    bc.set_max_height(available);
-                    let h = widget
-                        .widget_mut()
-                        .compute_max_intrinsic_height(ctx, &bc, data, env);
-                    h
-                };
-
-                let hw = |available: f64,
-                          ctx: &mut LayoutCtx,
-                          mut bc: BoxConstraints,
-                          widget: &mut WidgetPod<T, Box<dyn Widget<T>>>|
-                 -> f64 {
-                    bc.set_max_height(available);
-                    widget
-                        .widget_mut()
-                        .compute_max_intrinsic_width(ctx, &bc, data, env)
-                };
-
-                // only data is captured in above closures
-                self.measure_cross_intrinsic(ctx, bc, env, bc.max().height, hh, hw)
-            }
-        }
-    }
-
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        match self.direction {
-            Axis::Horizontal => {
-                let ww = |available: f64,
-                          ctx: &mut LayoutCtx,
-                          mut bc: BoxConstraints,
-                          widget: &mut WidgetPod<T, Box<dyn Widget<T>>>|
-                 -> f64 {
-                    bc.set_max_width(available);
-                    bc.set_max_height(f64::INFINITY);
-                    widget
-                        .widget_mut()
-                        .compute_max_intrinsic_width(ctx, &bc, data, env)
-                };
-
-                let wh = |available: f64,
-                          ctx: &mut LayoutCtx,
-                          mut bc: BoxConstraints,
-                          widget: &mut WidgetPod<T, Box<dyn Widget<T>>>|
-                 -> f64 {
-                    bc.set_max_width(available);
-                    widget
-                        .widget_mut()
-                        .compute_max_intrinsic_height(ctx, &bc, data, env)
-                };
-
-                // only data is captured in above closures
-                self.measure_cross_intrinsic(ctx, bc, env, bc.max().width, ww, wh)
-            }
-            Axis::Vertical => {
-                let f = |widget: &mut WidgetPod<T, Box<dyn Widget<T>>>| {
-                    widget
-                        .widget_mut()
-                        .compute_max_intrinsic_height(ctx, bc, data, env)
-                };
-                self.measure_main_intrinsic(env, f)
+            (Axis::Horizontal, Axis::Horizontal) | (Axis::Vertical, Axis::Vertical) => {
+                // Direction axis and sizing axis are same.
+                // We compute total(child dim on that axis)
+                let mut total: f64 = 0.;
+                let mut max_flex_fraction: f64 = 0.;
+                let mut total_flex = 0.;
+                for child in self.children.iter_mut() {
+                    match child {
+                        Child::Fixed { widget, .. } => {
+                            let s = widget
+                                .widget_mut()
+                                .compute_max_intrinsic(axis, ctx, bc, data, env);
+                            total = total.add(s);
+                        }
+                        Child::Flex { widget, flex, .. } => {
+                            let s = widget
+                                .widget_mut()
+                                .compute_max_intrinsic(axis, ctx, bc, data, env);
+                            let flex_fraction = s / *flex;
+                            total_flex += *flex;
+                            max_flex_fraction = max_flex_fraction.max(flex_fraction);
+                        }
+                        Child::FixedSpacer(kv, _) => {
+                            let mut s = kv.resolve(env);
+                            if s < 0.0 {
+                                tracing::warn!("Length provided to fixed spacer was less than 0");
+                                s = 0.;
+                            }
+                            total = total.add(s);
+                        }
+                        Child::FlexedSpacer(flex, _) => {
+                            total_flex += *flex;
+                        }
+                    }
+                }
+                total + max_flex_fraction * total_flex
             }
         }
     }

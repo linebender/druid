@@ -18,6 +18,7 @@ use crate::debug_state::DebugState;
 use crate::widget::{prelude::*, WidgetWrapper};
 use crate::{Data, Insets, KeyOrValue, Point, WidgetPod};
 
+use druid::widget::Axis;
 use tracing::{instrument, trace};
 
 /// A widget that just adds padding around its child.
@@ -127,43 +128,20 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
         }
     }
 
-    fn compute_max_intrinsic_width(
+    fn compute_max_intrinsic(
         &mut self,
+        axis: Axis,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
         data: &T,
         env: &Env,
     ) -> f64 {
-        let insets = self.insets.resolve(env);
-
-        let x_padding = insets.x_value();
-        let y_padding = insets.y_value();
-
-        let child_bc = bc.shrink((x_padding, y_padding));
+        let inset_size = self.insets.resolve(env).size();
+        let child_bc = bc.shrink(inset_size);
         let child_max_intrinsic_width = self
             .child
             .widget_mut()
-            .compute_max_intrinsic_width(ctx, &child_bc, data, env);
-        child_max_intrinsic_width + x_padding
-    }
-
-    fn compute_max_intrinsic_height(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &T,
-        env: &Env,
-    ) -> f64 {
-        let insets = self.insets.resolve(env);
-
-        let x_padding = insets.x_value();
-        let y_padding = insets.y_value();
-
-        let child_bc = bc.shrink((x_padding, y_padding));
-        let child_max_intrinsic_height = self
-            .child
-            .widget_mut()
-            .compute_max_intrinsic_height(ctx, &child_bc, data, env);
-        child_max_intrinsic_height + y_padding
+            .compute_max_intrinsic(axis, ctx, &child_bc, data, env);
+        child_max_intrinsic_width + axis.major(inset_size)
     }
 }
