@@ -9,4 +9,8 @@ edition = "2021"
 "druid-shell" = { path = "../druid-shell" }
 bitflags = "1.3.2"
 futures-task = "0.3"
-tokio = { version = "1", features = ["full"] }
+smol = "1.2.5"
+
+[dev-dependencies]
+sha2 = "0.10"
+hex = "0.4.3"

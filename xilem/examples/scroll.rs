@@ -12,14 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use xilem::{list, scroll_view, App, AppLauncher, View};
+use sha2::{Sha256, Digest};
+use xilem::{async_list, scroll_view, App, AppLauncher, View};
 
-fn app_logic(_: &mut ()) -> impl View<()> {
-    scroll_view(list(1000, 20.0, |i| format!("{}", i)))
+fn compute_hash(i: usize) -> String {
+    let mut s = format!("{}", i);
+    for _ in 0..i {
+        let mut hasher = Sha256::new();
+        hasher.update(s.as_bytes());
+        let result = hasher.finalize();
+        s = hex::encode(result);
+    }
+    s
 }
 
-#[tokio::main]
-async fn main() {
+fn app_logic(_: &mut ()) -> impl View<()> {
+    scroll_view(async_list(10_000, 16.0, |i| async move {
+        format!("{}: {}", i, compute_hash(i))
+    }))
+}
+
+fn main() {
     let app = App::new((), app_logic);
     AppLauncher::new(app).run();
 }

@@ -101,7 +101,7 @@ struct MyWaker {
 
 impl ArcWake for MyWaker {
     fn wake_by_ref(arc_self: &Arc<Self>) {
-        println!("path = {:?}", arc_self.id_path);
+        //println!("path = {:?}", arc_self.id_path);
         if arc_self.wake_queue.push_wake(arc_self.id_path.clone()) {
             // The clone shouldn't be needed; schedule_idle should be &self I think
             arc_self
