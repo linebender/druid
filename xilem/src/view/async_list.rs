@@ -18,7 +18,7 @@
 
 use std::{
     any::Any,
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     future::Future,
     marker::PhantomData,
     pin::Pin,
@@ -41,6 +41,7 @@ pub struct AsyncList<T, A, V, FF, F: Fn(usize) -> FF> {
 pub struct AsyncListState<T, A, V: View<T, A>> {
     add_req: Vec<usize>,
     remove_req: Vec<usize>,
+    requested: HashSet<usize>,
     items: BTreeMap<usize, ItemState<T, A, V>>,
     pending: HashMap<Id, (usize, Task<V>)>,
     waking: Vec<(Id, usize, Task<V>)>,
@@ -88,6 +89,7 @@ where
         let state = AsyncListState {
             add_req: Vec::new(),
             remove_req: Vec::new(),
+            requested: HashSet::new(),
             items: BTreeMap::new(),
             pending: HashMap::new(),
             waking: Vec::new(),
@@ -107,6 +109,7 @@ where
         let mut changed = !state.waking.is_empty() || !state.remove_req.is_empty();
         cx.with_id(*id, |cx| {
             for i in state.add_req.drain(..) {
+                state.requested.insert(i);
                 // spawn a task to run the callback
                 let future = (self.callback)(i);
                 let join_handle = smol::spawn(Box::pin(future));
@@ -121,18 +124,20 @@ where
                 });
                 match poll_result {
                     Poll::Ready(v) => {
-                        let child_view = v;
-                        let (child_id, child_state, child_element) = child_view.build(cx);
-                        element.set_child(i, Pod::new(child_element));
-                        state.items.insert(
-                            i,
-                            ItemState {
-                                id: child_id,
-                                view: child_view,
-                                state: child_state,
-                            },
-                        );
-                        changed = true;
+                        if state.requested.remove(&i) {
+                            let child_view = v;
+                            let (child_id, child_state, child_element) = child_view.build(cx);
+                            element.set_child(i, Pod::new(child_element));
+                            state.items.insert(
+                                i,
+                                ItemState {
+                                    id: child_id,
+                                    view: child_view,
+                                    state: child_state,
+                                },
+                            );
+                            changed = true;
+                        }
                     }
                     Poll::Pending => {
                         //println!("poll result id={:?} i={} pending, re-inserting", id, i);
@@ -141,8 +146,10 @@ where
                 }
             }
             for i in state.remove_req.drain(..) {
-                element.remove_child(i);
-                state.items.remove(&i);
+                if !state.requested.remove(&i) {
+                    element.remove_child(i);
+                    state.items.remove(&i);
+                }
             }
             // Note: we're not running rebuild on futures once resolved.
         });
