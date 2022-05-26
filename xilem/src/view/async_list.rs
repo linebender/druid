@@ -24,7 +24,7 @@ use std::{
     pin::Pin,
 };
 
-use futures_task::{Context, Poll};
+use futures_task::{Context, Poll, Waker};
 use tokio::task::{JoinHandle, Unconstrained};
 
 use crate::{event::EventResult, id::Id, widget::Pod};
@@ -43,8 +43,14 @@ pub struct AsyncListState<T, A, V: View<T, A>> {
     remove_req: Vec<usize>,
     requested: HashSet<usize>,
     items: BTreeMap<usize, ItemState<T, A, V>>,
-    pending: HashMap<Id, (usize, Unconstrained<JoinHandle<V>>)>,
-    waking: Vec<(Id, usize, Unconstrained<JoinHandle<V>>)>,
+    pending: HashMap<Id, PendingTask<V>>,
+    completed: Vec<(usize, V)>,
+}
+
+struct PendingTask<V> {
+    index: usize,
+    task: Unconstrained<JoinHandle<V>>,
+    waker: Waker,
 }
 
 struct ItemState<T, A, V: View<T, A>> {
@@ -92,7 +98,7 @@ where
             requested: HashSet::new(),
             items: BTreeMap::new(),
             pending: HashMap::new(),
-            waking: Vec::new(),
+            completed: Vec::new(),
         };
         (id, state, element)
     }
@@ -106,50 +112,41 @@ where
         element: &mut Self::Element,
     ) -> bool {
         // TODO: allow updating of n_items and item_height
-        let mut changed = !state.waking.is_empty() || !state.remove_req.is_empty();
+        let mut changed = false;
         cx.with_id(*id, |cx| {
-            for i in state.add_req.drain(..) {
+            for i in std::mem::take(&mut state.add_req) {
                 state.requested.insert(i);
                 // spawn a task to run the callback
                 let future = (self.callback)(i);
                 let join_handle = tokio::spawn(Box::pin(future));
-                let join_handle = tokio::task::unconstrained(join_handle);
-                let id = Id::next();
-                state.waking.push((id, i, join_handle));
-            }
-            for (id, i, mut join_handle) in state.waking.drain(..) {
-                let poll_result = cx.with_id(id, |cx| {
-                    let waker = cx.waker();
-                    let mut future_cx = Context::from_waker(&waker);
-                    Pin::new(&mut join_handle).poll(&mut future_cx)
+                let task = tokio::task::unconstrained(join_handle);
+                let (id, task) = cx.with_new_id(|cx| PendingTask {
+                    index: i,
+                    task,
+                    waker: cx.waker(),
                 });
-                match poll_result {
-                    Poll::Ready(v) => {
-                        if state.requested.remove(&i) {
-                            let child_view = v.unwrap();
-                            let (child_id, child_state, child_element) = child_view.build(cx);
-                            element.set_child(i, Pod::new(child_element));
-                            state.items.insert(
-                                i,
-                                ItemState {
-                                    id: child_id,
-                                    view: child_view,
-                                    state: child_state,
-                                },
-                            );
-                            changed = true;
-                        }
-                    }
-                    Poll::Pending => {
-                        //println!("poll result id={:?} i={} pending, re-inserting", id, i);
-                        state.pending.insert(id, (i, join_handle));
-                    }
+                state.poll_task(task, id);
+            }
+            for (i, view) in state.completed.drain(..) {
+                if state.requested.remove(&i) {
+                    let (child_id, child_state, child_element) = view.build(cx);
+                    element.set_child(i, Pod::new(child_element));
+                    state.items.insert(
+                        i,
+                        ItemState {
+                            id: child_id,
+                            view,
+                            state: child_state,
+                        },
+                    );
+                    changed = true;
                 }
             }
             for i in state.remove_req.drain(..) {
                 if !state.requested.remove(&i) {
                     element.remove_child(i);
                     state.items.remove(&i);
+                    changed = true;
                 }
             }
             // Note: we're not running rebuild on futures once resolved.
@@ -165,10 +162,12 @@ where
         app_state: &mut T,
     ) -> EventResult<A> {
         if let Some((id, tl)) = id_path.split_first() {
-            if let Some((i, join_handle)) = state.pending.remove(id) {
-                //println!("got async wake of id {:?}, i={}", id, i);
-                state.waking.push((*id, i, join_handle));
-                EventResult::RequestRebuild
+            if let Some(pending) = state.pending.remove(id) {
+                if state.poll_task(pending, *id) {
+                    EventResult::RequestRebuild
+                } else {
+                    EventResult::Nop
+                }
             } else if let Some((_, s)) = state.items.iter_mut().find(|(_, s)| s.id == *id) {
                 s.view.event(tl, &mut s.state, event, app_state)
             } else {
@@ -179,6 +178,23 @@ where
             state.add_req.extend(&req.add);
             state.remove_req.extend(&req.remove);
             EventResult::RequestRebuild
+        }
+    }
+}
+
+impl<T, A, V: View<T, A>> AsyncListState<T, A, V> {
+    fn poll_task(&mut self, mut task: PendingTask<V>, id: Id) -> bool {
+        let mut future_cx = Context::from_waker(&task.waker);
+        match Pin::new(&mut task.task).poll(&mut future_cx) {
+            Poll::Ready(v) => {
+                let view = v.unwrap();
+                self.completed.push((task.index, view));
+                true
+            }
+            Poll::Pending => {
+                self.pending.insert(id, task);
+                false
+            }
         }
     }
 }

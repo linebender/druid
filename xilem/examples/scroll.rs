@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use xilem::{async_list, scroll_view, App, AppLauncher, View};
 
 fn compute_hash(i: usize) -> String {
