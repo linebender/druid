@@ -17,6 +17,7 @@ use std::sync::{Arc, Mutex};
 use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
 use druid_shell::WindowHandle;
+use tokio::runtime::Runtime;
 
 use crate::event::AsyncWake;
 use crate::id::IdPath;
@@ -28,12 +29,11 @@ use crate::{
     widget::{RawEvent, Widget},
 };
 
-pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V> {
-    data: T,
-    app_logic: F,
-    view: Option<V>,
+pub struct App<T, V: View<T>> {
+    req_chan: tokio::sync::mpsc::Sender<AppReq>,
+    response_chan: tokio::sync::mpsc::Receiver<RenderResponse<V, V::State>>,
+    return_chan: tokio::sync::mpsc::Sender<(V, V::State)>,
     id: Option<Id>,
-    state: Option<V::State>,
     events: Vec<Event>,
     window_handle: WindowHandle,
     root_state: WidgetState,
@@ -41,12 +41,14 @@ pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V> {
     size: Size,
     cx: Cx,
     wake_queue: WakeQueue,
+    pub(crate) rt: Runtime,
 }
 
 /// State that's kept in a separate task for running the app
 struct AppTask<T, V: View<T>, F: FnMut(&mut T) -> V> {
-    req_chan: tokio::sync::mpsc::Receiver<AppReq<V, V::State>>,
+    req_chan: tokio::sync::mpsc::Receiver<AppReq>,
     response_chan: tokio::sync::mpsc::Sender<RenderResponse<V, V::State>>,
+    return_chan: tokio::sync::mpsc::Receiver<(V, V::State)>,
     data: T,
     app_logic: F,
     view: Option<V>,
@@ -54,10 +56,9 @@ struct AppTask<T, V: View<T>, F: FnMut(&mut T) -> V> {
 }
 
 /// A message sent from the main UI thread to the app task
-enum AppReq<V, S> {
+enum AppReq {
     Events(Vec<Event>),
     Render,
-    ReturnView(V, S),
 }
 
 /// A response sent to a render request.
@@ -72,19 +73,39 @@ pub struct WakeQueue(Arc<Mutex<Vec<IdPath>>>);
 
 const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
 
-impl<T, V: View<T>, F: FnMut(&mut T) -> V> App<T, V, F>
+impl<T: Send + 'static, V: View<T> + 'static> App<T, V>
 where
     V::Element: Widget + 'static,
+    V::State: 'static,
 {
-    pub fn new(data: T, app_logic: F) -> Self {
+    /// Create a new app instance.
+    pub fn new(data: T, app_logic: impl FnMut(&mut T) -> V + Send + 'static) -> Self {
+        // Create a new tokio runtime. Doing it here is hacky, we should allow
+        // the client to do it.
+        let rt = Runtime::new().unwrap();
         let wake_queue = Default::default();
         let cx = Cx::new(&wake_queue);
+        let (req_tx, req_rx) = tokio::sync::mpsc::channel(10);
+        let (response_tx, response_rx) = tokio::sync::mpsc::channel(1);
+        let (return_tx, return_rx) = tokio::sync::mpsc::channel(1);
+        // spawn app task
+        rt.spawn(async move {
+            let mut app_task = AppTask {
+                req_chan: req_rx,
+                response_chan: response_tx,
+                return_chan: return_rx,
+                data,
+                app_logic,
+                view: None,
+                state: None,
+            };
+            app_task.run().await;
+        });
         App {
-            data,
-            app_logic,
-            view: None,
+            req_chan: req_tx,
+            response_chan: response_rx,
+            return_chan: return_tx,
             id: None,
-            state: None,
             root_pod: None,
             events: Vec::new(),
             window_handle: Default::default(),
@@ -92,18 +113,7 @@ where
             size: Default::default(),
             cx,
             wake_queue,
-        }
-    }
-
-    pub fn ensure_app(&mut self) {
-        if self.view.is_none() {
-            let view = (self.app_logic)(&mut self.data);
-            let (id, state, element) = view.build(&mut self.cx);
-            let root_pod = Pod::new(element);
-            self.view = Some(view);
-            self.id = Some(id);
-            self.state = Some(state);
-            self.root_pod = Some(root_pod);
+            rt,
         }
     }
 
@@ -121,8 +131,9 @@ where
         let rect = self.size.to_rect();
         piet.fill(rect, &BG_COLOR);
 
-        self.ensure_app();
         loop {
+            self.send_events();
+            self.render();
             let root_pod = self.root_pod.as_mut().unwrap();
             let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
             let mut update_cx = UpdateCx::new(&mut cx_state, &mut self.root_state);
@@ -135,7 +146,6 @@ where
                 // Rerun app logic, primarily for LayoutObserver
                 // We might want some debugging here if the number of iterations
                 // becomes extreme.
-                self.run_app_logic();
                 continue;
             }
             let mut layout_cx = LayoutCx::new(&mut cx_state, &mut self.root_state);
@@ -143,7 +153,6 @@ where
             root_pod.prepare_paint(&mut layout_cx, visible);
             if cx_state.has_events() {
                 // Rerun app logic, primarily for virtualized scrolling
-                self.run_app_logic();
                 continue;
             }
             let mut paint_cx = PaintCx::new(&mut cx_state, &mut self.root_state, piet);
@@ -153,47 +162,55 @@ where
     }
 
     pub fn window_event(&mut self, event: RawEvent) {
-        self.ensure_app();
         let root_pod = self.root_pod.as_mut().unwrap();
         let mut cx_state = CxState::new(&self.window_handle, &mut self.events);
         let mut event_cx = EventCx::new(&mut cx_state, &mut self.root_state);
         root_pod.event(&mut event_cx, &event);
-        self.run_app_logic();
+        self.send_events();
     }
 
-    pub fn run_app_logic(&mut self) {
-        for event in self.events.drain(..) {
-            let id_path = &event.id_path[1..];
-            self.view.as_ref().unwrap().event(
-                id_path,
-                self.state.as_mut().unwrap(),
-                event.body,
-                &mut self.data,
-            );
+    fn send_events(&mut self) {
+        if !self.events.is_empty() {
+            let events = std::mem::take(&mut self.events);
+            let _ = self.req_chan.blocking_send(AppReq::Events(events));
         }
-        // Re-rendering should be more lazy.
-        let view = (self.app_logic)(&mut self.data);
-        if let Some(element) = self.root_pod.as_mut().unwrap().downcast_mut() {
-            let changed = view.rebuild(
-                &mut self.cx,
-                self.view.as_ref().unwrap(),
-                self.id.as_mut().unwrap(),
-                self.state.as_mut().unwrap(),
-                element,
-            );
-            if changed {
-                self.root_pod.as_mut().unwrap().request_update();
-            }
-            assert!(self.cx.is_empty(), "id path imbalance on rebuild");
+    }
+
+    /// Run the app logic and update the widget tree.
+    fn render(&mut self) {
+        let _ = self.req_chan.blocking_send(AppReq::Render);
+        if let Some(response) = self.response_chan.blocking_recv() {
+            let state =
+                if let Some(element) = self.root_pod.as_mut().and_then(|pod| pod.downcast_mut()) {
+                    let mut state = response.state.unwrap();
+                    let changed = response.view.rebuild(
+                        &mut self.cx,
+                        response.prev.as_ref().unwrap(),
+                        self.id.as_mut().unwrap(),
+                        &mut state,
+                        element,
+                    );
+                    if changed {
+                        self.root_pod.as_mut().unwrap().request_update();
+                    }
+                    assert!(self.cx.is_empty(), "id path imbalance on rebuild");
+                    state
+                } else {
+                    let (id, state, element) = response.view.build(&mut self.cx);
+                    assert!(self.cx.is_empty(), "id path imbalance on build");
+                    self.root_pod = Some(Pod::new(element));
+                    self.id = Some(id);
+                    state
+                };
+            let _ = self.return_chan.blocking_send((response.view, state));
         }
-        self.view = Some(view);
     }
 
     pub fn wake_async(&mut self) {
         for id_path in self.wake_queue.take() {
             self.events.push(Event::new(id_path, AsyncWake));
         }
-        self.run_app_logic();
+        //self.run_app_logic();
     }
 }
 
@@ -229,10 +246,8 @@ where
                         );
                     }
                 }
-                AppReq::Render => self.render().await,
-                AppReq::ReturnView(view, state) => {
-                    self.view = Some(view);
-                    self.state = Some(state);
+                AppReq::Render => {
+                    self.render().await;
                 }
             }
         }
@@ -246,7 +261,11 @@ where
             state: self.state.take(),
         };
         if self.response_chan.send(response).await.is_err() {
-            println!("error sending response");
+            println!("error sending render response");
+        }
+        if let Some((view, state)) = self.return_chan.recv().await {
+            self.view = Some(view);
+            self.state = Some(state);
         }
     }
 }

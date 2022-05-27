@@ -23,24 +23,24 @@ use crate::{app::App, widget::RawEvent, View, Widget};
 
 // This is a bit of a hack just to get a window launched. The real version
 // would deal with multiple windows and have other ways to configure things.
-pub struct AppLauncher<T, V: View<T>, F: FnMut(&mut T) -> V> {
+pub struct AppLauncher<T, V: View<T>> {
     title: String,
-    app: App<T, V, F>,
+    app: App<T, V>,
 }
 
 // The logic of this struct is mostly parallel to DruidHandler in win_handler.rs.
-struct MainState<T, V: View<T>, F: FnMut(&mut T) -> V>
+struct MainState<T, V: View<T>>
 where
     V::Element: Widget,
 {
     handle: WindowHandle,
-    app: App<T, V, F>,
+    app: App<T, V>,
 }
 
 const QUIT_MENU_ID: u32 = 0x100;
 
-impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> AppLauncher<T, V, F> {
-    pub fn new(app: App<T, V, F>) -> Self {
+impl<T: Send + 'static, V: View<T> + 'static> AppLauncher<T, V> {
+    pub fn new(app: App<T, V>) -> Self {
         AppLauncher {
             title: "Xilem app".into(),
             app,
@@ -66,6 +66,7 @@ impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> AppLaunc
         menubar.add_dropdown(file_menu, "&File", true);
         let druid_app = Application::new().unwrap();
         let mut builder = WindowBuilder::new(druid_app.clone());
+        let _guard = self.app.rt.enter();
         let main_state = MainState::new(self.app);
         builder.set_handler(Box::new(main_state));
         builder.set_title(self.title);
@@ -76,8 +77,7 @@ impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> AppLaunc
     }
 }
 
-impl<T: 'static, V: View<T> + 'static, F: FnMut(&mut T) -> V + 'static> WinHandler
-    for MainState<T, V, F>
+impl<T: Send + 'static, V: View<T> + 'static> WinHandler for MainState<T, V>
 where
     V::Element: Widget,
 {
@@ -146,11 +146,11 @@ where
     }
 }
 
-impl<T, V: View<T>, F: FnMut(&mut T) -> V> MainState<T, V, F>
+impl<T, V: View<T>> MainState<T, V>
 where
     V::Element: Widget,
 {
-    fn new(app: App<T, V, F>) -> Self {
+    fn new(app: App<T, V>) -> Self {
         let state = MainState {
             handle: Default::default(),
             app,
