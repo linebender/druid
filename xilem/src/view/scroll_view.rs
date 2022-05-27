@@ -20,7 +20,7 @@ use super::Cx;
 
 pub struct ScrollView<T, A, C> {
     child: C,
-    phantom: PhantomData<(T, A)>,
+    phantom: PhantomData<fn() -> (T, A)>,
 }
 
 pub fn scroll_view<T, A, C>(child: C) -> ScrollView<T, A, C> {

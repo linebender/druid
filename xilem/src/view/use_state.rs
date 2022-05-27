@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{any::Any, marker::PhantomData, rc::Rc};
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use crate::{event::EventResult, id::Id};
 
@@ -30,10 +30,10 @@ use super::{Cx, View};
 pub struct UseState<T, A, S, V, FInit, F> {
     f_init: FInit,
     f: F,
-    phantom: PhantomData<(T, A, S, V)>,
+    phantom: PhantomData<fn() -> (T, A, S, V)>,
 }
 
-pub struct UseStateState<T, A, S, V: View<(Rc<T>, S), A>> {
+pub struct UseStateState<T, A, S, V: View<(Arc<T>, S), A>> {
     state: Option<S>,
     view: V,
     view_state: V::State,
@@ -47,8 +47,12 @@ impl<T, A, S, V, FInit: Fn() -> S, F: Fn(&mut S) -> V> UseState<T, A, S, V, FIni
     }
 }
 
-impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View<Rc<T>, A>
+impl<T, A, S, V: View<(Arc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View<Arc<T>, A>
     for UseState<T, A, S, V, FInit, F>
+where
+    S: Send,
+    FInit: Send,
+    F: Send,
 {
     type State = UseStateState<T, A, S, V>;
 
@@ -85,14 +89,14 @@ impl<T, A, S, V: View<(Rc<T>, S), A>, FInit: Fn() -> S, F: Fn(&mut S) -> V> View
         id_path: &[Id],
         state: &mut Self::State,
         event: Box<dyn Any>,
-        app_state: &mut Rc<T>,
+        app_state: &mut Arc<T>,
     ) -> EventResult<A> {
         let mut local_state = (app_state.clone(), state.state.take().unwrap());
         let a = state
             .view
             .event(id_path, &mut state.view_state, event, &mut local_state);
         let (local_app_state, my_state) = local_state;
-        if !Rc::ptr_eq(app_state, &local_app_state) {
+        if !Arc::ptr_eq(app_state, &local_app_state) {
             *app_state = local_app_state
         }
         state.state = Some(my_state);

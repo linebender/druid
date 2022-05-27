@@ -32,14 +32,14 @@ use super::{Cx, View};
 pub trait AnyView<T, A = ()> {
     fn as_any(&self) -> &dyn Any;
 
-    fn dyn_build(&self, cx: &mut Cx) -> (Id, Box<dyn Any>, Box<dyn AnyWidget>);
+    fn dyn_build(&self, cx: &mut Cx) -> (Id, Box<dyn Any + Send>, Box<dyn AnyWidget>);
 
     fn dyn_rebuild(
         &self,
         cx: &mut Cx,
         prev: &dyn AnyView<T, A>,
         id: &mut Id,
-        state: &mut Box<dyn Any>,
+        state: &mut Box<dyn Any + Send>,
         element: &mut Box<dyn AnyWidget>,
     ) -> bool;
 
@@ -61,7 +61,7 @@ where
         self
     }
 
-    fn dyn_build(&self, cx: &mut Cx) -> (Id, Box<dyn Any>, Box<dyn AnyWidget>) {
+    fn dyn_build(&self, cx: &mut Cx) -> (Id, Box<dyn Any + Send>, Box<dyn AnyWidget>) {
         let (id, state, element) = self.build(cx);
         (id, Box::new(state), Box::new(element))
     }
@@ -71,7 +71,7 @@ where
         cx: &mut Cx,
         prev: &dyn AnyView<T, A>,
         id: &mut Id,
-        state: &mut Box<dyn Any>,
+        state: &mut Box<dyn Any + Send>,
         element: &mut Box<dyn AnyWidget>,
     ) -> bool {
         if let Some(prev) = prev.as_any().downcast_ref() {
@@ -111,8 +111,8 @@ where
     }
 }
 
-impl<T, A> View<T, A> for Box<dyn AnyView<T, A>> {
-    type State = Box<dyn Any>;
+impl<T, A> View<T, A> for Box<dyn AnyView<T, A> + Send> {
+    type State = Box<dyn Any + Send>;
 
     type Element = Box<dyn AnyWidget>;
 

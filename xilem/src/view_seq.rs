@@ -21,8 +21,8 @@ use crate::{
     widget::Pod,
 };
 
-pub trait ViewSequence<T, A> {
-    type State;
+pub trait ViewSequence<T, A>: Send {
+    type State: Send;
 
     type Elements;
 

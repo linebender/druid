@@ -35,7 +35,7 @@ pub struct AsyncList<T, A, V, FF, F: Fn(usize) -> FF> {
     n_items: usize,
     item_height: f64,
     callback: F,
-    phantom: PhantomData<(T, A, V)>,
+    phantom: PhantomData<fn() -> (T, A, V)>,
 }
 
 pub struct AsyncListState<T, A, V: View<T, A>> {
@@ -78,10 +78,10 @@ impl<T, A, V, FF, F: Fn(usize) -> FF> AsyncList<T, A, V, FF, F> {
     }
 }
 
-impl<T, A, V: View<T, A>, FF, F: Fn(usize) -> FF> View<T, A> for AsyncList<T, A, V, FF, F>
+impl<T, A, V: View<T, A>, FF, F: Fn(usize) -> FF + Send> View<T, A> for AsyncList<T, A, V, FF, F>
 where
     FF: Future<Output = V> + Send + 'static,
-    V: Send + 'static,
+    V: 'static,
     V::Element: 'static,
 {
     type State = AsyncListState<T, A, V>;

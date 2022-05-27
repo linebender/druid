@@ -51,9 +51,9 @@ use crate::{
 /// and also a type for actions which are passed up the tree in event
 /// propagation. During event handling, mutable access to the app state is
 /// given to view nodes, which in turn can make expose it to callbacks.
-pub trait View<T, A = ()> {
+pub trait View<T, A = ()>: Send {
     /// Associated state for the view.
-    type State;
+    type State: Send;
 
     /// The associated widget for the view.
     type Element: Widget;

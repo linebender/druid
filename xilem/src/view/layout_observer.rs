@@ -22,7 +22,7 @@ use super::{Cx, View};
 
 pub struct LayoutObserver<T, A, F, V> {
     callback: F,
-    phantom: PhantomData<(T, A, V)>,
+    phantom: PhantomData<fn() -> (T, A, V)>,
 }
 
 pub struct LayoutObserverState<T, A, V: View<T, A>> {
@@ -41,7 +41,7 @@ impl<T, A, F, V> LayoutObserver<T, A, F, V> {
     }
 }
 
-impl<T, A, F: Fn(Size) -> V, V: View<T, A>> View<T, A> for LayoutObserver<T, A, F, V>
+impl<T, A, F: Fn(Size) -> V + Send, V: View<T, A>> View<T, A> for LayoutObserver<T, A, F, V>
 where
     V::Element: 'static,
 {

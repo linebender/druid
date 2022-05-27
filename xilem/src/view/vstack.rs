@@ -20,7 +20,7 @@ use super::{Cx, View};
 
 pub struct VStack<T, A, VT: ViewSequence<T, A>> {
     children: VT,
-    phantom: PhantomData<(T, A)>,
+    phantom: PhantomData<fn() -> (T, A)>,
 }
 
 pub fn v_stack<T, A, VT: ViewSequence<T, A>>(children: VT) -> VStack<T, A, VT> {

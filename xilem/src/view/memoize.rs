@@ -35,7 +35,7 @@ impl<D, V, F: Fn(&D) -> V> Memoize<D, F> {
     }
 }
 
-impl<T, A, D: PartialEq + Clone + 'static, V: View<T, A>, F: Fn(&D) -> V> View<T, A>
+impl<T, A, D: PartialEq + Clone + Send + 'static, V: View<T, A>, F: Fn(&D) -> V + Send> View<T, A>
     for Memoize<D, F>
 {
     type State = MemoizeState<T, A, V>;

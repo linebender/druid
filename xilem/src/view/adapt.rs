@@ -21,7 +21,7 @@ use super::{Cx, View};
 pub struct Adapt<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A>, C: View<U, B>> {
     f: F,
     child: C,
-    phantom: PhantomData<(T, A, U, B)>,
+    phantom: PhantomData<fn() -> (T, A, U, B)>,
 }
 
 /// A "thunk" which dispatches an event to an adapt node's child.
@@ -54,8 +54,8 @@ impl<'a, U, B, C: View<U, B>> AdaptThunk<'a, U, B, C> {
     }
 }
 
-impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A>, C: View<U, B>> View<T, A>
-    for Adapt<T, A, U, B, F, C>
+impl<T, A, U, B, F: Fn(&mut T, AdaptThunk<U, B, C>) -> EventResult<A> + Send, C: View<U, B>>
+    View<T, A> for Adapt<T, A, U, B, F, C>
 {
     type State = C::State;
 

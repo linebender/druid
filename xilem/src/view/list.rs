@@ -26,7 +26,7 @@ pub struct List<T, A, V, F: Fn(usize) -> V> {
     n_items: usize,
     item_height: f64,
     callback: F,
-    phantom: PhantomData<(T, A)>,
+    phantom: PhantomData<fn() -> (T, A)>,
 }
 
 pub struct ListState<T, A, V: View<T, A>> {
@@ -60,7 +60,7 @@ impl<T, A, V, F: Fn(usize) -> V> List<T, A, V, F> {
     }
 }
 
-impl<T, A, V: View<T, A>, F: Fn(usize) -> V> View<T, A> for List<T, A, V, F>
+impl<T, A, V: View<T, A>, F: Fn(usize) -> V + Send> View<T, A> for List<T, A, V, F>
 where
     V::Element: 'static,
 {
