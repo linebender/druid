@@ -43,6 +43,30 @@ pub struct App<T, V: View<T>, F: FnMut(&mut T) -> V> {
     wake_queue: WakeQueue,
 }
 
+/// State that's kept in a separate task for running the app
+struct AppTask<T, V: View<T>, F: FnMut(&mut T) -> V> {
+    req_chan: tokio::sync::mpsc::Receiver<AppReq<V, V::State>>,
+    response_chan: tokio::sync::mpsc::Sender<RenderResponse<V, V::State>>,
+    data: T,
+    app_logic: F,
+    view: Option<V>,
+    state: Option<V::State>,
+}
+
+/// A message sent from the main UI thread to the app task
+enum AppReq<V, S> {
+    Events(Vec<Event>),
+    Render,
+    ReturnView(V, S),
+}
+
+/// A response sent to a render request.
+struct RenderResponse<V, S> {
+    prev: Option<V>,
+    view: V,
+    state: Option<S>,
+}
+
 #[derive(Clone, Default)]
 pub struct WakeQueue(Arc<Mutex<Vec<IdPath>>>);
 
@@ -184,5 +208,45 @@ impl WakeQueue {
 
     pub fn take(&self) -> Vec<IdPath> {
         std::mem::replace(&mut self.0.lock().unwrap(), Vec::new())
+    }
+}
+
+impl<T, V: View<T>, F: FnMut(&mut T) -> V> AppTask<T, V, F>
+where
+    V::Element: Widget + 'static,
+{
+    async fn run(&mut self) {
+        while let Some(req) = self.req_chan.recv().await {
+            match req {
+                AppReq::Events(events) => {
+                    for event in events {
+                        let id_path = &event.id_path[1..];
+                        self.view.as_ref().unwrap().event(
+                            id_path,
+                            self.state.as_mut().unwrap(),
+                            event.body,
+                            &mut self.data,
+                        );
+                    }
+                }
+                AppReq::Render => self.render().await,
+                AppReq::ReturnView(view, state) => {
+                    self.view = Some(view);
+                    self.state = Some(state);
+                }
+            }
+        }
+    }
+
+    async fn render(&mut self) {
+        let view = (self.app_logic)(&mut self.data);
+        let response = RenderResponse {
+            prev: self.view.take(),
+            view,
+            state: self.state.take(),
+        };
+        if self.response_chan.send(response).await.is_err() {
+            println!("error sending response");
+        }
     }
 }
