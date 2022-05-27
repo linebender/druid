@@ -16,10 +16,10 @@ use std::sync::{Arc, Mutex};
 
 use druid_shell::kurbo::Size;
 use druid_shell::piet::{Color, Piet, RenderContext};
-use druid_shell::WindowHandle;
+use druid_shell::{IdleHandle, IdleToken, WindowHandle};
 use tokio::runtime::Runtime;
 
-use crate::event::AsyncWake;
+use crate::event::{AsyncWake, EventResult};
 use crate::id::IdPath;
 use crate::widget::{CxState, EventCx, LayoutCx, PaintCx, Pod, UpdateCx, WidgetState};
 use crate::{
@@ -40,7 +40,6 @@ pub struct App<T, V: View<T>> {
     root_pod: Option<Pod>,
     size: Size,
     cx: Cx,
-    wake_queue: WakeQueue,
     pub(crate) rt: Runtime,
 }
 
@@ -53,11 +52,15 @@ struct AppTask<T, V: View<T>, F: FnMut(&mut T) -> V> {
     app_logic: F,
     view: Option<V>,
     state: Option<V::State>,
+    idle_handle: Option<IdleHandle>,
+    ui_wake_pending: bool,
 }
 
 /// A message sent from the main UI thread to the app task
-enum AppReq {
+pub(crate) enum AppReq {
     Events(Vec<Event>),
+    Wake(IdPath),
+    SetIdleHandle(IdleHandle),
     Render,
 }
 
@@ -83,11 +86,28 @@ where
         // Create a new tokio runtime. Doing it here is hacky, we should allow
         // the client to do it.
         let rt = Runtime::new().unwrap();
-        let wake_queue = Default::default();
-        let cx = Cx::new(&wake_queue);
-        let (req_tx, req_rx) = tokio::sync::mpsc::channel(10);
+
+        // Note: there is danger of deadlock if exceeded; think this through.
+        const CHANNEL_SIZE: usize = 1000;
+        let (req_tx, req_rx) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (response_tx, response_rx) = tokio::sync::mpsc::channel(1);
         let (return_tx, return_rx) = tokio::sync::mpsc::channel(1);
+
+        // We have a separate thread to forward wake requests (mostly generated
+        // by the custom waker when we poll) to the async task. Maybe there's a
+        // better way, but this is expedient.
+        //
+        // It's a sync_channel because sender needs to be sync to work in an async
+        // context. Consider crossbeam and flume channels as alternatives.
+        let req_tx_clone = req_tx.clone();
+        let (wake_tx, wake_rx) = std::sync::mpsc::sync_channel(10);
+        std::thread::spawn(move || {
+            while let Ok(id_path) = wake_rx.recv() {
+                let _ = req_tx_clone.blocking_send(AppReq::Wake(id_path));
+            }
+        });
+        let cx = Cx::new(&wake_tx);
+
         // spawn app task
         rt.spawn(async move {
             let mut app_task = AppTask {
@@ -98,6 +118,8 @@ where
                 app_logic,
                 view: None,
                 state: None,
+                idle_handle: None,
+                ui_wake_pending: false,
             };
             app_task.run().await;
         });
@@ -112,15 +134,17 @@ where
             root_state: Default::default(),
             size: Default::default(),
             cx,
-            wake_queue,
             rt,
         }
     }
 
     pub fn connect(&mut self, window_handle: WindowHandle) {
         self.window_handle = window_handle.clone();
-        // This will be needed for wiring up async but is a stub for now.
-        self.cx.set_handle(window_handle.get_idle_handle());
+        if let Some(idle_handle) = window_handle.get_idle_handle() {
+            let _ = self
+                .req_chan
+                .blocking_send(AppReq::SetIdleHandle(idle_handle));
+        }
     }
 
     pub fn size(&mut self, size: Size) {
@@ -205,27 +229,6 @@ where
             let _ = self.return_chan.blocking_send((response.view, state));
         }
     }
-
-    pub fn wake_async(&mut self) {
-        for id_path in self.wake_queue.take() {
-            self.events.push(Event::new(id_path, AsyncWake));
-        }
-        //self.run_app_logic();
-    }
-}
-
-impl WakeQueue {
-    // Returns true if the queue was empty.
-    pub fn push_wake(&self, id_path: IdPath) -> bool {
-        let mut queue = self.0.lock().unwrap();
-        let was_empty = queue.is_empty();
-        queue.push(id_path);
-        was_empty
-    }
-
-    pub fn take(&self) -> Vec<IdPath> {
-        std::mem::replace(&mut self.0.lock().unwrap(), Vec::new())
-    }
 }
 
 impl<T, V: View<T>, F: FnMut(&mut T) -> V> AppTask<T, V, F>
@@ -246,9 +249,28 @@ where
                         );
                     }
                 }
+                AppReq::Wake(id_path) => {
+                    let result = self.view.as_ref().unwrap().event(
+                        &id_path[1..],
+                        self.state.as_mut().unwrap(),
+                        Box::new(AsyncWake),
+                        &mut self.data,
+                    );
+                    if matches!(result, EventResult::RequestRebuild) {
+                        // request re-render from UI thread
+                        if !self.ui_wake_pending {
+                            if let Some(handle) = self.idle_handle.as_mut() {
+                                handle.schedule_idle(IdleToken::new(42));
+                            }
+                            self.ui_wake_pending = true;
+                            // TODO: complete render if this is the last pending result
+                        }
+                    }
+                }
                 AppReq::Render => {
                     self.render().await;
                 }
+                AppReq::SetIdleHandle(handle) => self.idle_handle = Some(handle),
             }
         }
     }
@@ -267,5 +289,6 @@ where
             self.view = Some(view);
             self.state = Some(state);
         }
+        self.ui_wake_pending = false;
     }
 }

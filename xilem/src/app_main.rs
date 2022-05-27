@@ -136,7 +136,6 @@ where
     }
 
     fn idle(&mut self, _token: IdleToken) {
-        self.app.wake_async();
         // TODO: wire up invalidation through widget hierarchy
         self.handle.invalidate();
     }
