@@ -54,14 +54,12 @@ struct AppTask<T, V: View<T>, F: FnMut(&mut T) -> V> {
     response_chan: tokio::sync::mpsc::Sender<RenderResponse<V, V::State>>,
     return_chan: tokio::sync::mpsc::Receiver<(V, V::State, HashSet<Id>)>,
 
-    req_tx: tokio::sync::mpsc::Sender<AppReq>,
     data: T,
     app_logic: F,
     view: Option<V>,
     state: Option<V::State>,
     idle_handle: Option<IdleHandle>,
     pending_async: HashSet<Id>,
-    current_frame_ix: u64,
     ui_state: UiState,
 }
 
@@ -72,8 +70,6 @@ pub(crate) enum AppReq {
     Wake(IdPath),
     // Parameter indicates whether it should be delayed for async
     Render(bool),
-    // Parameter is frame index
-    Timeout(u64),
 }
 
 /// A response sent to a render request.
@@ -129,7 +125,6 @@ where
             }
         });
         let cx = Cx::new(&wake_tx);
-        let req_tx_clone = req_tx.clone();
 
         // spawn app task
         rt.spawn(async move {
@@ -137,20 +132,18 @@ where
                 req_chan: req_rx,
                 response_chan: response_tx,
                 return_chan: return_rx,
-                req_tx,
                 data,
                 app_logic,
                 view: None,
                 state: None,
                 idle_handle: None,
                 pending_async: HashSet::new(),
-                current_frame_ix: 0,
                 ui_state: UiState::Start,
             };
             app_task.run().await;
         });
         App {
-            req_chan: req_tx_clone,
+            req_chan: req_tx,
             response_chan: response_rx,
             return_chan: return_tx,
             id: None,
@@ -279,60 +272,64 @@ where
     V::Element: Widget + 'static,
 {
     async fn run(&mut self) {
-        while let Some(req) = self.req_chan.recv().await {
+        let mut deadline = None;
+        loop {
+            let rx = self.req_chan.recv();
+            let req = match deadline {
+                Some(deadline) => tokio::time::timeout_at(deadline, rx).await,
+                None => Ok(rx.await),
+            };
             match req {
-                AppReq::SetIdleHandle(handle) => self.idle_handle = Some(handle),
-                AppReq::Events(events) => {
-                    for event in events {
-                        let id_path = &event.id_path[1..];
-                        self.view.as_ref().unwrap().event(
-                            id_path,
+                Ok(Some(req)) => match req {
+                    AppReq::SetIdleHandle(handle) => self.idle_handle = Some(handle),
+                    AppReq::Events(events) => {
+                        for event in events {
+                            let id_path = &event.id_path[1..];
+                            self.view.as_ref().unwrap().event(
+                                id_path,
+                                self.state.as_mut().unwrap(),
+                                event.body,
+                                &mut self.data,
+                            );
+                        }
+                    }
+                    AppReq::Wake(id_path) => {
+                        let result = self.view.as_ref().unwrap().event(
+                            &id_path[1..],
                             self.state.as_mut().unwrap(),
-                            event.body,
+                            Box::new(AsyncWake),
                             &mut self.data,
                         );
-                    }
-                }
-                AppReq::Wake(id_path) => {
-                    let result = self.view.as_ref().unwrap().event(
-                        &id_path[1..],
-                        self.state.as_mut().unwrap(),
-                        Box::new(AsyncWake),
-                        &mut self.data,
-                    );
-                    if matches!(result, EventResult::RequestRebuild) {
-                        // request re-render from UI thread
-                        if self.ui_state == UiState::Start {
-                            if let Some(handle) = self.idle_handle.as_mut() {
-                                handle.schedule_idle(IdleToken::new(42));
+                        if matches!(result, EventResult::RequestRebuild) {
+                            // request re-render from UI thread
+                            if self.ui_state == UiState::Start {
+                                if let Some(handle) = self.idle_handle.as_mut() {
+                                    handle.schedule_idle(IdleToken::new(42));
+                                }
+                                self.ui_state = UiState::WokeUI;
                             }
-                            self.ui_state = UiState::WokeUI;
+                            let id = id_path.last().unwrap();
+                            self.pending_async.remove(&id);
+                            if self.pending_async.is_empty() && self.ui_state == UiState::Delayed {
+                                self.render().await;
+                                deadline = None;
+                            }
                         }
-                        let id = id_path.last().unwrap();
-                        self.pending_async.remove(&id);
-                        if self.pending_async.is_empty() && self.ui_state == UiState::Delayed {
+                    }
+                    AppReq::Render(delay) => {
+                        if !delay || self.pending_async.is_empty() {
                             self.render().await;
+                            deadline = None;
+                        } else {
+                            deadline = Some(tokio::time::Instant::now() + RENDER_DELAY);
+                            self.ui_state = UiState::Delayed;
                         }
                     }
                 }
-                AppReq::Render(delay) => {
-                    self.current_frame_ix += 1;
-                    if !delay || self.pending_async.is_empty() {
-                        self.render().await;
-                    } else {
-                        let req_tx = self.req_tx.clone();
-                        let frame_ix = self.current_frame_ix;
-                        tokio::spawn(async move {
-                            tokio::time::sleep(RENDER_DELAY).await;
-                            let _ = req_tx.send(AppReq::Timeout(frame_ix)).await;
-                        });
-                        self.ui_state = UiState::Delayed;
-                    }
-                }
-                AppReq::Timeout(frame_ix) => {
-                    if frame_ix == self.current_frame_ix && self.ui_state == UiState::Delayed {
-                        self.render().await;
-                    }
+                Ok(None) => break,
+                Err(_) => {
+                    self.render().await;
+                    deadline = None;
                 }
             }
         }
