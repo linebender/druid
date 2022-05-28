@@ -26,6 +26,7 @@ pub mod vstack;
 
 use std::{
     any::Any,
+    collections::HashSet,
     sync::{mpsc::SyncSender, Arc},
 };
 
@@ -91,6 +92,7 @@ pub trait View<T, A = ()>: Send {
 pub struct Cx {
     id_path: IdPath,
     req_chan: SyncSender<IdPath>,
+    pub(crate) pending_async: HashSet<Id>,
 }
 
 struct MyWaker {
@@ -110,6 +112,7 @@ impl Cx {
         Cx {
             id_path: Vec::new(),
             req_chan: req_chan.clone(),
+            pending_async: HashSet::new(),
         }
     }
 
@@ -155,5 +158,14 @@ impl Cx {
             id_path: self.id_path.clone(),
             req_chan: self.req_chan.clone(),
         }))
+    }
+
+    /// Add an id for a pending async future.
+    ///
+    /// Rendering may be delayed when there are pending async futures, to avoid
+    /// flashing, and continues when all futures complete, or a timeout, whichever
+    /// is first.
+    pub fn add_pending_async(&mut self, id: Id) {
+        self.pending_async.insert(id);
     }
 }

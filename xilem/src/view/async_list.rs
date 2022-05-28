@@ -125,6 +125,7 @@ where
                     task,
                     waker: cx.waker(),
                 });
+                cx.add_pending_async(id);
                 state.poll_task(task, id);
             }
             for (i, view) in state.completed.drain(..) {
