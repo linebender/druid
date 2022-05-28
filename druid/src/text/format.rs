@@ -228,8 +228,9 @@ impl<T: std::fmt::Display> Default for ParseFormatter<T> {
 
 /// A naive [`Formatter`] for optional types that implement [`FromStr`].
 ///
-/// Some types that impl [`FromStr`], such as scalar values, do not allow empty strings as valid values.
-/// In these cases, a user can not remove all text from the text box.
+/// Maps empty strings to None
+/// Some types that impl [`FromStr`], such as integer values, do not allow empty strings as valid values.
+/// In these cases, a user cannot remove all text from the text box.
 /// To allow users to remove all text, an option can be used to account for empty strings.
 ///
 /// [`Formatter`]: Formatter
