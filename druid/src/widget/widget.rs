@@ -225,15 +225,16 @@ pub trait Widget<T> {
     }
 
     /// Computes max intrinsic/preferred dimension of a widget on the provided axis.
+    ///
     /// Max intrinsic/preferred dimension is the dimension the widget could take, provided infinite
     /// constraint on that axis.
     ///
     /// If axis == Axis::Horizontal, widget is being asked to calculate max intrinsic width.
     /// If axis == Axis::Vertical, widget is being asked to calculate max intrinsic height.
     ///
-    /// Box constrains must be honored in intrinsics computation.
+    /// Box constraints must be honored in intrinsics computation.
     ///
-    /// AspectRatioBox is an example where constrains are honored. If height is finite, max intrinsic
+    /// AspectRatioBox is an example where constraints are honored. If height is finite, max intrinsic
     /// width is *height * ratio*.
     /// Only when height is infinite, child's max intrinsic width is calculated.
     ///
