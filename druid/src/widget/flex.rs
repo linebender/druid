@@ -14,6 +14,8 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
+use std::ops::Add;
+
 use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
@@ -940,6 +942,108 @@ impl<T: Data> Widget<T> for Flex<T> {
             display_name: self.short_type_name().to_string(),
             children: children_state,
             ..Default::default()
+        }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        if self.direction != axis {
+            // Direction axis and sizing axis are different.
+            // We compute max(child dim in cross axis).
+            let mut max_size_on_cross_axis: f64 = 0.;
+            let mut available_size_on_main_axis = self.direction.major(bc.max());
+            let mut total_flex = 0.;
+            for child in self.children.iter_mut() {
+                match child {
+                    Child::Fixed { widget, .. } => {
+                        let new_bc = bc
+                            .unbound_max(axis)
+                            .shrink_max_to(self.direction, available_size_on_main_axis);
+                        let size_on_main_axis = widget.widget_mut().compute_max_intrinsic(
+                            self.direction,
+                            ctx,
+                            &new_bc,
+                            data,
+                            env,
+                        );
+                        let new_bc = new_bc.shrink_max_to(self.direction, size_on_main_axis);
+                        let size_on_cross_axis = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                        available_size_on_main_axis -= size_on_main_axis;
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                    }
+                    Child::FixedSpacer(kv, _) => {
+                        let mut s = kv.resolve(env);
+                        if s < 0.0 {
+                            tracing::warn!("Length provided to fixed spacer was less than 0");
+                            s = 0.;
+                        }
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(s);
+                    }
+                    Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => total_flex += *flex,
+                }
+            }
+            let space_per_flex = available_size_on_main_axis / total_flex;
+
+            if space_per_flex > 0.0 {
+                for child in self.children.iter_mut() {
+                    // We ignore Child::FlexedSpacer because its cross size is irrelevant.
+                    // Its flex matters only on main axis. But here we are interested in cross size of
+                    // each flex child.
+                    if let Child::Flex { widget, flex, .. } = child {
+                        let main_axis_available_space = *flex * space_per_flex;
+                        let new_bc = bc.shrink_max_to(axis, main_axis_available_space);
+                        let size_on_cross_axis = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                    }
+                }
+            }
+            max_size_on_cross_axis
+        } else {
+            // Direction axis and sizing axis are same.
+            // We compute total(child dim on that axis)
+            let mut total: f64 = 0.;
+            let mut max_flex_fraction: f64 = 0.;
+            let mut total_flex = 0.;
+            for child in self.children.iter_mut() {
+                match child {
+                    Child::Fixed { widget, .. } => {
+                        let s = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, bc, data, env);
+                        total = total.add(s);
+                    }
+                    Child::Flex { widget, flex, .. } => {
+                        let s = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, bc, data, env);
+                        let flex_fraction = s / *flex;
+                        total_flex += *flex;
+                        max_flex_fraction = max_flex_fraction.max(flex_fraction);
+                    }
+                    Child::FixedSpacer(kv, _) => {
+                        let mut s = kv.resolve(env);
+                        if s < 0.0 {
+                            tracing::warn!("Length provided to fixed spacer was less than 0");
+                            s = 0.;
+                        }
+                        total = total.add(s);
+                    }
+                    Child::FlexedSpacer(flex, _) => {
+                        total_flex += *flex;
+                    }
+                }
+            }
+            total + max_flex_fraction * total_flex
         }
     }
 }

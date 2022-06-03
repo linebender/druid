@@ -23,11 +23,12 @@ use crate::debug_state::DebugState;
 use crate::kurbo::Vec2;
 use crate::text::TextStorage;
 use crate::widget::prelude::*;
+use crate::widget::Axis;
 use crate::{
     ArcStr, Color, Data, FontDescriptor, KeyOrValue, LocalizedString, Point, TextAlignment,
     TextLayout,
 };
-use tracing::{instrument, trace};
+use tracing::{instrument, trace, warn};
 
 // added padding between the edges of the widget and the text.
 const LABEL_X_PADDING: f64 = 2.0;
@@ -537,6 +538,18 @@ impl<T: Data> Widget<T> for Label<T> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        _data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.label
+            .compute_max_intrinsic(axis, ctx, bc, &self.current_text, env)
+    }
 }
 
 impl<T: TextStorage> Widget<T> for RawLabel<T> {
@@ -633,6 +646,35 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
             ctx.clip(label_size.to_rect());
         }
         self.draw_at(ctx, origin)
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match axis {
+            Axis::Horizontal => {
+                match self.line_break_mode {
+                    LineBreaking::WordWrap => {
+                        // Height is irrelevant for labels. So max preferred/intrinsic width of a label is the size
+                        // it'd take without any word wrapping.
+                        self.line_break_mode = LineBreaking::Clip;
+                        let s = self.layout(ctx, bc, data, env);
+                        self.line_break_mode = LineBreaking::WordWrap;
+                        s.width
+                    }
+                    _ => self.layout(ctx, bc, data, env).width,
+                }
+            }
+            Axis::Vertical => {
+                warn!("Max intrinsic height of a label is not implemented.");
+                0.
+            }
+        }
     }
 }
 

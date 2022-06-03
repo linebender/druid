@@ -18,6 +18,7 @@ use super::BackgroundBrush;
 use crate::debug_state::DebugState;
 use crate::kurbo::RoundedRectRadii;
 use crate::widget::prelude::*;
+use crate::widget::Axis;
 use crate::{Color, Data, KeyOrValue, Point, WidgetPod};
 use tracing::{instrument, trace, trace_span};
 
@@ -241,5 +242,26 @@ impl<T: Data> Widget<T> for Container<T> {
             children: vec![self.child.widget().debug_state(data)],
             ..Default::default()
         }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let container_width = match &self.border {
+            Some(border) => border.width.resolve(env),
+            None => 0.0,
+        };
+        let child_bc = bc.shrink((2.0 * container_width, 2.0 * container_width));
+        let child_size = self
+            .child
+            .widget_mut()
+            .compute_max_intrinsic(axis, ctx, &child_bc, data, env);
+        let border_width_on_both_sides = container_width * 2.;
+        child_size + border_width_on_both_sides
     }
 }
