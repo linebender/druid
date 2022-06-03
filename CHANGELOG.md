@@ -131,6 +131,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
 - Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
 - X11: window focus events ([#1938] by [@Maan2003]
+- Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
 
 ### Visual
 
@@ -558,6 +559,7 @@ Last release without a changelog :(
 [@twitchyliquid64]: https://github.com/twitchyliquid64
 [@dristic]: https://github.com/dristic
 [@NickLarsenNZ]: https://github.com/NickLarsenNZ
+[@barsae]: https://github.com/barsae
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -851,6 +853,7 @@ Last release without a changelog :(
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
+[#2195]: https://github.com/linebender/druid/pull/2195
 [#2196]: https://github.com/linebender/druid/pull/2196
 [#2203]: https://github.com/linebender/druid/pull/2203
 

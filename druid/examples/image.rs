@@ -25,7 +25,7 @@ use druid::widget::{prelude::*, FillStrat, Image};
 use druid::widget::{
     Checkbox, CrossAxisAlignment, Flex, Label, RadioGroup, SizedBox, TextBox, WidgetExt,
 };
-use druid::{AppLauncher, Color, Data, ImageBuf, Lens, WindowDesc};
+use druid::{AppLauncher, Color, Data, ImageBuf, Lens, Rect, WindowDesc};
 
 static FILL_STRAT_OPTIONS: &[(&str, FillStrat)] = &[
     ("Contain", FillStrat::Contain),
@@ -50,6 +50,11 @@ struct AppState {
     width: f64,
     fix_height: bool,
     height: f64,
+    clip: bool,
+    clip_x: f64,
+    clip_y: f64,
+    clip_width: f64,
+    clip_height: f64,
 }
 
 /// builds a child Flex widget from some paramaters.
@@ -144,6 +149,8 @@ fn make_control_row() -> impl Widget<AppState> {
                 .with_default_spacer()
                 .with_child(Checkbox::new("Fix height").lens(AppState::fix_height))
                 .with_default_spacer()
+                .with_child(Checkbox::new("Clip").lens(AppState::clip))
+                .with_default_spacer()
                 .with_child(Checkbox::new("set interpolation mode").lens(AppState::interpolate)),
         )
         .padding(10.0)
@@ -164,6 +171,28 @@ fn make_width() -> impl Widget<AppState> {
                     .fix_width(60.0),
             ),
         )
+        .with_default_spacer()
+        .with_child(Label::new("clip x:"))
+        .with_default_spacer()
+        .with_child(
+            Flex::row().with_child(
+                TextBox::new()
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::clip_x)
+                    .fix_width(60.0),
+            ),
+        )
+        .with_default_spacer()
+        .with_child(Label::new("clip width:"))
+        .with_default_spacer()
+        .with_child(
+            Flex::row().with_child(
+                TextBox::new()
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::clip_width)
+                    .fix_width(60.0),
+            ),
+        )
 }
 fn make_height() -> impl Widget<AppState> {
     Flex::column()
@@ -178,6 +207,28 @@ fn make_height() -> impl Widget<AppState> {
                     .fix_width(60.0),
             ),
         )
+        .with_default_spacer()
+        .with_child(Label::new("clip y:"))
+        .with_default_spacer()
+        .with_child(
+            Flex::row().with_child(
+                TextBox::new()
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::clip_y)
+                    .fix_width(60.0),
+            ),
+        )
+        .with_default_spacer()
+        .with_child(Label::new("clip height:"))
+        .with_default_spacer()
+        .with_child(
+            Flex::row().with_child(
+                TextBox::new()
+                    .with_formatter(ParseFormatter::new())
+                    .lens(AppState::clip_height)
+                    .fix_width(60.0),
+            ),
+        )
 }
 
 fn build_widget(state: &AppState) -> Box<dyn Widget<AppState>> {
@@ -186,6 +237,14 @@ fn build_widget(state: &AppState) -> Box<dyn Widget<AppState>> {
     let mut img = Image::new(png_data).fill_mode(state.fill_strat);
     if state.interpolate {
         img.set_interpolation_mode(state.interpolation_mode)
+    }
+    if state.clip {
+        img.set_clip_area(Some(Rect::new(
+            state.clip_x,
+            state.clip_y,
+            state.clip_x + state.clip_width,
+            state.clip_y + state.clip_height,
+        )));
     }
     let mut sized = SizedBox::new(img);
     if state.fix_width {
@@ -219,6 +278,11 @@ pub fn main() {
         width: 200.,
         fix_height: true,
         height: 100.,
+        clip: false,
+        clip_x: 0.,
+        clip_y: 0.,
+        clip_width: 50.,
+        clip_height: 50.,
     };
 
     AppLauncher::with_window(main_window)
