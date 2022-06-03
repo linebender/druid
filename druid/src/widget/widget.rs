@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::Axis;
 use std::num::NonZeroU64;
 use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
 use crate::debug_state::DebugState;
+use crate::widget::Axis;
 
 /// A unique identifier for a single [`Widget`].
 ///
@@ -241,7 +241,7 @@ pub trait Widget<T> {
     /// Intrinsic is a *could-be* value. It's the value a widget *could* have given infinite constraints.
     /// This does not mean the value returned by layout() would be the same.
     ///
-    /// Make sure this function doesn't return an infinite value.
+    /// This method **must** return a finite value.
     fn compute_max_intrinsic(
         &mut self,
         axis: Axis,

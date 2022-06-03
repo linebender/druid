@@ -14,11 +14,12 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
+use std::ops::Add;
+
 use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
 use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
-use std::ops::Add;
 use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.

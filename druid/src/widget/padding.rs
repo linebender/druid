@@ -15,10 +15,9 @@
 //! A widget that just adds padding during layout.
 
 use crate::debug_state::DebugState;
-use crate::widget::{prelude::*, WidgetWrapper};
+use crate::widget::{prelude::*, Axis, WidgetWrapper};
 use crate::{Data, Insets, KeyOrValue, Point, WidgetPod};
 
-use druid::widget::Axis;
 use tracing::{instrument, trace};
 
 /// A widget that just adds padding around its child.
