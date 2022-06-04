@@ -35,7 +35,7 @@ use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::shared::winerror::*;
 use winapi::um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual};
-use winapi::um::dwmapi::DwmExtendFrameIntoClientArea;
+use winapi::um::dwmapi::{DwmExtendFrameIntoClientArea, DwmSetWindowAttribute};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellscalingapi::MDT_EFFECTIVE_DPI;
 use winapi::um::unknwnbase::*;
@@ -1515,6 +1515,18 @@ impl WindowBuilder {
                     };
                 }
             }
+
+            // Dark mode support
+            // https://docs.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes
+            const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
+            let value: BOOL = 1;
+            let value_ptr = &value as *const _ as *const c_void;
+            DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                value_ptr,
+                std::mem::size_of::<BOOL>() as u32,
+            );
 
             self.app.add_window(hwnd);
 

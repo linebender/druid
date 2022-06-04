@@ -72,6 +72,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `WidgetPod::requested_layout` ([#2145] by [@xarvic])
 - Make `Parse` work better with floats and similar types ([#2148] by [@superfell])
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
+- Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 
 ### Changed
 
@@ -554,6 +555,7 @@ Last release without a changelog :(
 [@superfell]: https://github.com/superfell
 [@GoldsteinE]: https://github.com/GoldsteinE
 [@twitchyliquid64]: https://github.com/twitchyliquid64
+[@dristic]: https://github.com/dristic
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -847,6 +849,7 @@ Last release without a changelog :(
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
+[#2196]: https://github.com/linebender/druid/pull/2196
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
