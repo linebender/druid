@@ -17,6 +17,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
 use crate::debug_state::DebugState;
+use crate::widget::Axis;
 
 /// A unique identifier for a single [`Widget`].
 ///
@@ -222,6 +223,38 @@ pub trait Widget<T> {
             ..Default::default()
         }
     }
+
+    /// Computes max intrinsic/preferred dimension of a widget on the provided axis.
+    ///
+    /// Max intrinsic/preferred dimension is the dimension the widget could take, provided infinite
+    /// constraint on that axis.
+    ///
+    /// If axis == Axis::Horizontal, widget is being asked to calculate max intrinsic width.
+    /// If axis == Axis::Vertical, widget is being asked to calculate max intrinsic height.
+    ///
+    /// Box constraints must be honored in intrinsics computation.
+    ///
+    /// AspectRatioBox is an example where constraints are honored. If height is finite, max intrinsic
+    /// width is *height * ratio*.
+    /// Only when height is infinite, child's max intrinsic width is calculated.
+    ///
+    /// Intrinsic is a *could-be* value. It's the value a widget *could* have given infinite constraints.
+    /// This does not mean the value returned by layout() would be the same.
+    ///
+    /// This method **must** return a finite value.
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match axis {
+            Axis::Horizontal => self.layout(ctx, bc, data, env).width,
+            Axis::Vertical => self.layout(ctx, bc, data, env).height,
+        }
+    }
 }
 
 impl WidgetId {
@@ -290,5 +323,17 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn debug_state(&self, data: &T) -> DebugState {
         self.deref().debug_state(data)
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.deref_mut()
+            .compute_max_intrinsic(axis, ctx, bc, data, env)
     }
 }

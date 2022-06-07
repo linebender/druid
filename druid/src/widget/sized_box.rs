@@ -19,6 +19,7 @@ use std::f64::INFINITY;
 use tracing::{instrument, trace, warn};
 
 use crate::widget::prelude::*;
+use crate::widget::Axis;
 use crate::{Data, KeyOrValue};
 
 /// A widget with predefined size.
@@ -216,6 +217,40 @@ impl<T: Data> Widget<T> for SizedBox<T> {
             display_name: self.short_type_name().to_string(),
             children,
             ..Default::default()
+        }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let kv = match axis {
+            Axis::Horizontal => self.width.as_ref(),
+            Axis::Vertical => self.height.as_ref(),
+        };
+        match (self.child.as_mut(), kv) {
+            (Some(c), Some(v)) => {
+                let v = v.resolve(env);
+                if v == f64::INFINITY {
+                    c.compute_max_intrinsic(axis, ctx, bc, data, env)
+                } else {
+                    v
+                }
+            }
+            (Some(c), None) => c.compute_max_intrinsic(axis, ctx, bc, data, env),
+            (None, Some(v)) => {
+                let v = v.resolve(env);
+                if v == f64::INFINITY {
+                    // If v infinite, we can only warn.
+                    warn!("SizedBox is without a child and its dim is infinite. Either give SizedBox a child or make its dim finite. ")
+                }
+                v
+            }
+            (None, None) => 0.,
         }
     }
 }
