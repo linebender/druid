@@ -15,7 +15,7 @@
 //! The fundamental druid types.
 
 use std::collections::VecDeque;
-use tracing::{info_span, trace, warn};
+use tracing::{trace, trace_span, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
@@ -415,7 +415,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 widget_state: child_state,
             };
             // We add a span so that inner logs are marked as being in a lifecycle pass
-            info_span!("lifecycle")
+            trace_span!("lifecycle")
                 .in_scope(|| child.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
             // if hot changes and we're showing widget ids, always repaint
             if env.get(Env::DEBUG_WIDGET_ID) {
@@ -594,7 +594,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let size_event = LifeCycle::Size(new_size);
 
             // We add a span so that inner logs are marked as being in a lifecycle pass
-            let _span = info_span!("lifecycle");
+            let _span = trace_span!("lifecycle");
             let _span = _span.enter();
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
         }

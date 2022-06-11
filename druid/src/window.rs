@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::mem;
-use tracing::{error, info, info_span};
+use tracing::{error, info, trace_span};
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
@@ -285,7 +285,7 @@ impl<T: Data> Window<T> {
             };
 
             {
-                let _span = info_span!("event");
+                let _span = trace_span!("event");
                 let _span = _span.enter();
                 self.root.event(&mut ctx, &event, data, env);
             }
@@ -350,7 +350,7 @@ impl<T: Data> Window<T> {
         };
 
         {
-            let _span = info_span!("lifecycle");
+            let _span = trace_span!("lifecycle");
             let _span = _span.enter();
             self.root.lifecycle(&mut ctx, event, data, env);
         }
@@ -379,7 +379,7 @@ impl<T: Data> Window<T> {
         };
 
         {
-            let _span = info_span!("update");
+            let _span = trace_span!("update");
             let _span = _span.enter();
             self.root.update(&mut update_ctx, data, env);
         }
@@ -475,7 +475,7 @@ impl<T: Data> Window<T> {
         };
 
         let content_size = {
-            let _span = info_span!("layout");
+            let _span = trace_span!("layout");
             let _span = _span.enter();
             self.root.layout(&mut layout_ctx, &bc, data, env)
         };
@@ -534,7 +534,7 @@ impl<T: Data> Window<T> {
         };
 
         let root = &mut self.root;
-        info_span!("paint").in_scope(|| {
+        trace_span!("paint").in_scope(|| {
             ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
         });
 
