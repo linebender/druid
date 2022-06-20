@@ -369,7 +369,7 @@ impl Shm {
                     self.size = new_size;
                     return Ok(());
                 }
-                Err(e) if matches!(e.as_errno(), Some(Errno::EINTR)) => {
+                Err(Errno::EINTR) => {
                     // continue (try again)
                 }
                 Err(e) => {

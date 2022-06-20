@@ -689,17 +689,8 @@ fn wait_for_event_with_deadline(
         // Wait for the socket to be readable via poll() and try again
         match poll(&mut poll_fds, poll_timeout) {
             Ok(_) => {}
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
-            Err(e) => return Err(nix_error_to_io(e).into()),
+            Err(nix::errno::Errno::EINTR) => {}
+            Err(e) => return Err(std::io::Error::from(e).into()),
         }
-    }
-}
-
-fn nix_error_to_io(e: nix::Error) -> std::io::Error {
-    use std::io::{Error, ErrorKind};
-    match e {
-        nix::Error::Sys(errno) => errno.into(),
-        nix::Error::InvalidPath | nix::Error::InvalidUtf8 => Error::new(ErrorKind::InvalidInput, e),
-        nix::Error::UnsupportedOperation => std::io::Error::new(ErrorKind::Other, e),
     }
 }

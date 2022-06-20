@@ -846,10 +846,10 @@ fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
     let mut read_buf = [0u8; 16];
     loop {
         match nix::unistd::read(idle_read, &mut read_buf[..]) {
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            Err(nix::errno::Errno::EINTR) => {}
             // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
             // pipe.
-            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+            Err(nix::errno::Errno::EAGAIN) => {
                 break;
             }
             Err(e) => {
@@ -944,7 +944,7 @@ fn poll_with_timeout(
                 }
             }
 
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {
+            Err(nix::errno::Errno::EINTR) => {
                 now = Instant::now();
             }
             Err(e) => return Err(e.into()),

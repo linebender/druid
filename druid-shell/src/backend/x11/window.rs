@@ -1544,8 +1544,8 @@ impl IdleHandle {
     fn wake(&self) {
         loop {
             match nix::unistd::write(self.pipe, &[0]) {
-                Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
-                Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {}
+                Err(nix::errno::Errno::EINTR) => {}
+                Err(nix::errno::Errno::EAGAIN) => {}
                 Err(e) => {
                     error!("Failed to write to idle pipe: {}", e);
                     break;
