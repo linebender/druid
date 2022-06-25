@@ -297,7 +297,7 @@ impl<T: Data> Window<T> {
                     info!("{}: {:?}", i, n);
                 }
                 info!(
-                    "if this was intended use EventCtx::submit_notification_unknown_target instead"
+                    "if this was intended use EventCtx::submit_notification_without_warning instead"
                 );
             }
             Handled::from(ctx.is_handled)
