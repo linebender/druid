@@ -43,7 +43,6 @@ use gtk::gdk::{
 use instant::Duration;
 use tracing::{error, warn};
 
-#[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
@@ -121,7 +120,6 @@ impl PartialEq for WindowHandle {
 }
 impl Eq for WindowHandle {}
 
-#[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         error!("HasRawWindowHandle trait not implemented for gtk.");

@@ -17,12 +17,12 @@
 mod accels;
 pub mod application;
 pub mod clipboard;
-pub mod dcomp;
+// pub mod dcomp;
 pub mod dialog;
 pub mod error;
 mod keyboard;
 pub mod menu;
-pub mod paint;
+// pub mod paint;
 pub mod screen;
 mod timers;
 pub mod util;

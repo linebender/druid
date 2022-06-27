@@ -30,7 +30,6 @@ use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 
-#[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// A token that uniquely identifies a running timer.
@@ -413,7 +412,6 @@ impl WindowHandle {
     }
 }
 
-#[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         self.0.raw_window_handle()

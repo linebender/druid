@@ -31,9 +31,6 @@ wayland = ["druid-shell/wayland"]
 crochet = []
 serde = ["im/serde", "druid-shell/serde"]
 
-# Implement HasRawWindowHandle for WindowHandle
-raw-win-handle = ["druid-shell/raw-win-handle"]
-
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
 png = ["druid-shell/image_png"]

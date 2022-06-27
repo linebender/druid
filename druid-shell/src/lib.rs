@@ -48,7 +48,6 @@ pub use image;
 pub use kurbo;
 
 // Reexport the version of `raw_window_handle` we are using.
-#[cfg(feature = "raw-win-handle")]
 pub use raw_window_handle;
 
 #[macro_use]

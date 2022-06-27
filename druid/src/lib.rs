@@ -198,7 +198,6 @@ pub use shell::{
     WindowHandle, WindowLevel, WindowState,
 };
 
-#[cfg(feature = "raw-win-handle")]
 pub use crate::shell::raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 pub use crate::core::{WidgetPod, WidgetState};

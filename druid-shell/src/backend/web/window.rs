@@ -24,7 +24,6 @@ use tracing::{error, warn};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-#[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
@@ -90,7 +89,6 @@ impl PartialEq for WindowHandle {
 }
 impl Eq for WindowHandle {}
 
-#[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         error!("HasRawWindowHandle trait not implemented for wasm.");

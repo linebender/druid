@@ -46,20 +46,16 @@ use winapi::um::winuser::*;
 use winapi::Interface;
 use wio::com::ComPtr;
 
-#[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{windows::WindowsHandle, HasRawWindowHandle, RawWindowHandle};
-
+use raw_window_handle::{Win32Handle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
 use super::accels::register_accel;
 use super::application::Application;
-use super::dcomp::D3D11Device;
 use super::dialog::get_file_dialog_path;
 use super::error::Error;
 use super::keyboard::{self, KeyboardState};
 use super::menu::Menu;
-use super::paint;
 use super::timers::TimerSlots;
 use super::util::{self, as_result, FromWide, ToWide, OPTIONAL_FUNCTIONS};
 
@@ -176,23 +172,17 @@ impl PartialEq for WindowHandle {
 }
 impl Eq for WindowHandle {}
 
-#[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
+        let mut handle = Win32Handle::empty();
         if let Some(hwnd) = self.get_hwnd() {
-            let handle = WindowsHandle {
-                hwnd: hwnd as *mut core::ffi::c_void,
-                hinstance: unsafe {
-                    winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
-                        as *mut core::ffi::c_void
-                },
-                ..WindowsHandle::empty()
+            handle.hwnd = hwnd as *mut core::ffi::c_void;
+            handle.hinstance = unsafe {
+                winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
+                as *mut core::ffi::c_void
             };
-            RawWindowHandle::Windows(handle)
-        } else {
-            error!("Cannot retrieved HWND for window.");
-            RawWindowHandle::Windows(WindowsHandle::empty())
         }
+        RawWindowHandle::Win32(handle)
     }
 }
 

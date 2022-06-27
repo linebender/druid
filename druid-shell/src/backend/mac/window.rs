@@ -39,7 +39,6 @@ use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
 use tracing::{debug, error, info};
 
-#[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
@@ -1384,7 +1383,6 @@ impl WindowHandle {
     }
 }
 
-#[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         let nsv = self.nsview.load();
