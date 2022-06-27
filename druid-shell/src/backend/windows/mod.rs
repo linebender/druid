@@ -46,39 +46,10 @@ pub mod window;
 // Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.
 // Go back up for particular needs.
 
-use piet_common::d2d::DeviceContext;
 use std::fmt::{Debug, Display, Formatter};
 use winapi::shared::winerror::HRESULT;
 use winapi::um::d2d1::ID2D1RenderTarget;
 use wio::com::ComPtr;
-
-#[derive(Clone)]
-pub struct DxgiSurfaceRenderTarget {
-    ptr: ComPtr<ID2D1RenderTarget>,
-}
-
-impl DxgiSurfaceRenderTarget {
-    /// construct from raw ptr
-    ///
-    /// # Safety
-    /// TODO
-    pub unsafe fn from_raw(raw: *mut ID2D1RenderTarget) -> Self {
-        DxgiSurfaceRenderTarget {
-            ptr: ComPtr::from_raw(raw),
-        }
-    }
-
-    /// cast to DeviceContext
-    ///
-    /// # Safety
-    /// TODO
-    pub unsafe fn as_device_context(&self) -> Option<DeviceContext> {
-        self.ptr
-            .cast()
-            .ok()
-            .map(|com_ptr| DeviceContext::new(com_ptr))
-    }
-}
 
 // error handling
 pub enum Error {
