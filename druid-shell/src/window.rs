@@ -29,7 +29,7 @@ use crate::mouse::{Cursor, CursorDesc, MouseEvent};
 use crate::region::Region;
 use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
-use piet_common::PietText;
+
 #[cfg(feature = "raw-win-handle")]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
@@ -311,11 +311,6 @@ impl WindowHandle {
         self.0.set_menu(menu.into_inner())
     }
 
-    /// Get access to a type that can perform text layout.
-    pub fn text(&self) -> PietText {
-        self.0.text()
-    }
-
     /// Register a new text input receiver for this window.
     ///
     /// This method should be called any time a new editable text field is
@@ -557,7 +552,7 @@ pub trait WinHandler {
     /// Request the handler to paint the window contents.  `invalid` is the region in [display
     /// points](crate::Scale) that needs to be repainted; painting outside the invalid region will
     /// have no effect.
-    fn paint(&mut self, piet: &mut piet_common::Piet, invalid: &Region);
+    fn paint(&mut self, invalid: &Region);
 
     /// Called when the resources need to be rebuilt.
     ///

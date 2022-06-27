@@ -43,7 +43,6 @@ use tracing::{debug, error, info};
 use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
-use crate::piet::{Piet, PietText, RenderContext};
 
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
@@ -175,7 +174,6 @@ struct ViewState {
     // Tracks whether we have already received the mouseExited event
     mouse_left: bool,
     keyboard_state: KeyboardState,
-    text: PietText,
     active_text_input: Option<TextFieldToken>,
     parent: Option<crate::WindowHandle>,
 }
@@ -556,7 +554,6 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
             focus_click: false,
             mouse_left: true,
             keyboard_state,
-            text: PietText::new_with_unique_state(),
             active_text_input: None,
             parent: None,
         };
@@ -848,13 +845,6 @@ extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
-        let context: id = msg_send![class![NSGraphicsContext], currentContext];
-        //FIXME: when core_graphics is at 0.20, we should be able to use
-        //core_graphics::sys::CGContextRef as our pointer type.
-        let cgcontext_ptr: *mut <CGContextRef as ForeignTypeRef>::CType =
-            msg_send![context, CGContext];
-        let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
-
         // FIXME: use the actual invalid region instead of just this bounding box.
         // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
         let rect = Rect::from_origin_size(
@@ -865,12 +855,8 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
 
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
 
-        (*view_state).handler.paint(&mut piet_ctx, &invalid);
-        if let Err(e) = piet_ctx.finish() {
-            error!("{}", e)
-        }
+        (*view_state).handler.paint(&invalid);
 
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), drawRect: dirtyRect];
@@ -1104,19 +1090,6 @@ impl WindowHandle {
             let () = msg_send![runloop, addTimer: timer forMode: NSRunLoopCommonModes];
         }
         token
-    }
-
-    pub fn text(&self) -> PietText {
-        let view = self.nsview.load();
-        unsafe {
-            if let Some(view) = (*view).as_ref() {
-                let state: *mut c_void = *view.get_ivar("viewState");
-                (*(state as *mut ViewState)).text.clone()
-            } else {
-                // this codepath should only happen during tests in druid, when view is nil
-                PietText::new_with_unique_state()
-            }
-        }
     }
 
     pub fn add_text_field(&self) -> TextFieldToken {

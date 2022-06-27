@@ -217,11 +217,13 @@ pub extern "C" fn character_index_for_point(
     _: Sel,
     point: NSPoint,
 ) -> NSUInteger {
-    with_edit_lock_from_window(this, true, |edit_lock| {
-        let hit_test = edit_lock.hit_test_point(Point::new(point.x, point.y));
-        hit_test.idx as NSUInteger
-    })
-    .unwrap_or(0)
+    // TODO: figure out how to do text hit testing without piet
+    // with_edit_lock_from_window(this, true, |edit_lock| {
+    //     let hit_test = edit_lock.hit_test_point(Point::new(point.x, point.y));
+    //     hit_test.idx as NSUInteger
+    // })
+    // .unwrap_or(0)
+    0
 }
 
 pub extern "C" fn first_rect_for_character_range(

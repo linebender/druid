@@ -103,7 +103,6 @@
 
 use crate::keyboard::{KbKey, KeyEvent};
 use crate::kurbo::{Point, Rect};
-use crate::piet::HitTestPoint;
 use crate::window::{TextFieldToken, WinHandler};
 use std::borrow::Cow;
 use std::ops::Range;
@@ -419,7 +418,7 @@ pub trait InputHandler {
     fn replace_range(&mut self, range: Range<usize>, text: &str);
 
     /// Given a `Point`, determine the corresponding text position.
-    fn hit_test_point(&self, point: Point) -> HitTestPoint;
+    // fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
     /// Returns the range, in UTF-8 code units, of the line (soft- or hard-wrapped)
     /// containing the byte specified by `index`.

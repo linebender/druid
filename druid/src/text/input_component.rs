@@ -877,14 +877,14 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
         self.inner.borrow_mut().external_text_change = Some(self.text.clone());
     }
 
-    fn hit_test_point(&self, point: Point) -> crate::piet::HitTestPoint {
-        self.inner
-            .borrow()
-            .layout
-            .layout()
-            .map(|layout| layout.hit_test_point(point))
-            .unwrap_or_default()
-    }
+    // fn hit_test_point(&self, point: Point) -> crate::piet::HitTestPoint {
+    //     self.inner
+    //         .borrow()
+    //         .layout
+    //         .layout()
+    //         .map(|layout| layout.hit_test_point(point))
+    //         .unwrap_or_default()
+    // }
 
     fn line_range(&self, index: usize, _affinity: druid_shell::text::Affinity) -> Range<usize> {
         let inner = self.inner.borrow();

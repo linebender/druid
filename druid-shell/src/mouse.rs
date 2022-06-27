@@ -16,7 +16,6 @@
 
 use crate::backend;
 use crate::kurbo::{Point, Vec2};
-use crate::piet::ImageBuf;
 use crate::Modifiers;
 
 /// Information about the mouse event.
@@ -270,8 +269,8 @@ pub enum Cursor {
 /// A platform-independent description of a custom cursor.
 #[derive(Clone)]
 pub struct CursorDesc {
-    #[allow(dead_code)] // Not yet used on all platforms.
-    pub(crate) image: ImageBuf,
+    // #[allow(dead_code)] // Not yet used on all platforms.
+    // pub(crate) image: ImageBuf,
     #[allow(dead_code)] // Not yet used on all platforms.
     pub(crate) hot: Point,
 }
@@ -283,9 +282,8 @@ impl CursorDesc {
     /// `(0, 0)` at the top left. The hot spot is the logical position of the mouse cursor within
     /// the image. For example, if the image is a picture of a arrow, the hot spot might be the
     /// coordinates of the arrow's tip.
-    pub fn new(image: ImageBuf, hot: impl Into<Point>) -> CursorDesc {
+    pub fn new(hot: impl Into<Point>) -> CursorDesc {
         CursorDesc {
-            image,
             hot: hot.into(),
         }
     }
