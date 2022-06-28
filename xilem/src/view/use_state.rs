@@ -103,3 +103,90 @@ where
         a
     }
 }
+
+
+/// Another implementation of the "use_state" pattern familiar in reactive UI.
+///
+/// In this version, the parent app data
+/// is `T`, and the child is `S` where S is the local state.
+///
+/// The first callback creates the initial state (it is called on build but
+/// not rebuild). The second callback updates both local and app state
+/// after event processing. The third callback takes local state as an argument.
+pub struct UseState2<T, A, S, V, FInit, FUpdate, F> {
+    f_init: FInit,
+    f_update: FUpdate,
+    f: F,
+    phantom: PhantomData<fn() -> (T, A, S, V)>,
+}
+
+pub struct UseStateState2<A, S, V: View<S, A>> {
+    state: Option<S>,
+    view: V,
+    view_state: V::State,
+}
+
+impl<T, A, S, V, FInit: Fn() -> S, FUpdate: Fn(&mut S, &mut T), F: Fn(&mut S) -> V> UseState2<T, A, S, V, FInit, FUpdate, F> {
+    #[allow(unused)]
+    pub fn new(f_init: FInit, f_update: FUpdate, f: F) -> Self {
+        let phantom = Default::default();
+        UseState2 { f_init, f_update, f, phantom }
+    }
+}
+
+impl<T, A, S, V: View<S, A>, FInit: Fn() -> S, FUpdate: Fn(&mut S, &mut T), F: Fn(&mut S) -> V> View<T, A>
+    for UseState2<T, A, S, V, FInit, FUpdate, F>
+where
+    S: Send,
+    FInit: Send,
+    FUpdate: Send,
+    F: Send,
+{
+    type State = UseStateState2<A, S, V>;
+
+    type Element = V::Element;
+
+    fn build(&self, cx: &mut Cx) -> (Id, Self::State, Self::Element) {
+        let mut state = (self.f_init)();
+        let view = (self.f)(&mut state);
+        let (id, view_state, element) = view.build(cx);
+        let my_state = UseStateState2 {
+            state: Some(state),
+            view,
+            view_state,
+        };
+        (id, my_state, element)
+    }
+
+    fn rebuild(
+        &self,
+        cx: &mut Cx,
+        _prev: &Self,
+        id: &mut Id,
+        state: &mut Self::State,
+        element: &mut Self::Element,
+    ) -> bool {
+        let view = (self.f)(state.state.as_mut().unwrap());
+        let changed = view.rebuild(cx, &state.view, id, &mut state.view_state, element);
+        state.view = view;
+        changed
+    }
+
+    fn event(
+        &self,
+        id_path: &[Id],
+        state: &mut Self::State,
+        event: Box<dyn Any>,
+        app_state: &mut T,
+    ) -> EventResult<A> {
+        let mut local_state = state.state.take().unwrap();
+        let a = state
+            .view
+            .event(id_path, &mut state.view_state, event, &mut local_state);
+
+        (self.f_update)(&mut local_state, app_state);
+        
+        state.state = Some(local_state);
+        a
+    }
+}
