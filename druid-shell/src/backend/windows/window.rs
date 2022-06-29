@@ -42,6 +42,7 @@ use winapi::um::unknwnbase::*;
 use winapi::um::uxtheme::*;
 use winapi::um::wingdi::*;
 use winapi::um::winnt::*;
+use winapi::um::winreg::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
 use winapi::um::winuser::*;
 use winapi::Interface;
 use wio::com::ComPtr;
@@ -1519,7 +1520,7 @@ impl WindowBuilder {
             // Dark mode support
             // https://docs.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes
             const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
-            let value: BOOL = 1;
+            let value: BOOL = if should_use_light_theme() { 0 } else { 1 };
             let value_ptr = &value as *const _ as *const c_void;
             DwmSetWindowAttribute(
                 hwnd,
@@ -1550,6 +1551,33 @@ impl WindowBuilder {
                 Point::new(0., 0.)
             }
         }
+    }
+}
+
+/// Attempt to read the registry and see if the system is set to a dark or
+/// light theme.
+pub fn should_use_light_theme() -> bool {
+    let mut data: [u8; 4] = [0; 4];
+    let mut cb_data: u32 = data.len() as u32;
+    let res = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            r#"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"#
+                .to_wide()
+                .as_ptr(),
+            "AppsUseLightTheme".to_wide().as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            data.as_mut_ptr() as _,
+            &mut cb_data as *mut _,
+        )
+    };
+
+    // ERROR_SUCCESS
+    if res == 0 {
+        i32::from_le_bytes(data) == 1
+    } else {
+        true // Default to light theme.
     }
 }
 
