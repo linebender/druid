@@ -20,9 +20,7 @@ use std::ffi::OsString;
 
 use cocoa::appkit::NSView;
 use cocoa::base::{id, nil, NO, YES};
-use cocoa::foundation::{
-    NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSURL,
-};
+use cocoa::foundation::{NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSURL};
 use objc::{class, msg_send, sel, sel_impl};
 
 use super::util::{from_nsstring, make_nsstring};
@@ -222,9 +220,7 @@ unsafe fn file_format_popup_button(allowed_types: &[crate::FileSpec], popup_fram
     let popup_button: id = msg_send![class!(NSPopUpButton), alloc];
     let _: () = msg_send![popup_button, initWithFrame:popup_frame pullsDown:false];
     for allowed_type in allowed_types {
-        let title = NSString::alloc(nil)
-            .init_str(allowed_type.name)
-            .autorelease();
+        let title = make_nsstring(allowed_type.name);
         msg_send![popup_button, addItemWithTitle: title]
     }
     let _: () = msg_send![popup_button, setTag: FileFormatPopoverTag];
@@ -237,7 +233,7 @@ unsafe fn file_format_label() -> (id, NSSize) {
     let _: () = msg_send![label, setDrawsBackground:false];
     // FIXME: As we have to roll our own view hierachy, we're not getting a translated
     // title here. So we ought to find a way to translate this.
-    let title = NSString::alloc(nil).init_str("File Format:").autorelease();
+    let title = make_nsstring("File Format:");
     let _: () = msg_send![label, setStringValue: title];
     let _: () = msg_send![label, sizeToFit];
     (label.autorelease(), label.frame().size)
@@ -275,5 +271,5 @@ unsafe fn rewritten_path(
         path,
         stringByAppendingPathExtension: make_nsstring(extension)
     ];
-    (path.autorelease(), Some(file_spec))
+    (path, Some(file_spec))
 }
