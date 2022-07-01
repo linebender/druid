@@ -333,7 +333,7 @@ impl Pointer {
                             ))
                         }
                         ButtonState::Released => {
-                            let mut updated = self.buttons.borrow_mut().remove(button);
+                            self.buttons.borrow_mut().remove(button);
                             self.clickevent.borrow_mut().debounce(MouseEvtKind::Up(
                                 mouse::MouseEvent {
                                     pos: self.pos.get(),
