@@ -15,6 +15,7 @@
 //! Safe wrapper for menus.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::mem;
 use std::ptr::null;
 
@@ -219,6 +220,7 @@ fn format_hotkey(key: &HotKey, s: &mut String) {
         KbKey::ArrowRight => s.push_str("Right"),
         KbKey::ArrowUp => s.push_str("Up"),
         KbKey::ArrowDown => s.push_str("Down"),
-        _ => s.push_str(&format!("{:?}", key.key)),
+        _ => write!(s, "{}", key.key)
+            .unwrap_or_else(|err| tracing::warn!("Failed to convert hotkey to string: {}", err)),
     }
 }
