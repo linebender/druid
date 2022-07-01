@@ -76,11 +76,11 @@ const SCALE_TARGET_DPI: f64 = 96.0;
 /// Taken from <https://gtk-rs.org/docs-src/tutorial/closures>
 /// It is used to reduce the boilerplate of setting up gtk callbacks
 /// Example:
-/// ```
+/// ```ignore
 /// button.connect_clicked(clone!(handle => move |_| { ... }))
 /// ```
 /// is equivalent to:
-/// ```
+/// ```ignore
 /// {
 ///     let handle = handle.clone();
 ///     button.connect_clicked(move |_| { ... })
