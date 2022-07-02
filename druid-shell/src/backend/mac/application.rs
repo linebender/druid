@@ -156,6 +156,7 @@ impl DelegateState {
 
 struct AppDelegate(*const Class);
 unsafe impl Sync for AppDelegate {}
+unsafe impl Send for AppDelegate {}
 
 lazy_static! {
     static ref APP_DELEGATE: AppDelegate = unsafe {

@@ -335,6 +335,7 @@ impl WindowBuilder {
 // Wrap pointer because lazy_static requires Sync.
 struct ViewClass(*const Class);
 unsafe impl Sync for ViewClass {}
+unsafe impl Send for ViewClass {}
 
 lazy_static! {
     static ref VIEW_CLASS: ViewClass = unsafe {
@@ -583,6 +584,7 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
 
 struct WindowClass(*const Class);
 unsafe impl Sync for WindowClass {}
+unsafe impl Send for WindowClass {}
 
 lazy_static! {
     static ref WINDOW_CLASS: WindowClass = unsafe {
