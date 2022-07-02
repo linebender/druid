@@ -225,3 +225,57 @@ impl<T: std::fmt::Display> Default for ParseFormatter<T> {
         ParseFormatter::new()
     }
 }
+
+/// A naive [`Formatter`] for optional types that implement [`FromStr`].
+///
+/// Maps empty strings to None
+/// Some types that impl [`FromStr`], such as integer values, do not allow empty strings as valid values.
+/// In these cases, a user cannot remove all text from the text box.
+/// To allow users to remove all text, an option can be used to account for empty strings.
+///
+/// [`Formatter`]: Formatter
+/// [`FromStr`]: std::str::FromStr
+/// ```
+/// use druid::text::OptionFormatter;
+/// use druid::{Data, Lens, Widget, WidgetExt};
+/// use druid::widget::TextBox;
+/// #[derive(Data, Clone, Lens)]
+/// struct State {
+///     float: Option<f64>
+/// }
+///
+/// fn optional_float_text_box() -> impl Widget<State> {
+///     TextBox::new().with_formatter(OptionFormatter).lens(State::float)
+/// }
+/// ```
+pub struct OptionFormatter;
+
+impl<T> Formatter<Option<T>> for OptionFormatter
+where
+    T: std::fmt::Display + FromStr,
+    <T as FromStr>::Err: std::error::Error + 'static,
+{
+    fn format(&self, value: &Option<T>) -> String {
+        match value {
+            None => String::new(),
+            Some(value) => value.to_string(),
+        }
+    }
+
+    fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
+        if input.is_empty() {
+            return Validation::success();
+        }
+        match input.parse::<T>() {
+            Ok(_) => Validation::success(),
+            Err(e) => Validation::failure(e),
+        }
+    }
+
+    fn value(&self, input: &str) -> Result<Option<T>, ValidationError> {
+        if input.is_empty() {
+            return Ok(None);
+        }
+        Some(input.parse::<T>().map_err(ValidationError::new)).transpose()
+    }
+}

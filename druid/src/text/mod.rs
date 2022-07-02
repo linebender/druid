@@ -43,7 +43,9 @@ pub use self::attribute::{Attribute, AttributeSpans, Link};
 pub use self::backspace::offset_for_delete_backwards;
 pub use self::editable_text::{EditableText, EditableTextCursor, StringCursor};
 pub use self::font_descriptor::FontDescriptor;
-pub use self::format_priv::{Formatter, ParseFormatter, Validation, ValidationError};
+pub use self::format_priv::{
+    Formatter, OptionFormatter, ParseFormatter, Validation, ValidationError,
+};
 pub use self::layout::{LayoutMetrics, TextLayout};
 pub use self::movement::movement;
 pub use input_component::{EditSession, TextComponent};
