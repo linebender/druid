@@ -168,7 +168,7 @@ impl<T: Data> MenuManager<T> {
     #[allow(unreachable_code)]
     pub fn platform_default() -> Option<MenuManager<T>> {
         #[cfg(target_os = "macos")]
-        return Some(MenuManager::new(|_, _, _| sys::mac::application::default()));
+        return Some(MenuManager::new(|_, _, _| sys::mac::menu_bar()));
 
         #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
         return None;
