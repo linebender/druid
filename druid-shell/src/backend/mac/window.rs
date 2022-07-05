@@ -40,7 +40,7 @@ use objc::{class, msg_send, sel, sel_impl};
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{AppKitHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -1417,11 +1417,9 @@ impl WindowHandle {
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         let nsv = self.nsview.load();
-        let handle = MacOSHandle {
-            ns_view: *nsv as *mut _,
-            ..MacOSHandle::empty()
-        };
-        RawWindowHandle::MacOS(handle)
+        let mut handle = AppKitHandle::empty();
+        handle.ns_view = *nsv as *mut _;
+        RawWindowHandle::AppKit(handle)
     }
 }
 
