@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Demonstrates how to debug invalidation regions, and also shows the
-//! invalidation behavior of several build-in widgets.
+//! invalidation behavior of several built-in widgets.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]

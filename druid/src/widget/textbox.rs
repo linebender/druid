@@ -258,7 +258,7 @@ impl<T> TextBox<T> {
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         if !self.text().can_write() {
-            tracing::warn!("set_text_color calld with IME lock held.");
+            tracing::warn!("set_text_color called with IME lock held.");
             return;
         }
         self.text_mut().borrow_mut().layout.set_text_color(color);

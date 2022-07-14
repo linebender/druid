@@ -165,7 +165,7 @@ pub(crate) unsafe fn build_panel(ty: FileDialogType, mut options: FileDialogOpti
 
 // AppKit has a built-in file format accessory view. However, this is only
 // displayed for `NSDocument` based apps. We have to construct our own `NSView`
-// hierachy to implement something similar.
+// hierarchy to implement something similar.
 unsafe fn allowed_types_accessory_view(allowed_types: &[crate::FileSpec]) -> id {
     // Build the View Structure required to have file format popup.
     // This requires a container view, a label, a popup button,
@@ -231,7 +231,7 @@ unsafe fn file_format_label() -> (id, NSSize) {
     let label: id = msg_send![class!(NSTextField), new];
     let _: () = msg_send![label, setBezeled:false];
     let _: () = msg_send![label, setDrawsBackground:false];
-    // FIXME: As we have to roll our own view hierachy, we're not getting a translated
+    // FIXME: As we have to roll our own view hierarchy, we're not getting a translated
     // title here. So we ought to find a way to translate this.
     let title = make_nsstring("File Format:");
     let _: () = msg_send![label, setStringValue: title];

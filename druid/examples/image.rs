@@ -57,7 +57,7 @@ struct AppState {
     clip_height: f64,
 }
 
-/// builds a child Flex widget from some paramaters.
+/// builds a child Flex widget from some parameters.
 struct Rebuilder {
     inner: Box<dyn Widget<AppState>>,
 }

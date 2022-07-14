@@ -20,7 +20,7 @@ pub trait Lens<T, U> {
 
 I've copied this definition from the `druid` source code, but then simplified it a little, by removing the return types, as they are not fundamental to the way lenses work.
 
-The first thing to notice is the generics on the `Lens` itself. There are 3 types involve in the lens: the lens itself, `T` and `U`. The two type parameters represent the mis-match that lenses solve: we have a function that operates on `U`, and an object of type `T`, so we need to transform `T` into `U` somehow.
+The first thing to notice is the generics on the `Lens` itself. There are 3 types involve in the lens: the lens itself, `T` and `U`. The two type parameters represent the mismatch that lenses solve: we have a function that operates on `U`, and an object of type `T`, so we need to transform `T` into `U` somehow.
 
 ### Implementation
 
@@ -170,7 +170,7 @@ struct Container {
 }
 ```
 
-Let's look at the code that get's generated (I captured this using `cargo-expand`, then removed some unimportant bits).
+Let's look at the code that gets generated (I captured this using `cargo-expand`, then removed some unimportant bits).
 
 ```rust
 pub mod container_derived_lenses {
@@ -197,7 +197,7 @@ The macro has created a new module with a long name, put a struct in it that bre
 
 ### Composing lenses
 
-If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be suprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a `String`. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like `f(&outer.inner.text)`, but actually we don't need to do this: we can use the `then` combinator. The full example is below
+If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be surprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a `String`. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like `f(&outer.inner.text)`, but actually we don't need to do this: we can use the `then` combinator. The full example is below
 
 ```rust
 #[derive(Lens)]

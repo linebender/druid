@@ -23,7 +23,7 @@ use crate::Data;
 /// A trait for types that create, interpret, and validate textual representations
 /// of values.
 ///
-/// A formatter has two responsiblities: converting a value into an appropriate
+/// A formatter has two responsibilities: converting a value into an appropriate
 /// string representation, and attempting to convert a string back into the
 /// appropriate value.
 ///
@@ -119,7 +119,7 @@ pub struct ParseFormatter<T> {
 }
 
 impl Validation {
-    /// Create a `Validation` indicating succes.
+    /// Create a `Validation` indicating success.
     pub fn success() -> Self {
         Validation {
             result: Ok(()),

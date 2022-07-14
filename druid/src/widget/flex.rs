@@ -154,7 +154,7 @@ pub struct Flex<T> {
 /// child and the desired flex factor as a `f64`, which has an impl of
 /// `Into<FlexParams>`.
 ///
-/// If you need to set additional paramaters, such as a custom [`CrossAxisAlignment`],
+/// If you need to set additional parameters, such as a custom [`CrossAxisAlignment`],
 /// you can construct `FlexParams` directly. By default, the child has the
 /// same `CrossAxisAlignment` as the container.
 ///
@@ -451,7 +451,7 @@ impl<T: Data> Flex<T> {
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
-    /// For the non-builder varient, see [`add_flex_child`].
+    /// For the non-builder variant, see [`add_flex_child`].
     ///
     /// # Examples
     ///
@@ -545,7 +545,7 @@ impl<T: Data> Flex<T> {
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
-    /// For the builder-style varient, see [`with_flex_child`].
+    /// For the builder-style variant, see [`with_flex_child`].
     ///
     /// # Examples
     ///

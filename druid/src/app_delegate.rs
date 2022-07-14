@@ -108,7 +108,7 @@ pub trait AppDelegate<T: Data> {
     /// If your implementation returns `Handled::No`, the command will be sent down
     /// the widget tree. Otherwise it will not.
     ///
-    /// To do anything fancier than this, you can submit arbitary commands
+    /// To do anything fancier than this, you can submit arbitrary commands
     /// via [`DelegateCtx::submit_command`].
     ///
     /// [`Target`]: enum.Target.html

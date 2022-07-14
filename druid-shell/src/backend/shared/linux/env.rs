@@ -23,7 +23,7 @@ pub fn locale() -> String {
     // from gettext manual
     // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
     let mut locale = locale_env_var("LANGUAGE")
-        // the LANGUAGE value is priority list seperated by :
+        // the LANGUAGE value is priority list separated by :
         // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
         .and_then(|locale| locale.split(':').next().map(String::from))
         .or_else(|| locale_env_var("LC_ALL"))

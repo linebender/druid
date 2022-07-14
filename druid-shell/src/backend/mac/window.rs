@@ -807,7 +807,7 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
     };
     if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
         if !(*view_state).handler.key_down(event) {
-            // key down not handled; foward to text input system
+            // key down not handled; forward to text input system
             unsafe {
                 let events = NSArray::arrayWithObjects(nil, &[nsevent]);
                 let _: () = msg_send![*(*view_state).nsview.load(), interpretKeyEvents: events];
