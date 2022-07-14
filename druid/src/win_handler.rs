@@ -257,7 +257,7 @@ impl<T: Data> InnerAppState<T> {
 
     /// Called after this window has been closed by the platform.
     ///
-    /// We clean up resources and notifiy the delegate, if necessary.
+    /// We clean up resources and notify the delegate, if necessary.
     fn remove_window(&mut self, window_id: WindowId) {
         self.with_delegate(|del, data, env, ctx| del.window_removed(window_id, data, env, ctx));
         // when closing the last window:

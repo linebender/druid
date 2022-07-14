@@ -91,7 +91,7 @@ impl EventSource for WaylandSource {
         loop {
             // 1. read events from the socket if any are available
             if let Some(guard) = self.queue.borrow().prepare_read() {
-                // might be None if some other thread read events before us, concurently
+                // might be None if some other thread read events before us, concurrently
                 if let Err(e) = guard.read_events() {
                     if e.kind() != io::ErrorKind::WouldBlock {
                         return Err(e);

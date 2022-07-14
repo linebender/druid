@@ -135,7 +135,7 @@ impl ResourceManager {
                 if (res_id, locale) == ("builtin.ftl", "en-US") {
                     FALLBACK_STRINGS.to_string()
                 } else {
-                    error!("missing resouce {}/{}", locale, res_id);
+                    error!("missing resource {}/{}", locale, res_id);
                     String::new()
                 }
             });

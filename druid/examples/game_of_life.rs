@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! This is an example of how you would implement the game of life with druid.
-//! This example doesnt showcase anything specific in druid.
+//! This example doesn't showcase anything specific in druid.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
@@ -313,7 +313,7 @@ impl Widget<AppData> for GameOfLifeWidget {
                     };
                     let rect = Rect::from_origin_size(point, cell_size);
 
-                    // We devide by 2 so that the colour changes every 2 positions instead of every 1
+                    // We divide by 2 so that the colour changes every 2 positions instead of every 1
                     ctx.fill(
                         rect,
                         &COLOURS[((pos.row * GRID_SIZE + pos.col) / 2) % COLOURS.len()],

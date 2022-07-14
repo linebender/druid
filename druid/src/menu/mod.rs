@@ -339,8 +339,8 @@ impl MenuUpdate {
     }
 }
 
-/// This is the trait that enables recursive visiting of all menu entries. It isn't publically
-/// visible (the publically visible analogue of this is `Into<MenuEntry<T>>`).
+/// This is the trait that enables recursive visiting of all menu entries. It isn't publicly
+/// visible (the publicly visible analogue of this is `Into<MenuEntry<T>>`).
 trait MenuVisitor<T> {
     /// Called when a menu item is activated.
     ///

@@ -52,7 +52,7 @@ pub enum PostalCodeValidationError {
     IncorrectFormat,
 }
 
-/// A formatter that sets the selection to the first occurance of the word 'cat'
+/// A formatter that sets the selection to the first occurrence of the word 'cat'
 /// in an input string, if it is found.
 pub struct CatSelectingFormatter;
 

@@ -366,7 +366,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// This is a convenience method to be used from the [`layout`] method
     /// of a `Widget` that manages a child; it allows the parent to correctly
-    /// propogate a child's desired paint rect, if it extends beyond the bounds
+    /// propagate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
     /// [`layout`]: trait.Widget.html#tymethod.layout
@@ -865,7 +865,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
 
-            // we try to handle the notifications that occured below us in the tree
+            // we try to handle the notifications that occurred below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
         }
 
@@ -1118,7 +1118,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::BuildFocusChain => {
                 self.state.update_focus_chain = false;
 
-                // had_focus is the old focus value. state.has_focus was repaced with ctx.is_focused().
+                // had_focus is the old focus value. state.has_focus was replaced with ctx.is_focused().
                 // Therefore if had_focus is true but state.has_focus is false then the widget which is
                 // currently focused is not part of the functional tree anymore
                 // (Lifecycle::BuildFocusChain.should_propagate_to_hidden() is false!) and should

@@ -35,7 +35,7 @@ impl Default for ClickDebouncer {
 }
 
 impl ClickDebouncer {
-    // this threshold was abritrarily chosen based on experimention.
+    // this threshold was arbitrarily chosen based on experimention.
     // there is likely a better default based on research to use.
     // during experimentation this allowed one to get to around 4 clicks.
     // but likely heavily dependent on the machine.
@@ -312,7 +312,7 @@ impl Pointer {
                     let button = match linux_to_mouse_button(button) {
                         // Skip unsupported buttons.
                         None => {
-                            tracing::debug!("unsupport button click {:?}", button);
+                            tracing::debug!("unsupported button click {:?}", button);
                             continue;
                         }
                         Some(b) => b,

@@ -165,7 +165,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Highlights
 
 - Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245])
-- The `Formatter` trait provides more flexible handling of converions between
+- The `Formatter` trait provides more flexible handling of conversions between
 values and their textual representations. ([#1377])
 
 ### Added

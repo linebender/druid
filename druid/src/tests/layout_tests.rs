@@ -111,7 +111,7 @@ fn simple_paint_rect() {
         // paint size is modified by insets
         assert_eq!(state.paint_rect().size(), Size::new(100., 140.,));
 
-        // now does the container widget correctly propogate the child's paint rect?
+        // now does the container widget correctly propagate the child's paint rect?
         let state = harness.get_state(id2);
 
         assert_eq!(state.layout_rect().origin(), Point::ZERO);

@@ -191,17 +191,17 @@ impl Manager {
 
         let mut data = Vec::new();
         let mut io: std::fs::File = unsafe { std::os::unix::io::FromRawFd::from_raw_fd(fdread) };
-        let transfered = match io.read_to_end(&mut data) {
+        let transferred = match io.read_to_end(&mut data) {
             Err(cause) => {
                 tracing::error!("clipboard unable to retrieve pasted content {:?}", cause);
                 return None;
             }
-            Ok(transfered) => transfered,
+            Ok(transferred) => transferred,
         };
 
-        tracing::debug!("transfered {:?} bytes", transfered);
+        tracing::debug!("transferred {:?} bytes", transferred);
 
-        match transfered {
+        match transferred {
             0 => None,
             _ => Some(data),
         }

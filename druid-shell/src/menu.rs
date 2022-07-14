@@ -77,7 +77,7 @@ impl Menu {
         self.0.add_item(id, text, key, enabled, selected)
     }
 
-    /// Add a seperator to the menu.
+    /// Add a separator to the menu.
     pub fn add_separator(&mut self) {
         self.0.add_separator()
     }

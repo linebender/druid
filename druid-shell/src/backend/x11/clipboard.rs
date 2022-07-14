@@ -630,7 +630,7 @@ impl Drop for WindowContainer<'_> {
 
 fn maximum_property_length(connection: &XCBConnection) -> usize {
     let change_property_header_size = 24;
-    // Apply an arbitraty limit to the property size to not stress the server too much
+    // Apply an arbitrary limit to the property size to not stress the server too much
     let max_request_length = connection
         .maximum_request_bytes()
         .min(usize::from(u16::MAX));

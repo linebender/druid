@@ -152,7 +152,7 @@ pub struct FileDialogOptions {
     pub(crate) starting_directory: Option<PathBuf>,
 }
 
-/// A description of a filetype, for specifiying allowed types in a file dialog.
+/// A description of a filetype, for specifying allowed types in a file dialog.
 ///
 /// # Windows
 ///
