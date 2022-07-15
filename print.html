@@ -513,7 +513,7 @@ fn flex_builder() -&gt; Flex&lt;()&gt; {
 <span class="boring">}
 </span></code></pre></pre>
 <p>I've copied this definition from the <code>druid</code> source code, but then simplified it a little, by removing the return types, as they are not fundamental to the way lenses work.</p>
-<p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involve in the lens: the lens itself, <code>T</code> and <code>U</code>. The two type parameters represent the mis-match that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
+<p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involve in the lens: the lens itself, <code>T</code> and <code>U</code>. The two type parameters represent the mismatch that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
 <h3><a class="header" href="#implementation" id="implementation">Implementation</a></h3>
 <p>Time for an example. Let's implement &amp; use <code>Lens</code> manually so we can see what's going on.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -658,7 +658,7 @@ struct Container {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>Let's look at the code that get's generated (I captured this using <code>cargo-expand</code>, then removed some unimportant bits).</p>
+<p>Let's look at the code that gets generated (I captured this using <code>cargo-expand</code>, then removed some unimportant bits).</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -685,7 +685,7 @@ impl Container {
 <p>Side note: Doing this makes using the lenses very simple (you just do <code>StructName::field_name</code>), but it can be a bit confusing, because of breaking the naming conventions. This is the reason I've included the expanded code in the page.</p>
 </blockquote>
 <h3><a class="header" href="#composing-lenses" id="composing-lenses">Composing lenses</a></h3>
-<p>If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be suprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a <code>String</code>. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like <code>f(&amp;outer.inner.text)</code>, but actually we don't need to do this: we can use the <code>then</code> combinator. The full example is below</p>
+<p>If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be surprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a <code>String</code>. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like <code>f(&amp;outer.inner.text)</code>, but actually we don't need to do this: we can use the <code>then</code> combinator. The full example is below</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -907,7 +907,7 @@ with rounded corners, we could use a <code>Painter</code>:</p>
 }
 </code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
-set size, you must pass it explicit contraints, such as by wrapping it in a
+set size, you must pass it explicit constraints, such as by wrapping it in a
 <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)

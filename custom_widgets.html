@@ -188,7 +188,7 @@ with rounded corners, we could use a <code>Painter</code>:</p>
 }
 </code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
-set size, you must pass it explicit contraints, such as by wrapping it in a
+set size, you must pass it explicit constraints, such as by wrapping it in a
 <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
