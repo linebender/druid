@@ -425,8 +425,7 @@ impl WindowBuilder {
         let cnv_attr = |attr| {
             canvas
                 .get_attribute(attr)
-                .map(|value| value.parse().ok())
-                .flatten()
+                .and_then(|value| value.parse().ok())
         };
 
         let canvas_size = match (cnv_attr("width"), cnv_attr("height")) {
