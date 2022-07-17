@@ -624,6 +624,7 @@ impl RawRect {
 impl From<Rect> for RawRect {
     fn from(r: Rect) -> Self {
         let max = i32::MAX as f64;
+        let r = r.expand();
         assert!(r.x0.abs() < max && r.y0.abs() < max && r.x1.abs() < max && r.y1.abs() < max);
         RawRect {
             x0: r.x0 as i32,
