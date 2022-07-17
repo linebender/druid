@@ -191,8 +191,9 @@ impl Pointer {
             Some(b) => b,
         };
 
+        let (hot_x, hot_y) = buffer.hotspot();
         self.current_cursor.replace(cursor);
-        wl_pointer.set_cursor(0, Some(&self.cursor_surface), 0, 0);
+        wl_pointer.set_cursor(0, Some(&self.cursor_surface), hot_x as i32, hot_y as i32);
         self.cursor_surface.attach(Some(&*buffer), 0, 0);
         self.cursor_surface.damage_buffer(0, 0, i32::MAX, i32::MAX);
         self.cursor_surface.commit();
