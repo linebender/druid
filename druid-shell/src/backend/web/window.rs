@@ -171,7 +171,7 @@ impl WindowState {
         let dpr = w.device_pixel_ratio();
 
         match self.canvas_size {
-            Some(Size {width, height}) => (width, height, dpr),
+            Some(Size { width, height }) => (width, height, dpr),
             _ => {
                 let width = w.inner_width().unwrap().as_f64().unwrap();
                 let height = w.inner_height().unwrap().as_f64().unwrap();
@@ -423,14 +423,15 @@ impl WindowBuilder {
             .map_err(|_| Error::JsCast)?;
 
         let cnv_attr = |attr| {
-            canvas.get_attribute(attr)
+            canvas
+                .get_attribute(attr)
                 .map(|value| value.parse().ok())
                 .flatten()
         };
 
         let canvas_size = match (cnv_attr("width"), cnv_attr("height")) {
             (Some(width), Some(height)) => Some(Size::new(width, height)),
-            _ => None
+            _ => None,
         };
 
         let context = canvas
