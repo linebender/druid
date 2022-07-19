@@ -243,14 +243,12 @@ impl WindowHandle {
         None
     }
 
-    pub fn open_file(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        tracing::warn!("unimplemented open_file");
-        None
+    pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.surface.open_file(options)
     }
 
-    pub fn save_as(&mut self, _options: FileDialogOptions) -> Option<FileDialogToken> {
-        tracing::warn!("unimplemented save_as");
-        None
+    pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.surface.save_as(options)
     }
 
     /// Get a handle that can be used to schedule an idle task.

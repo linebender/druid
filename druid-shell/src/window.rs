@@ -86,7 +86,7 @@ impl TextFieldToken {
 //NOTE: this has a From<backend::Handle> impl for construction
 /// A handle that can enqueue tasks on the window loop.
 #[derive(Clone)]
-pub struct IdleHandle(backend::IdleHandle);
+pub struct IdleHandle(pub(crate) backend::IdleHandle);
 
 impl IdleHandle {
     /// Add an idle handler, which is called (once) when the message loop

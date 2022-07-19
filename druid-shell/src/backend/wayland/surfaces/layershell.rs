@@ -4,6 +4,8 @@ use wayland_protocols::xdg_shell::client::xdg_surface;
 
 use crate::kurbo;
 use crate::window;
+use crate::FileDialogOptions;
+use crate::FileDialogToken;
 
 use super::super::error;
 use super::super::outputs;
@@ -367,6 +369,14 @@ impl Handle for Surface {
 
     fn invalidate_rect(&self, rect: kurbo::Rect) {
         return self.inner.wl_surface.borrow().invalidate_rect(rect);
+    }
+
+    fn open_file(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.wl_surface.borrow().open_file(options)
+    }
+
+    fn save_as(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.wl_surface.borrow().save_as(options)
     }
 
     fn remove_text_field(&self, token: crate::TextFieldToken) {

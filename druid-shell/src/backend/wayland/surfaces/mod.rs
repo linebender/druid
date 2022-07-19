@@ -6,9 +6,9 @@ use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
-use crate::kurbo;
 use crate::Scale;
 use crate::TextFieldToken;
+use crate::{kurbo, FileDialogOptions, FileDialogToken};
 
 use super::error;
 use super::outputs;
@@ -63,6 +63,8 @@ pub trait Handle {
     fn request_anim_frame(&self);
     fn invalidate(&self);
     fn invalidate_rect(&self, rect: kurbo::Rect);
+    fn open_file(&self, options: FileDialogOptions) -> Option<FileDialogToken>;
+    fn save_as(&self, options: FileDialogOptions) -> Option<FileDialogToken>;
     fn remove_text_field(&self, token: TextFieldToken);
     fn set_focused_text_field(&self, active_field: Option<TextFieldToken>);
     fn get_idle_handle(&self) -> idle::Handle;

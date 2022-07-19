@@ -5,12 +5,10 @@ use ashpd::{zbus, WindowIdentifier};
 use futures::executor::block_on;
 use tracing::warn;
 
-use crate::{FileDialogOptions, FileDialogToken, FileInfo};
-
-use super::window::IdleHandle;
+use crate::{FileDialogOptions, FileDialogToken, FileInfo, IdleHandle};
 
 pub(crate) fn open_file(
-    window: u32,
+    window: WindowIdentifier,
     idle: IdleHandle,
     options: FileDialogOptions,
 ) -> FileDialogToken {
@@ -18,7 +16,7 @@ pub(crate) fn open_file(
 }
 
 pub(crate) fn save_file(
-    window: u32,
+    window: WindowIdentifier,
     idle: IdleHandle,
     options: FileDialogOptions,
 ) -> FileDialogToken {
@@ -26,7 +24,7 @@ pub(crate) fn save_file(
 }
 
 fn dialog(
-    window: u32,
+    id: WindowIdentifier,
     idle: IdleHandle,
     mut options: FileDialogOptions,
     open: bool,
@@ -37,7 +35,6 @@ fn dialog(
         if let Err(e) = block_on(async {
             let conn = zbus::Connection::session().await?;
             let proxy = file_chooser::FileChooserProxy::new(&conn).await?;
-            let id = WindowIdentifier::from_xid(window as u64);
             let multi = options.multi_selection;
 
             let title_owned = options.title.take();
@@ -70,7 +67,7 @@ fn dialog(
                         format: None,
                     })
                     .collect();
-                idle.add_idle_callback(move |handler| handler.open_files(tok, infos));
+                idle.add_idle(move |handler| handler.open_files(tok, infos));
             } else if !multi {
                 if uris.len() > 2 {
                     warn!(
@@ -83,9 +80,9 @@ fn dialog(
                     format: None,
                 });
                 if open {
-                    idle.add_idle_callback(move |handler| handler.open_file(tok, info));
+                    idle.add_idle(move |handler| handler.open_file(tok, info));
                 } else {
-                    idle.add_idle_callback(move |handler| handler.save_as(tok, info));
+                    idle.add_idle(move |handler| handler.save_as(tok, info));
                 }
             } else {
                 warn!("cannot save multiple paths");

@@ -35,7 +35,6 @@ mod util;
 
 pub mod application;
 pub mod clipboard;
-pub mod dialog;
 pub mod error;
 pub mod menu;
 pub mod screen;
