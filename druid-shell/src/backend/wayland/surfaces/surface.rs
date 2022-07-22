@@ -398,7 +398,7 @@ impl Data {
         // require a fair bit of effort.
         unsafe {
             // We're going to lie about the lifetime of our buffer here. This is (I think) ok,
-            // becuase the Rust wrapper for cairo is overly pessimistic: the buffer only has to
+            // because the Rust wrapper for cairo is overly pessimistic: the buffer only has to
             // last as long as the `ImageSurface` (which we know this buffer will).
             let buf: &'static mut [u8] = &mut *(buf as *mut _);
             let cairo_surface = match cairo::ImageSurface::create_for_data(

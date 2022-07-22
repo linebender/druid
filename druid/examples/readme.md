@@ -133,7 +133,7 @@ Very similar to [layout](#Layout) but it splits the screen into 2 segments
 To run this example, make sure you are in `druid/examples/value_formatting`
 And then run `cargo run`
 
-Druid doesnt have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
+Druid doesn't have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
 This example shows you how to parse, and validate text input. 
 
 ## Split
@@ -180,7 +180,7 @@ Switches are useful in many ways, this example shows how to use the druid built-
 ```
 cargo run --example tabs --features="im"
 ```
-Tabs allow you to seperate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](#View Switcher) but with with a different purpose.
+Tabs allow you to separate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](#View Switcher) but with with a different purpose.
 
 ## Text
 ```
@@ -192,13 +192,13 @@ Text shows the effects of TextAlignment and LineBreaker types.
 ```
 cargo run --example textbox
 ```
-Textbox demostrates some of the possible configuraitons of the TextBox widget.
+Textbox demonstrates some of the possible configuraitons of the TextBox widget.
 
 ## Timer
 ```
 cargo run --example timer
 ```
-Timers allow you to send events to your widgets at a certain points inthe future. This example shows how to use them.
+Timers allow you to send events to your widgets at a certain points in the future. This example shows how to use them.
 
 ## Transparency
 ```
@@ -224,7 +224,7 @@ cargo run --example calc
 cargo run --example disabled
 ```
 
-This showcases all the widgets that can have disabled input. Disabling a widget is usefull for preventing the user from entering input.
+This showcases all the widgets that can have disabled input. Disabling a widget is useful for preventing the user from entering input.
 
 ## Event Viewer
 ```
@@ -238,7 +238,7 @@ Used as a debugging tool, this prints out mouse and keyboard events as they are 
 cargo run --example flex
 ```
 
-Flex shows off all the things you can do with flex elements. You can play with all the setings and it will change in real-time.
+Flex shows off all the things you can do with flex elements. You can play with all the settings and it will change in real-time.
 
 ## Game Of Life
 ```

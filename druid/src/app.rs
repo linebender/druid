@@ -116,7 +116,7 @@ impl<T: Data> PendingWindow<T> {
         self
     }
 
-    /// Set wether the background should be transparent
+    /// Set whether the background should be transparent
     pub fn transparent(mut self, transparent: bool) -> Self {
         self.transparent = transparent;
         self

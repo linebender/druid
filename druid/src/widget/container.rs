@@ -50,7 +50,7 @@ impl<T: Data> Container<T> {
     /// Builder-style method for setting the background for this widget.
     ///
     /// This can be passed anything which can be represented by a [`BackgroundBrush`];
-    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
@@ -66,7 +66,7 @@ impl<T: Data> Container<T> {
     /// Set the background for this widget.
     ///
     /// This can be passed anything which can be represented by a [`BackgroundBrush`];
-    /// noteably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
     /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html

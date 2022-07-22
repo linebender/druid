@@ -99,9 +99,10 @@ You can find its changes [documented below](#070---2021-01-01).
 - `AppDelegate::window_added` now receives the new window's `WindowHandle`. ([#2119] by [@zedseven])
 - Removed line of code that prevented window miximalization. ([#2113] by [@Pavel-N])
 - Dont warn about unhandled `Notification`s which have `known_target` set to false ([#2141] by [@xarvic])
-- `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic]) 
+- `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic])
 - `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
+- Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
 
 ### Deprecated
 
@@ -130,6 +131,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
 - Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
 - X11: window focus events ([#1938] by [@Maan2003]
+- Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
 
 ### Visual
 
@@ -163,7 +165,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Highlights
 
 - Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245])
-- The `Formatter` trait provides more flexible handling of converions between
+- The `Formatter` trait provides more flexible handling of conversions between
 values and their textual representations. ([#1377])
 
 ### Added
@@ -556,6 +558,8 @@ Last release without a changelog :(
 [@GoldsteinE]: https://github.com/GoldsteinE
 [@twitchyliquid64]: https://github.com/twitchyliquid64
 [@dristic]: https://github.com/dristic
+[@NickLarsenNZ]: https://github.com/NickLarsenNZ
+[@barsae]: https://github.com/barsae
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -849,7 +853,9 @@ Last release without a changelog :(
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
+[#2195]: https://github.com/linebender/druid/pull/2195
 [#2196]: https://github.com/linebender/druid/pull/2196
+[#2203]: https://github.com/linebender/druid/pull/2203
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0

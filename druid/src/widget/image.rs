@@ -159,6 +159,14 @@ impl Image {
     fn invalidate(&mut self) {
         self.paint_data = None;
     }
+
+    /// The size of the effective image, considering clipping if it's in effect.
+    #[inline]
+    fn image_size(&mut self) -> Size {
+        self.clip_area
+            .map(|a| a.size())
+            .unwrap_or_else(|| self.image_data.size())
+    }
 }
 
 impl<T: Data> Widget<T> for Image {
@@ -193,7 +201,7 @@ impl<T: Data> Widget<T> for Image {
         // in the size exactly. If it is unconstrained by both width and height take the size of
         // the image.
         let max = bc.max();
-        let image_size = self.image_data.size();
+        let image_size = self.image_size();
         let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
             let ratio = max.width / image_size.width;
             Size::new(max.width, ratio * image_size.height)
@@ -201,7 +209,7 @@ impl<T: Data> Widget<T> for Image {
             let ratio = max.height / image_size.height;
             Size::new(ratio * image_size.width, max.height)
         } else {
-            bc.constrain(self.image_data.size())
+            bc.constrain(image_size)
         };
         trace!("Computed size: {}", size);
         size
@@ -209,7 +217,8 @@ impl<T: Data> Widget<T> for Image {
 
     #[instrument(name = "Image", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.image_data.size());
+        let image_size = self.image_size();
+        let offset_matrix = self.fill.affine_to_fill(ctx.size(), image_size);
 
         // The ImageData's to_piet function does not clip to the image's size
         // CairoRenderContext is very like druids but with some extra goodies like clip
@@ -236,18 +245,9 @@ impl<T: Data> Widget<T> for Image {
             };
             ctx.transform(offset_matrix);
             if let Some(area) = self.clip_area {
-                ctx.draw_image_area(
-                    piet_image,
-                    area,
-                    self.image_data.size().to_rect(),
-                    self.interpolation,
-                );
+                ctx.draw_image_area(piet_image, area, image_size.to_rect(), self.interpolation);
             } else {
-                ctx.draw_image(
-                    piet_image,
-                    self.image_data.size().to_rect(),
-                    self.interpolation,
-                );
+                ctx.draw_image(piet_image, image_size.to_rect(), self.interpolation);
             }
         });
     }

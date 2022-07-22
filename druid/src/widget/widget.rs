@@ -37,7 +37,7 @@ use crate::widget::Axis;
 /// You can give a widget an _explicit_ id by wrapping it in an [`IdentityWrapper`]
 /// widget, or by using the [`WidgetExt::with_id`] convenience method.
 ///
-/// If you set a `WidgetId` directly, you are resposible for ensuring that it
+/// If you set a `WidgetId` directly, you are responsible for ensuring that it
 /// is unique in time. That is: only one widget can exist with a given id at a
 /// given time.
 ///

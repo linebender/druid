@@ -355,7 +355,7 @@ pub mod sys {
     /// [`Viewport::default_scroll_to_view_handling`]: crate::widget::Viewport::default_scroll_to_view_handling()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid-builtin.scroll-to");
 
-    /// A change that has occured to text state, and needs to be
+    /// A change that has occurred to text state, and needs to be
     /// communicated to the platform.
     pub(crate) struct ImeInvalidation {
         pub widget: WidgetId,

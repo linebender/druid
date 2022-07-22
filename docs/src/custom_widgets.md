@@ -25,7 +25,7 @@ with rounded corners, we could use a `Painter`:
 ```
 
 `Painter` uses all the space that is available to it; if you want to give it a
-set size, you must pass it explicit contraints, such as by wrapping it in a
+set size, you must pass it explicit constraints, such as by wrapping it in a
 [`SizedBox`]:
 
 ```rust,noplaypen

@@ -169,7 +169,7 @@ impl Clipboard {
     }
 }
 
-/// A type identifer for the system clipboard.
+/// A type identifier for the system clipboard.
 ///
 /// These should be [`UTI` strings] on macOS, and (by convention?) [MIME types] elsewhere.
 ///
