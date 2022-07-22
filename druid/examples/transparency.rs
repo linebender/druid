@@ -18,14 +18,31 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
-use druid::kurbo::Circle;
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, Painter, TextBox, WidgetExt};
+use druid::{kurbo::Circle, widget::Controller};
 use druid::{AppLauncher, Color, Lens, Rect, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct HelloState {
     name: String,
+}
+
+struct DragController;
+
+impl<T, W: Widget<T>> Controller<T, W> for DragController {
+    fn event(
+        &mut self,
+        _child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        _data: &mut T,
+        _env: &Env,
+    ) {
+        if let Event::MouseMove(_) = event {
+            ctx.window().handle_titlebar(true);
+        }
+    }
 }
 
 pub fn main() {
@@ -81,7 +98,7 @@ fn build_root_widget() -> impl Widget<HelloState> {
     .with_text_size(32.0);
 
     Flex::column()
-        .with_flex_child(circle_and_rects.expand(), 10.0)
+        .with_flex_child(circle_and_rects.expand().controller(DragController), 10.0)
         .with_spacer(4.0)
         .with_child(textbox)
         .with_spacer(4.0)

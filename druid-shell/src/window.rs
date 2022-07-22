@@ -206,7 +206,7 @@ impl WindowHandle {
     /// because this refers to the current location of the mouse, you should probably call this
     /// function in response to every relevant [`WinHandler::mouse_move`].
     ///
-    /// This is currently only implemented on Windows.
+    /// This is currently only implemented on Windows and GTK.
     pub fn handle_titlebar(&self, val: bool) {
         self.0.handle_titlebar(val);
     }
