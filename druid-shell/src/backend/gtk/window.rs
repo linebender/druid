@@ -174,6 +174,7 @@ pub(crate) struct WindowState {
     scale: Cell<Scale>,
     area: Cell<ScaledArea>,
     is_transparent: Cell<bool>,
+    handle_titlebar: Cell<bool>,
     /// Used to determine whether to honor close requests from the system: we inhibit them unless
     /// this is true, and this gets set to true when our client requests a close.
     closing: Cell<bool>,
@@ -353,6 +354,7 @@ impl WindowBuilder {
             scale: Cell::new(scale),
             area: Cell::new(area),
             is_transparent: Cell::new(transparent),
+            handle_titlebar: Cell::new(false),
             closing: Cell::new(false),
             drawing_area,
             surface: RefCell::new(None),
@@ -580,6 +582,10 @@ impl WindowBuilder {
                                 },
                             );
                         }
+                        if button.is_left() && state.handle_titlebar.replace(false) {
+                            let (root_x, root_y) = event.root();
+                            state.window.begin_move_drag(event.button() as i32, root_x as i32, root_y as i32, event.time());
+                        }
                     }
                 });
             }
@@ -604,6 +610,9 @@ impl WindowBuilder {
                                 wheel_delta: Vec2::ZERO
                             },
                         );
+                        if button.is_left() {
+                            state.handle_titlebar.set(false);
+                        }
                     }
                 });
             }
@@ -1092,8 +1101,10 @@ impl WindowHandle {
         Restored
     }
 
-    pub fn handle_titlebar(&self, _val: bool) {
-        warn!("WindowHandle::handle_titlebar is currently unimplemented for gtk.");
+    pub fn handle_titlebar(&self, val: bool) {
+        if let Some(state) = self.state.upgrade() {
+            state.handle_titlebar.set(val);
+        }
     }
 
     /// Close the window.
