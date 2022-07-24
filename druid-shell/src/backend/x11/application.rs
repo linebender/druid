@@ -684,9 +684,9 @@ impl Application {
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
-                // to copying pixels. This is blocked on
-                // https://github.com/psychon/x11rb/issues/503
-                return Err(x11rb::errors::ReplyError::from(*e).into());
+                // to copying pixels. This was blocked on
+                // https://github.com/psychon/x11rb/issues/503 but no longer is
+                return Err(x11rb::errors::ReplyError::from(e.clone()).into());
             }
             _ => {}
         }
