@@ -30,7 +30,9 @@ use x11rb::protocol::xproto::{
     self, ConnectionExt, CreateWindowAux, EventMask, Timestamp, Visualtype, WindowClass,
 };
 use x11rb::protocol::Event;
-use x11rb::resource_manager::Database as ResourceDb;
+use x11rb::resource_manager::{
+    new_from_default as new_resource_db_from_default, Database as ResourceDb,
+};
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::application::AppHandler;
@@ -210,7 +212,7 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
-        let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
+        let rdb = Rc::new(new_resource_db_from_default(&conn)?);
         let xkb_context = xkb::Context::new();
         xkb_context.set_log_level(tracing::Level::DEBUG);
         use x11rb::protocol::xkb::ConnectionExt;
@@ -684,9 +686,9 @@ impl Application {
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
-                // to copying pixels. This is blocked on
-                // https://github.com/psychon/x11rb/issues/503
-                return Err(x11rb::errors::ReplyError::from(*e).into());
+                // to copying pixels. This was blocked on
+                // https://github.com/psychon/x11rb/issues/503 but no longer is
+                return Err(x11rb::errors::ReplyError::from(e.clone()).into());
             }
             _ => {}
         }
