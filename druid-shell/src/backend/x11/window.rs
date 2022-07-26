@@ -42,8 +42,9 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, XcbHandle};
 
+use crate::backend::shared::zbus;
 use crate::backend::shared::Timer;
 use crate::common_util::IdleCallback;
 use crate::dialog::FileDialogOptions;
@@ -61,7 +62,6 @@ use crate::window::{
 use crate::{window, KeyEvent, ScaledArea};
 
 use super::application::Application;
-use super::dialog;
 use super::menu::Menu;
 
 /// A version of XCB's `xcb_visualtype_t` struct. This was copied from the [example] in x11rb; it
@@ -1798,7 +1798,11 @@ impl WindowHandle {
     pub fn open_file(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         if let Some(w) = self.window.upgrade() {
             if let Some(idle) = self.get_idle_handle() {
-                Some(dialog::open_file(w.id, idle, options))
+                Some(zbus::open_file(
+                    ashpd::WindowIdentifier::from_xid(w.id as u64),
+                    window::IdleHandle(idle),
+                    options,
+                ))
             } else {
                 warn!("Couldn't open file because no idle handle available");
                 None
@@ -1811,7 +1815,11 @@ impl WindowHandle {
     pub fn save_as(&mut self, options: FileDialogOptions) -> Option<FileDialogToken> {
         if let Some(w) = self.window.upgrade() {
             if let Some(idle) = self.get_idle_handle() {
-                Some(dialog::save_file(w.id, idle, options))
+                Some(zbus::save_file(
+                    ashpd::WindowIdentifier::from_xid(w.id as u64),
+                    window::IdleHandle(idle),
+                    options,
+                ))
             } else {
                 warn!("Couldn't save file because no idle handle available");
                 None

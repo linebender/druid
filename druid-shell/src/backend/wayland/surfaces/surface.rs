@@ -6,8 +6,9 @@ use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
-use crate::kurbo;
+use crate::backend::shared::zbus;
 use crate::window;
+use crate::{kurbo, FileDialogOptions, FileDialogToken};
 use crate::{piet::Piet, region::Region, scale::Scale, TextFieldToken};
 
 use super::super::Changed;
@@ -188,6 +189,14 @@ impl Handle for Surface {
 
     fn invalidate_rect(&self, rect: kurbo::Rect) {
         self.inner.invalidate_rect(rect)
+    }
+
+    fn open_file(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.open_file(options)
+    }
+
+    fn save_as(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        self.inner.save_as(options)
     }
 
     fn run_idle(&self) {
@@ -469,6 +478,26 @@ impl Data {
         self.schedule_deferred_task(DeferredTask::Paint);
     }
 
+    fn open_file(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        // FIXME: current ashpd has issues with wayland versions
+        //let id = ashpd::WindowIdentifier::from_wayland(&self.wl_surface.borrow());
+        Some(zbus::open_file(
+            Default::default(),
+            crate::IdleHandle(self.get_idle_handle()),
+            options,
+        ))
+    }
+
+    fn save_as(&self, options: FileDialogOptions) -> Option<FileDialogToken> {
+        // FIXME: current ashpd has issues with wayland versions
+        //let id = ashpd::WindowIdentifier::from_wayland(&self.wl_surface.borrow());
+        Some(zbus::save_file(
+            Default::default(),
+            crate::IdleHandle(self.get_idle_handle()),
+            options,
+        ))
+    }
+
     pub fn schedule_deferred_task(&self, task: DeferredTask) {
         tracing::trace!("scedule_deferred_task initiated");
         self.deferred_tasks.borrow_mut().push_back(task);
@@ -623,6 +652,16 @@ impl Handle for Dead {
 
     fn invalidate_rect(&self, _rect: kurbo::Rect) {
         tracing::warn!("invalidate_rect invoked on a dead surface")
+    }
+
+    fn open_file(&self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        tracing::warn!("open_file invoked on a dead surface");
+        None
+    }
+
+    fn save_as(&self, _options: FileDialogOptions) -> Option<FileDialogToken> {
+        tracing::warn!("save_as invoked on a dead surface");
+        None
     }
 
     fn run_idle(&self) {

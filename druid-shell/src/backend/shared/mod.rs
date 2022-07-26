@@ -26,5 +26,6 @@ cfg_if::cfg_if! {
         pub(crate) use timer::*;
         pub(crate) mod xkb;
         pub(crate) mod linux;
+        pub(crate) mod zbus;
     }
 }

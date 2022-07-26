@@ -26,6 +26,8 @@ x11 = [
     "x11rb",
 ]
 wayland = [
+    "ashpd",
+    "futures",
     "wayland-client",
     "wayland-protocols/client",
     "wayland-protocols/unstable_protocols",
