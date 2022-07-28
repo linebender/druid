@@ -22,9 +22,6 @@ use druid_shell::{
     Menu, MouseEvent, Region, SysMods, TimerToken, WinHandler, WindowBuilder, WindowHandle,
 };
 
-const BG_COLOR: Color = Color::rgb8(0x27, 0x28, 0x22);
-const FG_COLOR: Color = Color::rgb8(0xf0, 0xf0, 0xea);
-
 #[derive(Default)]
 struct HelloState {
     size: Size,
@@ -38,10 +35,8 @@ impl WinHandler for HelloState {
 
     fn prepare_paint(&mut self) {}
 
-    fn paint(&mut self, piet: &mut piet_common::Piet, _: &Region) {
-        let rect = self.size.to_rect();
-        piet.fill(rect, &BG_COLOR);
-        piet.stroke(Line::new((10.0, 50.0), (90.0, 90.0)), &FG_COLOR, 1.0);
+    fn paint(&mut self, _: &Region) {
+        println!("paint");
     }
 
     fn command(&mut self, id: u32) {

@@ -740,7 +740,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                     if !mouse_event.obstructed {Some(mouse_event.pos)} else {None},
                     data,
                     env,
                 );
@@ -759,7 +759,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !mouse_event.obstructed {Some(mouse_event.pos)} else {None},
                     data,
                     env,
                 );
@@ -778,7 +778,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !mouse_event.obstructed {Some(mouse_event.pos)} else {None},
                     data,
                     env,
                 );
@@ -800,7 +800,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !mouse_event.obstructed {Some(mouse_event.pos)} else {None},
                     data,
                     env,
                 );

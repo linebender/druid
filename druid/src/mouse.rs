@@ -69,6 +69,12 @@ pub struct MouseEvent {
     ///
     /// [WheelEvent]: https://w3c.github.io/uievents/#event-type-wheel
     pub wheel_delta: Vec2,
+
+    /// The point of this event is obstructed by another widget.
+    ///
+    /// This property is important for overlapping widgets which are active to determine whether
+    /// they are hot.
+    pub obstructed: bool,
 }
 
 impl From<druid_shell::MouseEvent> for MouseEvent {
@@ -91,6 +97,7 @@ impl From<druid_shell::MouseEvent> for MouseEvent {
             focus,
             button,
             wheel_delta,
+            obstructed: false,
         }
     }
 }
