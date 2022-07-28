@@ -73,6 +73,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Make `Parse` work better with floats and similar types ([#2148] by [@superfell])
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
+- `ZStack` widget ([#2235] by [@xarvic])
+- `obstructed` flag to `MouseEvent` ([#2235] by [@xarvic])
 
 ### Changed
 
@@ -102,6 +104,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic]) 
 - `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
+- `WidgetPod::event` stops proagating obstructed mouse events to non active widgets ([#2235] by [@xarvic])
 
 ### Deprecated
 
@@ -850,6 +853,7 @@ Last release without a changelog :(
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
 [#2196]: https://github.com/linebender/druid/pull/2196
+[#2235]: https://github.com/linebender/druid/pull/2235
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
