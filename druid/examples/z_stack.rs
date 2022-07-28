@@ -19,8 +19,8 @@
 #![windows_subsystem = "windows"]
 
 use druid::widget::prelude::*;
-use druid::widget::{Button, Flex, Label, LinearVec2, TextBox, ZStack};
-use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc};
+use druid::widget::{Button, Label, LinearVec2, ZStack};
+use druid::{AppLauncher, Data, Lens, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;

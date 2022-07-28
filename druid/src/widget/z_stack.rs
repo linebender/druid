@@ -1,4 +1,4 @@
-use crate::{Data, Point, Size, Widget, WidgetPod, WidgetExt, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, PaintCtx, Rect, Vec2};
+use crate::{Data, Point, Size, Widget, WidgetPod, WidgetExt, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, PaintCtx, Vec2};
 
 pub struct ZStack<T> {
     layers: Vec<ZChild<T>>,
@@ -36,7 +36,7 @@ impl<T: Data> ZStack<T> {
             position,
             size,
         });
-        if index < self.base_layer {
+        if index <= self.base_layer {
             // Baselayer moves down
             self.base_layer += 1;
         }
@@ -89,17 +89,19 @@ impl<T: Data> Widget<T> for ZStack<T> {
         ctx.set_baseline_offset(base_layer.child.baseline_offset());
 
         for (index, layer) in self.layers.iter_mut().enumerate() {
-            let mut inner_ctx = LayoutCtx {
-                state: ctx.state,
-                widget_state: ctx.widget_state,
-                mouse_pos: if Some(index) == self.current_hot { ctx.mouse_pos } else { None },
-            };
+            if index != self.base_layer {
+                let mut inner_ctx = LayoutCtx {
+                    state: ctx.state,
+                    widget_state: ctx.widget_state,
+                    mouse_pos: if Some(index) == self.current_hot { ctx.mouse_pos } else { None },
+                };
 
-            let max_size = layer.size.resolve(base_size.to_vec2());
-            let size = layer.child.layout(&mut inner_ctx, &BoxConstraints::new(Size::ZERO, max_size.to_size()), data, env);
-            let remaining = (base_size - size).to_vec2();
-            let origin = layer.position.resolve(remaining);
-            layer.child.set_origin(&mut inner_ctx, data, env, origin.to_point());
+                let max_size = layer.size.resolve(base_size.to_vec2());
+                let size = layer.child.layout(&mut inner_ctx, &BoxConstraints::new(Size::ZERO, max_size.to_size()), data, env);
+                let remaining = (base_size - size).to_vec2();
+                let origin = layer.position.resolve(remaining);
+                layer.child.set_origin(&mut inner_ctx, data, env, origin.to_point());
+            }
         }
 
         base_size
