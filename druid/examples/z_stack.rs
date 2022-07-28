@@ -19,7 +19,7 @@
 #![windows_subsystem = "windows"]
 
 use druid::widget::prelude::*;
-use druid::widget::{Button, Flex, Label, TextBox, ZStack};
+use druid::widget::{Button, Flex, Label, LinearVec2, TextBox, ZStack};
 use druid::{AppLauncher, Data, Lens, UnitPoint, WidgetExt, WindowDesc};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
@@ -54,6 +54,9 @@ fn build_root_widget() -> impl Widget<State> {
             .on_click(|_, state: &mut State, _|state.counter += 1)
     ).with_child_at_index(
         Button::new("Reset").on_click(|_, state: &mut State, _|state.counter = 0),
+        LinearVec2::new((0.0, 0.5), (10.0, 0.0)),
+        LinearVec2::full(),
+
         0,
 
     )
