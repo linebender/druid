@@ -574,6 +574,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
+        //TODO: this does not work!
+        // self.layout_rect().origin().to_vec2() + self.viewport_offset() is the old position which
+        // changes after set origin. Therefore changing hot state must happen after the root widget
+        // set its origin.
         let child_mouse_pos = ctx
             .mouse_pos
             .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());

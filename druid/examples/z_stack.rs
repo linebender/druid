@@ -12,18 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This is a very small example of how to setup a druid application.
-//! It does the almost bare minimum while still being useful.
+//!
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
 use druid::widget::prelude::*;
 use druid::widget::{Button, Label, LinearVec2, ZStack};
-use druid::{AppLauncher, Data, Lens, WidgetExt, WindowDesc};
-
-const VERTICAL_WIDGET_SPACING: f64 = 20.0;
-const TEXT_BOX_WIDTH: f64 = 200.0;
+use druid::{AppLauncher, Data, Lens, UnitPoint, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct State {
@@ -54,8 +50,8 @@ fn build_root_widget() -> impl Widget<State> {
             .on_click(|_, state: &mut State, _|state.counter += 1)
     ).with_child_at_index(
         Button::new("Reset").on_click(|_, state: &mut State, _|state.counter = 0),
-        LinearVec2::new((0.0, 0.5), (10.0, 0.0)),
-        LinearVec2::full(),
+        LinearVec2::new(UnitPoint::LEFT, (10.0, 0.0)),
+        LinearVec2::from_unit(UnitPoint::BOTTOM_RIGHT),
 
         0,
 
