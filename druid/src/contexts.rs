@@ -894,7 +894,7 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
         LayoutCtx {
             state: &mut self.state,
             widget_state: &mut self.widget_state,
-            mouse_pos: if obstructed { None } else { self.mouse_pos }
+            mouse_pos: if obstructed { None } else { self.mouse_pos },
         }
     }
 }

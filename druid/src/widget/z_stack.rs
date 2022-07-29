@@ -1,4 +1,7 @@
-use crate::{Data, Size, Widget, WidgetPod, WidgetExt, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, PaintCtx, Vec2, UnitPoint, Rect, Point};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+    Point, Rect, Size, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod,
+};
 
 /// A container that stacks its children on top of each other.
 ///
@@ -22,13 +25,13 @@ impl<T: Data> ZStack<T> {
     /// The baselayer is used by the ZStack to determine its own size.
     pub fn new(base_layer: impl Widget<T> + 'static) -> Self {
         Self {
-            layers: vec![ZChild{
+            layers: vec![ZChild {
                 child: WidgetPod::new(base_layer.boxed()),
 
                 relative_size: Vec2::new(1.0, 1.0),
                 absolute_size: Vec2::ZERO,
                 position: UnitPoint::CENTER,
-                offset: Vec2::ZERO
+                offset: Vec2::ZERO,
             }],
         }
     }
@@ -53,13 +56,16 @@ impl<T: Data> ZStack<T> {
         offset: Vec2,
     ) -> Self {
         let next_index = self.layers.len() - 1;
-        self.layers.insert(next_index, ZChild {
-            child: WidgetPod::new(child.boxed()),
-            relative_size,
-            absolute_size,
-            position,
-            offset,
-        });
+        self.layers.insert(
+            next_index,
+            ZChild {
+                child: WidgetPod::new(child.boxed()),
+                relative_size,
+                absolute_size,
+                position,
+                offset,
+            },
+        );
         self
     }
 
@@ -67,10 +73,7 @@ impl<T: Data> ZStack<T> {
     ///
     /// The child is added directly above the base layer, is positioned in the center and has no
     /// size constrains.
-    pub fn with_centered_child(
-        self,
-        child: impl Widget<T> + 'static,
-    ) -> Self {
+    pub fn with_centered_child(self, child: impl Widget<T> + 'static) -> Self {
         self.with_aligned_child(child, UnitPoint::CENTER)
     }
 
@@ -78,11 +81,7 @@ impl<T: Data> ZStack<T> {
     ///
     /// The child is added directly above the base layer, uses the given alignment and has no
     /// size constrains.
-    pub fn with_aligned_child(
-        self,
-        child: impl Widget<T> + 'static,
-        alignment: UnitPoint,
-    ) -> Self {
+    pub fn with_aligned_child(self, child: impl Widget<T> + 'static, alignment: UnitPoint) -> Self {
         self.with_child(
             child,
             Vec2::new(1.0, 1.0),
@@ -95,7 +94,10 @@ impl<T: Data> ZStack<T> {
 
 impl<T: Data> Widget<T> for ZStack<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let is_pointer_event = matches!(event, Event::MouseDown(_) | Event::MouseMove(_) | Event::MouseUp(_) | Event::Wheel(_));
+        let is_pointer_event = matches!(
+            event,
+            Event::MouseDown(_) | Event::MouseMove(_) | Event::MouseUp(_) | Event::Wheel(_)
+        );
         let mut previous_child_hot = false;
 
         for layer in self.layers.iter_mut() {
@@ -103,7 +105,7 @@ impl<T: Data> Widget<T> for ZStack<T> {
                 ctx,
                 &event.set_obstructed(is_pointer_event && previous_child_hot),
                 data,
-                env
+                env,
             );
 
             previous_child_hot |= layer.child.is_hot();
@@ -133,12 +135,9 @@ impl<T: Data> Widget<T> for ZStack<T> {
 
         for layer in self.layers.iter_mut().take(other_layers) {
             let max_size = layer.resolve_max_size(base_size);
-            layer.child.layout(
-                ctx,
-                &BoxConstraints::new(Size::ZERO, max_size),
-                data,
-                env
-            );
+            layer
+                .child
+                .layout(ctx, &BoxConstraints::new(Size::ZERO, max_size), data, env);
         }
 
         //Set origin for all Layers and calculate paint insets
@@ -172,8 +171,11 @@ impl<T: Data> Widget<T> for ZStack<T> {
 
 impl<T: Data> ZChild<T> {
     fn resolve_max_size(&self, availible: Size) -> Size {
-        self.absolute_size.to_size() +
-            Size::new(availible.width * self.relative_size.x, availible.height * self.relative_size.y)
+        self.absolute_size.to_size()
+            + Size::new(
+                availible.width * self.relative_size.x,
+                availible.height * self.relative_size.y,
+            )
     }
 
     fn resolve_point(&self, remaining_space: Size) -> Point {

@@ -33,9 +33,7 @@ pub fn main() {
         .window_size((400.0, 400.0));
 
     // create the initial app state
-    let initial_state: State = State {
-        counter: 0,
-    };
+    let initial_state: State = State { counter: 0 };
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
@@ -46,10 +44,16 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<State> {
     ZStack::new(
-        Button::from_label(Label::dynamic(|state: &State, _|format!("Very large button with text! Count up (currently {})", state.counter)))
-            .on_click(|_, state: &mut State, _|state.counter += 1)
-    ).with_child(
-        Button::new("Reset").on_click(|_, state: &mut State, _|state.counter = 0),
+        Button::from_label(Label::dynamic(|state: &State, _| {
+            format!(
+                "Very large button with text! Count up (currently {})",
+                state.counter
+            )
+        }))
+        .on_click(|_, state: &mut State, _| state.counter += 1),
+    )
+    .with_child(
+        Button::new("Reset").on_click(|_, state: &mut State, _| state.counter = 0),
         Vec2::new(1.0, 1.0),
         Vec2::ZERO,
         UnitPoint::LEFT,
