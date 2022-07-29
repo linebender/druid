@@ -103,7 +103,7 @@ pub(crate) struct Data {
     /// observed a change, and use `Output::changed` to see if there are any newer changes.
     ///
     /// It's a BTreeMap so the ordering is consistent when enumerating outputs (not sure if this is
-    /// necessary, but it negligable cost).
+    /// necessary, but it negligible cost).
     pub(super) outputs: Rc<RefCell<BTreeMap<u32, outputs::Meta>>>,
     pub(super) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
 

@@ -25,7 +25,7 @@ use crate::{Command, Notification, WidgetId};
 ///
 /// With two exceptions ([`Event::Command`] and [`Event::Notification`], which
 /// have special considerations outlined in their own docs) each event
-/// corresponds to some user action or other message recieved from the platform.
+/// corresponds to some user action or other message received from the platform.
 ///
 /// Events are things that happen that can change the state of widgets.
 /// An important category is events plumbed from the platform windowing

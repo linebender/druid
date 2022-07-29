@@ -126,7 +126,7 @@ pub(crate) struct ZOrderPaintOp {
 
 /// A context passed to paint methods of widgets.
 ///
-/// In addition to the API below, [`PaintCtx`] derefs to an implemention of
+/// In addition to the API below, [`PaintCtx`] derefs to an implementation of
 /// the [`RenderContext`] trait, which defines the basic available drawing
 /// commands.
 pub struct PaintCtx<'a, 'b, 'c> {
@@ -522,7 +522,7 @@ impl EventCtx<'_, '_> {
     /// Submit a [`Notification`].
     ///
     /// The provided argument can be a [`Selector`] or a [`Command`]; this lets
-    /// us work with the existing API for addding a payload to a [`Selector`].
+    /// us work with the existing API for adding a payload to a [`Selector`].
     ///
     /// If the argument is a `Command`, the command's target will be ignored.
     ///

@@ -344,7 +344,7 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
 
             // Constrain the height
             let height = ideal_height.max(bc.min().height).min(bc.max().height);
-            // Now calcuate how many rows we can actually fit in
+            // Now calculate how many rows we can actually fit in
             while height_from_rows(rows) > height && rows > 0 {
                 rows -= 1;
             }

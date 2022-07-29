@@ -15,7 +15,7 @@
 //! The fundamental druid types.
 
 use std::collections::VecDeque;
-use tracing::{info_span, trace, warn};
+use tracing::{trace, trace_span, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
@@ -366,7 +366,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// This is a convenience method to be used from the [`layout`] method
     /// of a `Widget` that manages a child; it allows the parent to correctly
-    /// propogate a child's desired paint rect, if it extends beyond the bounds
+    /// propagate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
     /// [`layout`]: trait.Widget.html#tymethod.layout
@@ -415,7 +415,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 widget_state: child_state,
             };
             // We add a span so that inner logs are marked as being in a lifecycle pass
-            info_span!("lifecycle")
+            trace_span!("lifecycle")
                 .in_scope(|| child.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
             // if hot changes and we're showing widget ids, always repaint
             if env.get(Env::DEBUG_WIDGET_ID) {
@@ -598,7 +598,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let size_event = LifeCycle::Size(new_size);
 
             // We add a span so that inner logs are marked as being in a lifecycle pass
-            let _span = info_span!("lifecycle");
+            let _span = trace_span!("lifecycle");
             let _span = _span.enter();
             self.inner.lifecycle(&mut child_ctx, &size_event, data, env);
         }
@@ -869,7 +869,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
 
-            // we try to handle the notifications that occured below us in the tree
+            // we try to handle the notifications that occurred below us in the tree
             self.send_notifications(ctx, &mut notifications, data, env);
         }
 
@@ -1122,7 +1122,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             LifeCycle::BuildFocusChain => {
                 self.state.update_focus_chain = false;
 
-                // had_focus is the old focus value. state.has_focus was repaced with ctx.is_focused().
+                // had_focus is the old focus value. state.has_focus was replaced with ctx.is_focused().
                 // Therefore if had_focus is true but state.has_focus is false then the widget which is
                 // currently focused is not part of the functional tree anymore
                 // (Lifecycle::BuildFocusChain.should_propagate_to_hidden() is false!) and should

@@ -85,7 +85,7 @@ pub struct Label<T> {
     label: RawLabel<ArcStr>,
     current_text: ArcStr,
     text: LabelText<T>,
-    // for debuging, we track if the user modifies the text and we don't get
+    // for debugging, we track if the user modifies the text and we don't get
     // an update call, which might cause us to display stale text.
     text_should_be_updated: bool,
 }

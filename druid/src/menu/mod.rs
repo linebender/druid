@@ -168,7 +168,7 @@ impl<T: Data> MenuManager<T> {
     #[allow(unreachable_code)]
     pub fn platform_default() -> Option<MenuManager<T>> {
         #[cfg(target_os = "macos")]
-        return Some(MenuManager::new(|_, _, _| sys::mac::application::default()));
+        return Some(MenuManager::new(|_, _, _| sys::mac::menu_bar()));
 
         #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
         return None;
@@ -339,8 +339,8 @@ impl MenuUpdate {
     }
 }
 
-/// This is the trait that enables recursive visiting of all menu entries. It isn't publically
-/// visible (the publically visible analogue of this is `Into<MenuEntry<T>>`).
+/// This is the trait that enables recursive visiting of all menu entries. It isn't publicly
+/// visible (the publicly visible analogue of this is `Into<MenuEntry<T>>`).
 trait MenuVisitor<T> {
     /// Called when a menu item is activated.
     ///
