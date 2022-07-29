@@ -110,7 +110,7 @@ pub use widget::{Widget, WidgetId};
 #[doc(hidden)]
 pub use widget_ext::WidgetExt;
 pub use widget_wrapper::WidgetWrapper;
-pub use z_stack::{ZStack, LinearVec2};
+pub use z_stack::ZStack;
 
 /// The types required to implement a `Widget`.
 ///

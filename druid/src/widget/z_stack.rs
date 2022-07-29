@@ -1,4 +1,4 @@
-use crate::{Data, Size, Widget, WidgetPod, WidgetExt, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, PaintCtx, Vec2, UnitPoint, Rect};
+use crate::{Data, Size, Widget, WidgetPod, WidgetExt, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, PaintCtx, Vec2, UnitPoint, Rect, Point};
 
 /// A container that stacks its children on top of each other.
 ///
@@ -10,14 +10,10 @@ pub struct ZStack<T> {
 
 struct ZChild<T> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
-    size: LinearVec2,
-    position: LinearVec2,
-}
-
-/// A two dimensional Vector relative to the available space.
-pub struct LinearVec2 {
-    pub relative: UnitPoint,
-    pub absolute: Vec2,
+    relative_size: Vec2,
+    absolute_size: Vec2,
+    position: UnitPoint,
+    offset: Vec2,
 }
 
 impl<T: Data> ZStack<T> {
@@ -28,31 +24,72 @@ impl<T: Data> ZStack<T> {
         Self {
             layers: vec![ZChild{
                 child: WidgetPod::new(base_layer.boxed()),
-                size: LinearVec2::from_unit(UnitPoint::BOTTOM_RIGHT),
-                position: LinearVec2::from_unit(UnitPoint::TOP_LEFT),
+
+                relative_size: Vec2::new(1.0, 1.0),
+                absolute_size: Vec2::ZERO,
+                position: UnitPoint::CENTER,
+                offset: Vec2::ZERO
             }],
         }
     }
 
-    /// Builder-style method to insert a new child into the Z-Stack.
+    /// Builder-style method to add a new child to the Z-Stack.
     ///
-    /// The index must be smaller that that of the base-layer.
-    pub fn with_child_at_index(mut self, child: impl Widget<T> + 'static, position: LinearVec2, size: LinearVec2, index: usize) -> Self {
-        assert!(index < self.layers.len());
-        self.layers.insert(index, ZChild {
+    /// The child is added directly above the base layer.
+    ///
+    /// `relative_size` is the space the child is allowed to take up relative to its parent. The
+    ///                 values are between 0 and 1.
+    /// `absolute_size` is a fixed amount of pixels added to `relative_size`.
+    ///
+    /// `position`      is the alignment of the child inside the remaining space of its parent.
+    ///
+    /// `offset`        is a fixed amount of pixels added to `position`.
+    pub fn with_child(
+        mut self,
+        child: impl Widget<T> + 'static,
+        relative_size: Vec2,
+        absolute_size: Vec2,
+        position: UnitPoint,
+        offset: Vec2,
+    ) -> Self {
+        let next_index = self.layers.len() - 1;
+        self.layers.insert(next_index, ZChild {
             child: WidgetPod::new(child.boxed()),
+            relative_size,
+            absolute_size,
             position,
-            size,
+            offset,
         });
         self
     }
 
     /// Builder-style method to add a new child to the Z-Stack.
     ///
-    /// The child is added directly above the base layer.
-    pub fn with_child(self, child: impl Widget<T> + 'static, position: LinearVec2, size: LinearVec2) -> Self {
-        let next_index = self.layers.len() - 1;
-        self.with_child_at_index(child, position, size, next_index)
+    /// The child is added directly above the base layer, is positioned in the center and has no
+    /// size constrains.
+    pub fn with_centered_child(
+        self,
+        child: impl Widget<T> + 'static,
+    ) -> Self {
+        self.with_aligned_child(child, UnitPoint::CENTER)
+    }
+
+    /// Builder-style method to add a new child to the Z-Stack.
+    ///
+    /// The child is added directly above the base layer, uses the given alignment and has no
+    /// size constrains.
+    pub fn with_aligned_child(
+        self,
+        child: impl Widget<T> + 'static,
+        alignment: UnitPoint,
+    ) -> Self {
+        self.with_child(
+            child,
+            Vec2::new(1.0, 1.0),
+            Vec2::ZERO,
+            alignment,
+            Vec2::ZERO,
+        )
     }
 }
 
@@ -95,10 +132,10 @@ impl<T: Data> Widget<T> for ZStack<T> {
         let other_layers = self.layers.len() - 1;
 
         for layer in self.layers.iter_mut().take(other_layers) {
-            let max_size = layer.size.resolve(base_size);
+            let max_size = layer.resolve_max_size(base_size);
             layer.child.layout(
                 ctx,
-                &BoxConstraints::new(Size::ZERO, max_size.to_size()),
+                &BoxConstraints::new(Size::ZERO, max_size),
                 data,
                 env
             );
@@ -112,7 +149,7 @@ impl<T: Data> Widget<T> for ZStack<T> {
             let mut inner_ctx = ctx.set_obstructed(previous_child_hot);
 
             let remaining = base_size - layer.child.layout_rect().size();
-            let origin = layer.position.resolve(remaining).to_point();
+            let origin = layer.resolve_point(remaining);
             layer.child.set_origin(&mut inner_ctx, data, env, origin);
 
             paint_rect = paint_rect.union(layer.child.paint_rect());
@@ -133,27 +170,13 @@ impl<T: Data> Widget<T> for ZStack<T> {
     }
 }
 
-impl LinearVec2 {
-    /// Creates a new LinearVec2 from an UnitPoint and an offset.
-    pub fn new(relative: impl Into<Vec2>, offset: impl Into<Vec2>) -> Self {
-        Self {
-            relative: relative.into(),
-            absolute: offset.into(),
-        }
+impl<T: Data> ZChild<T> {
+    fn resolve_max_size(&self, availible: Size) -> Size {
+        self.absolute_size.to_size() +
+            Size::new(availible.width * self.relative_size.x, availible.height * self.relative_size.y)
     }
 
-    /// creates a new LinearVec2 from a UnitPoint. Offset ist set to Zero.
-    pub fn from_unit(relative: impl Into<UnitPoint>) -> Self {
-        let point = relative.into();
-        Self::new(Vec2::new(point.), Vec2::ZERO)
-    }
-
-    pub fn from_relative_size(relative: impl Into<Size>) -> Self {
-
-    }
-
-    /// resolves this LinearVec2 for a given size
-    pub fn resolve(&self, reference: Size) -> Vec2 {
-        self.relative.resolve(reference.to_rect()).to_vec2() + self.absolute
+    fn resolve_point(&self, remaining_space: Size) -> Point {
+        (self.position.resolve(remaining_space.to_rect()).to_vec2() + self.offset).to_point()
     }
 }

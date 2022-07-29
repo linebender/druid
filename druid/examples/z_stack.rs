@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//!
+//! A simple test of overlapping widgets.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
 use druid::widget::prelude::*;
-use druid::widget::{Button, Label, LinearVec2, ZStack};
-use druid::{AppLauncher, Data, Lens, UnitPoint, WindowDesc};
+use druid::widget::{Button, Label, ZStack};
+use druid::{AppLauncher, Data, Lens, UnitPoint, Vec2, WindowDesc};
 
 #[derive(Clone, Data, Lens)]
 struct State {
@@ -48,12 +48,11 @@ fn build_root_widget() -> impl Widget<State> {
     ZStack::new(
         Button::from_label(Label::dynamic(|state: &State, _|format!("Very large button with text! Count up (currently {})", state.counter)))
             .on_click(|_, state: &mut State, _|state.counter += 1)
-    ).with_child_at_index(
+    ).with_child(
         Button::new("Reset").on_click(|_, state: &mut State, _|state.counter = 0),
-        LinearVec2::new(UnitPoint::LEFT, (10.0, 0.0)),
-        LinearVec2::from_unit(UnitPoint::BOTTOM_RIGHT),
-
-        0,
-
+        Vec2::new(1.0, 1.0),
+        Vec2::ZERO,
+        UnitPoint::LEFT,
+        Vec2::new(10.0, 0.0),
     )
 }
