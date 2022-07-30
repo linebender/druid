@@ -54,23 +54,23 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by(&mut self, delta: Vec2) -> bool {
-        self.clip.pan_by(delta)
+    pub fn scroll_by(&mut self, ctx: &mut EventCtx, delta: Vec2) -> bool {
+        self.clip.pan_by(ctx, delta)
     }
 
     /// Scroll the minimal distance to show the target rect.
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to(&mut self, region: Rect) -> bool {
-        self.clip.pan_to_visible(region)
+    pub fn scroll_to(&mut self, ctx: &mut EventCtx, region: Rect) -> bool {
+        self.clip.pan_to_visible(ctx, region)
     }
 
     /// Scroll to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_to_on_axis(&mut self, axis: Axis, position: f64) -> bool {
-        self.clip.pan_to_on_axis(axis, position)
+    pub fn scroll_to_on_axis(&mut self, ctx: &mut EventCtx, axis: Axis, position: f64) -> bool {
+        self.clip.pan_to_on_axis(ctx, axis, position)
     }
 }
 
@@ -178,7 +178,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let scroll_component = &mut self.scroll_component;
-        self.clip.with_port(|port| {
+        self.clip.with_port(ctx, |ctx, port| {
             scroll_component.event(port, ctx, event, env);
         });
         if !ctx.is_handled() {
@@ -187,7 +187,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
         // Handle scroll after the inner widget processed the events, to prefer inner widgets while
         // scrolling.
-        self.clip.with_port(|port| {
+        self.clip.with_port(ctx, |ctx, port| {
             scroll_component.handle_scroll(port, ctx, event, env);
 
             if !scroll_component.are_bars_held() {
@@ -227,9 +227,6 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
         log_size_warnings(child_size);
 
         let self_size = bc.constrain(child_size);
-        // The new size might have made the current scroll offset invalid. This makes it valid
-        // again.
-        let _ = self.scroll_by(Vec2::ZERO);
         if old_size != self_size {
             self.scroll_component
                 .reset_scrollbar_fade(|d| ctx.request_timer(d), env);

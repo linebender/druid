@@ -372,7 +372,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
             }
             //FIXME: this should happen in the parent too?
-            LifeCycle::Internal(crate::InternalLifeCycle::ParentWindowOrigin)
+            LifeCycle::ViewContextChanged(_)
                 if self.can_write() =>
             {
                 if self.can_write() {

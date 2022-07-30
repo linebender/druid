@@ -365,10 +365,10 @@ pub enum InternalLifeCycle {
 }
 
 /// Information about the widgets surroundings.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ViewContext {
-    /// The origin of this widget relative to the window.
-    pub global_origin: Point,
+    /// The origin of this widget's parent relative to the window.
+    pub parent_window_origin: Point,
 
     /// The last position the cursor was on, relative to the widget.
     pub last_mouse_position: Option<Point>,
@@ -470,7 +470,7 @@ impl ViewContext {
     pub(crate) fn for_child_widget(&self, child_origin: Point) -> Self {
         let child_origin = child_origin.to_vec2();
         ViewContext {
-            global_origin: self.global_origin.add(child_origin),
+            parent_window_origin: self.parent_window_origin.add(child_origin),
             last_mouse_position: self.last_mouse_position.map(|pos|pos.sub(child_origin)),
             clip: self.clip.sub(child_origin)
         }
@@ -478,7 +478,6 @@ impl ViewContext {
 }
 
 pub(crate) use state_cell::{DebugStateCell, StateCell, StateCheckFn};
-use crate::image::flat::View;
 
 mod state_cell {
     use crate::core::WidgetState;

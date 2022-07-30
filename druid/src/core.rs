@@ -270,7 +270,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, _: &T, _: &Env, origin: Point) {
+    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, _data: &T, _env: &Env, origin: Point) {
+        //TODO: decide whether we should keep data and env for compatibility or do a breaking change
         self.state.is_expecting_set_origin_call = false;
 
         if origin != self.state.origin {
@@ -282,7 +283,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Set the origin of this widget, in the parent's coordinate space.
-    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, _: &T, _: &Env, origin: Point) {
+    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, origin: Point) {
         if origin != self.state.origin {
             self.state.origin = origin;
             self.state.view_context_changed = true;
@@ -388,8 +389,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 widget_state: &mut self.state,
             };
             // We add a span so that inner logs are marked as being in a lifecycle pass
+            let mut widget = &mut self.inner;
             trace_span!("lifecycle")
-                .in_scope(|| child.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
+                .in_scope(|| widget.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
             // if hot changes and we're showing widget ids, always repaint
             if env.get(Env::DEBUG_WIDGET_ID) {
                 child_ctx.request_paint();
@@ -1075,6 +1077,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     data,
                     env,
                 );
+                self.state.parent_window_origin = view_context.parent_window_origin;
 
                 self.state.children_view_context_changed = false;
                 self.state.view_context_changed = false;
@@ -1358,7 +1361,7 @@ impl WidgetState {
     }
 
     pub(crate) fn window_origin(&self) -> Point {
-        self.parent_window_origin + self.origin.to_vec2() - self.viewport_offset
+        self.parent_window_origin + self.origin.to_vec2()
     }
 }
 

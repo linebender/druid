@@ -343,7 +343,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
 });
 
 //methods on event, update and layout.
-impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LayoutCtx<'_, '_>, {
     /// Indicate that your view_context has changed.
     ///
     /// Widgets must call this method after changing the clip region of thier children.
@@ -351,7 +351,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     pub fn view_context_changed(&mut self) {
         self.widget_state.view_context_changed = true;
     }
-}
+});
 
 // methods on event, update, and lifecycle
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {

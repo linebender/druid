@@ -180,7 +180,7 @@ impl<T: Data> Window<T> {
 
         if self.root.state().children_view_context_changed && !self.root.state().needs_layout {
             let event = LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
-                global_origin: Point::ORIGIN,
+                parent_window_origin: Point::ORIGIN,
                 last_mouse_position: self.last_mouse_pos,
                 clip: self.size.to_rect(),
             }));
@@ -489,13 +489,7 @@ impl<T: Data> Window<T> {
         }
         self.root
             .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
-        self.lifecycle(
-            queue,
-            &LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin),
-            data,
-            env,
-            false,
-        );
+
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
