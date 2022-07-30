@@ -17,7 +17,7 @@ use crate::debug_state::DebugState;
 use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
-use crate::{Data, WidgetPod};
+use crate::{Data, InternalLifeCycle, WidgetPod};
 use tracing::{info, instrument, trace, warn};
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
@@ -196,6 +196,7 @@ pub struct ClipBox<T, W> {
     constrain_vertical: bool,
     must_fill: bool,
     old_bc: BoxConstraints,
+    old_size: Size,
 
     //This ClipBox is wrapped by a widget which manages the viewport_offset
     managed: bool,
@@ -320,6 +321,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             constrain_vertical: false,
             must_fill: false,
             old_bc: BoxConstraints::tight(Size::ZERO),
+            old_size: Size::ZERO,
             managed: true,
         }
     }
@@ -335,6 +337,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
             constrain_vertical: false,
             must_fill: false,
             old_bc: BoxConstraints::tight(Size::ZERO),
+            old_size: Size::ZERO,
             managed: false,
         }
     }
@@ -383,7 +386,23 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
 
     #[instrument(name = "ClipBox", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        self.child.lifecycle(ctx, event, data, env);
+        match event {
+            LifeCycle::ViewContextChanged(&view_context) => {
+                view_context.clip = view_context.clip.intersect(ctx.size().to_rect());
+                let modified_event = LifeCycle::ViewContextChanged(view_context);
+                self.child.lifecycle(ctx, &modified_event, data, env);
+
+            },
+            LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(&view_context)) => {
+                view_context.clip = view_context.clip.intersect(ctx.size().to_rect());
+                let modified_event = LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_context));
+                self.child.lifecycle(ctx, &modified_event, data, env);
+            }
+            _ => {
+                self.child.lifecycle(ctx, event, data, env);
+            },
+        }
+
     }
 
     #[instrument(
@@ -427,6 +446,11 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
 
         let new_offset = -self.port.clamp_view_origin(-self.child.layout_rect().origin());
         self.child.set_origin(ctx, data, env, new_offset);
+
+        if self.viewport_size() != self.old_size {
+            ctx.view_context_changed();
+            self.old_size = self.viewport_size();
+        }
 
         trace!("Computed sized: {}", self.viewport_size());
         self.viewport_size()

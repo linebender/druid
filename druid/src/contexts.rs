@@ -114,7 +114,6 @@ pub struct UpdateCtx<'a, 'b> {
 pub struct LayoutCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) mouse_pos: Option<Point>,
 }
 
 /// Z-order paint operations with transformations.
@@ -342,6 +341,17 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
         self.widget_state.cursor_change = CursorChange::Default;
     }
 });
+
+//methods on event, update and layout.
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
+    /// Indicate that your view_context has changed.
+    ///
+    /// Widgets must call this method after changing the clip region of thier children.
+    /// The other parts of view_context (cursor_position and global origin) are tracked internally.
+    pub fn view_context_changed(&mut self) {
+        self.widget_state.view_context_changed = true;
+    }
+}
 
 // methods on event, update, and lifecycle
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, {

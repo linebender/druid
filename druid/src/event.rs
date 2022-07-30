@@ -14,12 +14,13 @@
 
 //! Events.
 
+use std::ops::{Add, Sub};
 use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, WidgetId};
+use crate::{Command, Notification, Point, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -303,6 +304,8 @@ pub enum LifeCycle {
     ///
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
+    ///
+    ViewContextChanged(ViewContext),
     /// Internal druid lifecycle event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -332,7 +335,7 @@ pub enum InternalLifeCycle {
     /// Used to route the `DisabledChanged` event to the required widgets.
     RouteDisabledChanged,
     /// The parents widget origin in window coordinate space has changed.
-    ParentWindowOrigin,
+    RouteViewContextChanged(ViewContext),
     /// For testing: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
@@ -359,6 +362,21 @@ pub enum InternalLifeCycle {
     },
     /// For testing: apply the given function on every widget.
     DebugInspectState(StateCheckFn),
+}
+
+/// Information about the widgets surroundings.
+#[derive(Copy, Clone)]
+pub struct ViewContext {
+    /// The origin of this widget relative to the window.
+    pub global_origin: Point,
+
+    /// The last position the cursor was on, relative to the widget.
+    pub last_mouse_position: Option<Point>,
+
+    /// The visible area, this widget is contained in, relative to the widget.
+    ///
+    /// The area may be larger than the widgets paint_rect.
+    pub clip: Rect,
 }
 
 impl Event {
@@ -419,7 +437,8 @@ impl LifeCycle {
             LifeCycle::Size(_)
             | LifeCycle::HotChanged(_)
             | LifeCycle::FocusChanged(_)
-            | LifeCycle::BuildFocusChain => false,
+            | LifeCycle::BuildFocusChain
+            | LifeCycle::ViewContextChanged {..} => false,
         }
     }
 }
@@ -438,7 +457,7 @@ impl InternalLifeCycle {
             InternalLifeCycle::RouteWidgetAdded
             | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
-            InternalLifeCycle::ParentWindowOrigin => false,
+            InternalLifeCycle::RouteViewContextChanged {..} => false,
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
@@ -446,7 +465,20 @@ impl InternalLifeCycle {
     }
 }
 
+impl ViewContext {
+    /// Transforms the `ViewContext` into the coordinate_space of its child.
+    pub(crate) fn for_child_widget(&self, child_origin: Point) -> Self {
+        let child_origin = child_origin.to_vec2();
+        ViewContext {
+            global_origin: self.global_origin.add(child_origin),
+            last_mouse_position: self.last_mouse_position.map(|pos|pos.sub(child_origin)),
+            clip: self.clip.sub(child_origin)
+        }
+    }
+}
+
 pub(crate) use state_cell::{DebugStateCell, StateCell, StateCheckFn};
+use crate::image::flat::View;
 
 mod state_cell {
     use crate::core::WidgetState;

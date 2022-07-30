@@ -121,8 +121,11 @@ pub struct WidgetState {
 
     pub(crate) needs_layout: bool,
 
-    /// Because of some scrolling or something, `parent_window_origin` needs to be updated.
-    pub(crate) needs_window_origin: bool,
+    /// Some of our children have the `view_context_changed` flag set.
+    pub(crate) children_view_context_changed: bool,
+
+    ///
+    pub(crate) view_context_changed: bool,
 
     /// Any descendant is active.
     has_active: bool,
@@ -267,50 +270,24 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, origin: Point) {
+    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, _: &T, _: &Env, origin: Point) {
         self.state.is_expecting_set_origin_call = false;
 
         if origin != self.state.origin {
             self.state.origin = origin;
-            self.state.needs_window_origin = true;
-            let layout_rect = self.layout_rect();
-
-            // if the widget has moved, it may have moved under the mouse, in which
-            // case we need to handle that.
-            if WidgetPod::set_hot_state(
-                &mut self.inner,
-                &mut self.state,
-                ctx.state,
-                layout_rect,
-                ctx.mouse_pos,
-                data,
-                env,
-            ) {
-                ctx.widget_state.merge_up(&mut self.state);
-            }
+            self.state.view_context_changed = true;
+            // identical to calling merge up but faster!
+            ctx.widget_state.children_view_context_changed = true;
         }
     }
 
     /// Set the origin of this widget, in the parent's coordinate space.
-    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, data: &T, env: &Env, origin: Point) {
+    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, _: &T, _: &Env, origin: Point) {
         if origin != self.state.origin {
             self.state.origin = origin;
-            self.state.needs_window_origin = true;
-            let layout_rect = self.layout_rect();
-
-            // if the widget has moved, it may have moved under the mouse, in which
-            // case we need to handle that.
-            if WidgetPod::set_hot_state(
-                &mut self.inner,
-                &mut self.state,
-                ctx.state,
-                layout_rect,
-                ctx.mouse_pos,
-                data,
-                env,
-            ) {
-                ctx.widget_state.merge_up(&mut self.state);
-            }
+            self.state.view_context_changed = true;
+            // identical to calling merge up but faster!
+            ctx.widget_state.children_view_context_changed = true;
         }
     }
 
@@ -386,30 +363,29 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     ///
     /// The provided `child_state` should be merged up if this returns `true`.
     fn set_hot_state(
-        child: &mut W,
-        child_state: &mut WidgetState,
+        &mut self,
         state: &mut ContextState,
-        rect: Rect,
         mouse_pos: Option<Point>,
         data: &T,
         env: &Env,
     ) -> bool {
-        let had_hot = child_state.is_hot;
-        child_state.is_hot = match mouse_pos {
+        let rect = self.layout_rect();
+        let had_hot = self.state.is_hot;
+        self.state.is_hot = match mouse_pos {
             Some(pos) => rect.winding(pos) != 0,
             None => false,
         };
-        if had_hot != child_state.is_hot {
+        if had_hot != self.state.is_hot {
             trace!(
                 "Widget {:?}: set hot state to {}",
-                child_state.id,
-                child_state.is_hot
+                self.state.id,
+                self.state.is_hot
             );
 
-            let hot_changed_event = LifeCycle::HotChanged(child_state.is_hot);
+            let hot_changed_event = LifeCycle::HotChanged(self.state.is_hot);
             let mut child_ctx = LifeCycleCtx {
                 state,
-                widget_state: child_state,
+                widget_state: &mut self.state,
             };
             // We add a span so that inner logs are marked as being in a lifecycle pass
             trace_span!("lifecycle")
@@ -568,22 +544,13 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         self.state.needs_layout = false;
-        self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
-        //TODO: this does not work!
-        // self.layout_rect().origin().to_vec2() + self.viewport_offset() is the old position which
-        // changes after set origin. Therefore changing hot state must happen after the root widget
-        // set its origin.
-        let child_mouse_pos = ctx
-            .mouse_pos
-            .map(|pos| pos - self.layout_rect().origin().to_vec2());
         let prev_size = self.state.size;
 
         let mut child_ctx = LayoutCtx {
             widget_state: &mut self.state,
             state: ctx.state,
-            mouse_pos: child_mouse_pos,
         };
 
         let new_size = self.inner.layout(&mut child_ctx, bc, data, env);
@@ -683,11 +650,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let recurse = match event {
             Event::Internal(internal) => match internal {
                 InternalEvent::MouseLeave => {
-                    let hot_changed = WidgetPod::set_hot_state(
-                        &mut self.inner,
-                        &mut self.state,
+                    let hot_changed = self.set_hot_state(
                         ctx.state,
-                        rect,
                         None,
                         data,
                         env,
@@ -741,11 +705,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 ctx.is_root
             }
             Event::MouseDown(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
+                self.set_hot_state(
                     ctx.state,
-                    rect,
                     if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
@@ -764,11 +725,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             Event::MouseUp(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
+                self.set_hot_state(
                     ctx.state,
-                    rect,
                     if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
@@ -787,11 +745,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             Event::MouseMove(mouse_event) => {
-                let hot_changed = WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
+                let hot_changed = self.set_hot_state(
                     ctx.state,
-                    rect,
                     if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
@@ -813,11 +768,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
             }
             Event::Wheel(mouse_event) => {
-                WidgetPod::set_hot_state(
-                    &mut self.inner,
-                    &mut self.state,
+                self.set_hot_state(
                     ctx.state,
-                    rect,
                     if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
@@ -1010,11 +962,24 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                         _ => false,
                     }
                 }
-                InternalLifeCycle::ParentWindowOrigin => {
-                    let old_parent_window_origin = self.state.parent_window_origin;
-                    self.state.parent_window_origin = ctx.widget_state.window_origin();
+                InternalLifeCycle::RouteViewContextChanged(view_context) => {
+                    if self.state.view_context_changed {
+                        self.lifecycle(ctx, &LifeCycle::ViewContextChanged(*view_context), data, env);
+                        self.state.view_context_changed = false;
+                        self.state.children_view_context_changed = false;
 
-                    old_parent_window_origin != self.state.parent_window_origin || self.state.needs_window_origin
+                        return;
+                    } else if self.state.children_view_context_changed {
+                        extra_event = Some(LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(
+                            view_context.for_child_widget(self.state.origin)
+                        )));
+
+                        self.state.view_context_changed = false;
+                        self.state.children_view_context_changed = false;
+
+                    }
+
+                    false
                 }
                 InternalLifeCycle::DebugRequestState { widget, state_cell } => {
                     if *widget == self.id() {
@@ -1098,6 +1063,23 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 } else {
                     false
                 }
+            }
+            LifeCycle::ViewContextChanged (view_context) => {
+                extra_event = Some(LifeCycle::ViewContextChanged(
+                    view_context.for_child_widget(self.state.origin)
+                ));
+
+                self.set_hot_state(
+                    ctx.state,
+                    view_context.last_mouse_position,
+                    data,
+                    env,
+                );
+
+                self.state.children_view_context_changed = false;
+                self.state.view_context_changed = false;
+
+                false
             }
         };
 
@@ -1264,7 +1246,7 @@ impl WidgetState {
             baseline_offset: 0.0,
             is_hot: false,
             needs_layout: false,
-            needs_window_origin: false,
+            children_view_context_changed: false,
             is_active: false,
             has_active: false,
             has_focus: false,
@@ -1279,6 +1261,7 @@ impl WidgetState {
             sub_window_hosts: Vec::new(),
             is_explicitly_disabled_new: false,
             update_focus_chain: false,
+            view_context_changed: false,
         }
     }
 
@@ -1315,7 +1298,8 @@ impl WidgetState {
         child_state.invalid.clear();
 
         self.needs_layout |= child_state.needs_layout;
-        self.needs_window_origin |= child_state.needs_window_origin;
+        self.children_view_context_changed |=
+            child_state.children_view_context_changed | child_state.view_context_changed;
         self.request_anim |= child_state.request_anim;
         self.children_disabled_changed |= child_state.children_disabled_changed;
         self.children_disabled_changed |=

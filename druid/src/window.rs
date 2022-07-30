@@ -32,11 +32,7 @@ use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
-    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken,
-    UpdateCtx, Widget, WidgetId, WidgetPod,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent, InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken, UpdateCtx, ViewContext, Widget, WidgetId, WidgetPod};
 
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
 
@@ -182,8 +178,12 @@ impl<T: Data> Window<T> {
             );
         }
 
-        if self.root.state().needs_window_origin && !self.root.state().needs_layout {
-            let event = LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin);
+        if self.root.state().children_view_context_changed && !self.root.state().needs_layout {
+            let event = LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
+                global_origin: Point::ORIGIN,
+                last_mouse_position: self.last_mouse_pos,
+                clip: self.size.to_rect(),
+            }));
             self.lifecycle(queue, &event, data, env, false);
         }
 
@@ -467,7 +467,6 @@ impl<T: Data> Window<T> {
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
-            mouse_pos: self.last_mouse_pos,
         };
         let bc = match self.size_policy {
             WindowSizePolicy::User => BoxConstraints::tight(self.size),
