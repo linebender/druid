@@ -14,8 +14,8 @@
 
 //! Events.
 
+use crate::kurbo::{Rect, Size};
 use std::ops::{Add, Sub};
-use crate::kurbo::{Rect, Shape, Size, Vec2};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
@@ -438,7 +438,7 @@ impl LifeCycle {
             | LifeCycle::HotChanged(_)
             | LifeCycle::FocusChanged(_)
             | LifeCycle::BuildFocusChain
-            | LifeCycle::ViewContextChanged {..} => false,
+            | LifeCycle::ViewContextChanged { .. } => false,
         }
     }
 }
@@ -457,7 +457,7 @@ impl InternalLifeCycle {
             InternalLifeCycle::RouteWidgetAdded
             | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
-            InternalLifeCycle::RouteViewContextChanged {..} => false,
+            InternalLifeCycle::RouteViewContextChanged { .. } => false,
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
@@ -471,8 +471,8 @@ impl ViewContext {
         let child_origin = child_origin.to_vec2();
         ViewContext {
             parent_window_origin: self.parent_window_origin.add(child_origin),
-            last_mouse_position: self.last_mouse_position.map(|pos|pos.sub(child_origin)),
-            clip: self.clip.sub(child_origin)
+            last_mouse_position: self.last_mouse_position.map(|pos| pos.sub(child_origin)),
+            clip: self.clip.sub(child_origin),
         }
     }
 }

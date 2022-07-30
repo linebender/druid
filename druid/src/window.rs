@@ -32,7 +32,11 @@ use crate::menu::{MenuItemId, MenuManager};
 use crate::text::TextFieldRegistration;
 use crate::widget::LabelText;
 use crate::win_handler::RUN_COMMANDS_TOKEN;
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent, InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken, UpdateCtx, ViewContext, Widget, WidgetId, WidgetPod};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
+    InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken,
+    UpdateCtx, ViewContext, Widget, WidgetId, WidgetPod,
+};
 
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
 
@@ -179,11 +183,12 @@ impl<T: Data> Window<T> {
         }
 
         if self.root.state().children_view_context_changed && !self.root.state().needs_layout {
-            let event = LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
-                parent_window_origin: Point::ORIGIN,
-                last_mouse_position: self.last_mouse_pos,
-                clip: self.size.to_rect(),
-            }));
+            let event =
+                LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
+                    parent_window_origin: Point::ORIGIN,
+                    last_mouse_position: self.last_mouse_pos,
+                    clip: self.size.to_rect(),
+                }));
             self.lifecycle(queue, &event, data, env, false);
         }
 

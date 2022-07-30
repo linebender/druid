@@ -14,7 +14,7 @@
 
 use crate::commands::SCROLL_TO_VIEW;
 use crate::debug_state::DebugState;
-use crate::kurbo::{Affine, Point, Rect, Size, Vec2};
+use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, InternalLifeCycle, WidgetPod};
@@ -76,8 +76,8 @@ impl Viewport {
     /// Returns true if the position changed. Note that the valid values for the viewport origin
     /// are constrained by the size of the child, and so the origin might not get set to exactly
     /// `pos`.
-    pub fn pan_to(&mut self, origin: Point) -> bool {
-        let new_origin = self.clamp_view_origin(origin);
+    pub fn pan_to(&mut self, pos: Point) -> bool {
+        let new_origin = self.clamp_view_origin(pos);
         if (new_origin - self.view_origin).hypot2() > 1e-12 {
             self.view_origin = new_origin;
             true
@@ -86,11 +86,16 @@ impl Viewport {
         }
     }
 
-    pub fn pan_to_on_axis(&mut self, axis: Axis, origin: f64) -> bool {
-        self.pan_to(Point::from(axis.pack(
-            origin,
-            axis.minor_pos(self.view_origin)
-        )))
+    /// Sets the component selected by axis of viewport origin to `pos`, while trying to keep the
+    /// view rectangle inside the content rectangle.
+    ///
+    /// Returns true if the position changed. Note that the valid values for the viewport origin
+    /// are constrained by the size of the child, and so the origin might not get set to exactly
+    /// `pos`.
+    pub fn pan_to_on_axis(&mut self, axis: Axis, pos: f64) -> bool {
+        self.pan_to(Point::from(
+            axis.pack(pos, axis.minor_pos(self.view_origin)),
+        ))
     }
 
     /// Pan the smallest distance that makes the target [`Rect`] visible.
@@ -357,7 +362,9 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// Returns `true` if the scroll offset has changed.
     pub fn pan_by(&mut self, ctx: &mut EventCtx, delta: Vec2) -> bool {
-        self.with_port(ctx, |_, port|{port.pan_by(delta);})
+        self.with_port(ctx, |_, port| {
+            port.pan_by(delta);
+        })
     }
 
     /// Pans the minimal distance to show the target rect.
@@ -365,28 +372,35 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
     pub fn pan_to_visible(&mut self, ctx: &mut EventCtx, region: Rect) -> bool {
-        self.with_port(ctx, |_, port|{port.pan_to_visible(region);})
+        self.with_port(ctx, |_, port| {
+            port.pan_to_visible(region);
+        })
     }
 
     /// Pan to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
     pub fn pan_to_on_axis(&mut self, ctx: &mut EventCtx, axis: Axis, position: f64) -> bool {
-        self.with_port(ctx, |_, port|{port.pan_to_on_axis(axis, position);})
+        self.with_port(ctx, |_, port| {
+            port.pan_to_on_axis(axis, position);
+        })
     }
 
     /// Modify the `ClipBox`'s viewport rectangle with a closure.
     ///
     /// The provided callback function can modify its argument, and when it is
     /// done then this `ClipBox` will be modified to have the new viewport rectangle.
-    pub fn with_port<F: FnOnce(&mut EventCtx, &mut Viewport)>(&mut self, ctx: &mut EventCtx, f: F) -> bool {
+    pub fn with_port<F: FnOnce(&mut EventCtx, &mut Viewport)>(
+        &mut self,
+        ctx: &mut EventCtx,
+        f: F,
+    ) -> bool {
         f(ctx, &mut self.port);
         self.port.sanitize_view_origin();
         let new_content_origin = (Point::ZERO - self.port.view_origin).to_point();
 
         if new_content_origin != self.child.layout_rect().origin() {
-                self.child
-                    .set_origin_dyn(ctx, new_content_origin);
+            self.child.set_origin_dyn(ctx, new_content_origin);
             true
         } else {
             false
@@ -426,19 +440,18 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                 view_context.clip = view_context.clip.intersect(ctx.size().to_rect());
                 let modified_event = LifeCycle::ViewContextChanged(view_context);
                 self.child.lifecycle(ctx, &modified_event, data, env);
-
-            },
+            }
             LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_context)) => {
                 let mut view_context = *view_context;
                 view_context.clip = view_context.clip.intersect(ctx.size().to_rect());
-                let modified_event = LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_context));
+                let modified_event =
+                    LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_context));
                 self.child.lifecycle(ctx, &modified_event, data, env);
             }
             _ => {
                 self.child.lifecycle(ctx, event, data, env);
-            },
+            }
         }
-
     }
 
     #[instrument(
@@ -481,7 +494,12 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         self.port.view_size = bc.constrain(content_size);
         self.port.sanitize_view_origin();
 
-        self.child.set_origin(ctx, data, env, (Point::ZERO - self.port.view_origin).to_point());
+        self.child.set_origin(
+            ctx,
+            data,
+            env,
+            (Point::ZERO - self.port.view_origin).to_point(),
+        );
 
         if self.viewport_size() != self.old_size {
             ctx.view_context_changed();

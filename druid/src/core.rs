@@ -21,7 +21,7 @@ use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::commands::SCROLL_TO_VIEW;
 use crate::contexts::ContextState;
-use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size, Vec2};
+use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
 use crate::sub_window::SubWindowUpdate;
 use crate::{
     ArcStr, BoxConstraints, Color, Command, Cursor, Data, Env, Event, EventCtx, InternalEvent,
@@ -389,7 +389,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
                 widget_state: &mut self.state,
             };
             // We add a span so that inner logs are marked as being in a lifecycle pass
-            let mut widget = &mut self.inner;
+            let widget = &mut self.inner;
             trace_span!("lifecycle")
                 .in_scope(|| widget.lifecycle(&mut child_ctx, &hot_changed_event, data, env));
             // if hot changes and we're showing widget ids, always repaint
@@ -652,12 +652,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         let recurse = match event {
             Event::Internal(internal) => match internal {
                 InternalEvent::MouseLeave => {
-                    let hot_changed = self.set_hot_state(
-                        ctx.state,
-                        None,
-                        data,
-                        env,
-                    );
+                    let hot_changed = self.set_hot_state(ctx.state, None, data, env);
                     had_active || hot_changed
                 }
                 InternalEvent::TargetedCommand(cmd) => {
@@ -966,19 +961,25 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 }
                 InternalLifeCycle::RouteViewContextChanged(view_context) => {
                     if self.state.view_context_changed {
-                        self.lifecycle(ctx, &LifeCycle::ViewContextChanged(*view_context), data, env);
+                        self.lifecycle(
+                            ctx,
+                            &LifeCycle::ViewContextChanged(*view_context),
+                            data,
+                            env,
+                        );
                         self.state.view_context_changed = false;
                         self.state.children_view_context_changed = false;
 
                         return;
                     } else if self.state.children_view_context_changed {
-                        extra_event = Some(LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(
-                            view_context.for_child_widget(self.state.origin)
-                        )));
+                        extra_event = Some(LifeCycle::Internal(
+                            InternalLifeCycle::RouteViewContextChanged(
+                                view_context.for_child_widget(self.state.origin),
+                            ),
+                        ));
 
                         self.state.view_context_changed = false;
                         self.state.children_view_context_changed = false;
-
                     }
 
                     false
@@ -1066,17 +1067,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     false
                 }
             }
-            LifeCycle::ViewContextChanged (view_context) => {
+            LifeCycle::ViewContextChanged(view_context) => {
                 extra_event = Some(LifeCycle::ViewContextChanged(
-                    view_context.for_child_widget(self.state.origin)
+                    view_context.for_child_widget(self.state.origin),
                 ));
 
-                self.set_hot_state(
-                    ctx.state,
-                    view_context.last_mouse_position,
-                    data,
-                    env,
-                );
+                self.set_hot_state(ctx.state, view_context.last_mouse_position, data, env);
                 self.state.parent_window_origin = view_context.parent_window_origin;
 
                 self.state.children_view_context_changed = false;
