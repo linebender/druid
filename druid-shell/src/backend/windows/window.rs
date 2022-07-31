@@ -185,8 +185,8 @@ impl Eq for WindowHandle {}
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         if let Some(hwnd) = self.get_hwnd() {
-            // Using empty + set fields instead Win32Handle{...} to shut up a unexplainable compiler error
-            // "cannot create non-exhaustive struct using struct expression"
+            // Using empty + set fields instead Win32Handle{...}
+            // because Win32Handle is marked as #[non_exhaustive]
             let mut handle = Win32Handle::empty();
             handle.hwnd = hwnd as *mut core::ffi::c_void;
             handle.hinstance = unsafe {
