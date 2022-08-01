@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, WebWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
@@ -94,7 +94,7 @@ impl Eq for WindowHandle {}
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         error!("HasRawWindowHandle trait not implemented for wasm.");
-        RawWindowHandle::Web(WebHandle::empty())
+        RawWindowHandle::Web(WebWindowHandle::empty())
     }
 }
 
