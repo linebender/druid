@@ -185,7 +185,7 @@ impl Eq for WindowHandle {}
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         if let Some(hwnd) = self.get_hwnd() {
-            let handle = Win32WindowHandle::empty();
+            let mut handle = Win32WindowHandle::empty();
             handle.hwnd = hwnd as *mut core::ffi::c_void;
             handle.hinstance = unsafe {
                 winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
