@@ -56,13 +56,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11 --no-default-features -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11,raw-win-handle --no-default-features -- -D warnings
 
       - name: cargo clippy druid
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets  --no-default-features --features=svg,image,im,x11 -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets  --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
@@ -135,7 +135,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features wayland --no-default-features -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=wayland,raw-win-handle --no-default-features -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
@@ -179,7 +179,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
@@ -193,7 +193,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle
 
   test-stable-wasm:
     runs-on: macOS-latest
@@ -304,14 +304,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=raw-win-handle -- -D warnings
         continue-on-error: true
 
       - name: cargo clippy druid
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle -- -D warnings
         continue-on-error: true
 
       # Test packages in deeper-to-higher dependency order
