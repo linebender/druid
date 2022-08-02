@@ -1581,6 +1581,7 @@ impl IdleHandle {
 #[derive(Clone, Default)]
 pub(crate) struct WindowHandle {
     id: u32,
+    #[allow(dead_code)] // Only used with the raw-win-handle feature
     visual_id: u32,
     window: Weak<Window>,
 }
