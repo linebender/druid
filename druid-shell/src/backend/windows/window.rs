@@ -48,7 +48,7 @@ use winapi::Interface;
 use wio::com::ComPtr;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{windows::WindowsHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, Win32WindowHandle};
 
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
@@ -185,18 +185,16 @@ impl Eq for WindowHandle {}
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         if let Some(hwnd) = self.get_hwnd() {
-            let handle = WindowsHandle {
-                hwnd: hwnd as *mut core::ffi::c_void,
-                hinstance: unsafe {
-                    winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
-                        as *mut core::ffi::c_void
-                },
-                ..WindowsHandle::empty()
+            let mut handle = Win32WindowHandle::empty();
+            handle.hwnd = hwnd as *mut core::ffi::c_void;
+            handle.hinstance = unsafe {
+                winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
+                    as *mut core::ffi::c_void
             };
-            RawWindowHandle::Windows(handle)
+            RawWindowHandle::Win32(handle)
         } else {
             error!("Cannot retrieved HWND for window.");
-            RawWindowHandle::Windows(WindowsHandle::empty())
+            RawWindowHandle::Win32(Win32WindowHandle::empty())
         }
     }
 }

@@ -44,7 +44,7 @@ use instant::Duration;
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, XcbWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -126,7 +126,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         error!("HasRawWindowHandle trait not implemented for gtk.");
         // GTK is not a platform, and there's no empty generic handle. Pick XCB randomly as fallback.
-        RawWindowHandle::Xcb(XcbHandle::empty())
+        RawWindowHandle::Xcb(XcbWindowHandle::empty())
     }
 }
 
