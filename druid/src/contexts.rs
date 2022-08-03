@@ -888,13 +888,13 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
 
     /// Creates a new LayoutCtx for a widget that maybe is hidden by another widget.
     ///
-    /// If obstructed is `true` the child will not set its hot state to `true` even if the cursor
+    /// If ignore is `true` the child will not set its hot state to `true` even if the cursor
     /// is inside its bounds.
-    pub fn set_obstructed<'c>(&'c mut self, obstructed: bool) -> LayoutCtx<'c, 'b> {
+    pub fn ignore_hot<'c>(&'c mut self, ignore: bool) -> LayoutCtx<'c, 'b> {
         LayoutCtx {
             state: &mut self.state,
             widget_state: &mut self.widget_state,
-            mouse_pos: if obstructed { None } else { self.mouse_pos },
+            mouse_pos: if ignore { None } else { self.mouse_pos },
         }
     }
 }

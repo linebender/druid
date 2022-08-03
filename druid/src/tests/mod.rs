@@ -48,7 +48,6 @@ pub fn move_mouse(p: impl Into<Point>) -> MouseEvent {
         focus: false,
         button: MouseButton::None,
         wheel_delta: Vec2::ZERO,
-        obstructed: false,
     }
 }
 
@@ -64,7 +63,6 @@ pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
         focus: false,
         button: MouseButton::None,
         wheel_delta: delta.into(),
-        obstructed: false,
     }
 }
 

@@ -98,17 +98,13 @@ impl<T: Data> Widget<T> for ZStack<T> {
             event,
             Event::MouseDown(_) | Event::MouseMove(_) | Event::MouseUp(_) | Event::Wheel(_)
         );
-        let mut previous_child_hot = false;
 
         for layer in self.layers.iter_mut() {
-            layer.child.event(
-                ctx,
-                &event.set_obstructed(is_pointer_event && previous_child_hot),
-                data,
-                env,
-            );
+            layer.child.event(ctx, event, data, env);
 
-            previous_child_hot |= layer.child.is_hot();
+            if is_pointer_event && layer.child.is_hot() {
+                ctx.set_handled();
+            }
         }
     }
 
@@ -145,7 +141,7 @@ impl<T: Data> Widget<T> for ZStack<T> {
         let mut paint_rect = Rect::ZERO;
 
         for layer in self.layers.iter_mut() {
-            let mut inner_ctx = ctx.set_obstructed(previous_child_hot);
+            let mut inner_ctx = ctx.ignore_hot(previous_child_hot);
 
             let remaining = base_size - layer.child.layout_rect().size();
             let origin = layer.resolve_point(remaining);

@@ -409,40 +409,6 @@ impl Event {
         }
     }
 
-    /// Changes the event for widgets which maybe are hidden behind other widgets.
-    ///
-    /// If obstructed is `true` the child will not set its hot state to `true` even if the cursor
-    /// is inside its bounds.
-    pub fn set_obstructed(&self, obstructed: bool) -> Self {
-        if obstructed {
-            match self {
-                Event::MouseDown(me) => {
-                    let mut me = me.clone();
-                    me.obstructed = true;
-                    Event::MouseDown(me)
-                }
-                Event::MouseUp(me) => {
-                    let mut me = me.clone();
-                    me.obstructed = true;
-                    Event::MouseUp(me)
-                }
-                Event::MouseMove(me) => {
-                    let mut me = me.clone();
-                    me.obstructed = true;
-                    Event::MouseMove(me)
-                }
-                Event::Wheel(me) => {
-                    let mut me = me.clone();
-                    me.obstructed = true;
-                    Event::Wheel(me)
-                }
-                _ => self.clone(),
-            }
-        } else {
-            self.clone()
-        }
-    }
-
     /// Whether this event should be sent to widgets which are currently not visible and not
     /// accessible.
     ///

@@ -666,7 +666,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
-        if ctx.is_handled {
+        if ctx.is_handled
+            && !matches!(
+                event,
+                Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_) | Event::Wheel(_)
+            )
+        {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
@@ -744,7 +749,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    if !mouse_event.obstructed {
+                    if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
                         None
@@ -767,7 +772,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    if !mouse_event.obstructed {
+                    if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
                         None
@@ -790,7 +795,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    if !mouse_event.obstructed {
+                    if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
                         None
@@ -816,7 +821,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    if !mouse_event.obstructed {
+                    if !ctx.is_handled {
                         Some(mouse_event.pos)
                     } else {
                         None
