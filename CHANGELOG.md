@@ -74,7 +74,6 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 - `ZStack` widget ([#2235] by [@xarvic])
-- `obstructed` flag to `MouseEvent` and `set_obstructed` methods to `LayoutCtx` and `Event` ([#2235] by [@xarvic])
 
 ### Changed
 
@@ -105,7 +104,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
 - Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
-- `WidgetPod::event` stops proagating obstructed mouse events to non active widgets ([#2235] by [@xarvic])
+- `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
 
 ### Deprecated
 
