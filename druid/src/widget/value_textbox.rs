@@ -70,9 +70,9 @@ pub trait ValidationDelegate {
 pub enum TextBoxEvent {
     /// The textbox began editing.
     Began,
-    /// An edit occured which was considered valid by the [`Formatter`].
+    /// An edit occurred which was considered valid by the [`Formatter`].
     Changed,
-    /// An edit occured which was rejected by the [`Formatter`].
+    /// An edit occurred which was rejected by the [`Formatter`].
     PartiallyInvalid(ValidationError),
     /// The user attempted to finish editing, but the input was not valid.
     Invalid(ValidationError),
@@ -260,7 +260,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                     self.child.event(ctx, event, &mut self.buffer, env);
                 }
             }
-            // if an edit occured, validate it with the formatter
+            // if an edit occurred, validate it with the formatter
             // notifications can arrive before update, so we always ignore them
             if !matches!(event, Event::Notification(_)) && self.buffer != self.old_buffer {
                 let mut validation = self

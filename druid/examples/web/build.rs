@@ -57,7 +57,7 @@ fn link_dir_windows(src: &Path, dst: &Path) {
         Some(err) => panic!("Failed to remove directory: {}", err),
     }
     // Attempt to create a symlink, which will work with either
-    // * Admininstrator privileges
+    // * Administrator privileges
     // * New enough Windows with developer mode enabled
     if std::os::windows::fs::symlink_dir(src, dst).is_ok() {
         return;

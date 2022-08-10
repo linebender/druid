@@ -672,7 +672,7 @@ impl SliderValueMapping {
     fn check_range(&mut self) {
         if self.max < self.min {
             warn!(
-                "min({}) should be less than max({}), swaping the values",
+                "min({}) should be less than max({}), swapping the values",
                 self.min, self.max
             );
             std::mem::swap(&mut self.max, &mut self.min);

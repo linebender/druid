@@ -68,7 +68,7 @@ pub fn scroll_mouse(p: impl Into<Point>, delta: impl Into<Vec2>) -> MouseEvent {
 
 /// This function creates a temporary directory and returns a PathBuf to it.
 ///
-/// This directory will be created relative to the executable and will therefor
+/// This directory will be created relative to the executable and will therefore
 /// be created in the target directory for tests when running with cargo. The
 /// directory will be cleaned up at the end of the PathBufs lifetime. This
 /// uses the `tempfile` crate.

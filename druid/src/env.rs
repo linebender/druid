@@ -255,7 +255,7 @@ impl Env {
         }
     }
 
-    /// Trys to get a value from the environment.
+    /// Tries to get a value from the environment.
     ///
     /// If the value is not found, the raw key is returned as the error.
     ///

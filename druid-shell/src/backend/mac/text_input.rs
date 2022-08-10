@@ -262,14 +262,7 @@ pub extern "C" fn first_rect_for_character_range(
 }
 
 pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
-    if with_edit_lock_from_window(this, true, |lock| do_command_by_selector_impl(lock, cmd))
-        .is_none()
-    {
-        // this is not a text field, so forward command to parent
-        if let Some(superclass) = this.class().superclass() {
-            unsafe { msg_send![superclass, doCommandBySelector: cmd] }
-        }
-    }
+    with_edit_lock_from_window(this, true, |lock| do_command_by_selector_impl(lock, cmd));
 }
 
 fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {

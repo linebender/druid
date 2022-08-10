@@ -126,7 +126,7 @@ impl<T: Data> ListIter<T> for Vector<T> {
     }
 }
 
-//An implementation for ListIter<(K, V)> has been ommitted due to problems
+//An implementation for ListIter<(K, V)> has been omitted due to problems
 //with how the List Widget handles the reordering of its data.
 #[cfg(feature = "im")]
 impl<K, V> ListIter<V> for OrdMap<K, V>

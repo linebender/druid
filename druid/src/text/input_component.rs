@@ -337,7 +337,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                         TextAction::InsertBacktab => {
                             ctx.submit_notification(TextComponent::BACKTAB)
                         }
-                        _ => tracing::warn!("unexepcted external action '{:?}'", action),
+                        _ => tracing::warn!("unexpected external action '{:?}'", action),
                     };
                 }
                 let text = self.borrow_mut().take_external_text_change();

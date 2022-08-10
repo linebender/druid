@@ -19,7 +19,7 @@
 //! events passed from the platform to the application. For example, many mobile
 //! phones implement autocorrect: when the user presses the spacebar, the
 //! platform peeks at the word directly behind the caret, and potentially
-//! replaces it if it's mispelled. This means the platform needs to know the
+//! replaces it if it's misspelled. This means the platform needs to know the
 //! contents of a text field. On other devices, the platform may need to draw an
 //! emoji window under the caret, or look up the on-screen locations of letters
 //! for crossing out with a stylus, both of which require fetching on-screen
@@ -36,7 +36,7 @@
 //! happens in a different process from your application. If we don't
 //! specifically account for this fact, we might get race conditions!  In the
 //! autocorrect example, if I sloppily type "meoow" and press space, the
-//! platform might issue edits to "delete backwords one word and insert meow".
+//! platform might issue edits to "delete backwards one word and insert meow".
 //! However, if I concurrently click somewhere else in the document to move the
 //! caret, this will replace some *other* word with "meow", and leave the
 //! "meoow" disappointingly present. To mitigate this problem, we use locks,
@@ -111,7 +111,7 @@ use std::ops::Range;
 /// An event representing an application-initiated change in [`InputHandler`]
 /// state.
 ///
-/// When we change state that may have previously been retreived from an
+/// When we change state that may have previously been retrieved from an
 /// [`InputHandler`], we notify the platform so that it can invalidate any
 /// data if necessary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -303,7 +303,7 @@ pub trait InputHandler {
     /// `selection.anchor` and `selection.active` to the nearest extended
     /// grapheme cluster boundary.
     ///
-    /// Requries a mutable lock.
+    /// Requires a mutable lock.
     fn set_selection(&mut self, selection: Selection);
 
     /// The current composition region.
@@ -319,7 +319,7 @@ pub trait InputHandler {
     /// Set the composition region.
     ///
     /// If this is `Some` it means that the IME is currently active for this
-    /// region of the document. If it is `None` it means that hte IME is not
+    /// region of the document. If it is `None` it means that the IME is not
     /// currently active.
     ///
     /// Both `range.start` and `range.end` must be less than or equal to the
@@ -329,7 +329,7 @@ pub trait InputHandler {
     /// `range.start` and `range.end` to the nearest extended grapheme cluster
     /// boundary.
     ///
-    /// Requries a mutable lock.
+    /// Requires a mutable lock.
     fn set_composition_range(&mut self, range: Option<Range<usize>>);
 
     /// Check if the provided index is the first byte of a UTF-8 code point
@@ -410,7 +410,7 @@ pub trait InputHandler {
     /// After the above update, if we increase each end of the selection if
     /// necessary to put it on a grapheme cluster boundary.
     ///
-    /// Requries a mutable lock.
+    /// Requires a mutable lock.
     ///
     /// # Panics
     ///
@@ -442,7 +442,7 @@ pub trait InputHandler {
 
     /// Applies an [`Action`] to the text field.
     ///
-    /// Requries a mutable lock.
+    /// Requires a mutable lock.
     fn handle_action(&mut self, action: Action);
 }
 

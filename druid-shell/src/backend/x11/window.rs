@@ -42,7 +42,7 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{unix::XcbHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, XcbWindowHandle};
 
 use crate::backend::shared::Timer;
 use crate::common_util::IdleCallback;
@@ -494,7 +494,7 @@ impl WindowBuilder {
             window.set_position(pos);
         }
 
-        let handle = WindowHandle::new(id, Rc::downgrade(&window));
+        let handle = WindowHandle::new(id, visual_type.visual_id, Rc::downgrade(&window));
         window.connect(handle.clone())?;
 
         self.app.add_window(id, window)?;
@@ -1555,8 +1555,8 @@ impl IdleHandle {
     fn wake(&self) {
         loop {
             match nix::unistd::write(self.pipe, &[0]) {
-                Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
-                Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {}
+                Err(nix::errno::Errno::EINTR) => {}
+                Err(nix::errno::Errno::EAGAIN) => {}
                 Err(e) => {
                     error!("Failed to write to idle pipe: {}", e);
                     break;
@@ -1592,6 +1592,8 @@ impl IdleHandle {
 #[derive(Clone, Default)]
 pub(crate) struct WindowHandle {
     id: u32,
+    #[allow(dead_code)] // Only used with the raw-win-handle feature
+    visual_id: u32,
     window: Weak<Window>,
 }
 impl PartialEq for WindowHandle {
@@ -1602,8 +1604,12 @@ impl PartialEq for WindowHandle {
 impl Eq for WindowHandle {}
 
 impl WindowHandle {
-    fn new(id: u32, window: Weak<Window>) -> WindowHandle {
-        WindowHandle { id, window }
+    fn new(id: u32, visual_id: u32, window: Weak<Window>) -> WindowHandle {
+        WindowHandle {
+            id,
+            visual_id,
+            window,
+        }
     }
 
     pub fn show(&self) {
@@ -1865,19 +1871,9 @@ impl WindowHandle {
 #[cfg(feature = "raw-win-handle")]
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
-        let mut handle = XcbHandle {
-            window: self.id,
-            ..XcbHandle::empty()
-        };
-
-        if let Some(window) = self.window.upgrade() {
-            handle.connection = window.app.connection().get_raw_xcb_connection();
-        } else {
-            // Documentation for HasRawWindowHandle encourages filling in all fields possible,
-            // leaving those empty that cannot be derived.
-            error!("Failed to get XCBConnection, returning incomplete handle");
-        }
-
+        let mut handle = XcbWindowHandle::empty();
+        handle.window = self.id;
+        handle.visual_id = self.visual_id;
         RawWindowHandle::Xcb(handle)
     }
 }
