@@ -318,7 +318,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CustomCursor;
 
 /// Builder abstraction for creating new windows

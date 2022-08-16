@@ -302,10 +302,10 @@ struct DxgiState {
     composition_visual: Option<ComPtr<IDCompositionVisual>>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CustomCursor(Arc<HCursor>);
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 struct HCursor(HCURSOR);
 
 impl Drop for HCursor {

@@ -201,7 +201,7 @@ impl Pointer {
 
     fn get_cursor_buffer(&self, cursor: &mouse::Cursor) -> Option<CursorImageBuffer> {
         #[allow(deprecated)]
-        return match cursor {
+        match cursor {
             mouse::Cursor::Arrow => self.unpack_image_buffer("left_ptr"),
             mouse::Cursor::IBeam => self.unpack_image_buffer("xterm"),
             mouse::Cursor::Crosshair => self.unpack_image_buffer("cross"),
@@ -214,7 +214,7 @@ impl Pointer {
                 tracing::warn!("custom cursors not implemented");
                 self.unpack_image_buffer("left_ptr")
             }
-        };
+        }
     }
 
     // Just use the first image, people using animated cursors have already made bad life

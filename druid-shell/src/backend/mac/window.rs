@@ -180,7 +180,7 @@ struct ViewState {
     parent: Option<crate::WindowHandle>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 // TODO: support custom cursors
 pub struct CustomCursor;
 
