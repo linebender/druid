@@ -293,6 +293,8 @@ impl std::cmp::PartialEq for WindowHandle {
     }
 }
 
+impl Eq for WindowHandle {}
+
 impl std::default::Default for WindowHandle {
     fn default() -> WindowHandle {
         WindowHandle {

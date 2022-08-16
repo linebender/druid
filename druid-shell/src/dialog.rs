@@ -41,7 +41,7 @@ pub struct FileInfo {
     all(feature = "x11", any(target_os = "linux", target_os = "openbsd")),
     feature = "wayland"
 )))]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileDialogType {
     /// File open dialog.
     Open,
@@ -164,7 +164,7 @@ pub struct FileDialogOptions {
 ///
 /// [`COMDLG_FILTERSPEC`]: https://docs.microsoft.com/en-ca/windows/win32/api/shtypes/ns-shtypes-comdlg_filterspec
 /// [packages]: struct.FileDialogOptions.html#packages
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FileSpec {
     /// A human readable name, describing this filetype.
     ///

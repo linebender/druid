@@ -148,7 +148,7 @@ impl FileDialogToken {
 /// Levels in the window system - Z order for display purposes.
 /// Describes the purpose of a window and should be mapped appropriately to match platform
 /// conventions.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum WindowLevel {
     /// A top level app window.
     AppWindow,
@@ -161,7 +161,7 @@ pub enum WindowLevel {
 }
 
 /// Contains the different states a Window can be in.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowState {
     Maximized,
     Minimized,
@@ -169,7 +169,7 @@ pub enum WindowState {
 }
 
 /// A handle to a platform window object.
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct WindowHandle(pub(crate) backend::WindowHandle);
 
 impl WindowHandle {
