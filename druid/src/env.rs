@@ -87,7 +87,7 @@ struct EnvImpl {
 ///
 /// [`ValueType`]: trait.ValueType.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, Debug, PartialEq, Data)]
+#[derive(Clone, Debug, PartialEq, Eq, Data)]
 pub struct Key<T> {
     key: &'static str,
     value_type: PhantomData<T>,
@@ -120,7 +120,7 @@ pub enum Value {
 ///
 /// [`Key<T>`]: struct.Key.html
 /// [`Env`]: struct.Env.html
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
     ///

@@ -526,7 +526,7 @@ impl Drop for Mmap {
         }
     }
 }
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RawSize {
     pub width: i32,
     pub height: i32,

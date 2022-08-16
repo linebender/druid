@@ -3,3 +3,8 @@
 # it makes sense to optimize for 64-bit and accept the performance hits on 32-bit.
 # 16 bytes is the number of bytes that fits into two 64-bit CPU registers.
 trivial-copy-size-limit = 16
+
+# The default clippy value for this is 250, which causes warnings for rather simple types
+# like Box<dyn Fn(&mut Env, &T)>, which seems overly strict. The new value of 400 is
+# a simple guess. It might be worth lowering this, or using the default, in the future.
+type-complexity-threshold = 400

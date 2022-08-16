@@ -40,7 +40,7 @@ pub struct AppLauncher<T> {
 }
 
 /// Defines how a windows size should be determined
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum WindowSizePolicy {
     /// Use the content of the window to determine the size.
     ///
