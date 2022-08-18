@@ -881,25 +881,25 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
             core_graphics::base::kCGImageAlphaPremultipliedLast,
         );
 
-        {
-            let mut piet_bitmap_ctx = Piet::new_y_up(
-                &mut cache_ctx,
-                context_height as f64,
-                Some(view_state.text.clone()),
-            );
-            (*view_state)
-                .handler
-                .paint(&mut piet_bitmap_ctx, &invalid_region);
-        }
+        let mut piet_bitmap_ctx = Piet::new_y_up(
+            &mut cache_ctx,
+            context_height as f64,
+            Some(view_state.text.clone()),
+        );
 
-        let cache_context_content = cache_ctx
-            .create_image()
-            .expect("Failed to retrieve content from render cache context");
+        (*view_state)
+            .handler
+            .paint(&mut piet_bitmap_ctx, &invalid_region);
+
+        let cache_context_content = piet_bitmap_ctx
+            .capture_image_area(invalid_region_rect)
+            .expect("Failed to retrieve content from render cache context")
+            .copy_image()
+            .expect("Cropped image was empty");
 
         let mut window_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
-        window_ctx.draw_image_area(
-            &piet_common::CoreGraphicsImage::NonEmpty(cache_context_content),
-            invalid_region_rect,
+        window_ctx.draw_image(
+            &piet_common::CoreGraphicsImage::YDown(cache_context_content),
             invalid_region_rect,
             InterpolationMode::Bilinear,
         );
