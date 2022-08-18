@@ -854,7 +854,7 @@ impl LifeCycleCtx<'_, '_> {
     }
 }
 
-impl LayoutCtx<'_, '_> {
+impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Set explicit paint [`Insets`] for this widget.
     ///
     /// You are not required to set explicit paint bounds unless you need
@@ -884,6 +884,18 @@ impl LayoutCtx<'_, '_> {
     pub fn set_baseline_offset(&mut self, baseline: f64) {
         trace!("set_baseline_offset {}", baseline);
         self.widget_state.baseline_offset = baseline
+    }
+
+    /// Creates a new LayoutCtx for a widget that maybe is hidden by another widget.
+    ///
+    /// If ignore is `true` the child will not set its hot state to `true` even if the cursor
+    /// is inside its bounds.
+    pub fn ignore_hot<'c>(&'c mut self, ignore: bool) -> LayoutCtx<'c, 'b> {
+        LayoutCtx {
+            state: &mut self.state,
+            widget_state: &mut self.widget_state,
+            mouse_pos: if ignore { None } else { self.mouse_pos },
+        }
     }
 }
 
