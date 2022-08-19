@@ -894,7 +894,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let cache_capture = piet_bitmap_ctx
             .capture_image_area(invalid_region_rect)
             .expect("Failed to retrieve content from render cache context");
-        let unwrapped_cache = cache_capture.as_ref().expect("Cropped image was empty");
+        let unwrapped_cache = cache_capture.as_cgimage().expect("Cropped image was empty");
         let rewrapped_cache = piet_common::CoreGraphicsImage::YDown(unwrapped_cache.clone());
 
         let mut window_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
