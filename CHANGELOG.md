@@ -149,6 +149,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 - Fix `Controller` links for `Click` ([#2158] by [@yrns])
+- Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -562,6 +563,7 @@ Last release without a changelog :(
 [@dristic]: https://github.com/dristic
 [@NickLarsenNZ]: https://github.com/NickLarsenNZ
 [@barsae]: https://github.com/barsae
+[@amtep]: https://github.com/amtep
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -859,7 +861,7 @@ Last release without a changelog :(
 [#2196]: https://github.com/linebender/druid/pull/2196
 [#2203]: https://github.com/linebender/druid/pull/2203
 [#2235]: https://github.com/linebender/druid/pull/2235
-
+[#2247]: https://github.com/linebender/druid/pull/2247
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0

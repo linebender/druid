@@ -28,8 +28,7 @@ pub type KbKey = keyboard_types::Key;
 /// Information about a keyboard event.
 ///
 /// Note that this type is similar to [`KeyboardEvent`] in keyboard-types,
-/// but has a few small differences for convenience. It is missing the `state`
-/// field because that is already implicit in the event.
+/// but has a few small differences for convenience.
 ///
 /// [`KeyboardEvent`]: keyboard_types::KeyboardEvent
 #[non_exhaustive]
