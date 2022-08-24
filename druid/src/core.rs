@@ -16,6 +16,7 @@
 
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
+use druid::contexts::CommandCtx;
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
@@ -270,7 +271,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_origin(&mut self, ctx: &mut LayoutCtx, _data: &T, _env: &Env, origin: Point) {
+    //TODO: we are using CommandCtx because it allows every context but paint, but it might be a
+    // confusing name.
+    pub fn set_origin<'a>(&mut self, ctx: &mut impl CommandCtx<'a>, _data: &T, _env: &Env, origin: Point) {
         //TODO: decide whether we should keep data and env for compatibility or do a breaking change
         self.state.is_expecting_set_origin_call = false;
 
@@ -278,17 +281,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
             self.state.origin = origin;
             self.state.view_context_changed = true;
             // identical to calling merge up but faster!
-            ctx.widget_state.children_view_context_changed = true;
-        }
-    }
-
-    /// Set the origin of this widget, in the parent's coordinate space.
-    pub fn set_origin_dyn(&mut self, ctx: &mut EventCtx, origin: Point) {
-        if origin != self.state.origin {
-            self.state.origin = origin;
-            self.state.view_context_changed = true;
-            // identical to calling merge up but faster!
-            ctx.widget_state.children_view_context_changed = true;
+            ctx.state().widget_state.children_view_context_changed = true;
         }
     }
 
@@ -425,22 +418,22 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             state: ctx.state,
             z_ops: Vec::new(),
             region: ctx.region.clone(),
-            widget_state: &self.state,
+            widget_state: &mut self.state,
             depth: ctx.depth,
         };
         self.inner.paint(&mut inner_ctx, data, env);
 
+        ctx.z_ops.append(&mut inner_ctx.z_ops);
+
         let debug_ids = inner_ctx.is_hot() && env.get(Env::DEBUG_WIDGET_ID);
         if debug_ids {
             // this also draws layout bounds
-            self.debug_paint_widget_ids(&mut inner_ctx, env);
+            self.debug_paint_widget_ids(ctx, env);
         }
 
         if !debug_ids && env.get(Env::DEBUG_PAINT) {
-            self.debug_paint_layout_bounds(&mut inner_ctx, env);
+            self.debug_paint_layout_bounds(ctx, env);
         }
-
-        ctx.z_ops.append(&mut inner_ctx.z_ops);
     }
 
     /// Paint the widget, translating it by the origin of its layout rectangle.

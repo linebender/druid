@@ -512,7 +512,7 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        let widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(
             queue,
             &self.ext_handle,
@@ -525,7 +525,7 @@ impl<T: Data> Window<T> {
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
-            widget_state: &widget_state,
+            widget_state: &mut widget_state,
             z_ops: Vec::new(),
             region: invalid.clone(),
             depth: 0,

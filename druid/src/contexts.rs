@@ -51,6 +51,17 @@ macro_rules! impl_context_method {
     };
 }
 
+/// A macro for implementing context traits for multiple contexts.
+macro_rules! impl_context_trait{
+    ($tr:ty => $ty:ty,  { $($method:item)+ } ) => {
+        impl<'b> $tr for $ty { $($method)+ }
+    };
+    ($tr:ty => $ty:ty, $($more:ty),+, { $($method:item)+ } ) => {
+        impl_context_trait!($tr => $ty, { $($method)+ });
+        impl_context_trait!($tr => $($more),+, { $($method)+ });
+    };
+}
+
 /// Static state that is shared between most contexts.
 pub(crate) struct ContextState<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
@@ -130,7 +141,7 @@ pub(crate) struct ZOrderPaintOp {
 /// commands.
 pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) state: &'a mut ContextState<'b>,
-    pub(crate) widget_state: &'a WidgetState,
+    pub(crate) widget_state: &'a mut WidgetState,
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'c>,
     /// The z-order paint operations.
@@ -140,6 +151,176 @@ pub struct PaintCtx<'a, 'b, 'c> {
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
 }
+
+/// The state of a widget and its global context.
+pub struct State<'a, 'b> {
+    #[allow(dead_code)]
+    pub(crate) state: &'a mut ContextState<'b>,
+    pub(crate) widget_state: &'a mut WidgetState,
+}
+
+/// trait for accessing state and widget_state of the context.
+pub trait AnyCtx<'b> {
+    /// Get the state of a widget.
+    ///
+    /// This method can be used to perform merge_up of the widget state with a generic ctx
+    /// This method is intended to be used only by the framework.
+    fn state<'a>(&'a mut self) -> State<'a, 'b>;
+}
+
+/// Convenience trait for code generic over contexts.
+///
+/// Methods to do with commands and timers.
+/// Available to all contexts but PaintCtx.
+pub trait CommandCtx<'b>: AnyCtx<'b> {
+    /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
+    ///
+    /// [`submit_command`]: EventCtx::submit_command
+    fn submit_command(&mut self, cmd: impl Into<Command>);
+    /// Returns an [`ExtEventSink`] for submitting commands from other threads. See ['get_external_handle'].
+    ///
+    /// [`get_external_handle`]: EventCtx::get_external_handle
+    fn get_external_handle(&self) -> ExtEventSink;
+    /// Request a timer event. See [`request_timer`]
+    ///
+    /// [`request_timer`]: EventCtx::request_timer
+    fn request_timer(&mut self, deadline: Duration) -> TimerToken;
+}
+
+/// Convenience trait for invalidation and request methods available on multiple contexts.
+///
+/// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
+pub trait RequestCtx<'b>: CommandCtx<'b> {
+    /// Request a [`paint`] pass. See ['request_paint']
+    ///
+    /// ['request_paint']: EventCtx::request_paint
+    fn request_paint(&mut self);
+    /// Request a [`paint`] pass for redrawing a rectangle. See [`request_paint_rect`].
+    ///
+    /// [`request_paint_rect`]: EventCtx::request_paint_rect
+    /// [`paint`]: Widget::paint
+    fn request_paint_rect(&mut self, rect: Rect);
+    /// Request a layout pass. See [`request_layout`].
+    ///
+    /// [`request_layout`]: EventCtx::request_layout
+    fn request_layout(&mut self);
+    /// Request an animation frame. See [`request_anim_frame`].
+    ///
+    /// [`request_anim_frame`]: EventCtx::request_anim_frame
+    fn request_anim_frame(&mut self);
+    /// Indicate that your children have changed. See [`children_changed`].
+    ///
+    /// [`children_changed`]: EventCtx::children_changed
+    fn children_changed(&mut self);
+    /// Create a new sub-window. See [`new_sub_window`].
+    ///
+    /// [`new_sub_window`]: EventCtx::new_sub_window
+    fn new_sub_window<W: Widget<U> + 'static, U: Data>(
+        &mut self,
+        window_config: WindowConfig,
+        widget: W,
+        data: U,
+        env: Env,
+    ) -> WindowId;
+    /// Change the disabled state of this widget. See [`set_disabled`].
+    ///
+    /// [`set_disabled`]: EventCtx::set_disabled
+    fn set_disabled(&mut self, disabled: bool);
+    /// Indicate that text input state has changed. See [`invalidate_text_input`].
+    ///
+    /// [`invalidate_text_input`]: EventCtx::invalidate_text_input
+    fn invalidate_text_input(&mut self, event: ImeInvalidation);
+    /// Scrolls this widget into view.
+    ///
+    /// [`scroll_to_view`]: EventCtx::scroll_to_view
+    fn scroll_to_view(&mut self);
+    /// Scrolls the area into view. See [`scroll_area_to_view`].
+    ///
+    /// [`scroll_area_to_view`]: EventCtx::scroll_area_to_view
+    fn scroll_area_to_view(&mut self, area: Rect);
+}
+
+impl_context_trait!(
+    AnyCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>, PaintCtx<'_, 'b, '_>,
+    {
+        fn state<'a>(&'a mut self) -> State<'a, 'b> {
+            State {
+                state: &mut *self.state,
+                widget_state: &mut *self.widget_state,
+            }
+        }
+    }
+);
+
+impl_context_trait!(
+    CommandCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>,
+    {
+
+        fn submit_command(&mut self, cmd: impl Into<Command>) {
+            Self::submit_command(self, cmd)
+        }
+
+        fn get_external_handle(&self) -> ExtEventSink {
+            Self::get_external_handle(self)
+        }
+
+        fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+            Self::request_timer(self, deadline)
+        }
+    }
+);
+
+impl_context_trait!(
+    RequestCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>,
+    {
+        fn request_paint(&mut self) {
+            Self::request_paint(self)
+        }
+
+        fn request_paint_rect(&mut self, rect: Rect) {
+            Self::request_paint_rect(self, rect)
+        }
+
+        fn request_layout(&mut self) {
+            Self::request_layout(self)
+        }
+
+        fn request_anim_frame(&mut self) {
+            Self::request_anim_frame(self)
+        }
+
+        fn children_changed(&mut self) {
+            Self::children_changed(self)
+        }
+
+        fn new_sub_window<W: Widget<U> + 'static, U: Data>(
+            &mut self,
+            window_config: WindowConfig,
+            widget: W,
+            data: U,
+            env: Env,
+        ) -> WindowId {
+            Self::new_sub_window(self, window_config, widget, data, env)
+        }
+
+        fn set_disabled(&mut self, disabled: bool) {
+            Self::set_disabled(self, disabled)
+        }
+
+        fn invalidate_text_input(&mut self, event: ImeInvalidation) {
+            Self::invalidate_text_input(self, event)
+        }
+
+        fn scroll_to_view(&mut self) {
+            Self::scroll_to_view(self)
+        }
+
+        fn scroll_area_to_view(&mut self, area: Rect) {
+            Self::scroll_area_to_view(self, area)
+        }
+    }
+);
+
 
 // methods on everyone
 impl_context_method!(

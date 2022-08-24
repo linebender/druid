@@ -29,6 +29,7 @@ use crate::{
     theme, ArcStr, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect,
     SysMods, TextAlignment, TimerToken, Vec2,
 };
+use crate::contexts::CommandCtx;
 
 use super::LabelText;
 
@@ -337,13 +338,13 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         Rect::new(x, y0, x, y1)
     }
 
-    fn scroll_to_selection_end(&mut self, ctx: &mut EventCtx) {
+    fn scroll_to_selection_end<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env) {
         let rect = self.rect_for_selection_end();
         let view_rect = self.inner.viewport_rect();
         let is_visible =
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
-            self.inner.scroll_to(ctx, rect + SCROLL_TO_INSETS);
+            self.inner.scroll_to(ctx, data, env, rect + SCROLL_TO_INSETS);
         }
     }
 
@@ -388,7 +389,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                         ctx.request_layout();
                         self.scroll_to_selection_after_layout = true;
                     } else {
-                        self.scroll_to_selection_end(ctx);
+                        self.scroll_to_selection_end(ctx, data, env);
                     }
                     ctx.set_handled();
                     ctx.request_paint();
@@ -528,8 +529,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 self.text_mut().has_focus = false;
                 if !self.multiline {
-                    //TODO: scroll outside of event
-                    //self.inner.scroll_to(Rect::ZERO);
+                    self.inner.scroll_to(ctx, data, env, Rect::ZERO);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -588,8 +588,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
-            //TODO: scroll during layout
-            //self.scroll_to_selection_end();
+            self.scroll_to_selection_end(ctx, data, env);
             self.scroll_to_selection_after_layout = false;
         }
 

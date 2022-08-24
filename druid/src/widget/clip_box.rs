@@ -19,6 +19,7 @@ use crate::widget::prelude::*;
 use crate::widget::Axis;
 use crate::{Data, InternalLifeCycle, WidgetPod};
 use tracing::{info, instrument, trace, warn};
+use crate::contexts::CommandCtx;
 
 /// Represents the size and position of a rectangular "viewport" into a larger area.
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -361,8 +362,8 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pans by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_by(&mut self, ctx: &mut EventCtx, delta: Vec2) -> bool {
-        self.with_port(ctx, |_, port| {
+    pub fn pan_by<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, delta: Vec2) -> bool {
+        self.with_port(ctx, data, env, |_, port| {
             port.pan_by(delta);
         })
     }
@@ -371,8 +372,8 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn pan_to_visible(&mut self, ctx: &mut EventCtx, region: Rect) -> bool {
-        self.with_port(ctx, |_, port| {
+    pub fn pan_to_visible<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, region: Rect) -> bool {
+        self.with_port(ctx, data, env, |_, port| {
             port.pan_to_visible(region);
         })
     }
@@ -380,8 +381,8 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pan to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_to_on_axis(&mut self, ctx: &mut EventCtx, axis: Axis, position: f64) -> bool {
-        self.with_port(ctx, |_, port| {
+    pub fn pan_to_on_axis<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, axis: Axis, position: f64) -> bool {
+        self.with_port(ctx, data, env, |_, port| {
             port.pan_to_on_axis(axis, position);
         })
     }
@@ -390,9 +391,11 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// The provided callback function can modify its argument, and when it is
     /// done then this `ClipBox` will be modified to have the new viewport rectangle.
-    pub fn with_port<F: FnOnce(&mut EventCtx, &mut Viewport)>(
+    pub fn with_port<'a, C: CommandCtx<'a>, F: FnOnce(&mut C, &mut Viewport)>(
         &mut self,
-        ctx: &mut EventCtx,
+        ctx: &mut C,
+        data: &T,
+        env: &Env,
         f: F,
     ) -> bool {
         f(ctx, &mut self.port);
@@ -400,7 +403,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         let new_content_origin = (Point::ZERO - self.port.view_origin).to_point();
 
         if new_content_origin != self.child.layout_rect().origin() {
-            self.child.set_origin_dyn(ctx, new_content_origin);
+            self.child.set_origin(ctx, data, env, new_content_origin);
             true
         } else {
             false
@@ -418,7 +421,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                     // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
                     // to this ClipBox's viewport.
                     ctx.set_handled();
-                    self.with_port(ctx, |ctx, port| {
+                    self.with_port(ctx, data, env,|ctx, port| {
                         port.fixed_scroll_to_view_handling(
                             ctx,
                             *global_highlight_rect,
