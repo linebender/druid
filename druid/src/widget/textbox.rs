@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::contexts::CommandCtx;
 use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
@@ -29,7 +30,6 @@ use crate::{
     theme, ArcStr, Color, Command, FontDescriptor, HotKey, KeyEvent, KeyOrValue, Point, Rect,
     SysMods, TextAlignment, TimerToken, Vec2,
 };
-use crate::contexts::CommandCtx;
 
 use super::LabelText;
 
@@ -344,7 +344,8 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         let is_visible =
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
-            self.inner.scroll_to(ctx, data, env, rect + SCROLL_TO_INSETS);
+            self.inner
+                .scroll_to(ctx, data, env, rect + SCROLL_TO_INSETS);
         }
     }
 

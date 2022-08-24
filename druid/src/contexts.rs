@@ -321,7 +321,6 @@ impl_context_trait!(
     }
 );
 
-
 // methods on everyone
 impl_context_method!(
     EventCtx<'_, '_>,

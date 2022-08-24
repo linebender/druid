@@ -15,12 +15,12 @@
 //! A container that scrolls its contents.
 
 use crate::commands::SCROLL_TO_VIEW;
+use crate::contexts::CommandCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
 use crate::{scroll_component::*, Data, Rect, Vec2};
 use tracing::{instrument, trace};
-use crate::contexts::CommandCtx;
 
 /// A container that scrolls its contents.
 ///
@@ -55,7 +55,13 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, delta: Vec2) -> bool {
+    pub fn scroll_by<'a, C: CommandCtx<'a>>(
+        &mut self,
+        ctx: &mut C,
+        data: &T,
+        env: &Env,
+        delta: Vec2,
+    ) -> bool {
         self.clip.pan_by(ctx, data, env, delta)
     }
 
@@ -63,14 +69,27 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, region: Rect) -> bool {
+    pub fn scroll_to<'a, C: CommandCtx<'a>>(
+        &mut self,
+        ctx: &mut C,
+        data: &T,
+        env: &Env,
+        region: Rect,
+    ) -> bool {
         self.clip.pan_to_visible(ctx, data, env, region)
     }
 
     /// Scroll to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_to_on_axis<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env, axis: Axis, position: f64) -> bool {
+    pub fn scroll_to_on_axis<'a, C: CommandCtx<'a>>(
+        &mut self,
+        ctx: &mut C,
+        data: &T,
+        env: &Env,
+        axis: Axis,
+        position: f64,
+    ) -> bool {
         self.clip.pan_to_on_axis(ctx, data, env, axis, position)
     }
 }

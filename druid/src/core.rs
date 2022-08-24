@@ -14,9 +14,9 @@
 
 //! The fundamental druid types.
 
+use druid::contexts::CommandCtx;
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
-use druid::contexts::CommandCtx;
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
@@ -273,7 +273,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
     //TODO: we are using CommandCtx because it allows every context but paint, but it might be a
     // confusing name.
-    pub fn set_origin<'a>(&mut self, ctx: &mut impl CommandCtx<'a>, _data: &T, _env: &Env, origin: Point) {
+    pub fn set_origin<'a>(
+        &mut self,
+        ctx: &mut impl CommandCtx<'a>,
+        _data: &T,
+        _env: &Env,
+        origin: Point,
+    ) {
         //TODO: decide whether we should keep data and env for compatibility or do a breaking change
         self.state.is_expecting_set_origin_call = false;
 
