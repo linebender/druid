@@ -74,6 +74,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Make `Parse` work better with floats and similar types ([#2148] by [@superfell])
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
+- `ZStack` widget ([#2235] by [@xarvic])
 
 ### Changed
 
@@ -104,6 +105,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
 - Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
+- `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
 
 ### Deprecated
 
@@ -148,6 +150,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 - Fix `Controller` links for `Click` ([#2158] by [@yrns])
+- Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -561,6 +564,7 @@ Last release without a changelog :(
 [@dristic]: https://github.com/dristic
 [@NickLarsenNZ]: https://github.com/NickLarsenNZ
 [@barsae]: https://github.com/barsae
+[@amtep]: https://github.com/amtep
 [@newcomb-luke]: https://github.com/newcomb-luke
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -858,6 +862,8 @@ Last release without a changelog :(
 [#2195]: https://github.com/linebender/druid/pull/2195
 [#2196]: https://github.com/linebender/druid/pull/2196
 [#2203]: https://github.com/linebender/druid/pull/2203
+[#2235]: https://github.com/linebender/druid/pull/2235
+[#2247]: https://github.com/linebender/druid/pull/2247
 [#2191]: https://github.com/linebender/druid/pull/2191
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master

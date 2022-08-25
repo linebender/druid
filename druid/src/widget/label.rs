@@ -103,7 +103,7 @@ pub struct RawLabel<T> {
 }
 
 /// Options for handling lines that are too wide for the label.
-#[derive(Debug, Clone, Copy, PartialEq, Data)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Data)]
 pub enum LineBreaking {
     /// Lines are broken at word boundaries.
     WordWrap,

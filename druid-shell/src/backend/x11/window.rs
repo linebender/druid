@@ -397,7 +397,7 @@ impl WindowBuilder {
             let mut wm_class = Vec::with_capacity(2 * (name.len() + 1));
             wm_class.extend(name.as_bytes());
             wm_class.push(0);
-            if let Some(&first) = wm_class.get(0) {
+            if let Some(&first) = wm_class.first() {
                 wm_class.push(first.to_ascii_uppercase());
                 wm_class.extend(&name.as_bytes()[1..]);
             }
@@ -662,7 +662,7 @@ struct PresentData {
     last_ust: Option<u64>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CustomCursor(xproto::Cursor);
 
 impl Window {

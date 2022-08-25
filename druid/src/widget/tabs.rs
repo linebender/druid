@@ -754,7 +754,7 @@ impl<TP: TabsPolicy> ScopePolicy for TabsScopePolicy<TP> {
 }
 
 /// Determines whether the tabs will have a transition animation when a new tab is selected.
-#[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Data, Copy, Clone, Debug, PartialOrd, PartialEq, Eq)]
 pub enum TabsTransition {
     /// Change tabs instantly with no animation
     Instant,
@@ -778,7 +778,7 @@ impl TabsTransition {
 }
 
 /// Determines where the tab bar should be placed relative to the cross axis
-#[derive(Debug, Copy, Clone, PartialEq, Data)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Data)]
 pub enum TabsEdge {
     /// For horizontal tabs, top. For vertical tabs, left.
     Leading,

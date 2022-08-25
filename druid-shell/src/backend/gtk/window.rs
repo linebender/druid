@@ -216,7 +216,7 @@ impl std::fmt::Debug for WindowState {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CustomCursor(gtk::gdk::Cursor);
 
 impl WindowBuilder {

@@ -248,7 +248,7 @@ impl std::fmt::Debug for MouseButtons {
 //NOTE: this currently only contains cursors that are included by default on
 //both Windows and macOS. We may want to provide polyfills for various additional cursors.
 /// Mouse cursors.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Cursor {
     /// The default arrow cursor.
     Arrow,

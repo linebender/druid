@@ -189,7 +189,7 @@ pub struct FlexParams {
 /// Most often used by widgets to describe
 /// the direction in which they grow as their number of children increases.
 /// Has some methods for manipulating geometry with respect to the axis.
-#[derive(Data, Debug, Clone, Copy, PartialEq)]
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Axis {
     /// The x axis
     Horizontal,
@@ -291,7 +291,7 @@ impl Axis {
 ///
 /// If a widget is smaller than the container on the minor axis, this determines
 /// where it is positioned.
-#[derive(Debug, Clone, Copy, PartialEq, Data)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Data)]
 pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
@@ -323,7 +323,7 @@ pub enum CrossAxisAlignment {
 ///
 /// If there is surplus space on the main axis after laying out children, this
 /// enum represents how children are laid out in this space.
-#[derive(Debug, Clone, Copy, PartialEq, Data)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Data)]
 pub enum MainAxisAlignment {
     /// Top or leading.
     ///

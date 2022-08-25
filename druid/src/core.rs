@@ -574,6 +574,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         self.state.needs_window_origin = false;
         self.state.is_expecting_set_origin_call = true;
 
+        //TODO: this does not work!
+        // self.layout_rect().origin().to_vec2() + self.viewport_offset() is the old position which
+        // changes after set origin. Therefore changing hot state must happen after the root widget
+        // set its origin.
         let child_mouse_pos = ctx
             .mouse_pos
             .map(|pos| pos - self.layout_rect().origin().to_vec2() + self.viewport_offset());
@@ -662,7 +666,12 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
-        if ctx.is_handled {
+        if ctx.is_handled
+            && !matches!(
+                event,
+                Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_) | Event::Wheel(_)
+            )
+        {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
@@ -740,7 +749,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !ctx.is_handled {
+                        Some(mouse_event.pos)
+                    } else {
+                        None
+                    },
                     data,
                     env,
                 );
@@ -759,7 +772,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !ctx.is_handled {
+                        Some(mouse_event.pos)
+                    } else {
+                        None
+                    },
                     data,
                     env,
                 );
@@ -778,7 +795,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !ctx.is_handled {
+                        Some(mouse_event.pos)
+                    } else {
+                        None
+                    },
                     data,
                     env,
                 );
@@ -800,7 +821,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     &mut self.state,
                     ctx.state,
                     rect,
-                    Some(mouse_event.pos),
+                    if !ctx.is_handled {
+                        Some(mouse_event.pos)
+                    } else {
+                        None
+                    },
                     data,
                     env,
                 );

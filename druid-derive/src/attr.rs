@@ -68,7 +68,7 @@ pub struct Field<Attrs> {
     pub attrs: Attrs,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DataAttr {
     Empty,
     Ignore,

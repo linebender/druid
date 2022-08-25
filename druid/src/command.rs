@@ -138,7 +138,7 @@ pub struct SingleUse<T>(Mutex<Option<T>>);
 /// The target of a [`Command`].
 ///
 /// [`Command`]: struct.Command.html
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
     /// The target is the top-level application.
     ///
