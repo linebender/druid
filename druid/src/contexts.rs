@@ -194,6 +194,7 @@ pub trait RequestCtx<'b>: CommandCtx<'b> {
     /// Request a [`paint`] pass. See ['request_paint']
     ///
     /// ['request_paint']: EventCtx::request_paint
+    /// [`paint`]: Widget::paint
     fn request_paint(&mut self);
     /// Request a [`paint`] pass for redrawing a rectangle. See [`request_paint_rect`].
     ///

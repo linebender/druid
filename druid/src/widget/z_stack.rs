@@ -140,7 +140,6 @@ impl<T: Data> Widget<T> for ZStack<T> {
         }
 
         //Set origin for all Layers and calculate paint insets
-        let mut previous_child_hot = false;
         let mut paint_rect = Rect::ZERO;
 
         for layer in self.layers.iter_mut() {
@@ -149,7 +148,6 @@ impl<T: Data> Widget<T> for ZStack<T> {
             layer.child.set_origin(ctx, data, env, origin);
 
             paint_rect = paint_rect.union(layer.child.paint_rect());
-            previous_child_hot |= layer.child.is_hot();
         }
 
         ctx.set_paint_insets(paint_rect - base_size.to_rect());
