@@ -109,8 +109,11 @@ impl<T: Data> Widget<T> for ZStack<T> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let mut previous_hot = false;
         for layer in self.layers.iter_mut() {
-            layer.child.lifecycle(ctx, event, data, env);
+            let inner_event = event.ignore_hot(previous_hot);
+            layer.child.lifecycle(ctx, &inner_event, data, env);
+            previous_hot |= layer.child.is_hot();
         }
     }
 
@@ -141,11 +144,9 @@ impl<T: Data> Widget<T> for ZStack<T> {
         let mut paint_rect = Rect::ZERO;
 
         for layer in self.layers.iter_mut() {
-            let mut inner_ctx = ctx.ignore_hot(previous_child_hot);
-
             let remaining = base_size - layer.child.layout_rect().size();
             let origin = layer.resolve_point(remaining);
-            layer.child.set_origin(&mut inner_ctx, data, env, origin);
+            layer.child.set_origin(ctx, data, env, origin);
 
             paint_rect = paint_rect.union(layer.child.paint_rect());
             previous_child_hot |= layer.child.is_hot();

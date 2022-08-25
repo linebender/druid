@@ -1075,18 +1075,6 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
         trace!("set_baseline_offset {}", baseline);
         self.widget_state.baseline_offset = baseline
     }
-
-    /// Creates a new LayoutCtx for a widget that maybe is hidden by another widget.
-    ///
-    /// If ignore is `true` the child will not set its hot state to `true` even if the cursor
-    /// is inside its bounds.
-    pub fn ignore_hot<'c>(&'c mut self, ignore: bool) -> LayoutCtx<'c, 'b> {
-        LayoutCtx {
-            state: self.state,
-            widget_state: self.widget_state,
-            mouse_pos: if ignore { None } else { self.mouse_pos },
-        }
-    }
 }
 
 impl PaintCtx<'_, '_, '_> {

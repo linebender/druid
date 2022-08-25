@@ -441,6 +441,30 @@ impl LifeCycle {
             | LifeCycle::ViewContextChanged { .. } => false,
         }
     }
+
+    /// Returns an event for a widget which maybe is overlapped by another widget.
+    ///
+    /// When ignore is set to `true` the widget will set its hot state to `false` even if the cursor
+    /// is inside its bounds.
+    pub fn ignore_hot(&self, ignore: bool) -> Self {
+        if ignore {
+            match self {
+                LifeCycle::ViewContextChanged(view_ctx) => {
+                    let mut view_ctx = view_ctx.to_owned();
+                    view_ctx.last_mouse_position = None;
+                    LifeCycle::ViewContextChanged(view_ctx)
+                },
+                LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx)) => {
+                    let mut view_ctx = view_ctx.to_owned();
+                    view_ctx.last_mouse_position = None;
+                    LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx))
+                },
+                _ => self.to_owned()
+            }
+        } else {
+            self.to_owned()
+        }
+    }
 }
 
 impl InternalLifeCycle {
