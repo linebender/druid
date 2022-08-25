@@ -453,13 +453,13 @@ impl LifeCycle {
                     let mut view_ctx = view_ctx.to_owned();
                     view_ctx.last_mouse_position = None;
                     LifeCycle::ViewContextChanged(view_ctx)
-                },
+                }
                 LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx)) => {
                     let mut view_ctx = view_ctx.to_owned();
                     view_ctx.last_mouse_position = None;
                     LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx))
-                },
-                _ => self.to_owned()
+                }
+                _ => self.to_owned(),
             }
         } else {
             self.to_owned()
