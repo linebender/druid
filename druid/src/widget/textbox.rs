@@ -34,6 +34,7 @@ use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
 const MAC_OR_LINUX_OR_OBSD: bool = cfg!(any(
+    target_os = "freebsd",
     target_os = "macos",
     target_os = "linux",
     target_os = "openbsd"
