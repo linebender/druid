@@ -64,6 +64,7 @@ mod view_switcher;
 mod widget;
 mod widget_ext;
 mod z_stack;
+mod viewport_header;
 
 pub use self::image::Image;
 pub use added::Added;
@@ -79,7 +80,7 @@ pub use controller::{Controller, ControllerHost};
 pub use disable_if::DisabledIf;
 pub use either::Either;
 pub use env_scope::EnvScope;
-pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment};
+pub use flex::{Axis, CrossAxisAlignment, Flex, FlexParams, MainAxisAlignment, Side, Orientation};
 pub use identity_wrapper::IdentityWrapper;
 pub use intrinsic_width::IntrinsicWidth;
 pub use label::{Label, LabelText, LineBreaking, RawLabel};
@@ -105,6 +106,7 @@ pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
+pub use viewport_header::{ViewportHeader, ViewportHeaderConfig};
 #[doc(hidden)]
 pub use widget::{Widget, WidgetId};
 #[doc(hidden)]

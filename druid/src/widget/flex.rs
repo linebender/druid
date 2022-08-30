@@ -19,7 +19,7 @@ use std::ops::Add;
 use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
-use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
+use crate::{Data, Insets, KeyOrValue, Point, Rect, WidgetPod};
 use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.
@@ -195,6 +195,74 @@ pub enum Axis {
     Horizontal,
     /// The y axis
     Vertical,
+}
+
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Orientation {
+    Start,
+    End,
+}
+
+impl Orientation {
+    pub fn order<T>(&self, reference: T, side: T) -> (T, T) {
+        match self {
+            Orientation::Start => (side, reference),
+            Orientation::End => (reference, side),
+        }
+    }
+}
+
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    Top,
+    Left,
+    Right,
+    Bottom,
+}
+
+impl Side {
+    pub fn axis(&self) -> Axis {
+        match self {
+            Side::Top | Side::Bottom => Axis::Vertical,
+            Side::Left | Side::Right => Axis::Horizontal,
+        }
+    }
+
+    pub fn orientation(&self) -> Orientation {
+        match self {
+            Side::Top | Side::Left => Orientation::Start,
+            Side::Bottom | Side::Right => Orientation::End,
+        }
+    }
+
+    pub fn direction(&self) -> Vec2 {
+        match self {
+            Side::Top => Vec2::new(0.0, -1.0),
+            Side::Bottom => Vec2::new(0.0, 1.0),
+            Side::Left => Vec2::new(-1.0, 0.0),
+            Side::Right => Vec2::new(1.0, 0.0),
+        }
+    }
+
+    pub fn from_inset(&self, insets: Insets) -> f64 {
+        match self {
+            Side::Top => insets.y0,
+            Side::Left => insets.x0,
+            Side::Right => insets.x1,
+            Side::Bottom => insets.y1,
+        }
+    }
+
+    pub fn as_insets(&self, amount: f64) -> Insets {
+        let mut insets = Insets::ZERO;
+        match self {
+            Side::Top => {insets.y0 = amount;}
+            Side::Left => {insets.x0 = amount;}
+            Side::Right => {insets.x1 = amount;}
+            Side::Bottom => {insets.y1 = amount;}
+        }
+        insets
+    }
 }
 
 impl Axis {
