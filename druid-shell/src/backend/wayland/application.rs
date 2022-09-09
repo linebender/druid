@@ -220,8 +220,8 @@ impl Application {
 
         let wl_compositor = env
             .registry
-            .instantiate_exact::<WlCompositor>(4)
-            .map_err(|e| Error::global("wl_compositor", 4, e))?;
+            .instantiate_range::<WlCompositor>(1, 5)
+            .map_err(|e| Error::global("wl_compositor", 1, e))?;
         let wl_shm = env
             .registry
             .instantiate_exact::<WlShm>(1)

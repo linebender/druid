@@ -130,15 +130,18 @@ impl Surface {
             _ => tracing::warn!("unhandled wayland surface event {:?}", event),
         }
 
-        let new_scale = current.recompute_scale();
-        if current.set_scale(new_scale).is_changed() {
-            current.wl_surface.borrow().set_buffer_scale(new_scale);
-            // We also need to change the physical size to match the new scale
-            current
-                .buffers
-                .set_size(buffers::RawSize::from(current.logical_size.get()).scale(new_scale));
-            // always repaint, because the scale changed.
-            current.schedule_deferred_task(DeferredTask::Paint);
+        if current.wl_surface.borrow().as_ref().version() >= wl_surface::REQ_SET_BUFFER_SCALE_SINCE
+        {
+            let new_scale = current.recompute_scale();
+            if current.set_scale(new_scale).is_changed() {
+                current.wl_surface.borrow().set_buffer_scale(new_scale);
+                // We also need to change the physical size to match the new scale
+                current
+                    .buffers
+                    .set_size(buffers::RawSize::from(current.logical_size.get()).scale(new_scale));
+                // always repaint, because the scale changed.
+                current.schedule_deferred_task(DeferredTask::Paint);
+            }
         }
     }
 }
@@ -376,12 +379,22 @@ impl Data {
             for rect in damaged_region.rects() {
                 // Convert it to physical coordinate space.
                 let rect = buffers::RawRect::from(*rect).scale(self.scale.get());
-                self.wl_surface.borrow().damage_buffer(
-                    rect.x0,
-                    rect.y0,
-                    rect.x1 - rect.x0,
-                    rect.y1 - rect.y0,
-                );
+
+                if self.wl_surface.borrow().as_ref().version()
+                    >= wl_surface::REQ_DAMAGE_BUFFER_SINCE
+                {
+                    self.wl_surface.borrow().damage_buffer(
+                        rect.x0,
+                        rect.y0,
+                        rect.x1 - rect.x0,
+                        rect.y1 - rect.y0,
+                    );
+                } else {
+                    // We don't care about obscure pre version 4 compositors
+                    // and just damage the whole surface instead of
+                    // translating from buffer coordinates to surface coordinates
+                    self.wl_surface.borrow().damage(0, 0, i32::MAX, i32::MAX);
+                }
             }
             if damaged_region.is_empty() {
                 // Nothing to draw, so we can finish here!

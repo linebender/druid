@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use wayland_client::protocol::wl_pointer;
-use wayland_client::protocol::wl_surface::WlSurface;
+use wayland_client::protocol::wl_surface::{self, WlSurface};
 use wayland_client::{self as wl};
 use wayland_cursor::CursorImageBuffer;
 use wayland_cursor::CursorTheme;
@@ -195,7 +195,13 @@ impl Pointer {
         self.current_cursor.replace(cursor);
         wl_pointer.set_cursor(0, Some(&self.cursor_surface), hot_x as i32, hot_y as i32);
         self.cursor_surface.attach(Some(&*buffer), 0, 0);
-        self.cursor_surface.damage_buffer(0, 0, i32::MAX, i32::MAX);
+
+        if self.cursor_surface.as_ref().version() >= wl_surface::REQ_DAMAGE_BUFFER_SINCE {
+            self.cursor_surface.damage_buffer(0, 0, i32::MAX, i32::MAX);
+        } else {
+            self.cursor_surface.damage(0, 0, i32::MAX, i32::MAX);
+        }
+
         self.cursor_surface.commit();
     }
 
