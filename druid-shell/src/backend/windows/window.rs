@@ -1732,6 +1732,8 @@ unsafe fn create_dxgi_state(
 
 #[cfg(target_arch = "x86_64")]
 type WindowLongPtr = winapi::shared::basetsd::LONG_PTR;
+#[cfg(target_arch = "aarch64")]
+type WindowLongPtr = winapi::shared::basetsd::LONG_PTR;
 #[cfg(target_arch = "x86")]
 type WindowLongPtr = LONG;
 
