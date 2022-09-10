@@ -422,7 +422,8 @@ impl WindowBuilder {
 
         let handler = self.handler.expect("must set a window handler");
 
-        let surface = surfaces::toplevel::Surface::new(appdata.clone(), handler, self.min_size);
+        let surface =
+            surfaces::toplevel::Surface::new(appdata.clone(), handler, self.size, self.min_size);
 
         (&surface as &dyn surfaces::Decor).set_title(self.title);
 
