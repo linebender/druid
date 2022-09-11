@@ -18,6 +18,7 @@ use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 use tracing::{instrument, trace};
+use crate::contexts::CommandCtx;
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -25,6 +26,9 @@ pub struct Align<T> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
     width_factor: Option<f64>,
     height_factor: Option<f64>,
+    in_viewport: bool,
+    viewport: Rect,
+    my_size: Size,
 }
 
 impl<T> Align<T> {
@@ -39,6 +43,9 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: None,
             height_factor: None,
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
+            my_size: Size::ZERO,
         }
     }
 
@@ -64,6 +71,9 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: None,
             height_factor: Some(1.0),
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
+            my_size: Size::ZERO,
         }
     }
 
@@ -74,7 +84,46 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: Some(1.0),
             height_factor: None,
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
+            my_size: Size::ZERO,
         }
+    }
+
+    fn in_viewport(mut self) -> Self {
+        self.in_viewport = true;
+        self
+    }
+
+    fn align<C: CommandCtx>(&mut self, ctx: &mut C, data: &T, env: &Env) {
+        let size = self.child.layout_rect().size();
+
+        let extra_width = (self.my_size.width - size.width).max(0.);
+        let extra_height = (self.my_size.height - size.height).max(0.);
+
+        // The part of our layout_rect the origin of the child is alloed to be in
+        let mut extra_space = Rect::new(0., 0., extra_width, extra_height);
+
+        if self.in_viewport {
+            // The part of the viewport the origin of the child is alloed to be in
+            let viewport = Rect::from_origin_size(self.viewport.origin(), self.viewport.size() - size);
+
+            // Essentially Rect::intersect but this implementation chooses the point closed to viewport
+            // inside extra_space to give the child a valid origin
+            extra_space.x0 = extra_space.x0.max(viewport.x0).min(extra_space.x1);
+            extra_space.y0 = extra_space.y0.max(viewport.y0).min(extra_space.y1);
+            extra_space.x1 = extra_space.x1.min(viewport.x1).max(extra_space.x0);
+            extra_space.y1 = extra_space.y1.min(viewport.y1).max(extra_space.y0);
+        }
+
+        let origin = self
+            .align
+            .resolve(extra_space)
+            .expand();
+        self.child.set_origin(ctx, data, env, origin);
+
+        let my_insets = self.child.compute_parent_paint_insets(my_size);
+        ctx.set_paint_insets(my_insets);
     }
 }
 
@@ -86,6 +135,13 @@ impl<T: Data> Widget<T> for Align<T> {
 
     #[instrument(name = "Align", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        if let LifeCycle::ViewContextChanged(view_ctx) = event {
+            self.viewport = view_ctx.clip;
+            if self.in_viewport {
+                self.align(ctx, data, env);
+            }
+        }
+
         self.child.lifecycle(ctx, event, data, env)
     }
 
@@ -118,21 +174,13 @@ impl<T: Data> Widget<T> for Align<T> {
             my_size.height = size.height * height;
         }
 
-        my_size = bc.constrain(my_size);
-        let extra_width = (my_size.width - size.width).max(0.);
-        let extra_height = (my_size.height - size.height).max(0.);
-        let origin = self
-            .align
-            .resolve(Rect::new(0., 0., extra_width, extra_height))
-            .expand();
-        self.child.set_origin(ctx, origin);
+        self.my_size = bc.constrain(my_size);
+        self.align(ctx, data, env);
 
-        let my_insets = self.child.compute_parent_paint_insets(my_size);
-        ctx.set_paint_insets(my_insets);
         if self.height_factor.is_some() {
             let baseline_offset = self.child.baseline_offset();
             if baseline_offset > 0f64 {
-                ctx.set_baseline_offset(baseline_offset + extra_height / 2.0);
+                ctx.set_baseline_offset(self.my_size.height - self.child.layout_rect().y1 + baseline_offset);
             }
         }
 
