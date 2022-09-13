@@ -1401,18 +1401,20 @@ impl WindowBuilder {
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
-                        if let Some(point_in_window_coord) = self.position {
-                            let screen_point = parent_window_handle.get_position()
-                                + point_in_window_coord.to_vec2();
-                            let scaled_point = WindowBuilder::scale_sub_window_position(
-                                screen_point,
-                                parent_window_handle.get_scale(),
-                            );
-                            pos_x = scaled_point.x as i32;
-                            pos_y = scaled_point.y as i32;
-                        } else {
-                            warn!("No position provided for subwindow!");
-                        }
+
+                        match (parent_hwnd, self.position) {
+                            (Some(_), Some(point_in_window_coord)) => {
+                                let screen_point = parent_window_handle.get_position()
+                                    + point_in_window_coord.to_vec2();
+                                let scaled_point = WindowBuilder::scale_sub_window_position(
+                                    screen_point,
+                                    parent_window_handle.get_scale(),
+                                );
+                                pos_x = scaled_point.x as i32;
+                                pos_y = scaled_point.y as i32;
+                            }
+                            _ => warn!("No position or parent widnow provided for subwindow!"),
+                        };
                     }
                 }
             } else {
