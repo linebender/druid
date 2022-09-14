@@ -63,6 +63,7 @@ pub fn detect(
                             }
 
                             xdgmeta.modify(&mut m);
+                            m.output = Some(output.detach());
 
                             if let Err(cause) = outputstx.send(outputs::Event::Located(m)) {
                                 tracing::warn!("unable to transmit output {:?}", cause);

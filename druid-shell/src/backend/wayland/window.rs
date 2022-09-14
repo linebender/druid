@@ -405,23 +405,14 @@ impl WindowBuilder {
             tracing::warn!("menus unimplemented for wayland");
         }
 
-        if let WindowLevel::DropDown(parent) = self.level {
-            let dim = self.min_size.unwrap_or(Size::ZERO);
-            let dim = Size::new(dim.width.max(1.), dim.height.max(1.));
-            let dim = Size::new(
-                self.size.width.max(dim.width),
-                self.size.height.max(dim.height),
-            );
+        let level = self.level.clone();
 
-            let config = surfaces::popup::Config::default()
-                .with_size(dim)
-                .with_offset(Into::into(
-                    self.position.unwrap_or_else(|| Into::into((0., 0.))),
-                ));
+        if let WindowLevel::Modal(parent) = level {
+            return self.create_popup(parent);
+        }
 
-            tracing::debug!("popup {:?}", config);
-
-            return popup::create(&parent.0, &config, self.appdata, self.handler);
+        if let WindowLevel::DropDown(parent) = level {
+            return self.create_popup(parent);
         }
 
         let appdata = match self.appdata.upgrade() {
@@ -430,10 +421,8 @@ impl WindowBuilder {
         };
 
         let handler = self.handler.expect("must set a window handler");
-        // compute the initial window size.
-        let initial_size = WindowBuilder::initial_window_size(&appdata, self.size);
-        let surface =
-            surfaces::toplevel::Surface::new(appdata.clone(), handler, initial_size, self.min_size);
+
+        let surface = surfaces::toplevel::Surface::new(appdata.clone(), handler, self.min_size);
 
         (&surface as &dyn surfaces::Decor).set_title(self.title);
 
@@ -469,30 +458,23 @@ impl WindowBuilder {
         Ok(handle)
     }
 
-    pub(super) fn initial_window_size(
-        appdata: &application::Data,
-        defaults: kurbo::Size,
-    ) -> kurbo::Size {
-        // compute the initial window size.
-        let initialwidth = if defaults.width == 0.0 {
-            f64::INFINITY
-        } else {
-            defaults.width
-        };
-        let initialheight = if defaults.height == 0.0 {
-            f64::INFINITY
-        } else {
-            defaults.height
-        };
-        return appdata.outputs.borrow().iter().fold(
-            kurbo::Size::from((initialwidth, initialheight)),
-            |computed, entry| {
-                kurbo::Size::new(
-                    computed.width.min(entry.1.logical.width.into()),
-                    computed.height.min(entry.1.logical.height.into()),
-                )
-            },
+    fn create_popup(self, parent: window::WindowHandle) -> Result<WindowHandle, ShellError> {
+        let dim = self.min_size.unwrap_or(Size::ZERO);
+        let dim = Size::new(dim.width.max(1.), dim.height.max(1.));
+        let dim = Size::new(
+            self.size.width.max(dim.width),
+            self.size.height.max(dim.height),
         );
+
+        let config = surfaces::popup::Config::default()
+            .with_size(dim)
+            .with_offset(Into::into(
+                self.position.unwrap_or_else(|| Into::into((0., 0.))),
+            ));
+
+        tracing::debug!("popup {:?}", config);
+
+        popup::create(&parent.0, &config, self.appdata, self.handler)
     }
 }
 

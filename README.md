@@ -130,7 +130,7 @@ the Rust community is working on a variety of different libraries with
 different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
 
-- Use the the platform-native widgets or mimic them. ([Relm], [SixtyFPS])
+- Use the the platform-native widgets or mimic them. ([Relm], [Slint])
 - Embed easily into custom render pipelines. ([Conrod])
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when targeting the web. ([Iced], [Moxie])
@@ -323,4 +323,4 @@ active and friendly community.
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
-[SixtyFPS]: https://github.com/sixtyfpsui/sixtyfps
+[Slint]: https://github.com/slint-ui/slint
