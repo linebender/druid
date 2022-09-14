@@ -8,8 +8,8 @@ fn main() {
     use std::path::PathBuf;
 
     if env::var("CARGO_CFG_TARGET_OS").unwrap() != "freebsd"
-    && env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux"
-    && env::var("CARGO_CFG_TARGET_OS").unwrap() != "openbsd"
+        && env::var("CARGO_CFG_TARGET_OS").unwrap() != "linux"
+        && env::var("CARGO_CFG_TARGET_OS").unwrap() != "openbsd"
     {
         return;
     }
