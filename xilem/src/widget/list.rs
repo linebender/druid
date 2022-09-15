@@ -111,8 +111,8 @@ impl Widget for List {
     }
 
     fn prepare_paint(&mut self, cx: &mut PreparePaintCx, visible: Rect) {
-        let start = ((visible.y0 / self.item_height).floor() as usize).min(self.n_items);
-        let end = ((visible.y1 / self.item_height).ceil() as usize).min(self.n_items);
+        let start = ((visible.y0 / self.item_height).floor() as usize).saturating_sub(10).min(self.n_items);
+        let end = ((visible.y1 / self.item_height).ceil() as usize + 10).min(self.n_items);
         if (start, end) != self.item_range {
             // item range has changed, send a request
             let mut add = Vec::new();
@@ -124,7 +124,7 @@ impl Widget for List {
                 if self.item_range.0 < start {
                     remove.extend(self.item_range.0..start);
                 } else if start < self.item_range.0 {
-                    add.extend(start..self.item_range.0);
+                    add.extend((start..self.item_range.0).rev());
                 }
                 if self.item_range.1 < end {
                     add.extend(self.item_range.1..end);
