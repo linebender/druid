@@ -372,29 +372,27 @@ impl Data {
             force
         );
 
-        if force {
+        // We don't care about obscure pre version 4 compositors
+        // and just damage the whole surface instead of
+        // translating from buffer coordinates to surface coordinates
+        let damage_buffer_supported =
+            self.wl_surface.borrow().as_ref().version() >= wl_surface::REQ_DAMAGE_BUFFER_SINCE;
+
+        if force || !damage_buffer_supported {
             self.invalidate();
+            self.wl_surface.borrow().damage(0, 0, i32::MAX, i32::MAX);
         } else {
             let damaged_region = self.damaged_region.borrow_mut();
             for rect in damaged_region.rects() {
                 // Convert it to physical coordinate space.
                 let rect = buffers::RawRect::from(*rect).scale(self.scale.get());
 
-                if self.wl_surface.borrow().as_ref().version()
-                    >= wl_surface::REQ_DAMAGE_BUFFER_SINCE
-                {
-                    self.wl_surface.borrow().damage_buffer(
-                        rect.x0,
-                        rect.y0,
-                        rect.x1 - rect.x0,
-                        rect.y1 - rect.y0,
-                    );
-                } else {
-                    // We don't care about obscure pre version 4 compositors
-                    // and just damage the whole surface instead of
-                    // translating from buffer coordinates to surface coordinates
-                    self.wl_surface.borrow().damage(0, 0, i32::MAX, i32::MAX);
-                }
+                self.wl_surface.borrow().damage_buffer(
+                    rect.x0,
+                    rect.y0,
+                    rect.x1 - rect.x0,
+                    rect.y1 - rect.y0,
+                );
             }
             if damaged_region.is_empty() {
                 // Nothing to draw, so we can finish here!

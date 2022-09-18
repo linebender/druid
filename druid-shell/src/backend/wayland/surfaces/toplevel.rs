@@ -85,10 +85,8 @@ impl Surface {
                         (width as f64, height as f64)
                     };
 
-                    let dim = kurbo::Size::new(
-                        width.max(min_size.width),
-                        height.max(min_size.height),
-                    );
+                    let dim =
+                        kurbo::Size::new(width.max(min_size.width), height.max(min_size.height));
 
                     wl_surface.update_dimensions(dim);
                 }
