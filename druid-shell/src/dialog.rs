@@ -38,7 +38,10 @@ pub struct FileInfo {
 
 /// Type of file dialog.
 #[cfg(not(any(
-    all(feature = "x11", any(target_os = "linux", target_os = "openbsd")),
+    all(
+        feature = "x11",
+        any(target_os = "freebsd", target_os = "linux", target_os = "openbsd")
+    ),
     feature = "wayland"
 )))]
 #[derive(Clone, Copy, PartialEq, Eq)]

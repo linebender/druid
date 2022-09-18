@@ -170,7 +170,12 @@ impl<T: Data> MenuManager<T> {
         #[cfg(target_os = "macos")]
         return Some(MenuManager::new(|_, _, _| sys::mac::menu_bar()));
 
-        #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
+        #[cfg(any(
+            target_os = "windows",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "openbsd"
+        ))]
         return None;
 
         // we want to explicitly handle all platforms; log if a platform is missing.

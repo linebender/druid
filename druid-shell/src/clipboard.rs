@@ -226,7 +226,7 @@ cfg_if::cfg_if! {
     } else {
         impl ClipboardFormat {
             cfg_if::cfg_if! {
-                if #[cfg(any(target_os = "linux", target_os = "openbsd"))] {
+                if #[cfg(any(target_os = "freebsd", target_os = "linux", target_os = "openbsd"))] {
                     // trial and error; this is the most supported string type for gtk?
                     pub const TEXT: &'static str = "UTF8_STRING";
                 } else {
