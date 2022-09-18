@@ -14,11 +14,11 @@
 
 //! GTK implementation of menus.
 
-use gtk::builders::SeparatorMenuItemBuilder;
 use gtk::gdk::ModifierType;
 use gtk::{
     AccelGroup, CheckMenuItem, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
 };
+use gtk_rs::SeparatorMenuItemBuilder;
 
 use gtk::prelude::{GtkMenuExt, GtkMenuItemExt, MenuShellExt, WidgetExt};
 
@@ -32,18 +32,14 @@ use crate::keyboard::{KbKey, Modifiers};
 pub struct Menu {
     items: Vec<MenuItem>,
 }
-#[derive(Debug)]
-enum MenuItemType {
-    Normal(GtkMenuItem),
-    Selected(CheckMenuItem),
-}
 
 #[derive(Debug)]
 enum MenuItem {
     Entry {
-        item: MenuItemType,
+        name: String,
         id: u32,
         key: Option<HotKey>,
+        selected: Option<bool>,
         enabled: bool,
     },
     SubMenu(String, Menu),
@@ -70,17 +66,14 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
-        let item = match selected {
-            true => MenuItemType::Selected(CheckMenuItem::with_label(&strip_access_key(text))),
-            false => MenuItemType::Normal(GtkMenuItem::with_label(&strip_access_key(text))),
-        };
         self.items.push(MenuItem::Entry {
-            item,
+            name: strip_access_key(text),
             id,
             key: key.cloned(),
+            selected,
             enabled,
         });
     }
@@ -98,16 +91,21 @@ impl Menu {
         for item in self.items {
             match item {
                 MenuItem::Entry {
-                    item,
+                    name,
                     id,
                     key,
+                    selected,
                     enabled,
                 } => {
-                    if let MenuItemType::Normal(item) = item {
+                    if let Some(state) = selected {
+                        let item = CheckMenuItem::with_label(&name);
+                        if state {
+                            item.activate();
+                        }
                         add_menu_entry(menu, handle, accel_group, &item, id, key, enabled);
-                    } else if let MenuItemType::Selected(item) = item {
-                        item.activate();
-                        add_menu_entry(menu, handle, accel_group, &item, id, key, enabled);
+                    } else {
+                        let entry = GtkMenuItem::with_label(&name);
+                        add_menu_entry(menu, handle, accel_group, &entry, id, key, enabled);
                     }
                 }
                 MenuItem::SubMenu(name, submenu) => {
