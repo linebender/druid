@@ -99,8 +99,8 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
         let mut anno_text = text.to_string();
         if let Some(key) = key {

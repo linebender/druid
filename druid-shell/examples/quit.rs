@@ -75,8 +75,8 @@ fn main() {
         0x100,
         "E&xit",
         Some(&HotKey::new(SysMods::Cmd, "q")),
+        None,
         true,
-        false,
     );
 
     let mut menubar = Menu::new();

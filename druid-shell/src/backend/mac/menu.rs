@@ -90,8 +90,8 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
         let menu_item = make_menu_item(id, text, key, enabled, selected);
         unsafe {
