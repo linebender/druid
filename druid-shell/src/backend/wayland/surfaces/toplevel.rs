@@ -35,6 +35,7 @@ impl Surface {
     pub fn new(
         c: impl Into<CompositorHandle>,
         handler: Box<dyn window::WinHandler>,
+        size: kurbo::Size,
         min_size: Option<kurbo::Size>,
     ) -> Self {
         let min_size = min_size.unwrap_or_else(|| kurbo::Size::from((1.0, 1.0)));
@@ -61,7 +62,6 @@ impl Surface {
 
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
-            let dim = min_size;
             move |_xdg_toplevel, event, a3| match event {
                 xdg_toplevel::Event::Configure {
                     width,
@@ -76,10 +76,17 @@ impl Surface {
                         a3
                     );
 
-                    let dim = kurbo::Size::new(
-                        (width as f64).max(dim.width),
-                        (height as f64).max(dim.height),
-                    );
+                    // If the width or height arguments are zero, it means the client should decide its own window dimension.
+                    // This may happen when the compositor needs to configure the state of the surface
+                    // but doesn't have any information about any previous or expected dimension.
+                    let (width, height) = if width == 0 || height == 0 {
+                        (size.width, size.height)
+                    } else {
+                        (width as f64, height as f64)
+                    };
+
+                    let dim =
+                        kurbo::Size::new(width.max(min_size.width), height.max(min_size.height));
 
                     wl_surface.update_dimensions(dim);
                 }
