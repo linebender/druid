@@ -112,7 +112,7 @@ impl Menu {
             if !enabled {
                 flags |= MF_GRAYED;
             }
-            if selected {
+            if let Some(true) = selected {
                 flags |= MF_CHECKED;
             }
             AppendMenuW(
