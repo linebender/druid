@@ -290,10 +290,10 @@ impl MenuBuildCtx {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
-        self.current.add_item(id, text, key, enabled, selected);
+        self.current.add_item(id, text, key, selected, enabled);
     }
 
     fn add_separator(&mut self) {
@@ -705,11 +705,7 @@ impl<T: Data> MenuItem<T> {
         let new_state = MenuItemState {
             title: self.title.display_text(),
             hotkey: self.hotkey.as_mut().and_then(|h| h(data, env)),
-            selected: self
-                .selected
-                .as_mut()
-                .map(|s| s(data, env))
-                .unwrap_or(false),
+            selected: self.selected.as_mut().map(|s| s(data, env)),
             enabled: self.enabled.as_mut().map(|e| e(data, env)).unwrap_or(true),
         };
         let ret = self.old_state.as_ref() != Some(&new_state);
@@ -803,8 +799,8 @@ impl<T: Data> MenuVisitor<T> for MenuItem<T> {
             self.id.0.map(|x| x.get()).unwrap_or(0),
             &state.title,
             state.hotkey.as_ref(),
-            state.enabled,
             state.selected,
+            state.enabled,
         );
     }
 }
@@ -825,7 +821,7 @@ impl<T: Data> MenuVisitor<T> for Separator {
 struct MenuItemState {
     title: ArcStr,
     hotkey: Option<HotKey>,
-    selected: bool,
+    selected: Option<bool>,
     enabled: bool,
 }
 

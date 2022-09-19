@@ -99,8 +99,8 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
         let mut anno_text = text.to_string();
         if let Some(key) = key {
@@ -112,7 +112,7 @@ impl Menu {
             if !enabled {
                 flags |= MF_GRAYED;
             }
-            if selected {
+            if let Some(true) = selected {
                 flags |= MF_CHECKED;
             }
             AppendMenuW(

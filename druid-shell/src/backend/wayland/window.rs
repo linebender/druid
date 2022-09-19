@@ -380,6 +380,12 @@ impl WindowBuilder {
         );
     }
 
+    pub fn set_always_on_top(&mut self, _always_on_top: bool) {
+        tracing::warn!(
+            "set_always_on_top unimplemented for wayland"
+        );
+    }
+
     pub fn set_position(&mut self, position: Point) {
         self.position = Some(position);
     }
@@ -422,7 +428,8 @@ impl WindowBuilder {
 
         let handler = self.handler.expect("must set a window handler");
 
-        let surface = surfaces::toplevel::Surface::new(appdata.clone(), handler, self.min_size);
+        let surface =
+            surfaces::toplevel::Surface::new(appdata.clone(), handler, self.size, self.min_size);
 
         (&surface as &dyn surfaces::Decor).set_title(self.title);
 

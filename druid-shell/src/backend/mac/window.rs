@@ -225,6 +225,10 @@ impl WindowBuilder {
         self.transparent = transparent;
     }
 
+    pub fn set_always_on_top(&mut self, _always_on_top: bool) {
+        tracing::warn!("set_always_on_top unimplemented for mac");
+    }
+
     pub fn set_level(&mut self, level: WindowLevel) {
         self.level = Some(level);
     }

@@ -41,8 +41,8 @@ impl Menu {
         _id: u32,
         _text: &str,
         _key: Option<&HotKey>,
+        _selected: Option<bool>,
         _enabled: bool,
-        _selected: bool,
     ) {
         // TODO(x11/menus): implement Menu::add_item (currently a no-op)
         tracing::warn!("Menu::add_item is currently unimplemented for X11 backend.");

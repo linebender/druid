@@ -171,11 +171,15 @@ impl Application {
                         let id = *id;
                         let version = *version;
 
-                        if !(interface.as_str() == "wl_seat" && version >= 7) {
+                        if interface.as_str() != "wl_seat" {
                             return;
                         }
+
                         tracing::debug!("seat detected {:?} {:?} {:?}", interface, id, version);
-                        let new_seat = registry.bind::<WlSeat>(7, id);
+
+                        // 7 is the max version supported by wayland-rs 0.29.5
+                        let version = version.min(7);
+                        let new_seat = registry.bind::<WlSeat>(version, id);
                         let prev_seat = weak_seats
                             .upgrade()
                             .unwrap()
@@ -185,6 +189,10 @@ impl Application {
                             prev_seat.is_none(),
                             "internal: wayland should always use new IDs"
                         );
+
+                        // TODO: This code handles only app startup, but seats can come and go on the fly,
+                        // so we have to handle that in the future
+
                         // Defer setting up the pointer/keyboard event handling until we've
                         // finished constructing the `Application`. That way we can pass it as a
                         // parameter.
@@ -212,8 +220,8 @@ impl Application {
 
         let wl_compositor = env
             .registry
-            .instantiate_exact::<WlCompositor>(4)
-            .map_err(|e| Error::global("wl_compositor", 4, e))?;
+            .instantiate_range::<WlCompositor>(1, 5)
+            .map_err(|e| Error::global("wl_compositor", 1, e))?;
         let wl_shm = env
             .registry
             .instantiate_exact::<WlShm>(1)
@@ -290,8 +298,14 @@ impl Application {
                             });
                             seat.pointer = Some(pointer);
                         }
-                        // Dont worry if they go away - we will just stop receiving events. If the
-                        // capability comes back we will start getting events again.
+
+                        // TODO: We should react to capability removal, 
+                        // "if a seat regains the pointer capability 
+                        // and a client has a previously obtained wl_pointer object 
+                        // of version 4 or less, that object may start sending pointer events again. 
+                        // This behavior is considered a misinterpretation of the intended behavior 
+                        // and must not be relied upon by the client", 
+                        // versions 5 up guarantee that events will not be sent for sure
                     }
                     wl_seat::Event::Name { name } => {
                         seat.name = name;
