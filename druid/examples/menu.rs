@@ -74,15 +74,16 @@ fn build_menu() -> Menu<AppState> {
         )
         .entry(
             MenuItem::new("1 Selected")
-                .on_activate(|_, data: &mut AppState, _|if data.value == 1 {data.value = 0} else {data.value = 1})
-                .selected_if(|data: &AppState, _|data.value == 1)
+                .radio_item(1, Some(0))
+                .lens(AppState::value)
         )
         .entry(
             MenuItem::new("2 Selected")
-                .on_activate(|_, data: &mut AppState, _|if data.value == 2 {data.value = 0} else {data.value = 2})
-                .selected_if(|data: &AppState, _|data.value == 2)
+                .radio_item(2, Some(0))
+                .lens(AppState::value)
         )
         .entry(
+            // Implementing the radio item from hand
             MenuItem::new("3 Selected")
                 .on_activate(|_, data: &mut AppState, _|if data.value == 3 {data.value = 0} else {data.value = 3})
                 .selected_if(|data: &AppState, _|data.value == 3)
@@ -90,6 +91,12 @@ fn build_menu() -> Menu<AppState> {
         .separator()
         .entry(
             MenuItem::new("CheckBox")
+                .toggle_data()
+                .lens(AppState::option)
+        )
+        .entry(
+            // Implementing the CheckBox from hand
+            MenuItem::new("Manual CheckBox")
                 .on_activate(|_, data: &mut AppState, _|data.option = !data.option)
                 .selected_if(|data: &AppState, _|data.option)
         )
