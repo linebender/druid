@@ -33,17 +33,22 @@ impl Menu {
         Menu
     }
 
-    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {}
+    pub fn add_dropdown(&mut self, menu: Menu, text: &str, _enabled: bool) {
+        tracing::warn!("unimplemented");
+    }
 
     pub fn add_item(
         &mut self,
-        id: u32,
-        text: &str,
-        key: Option<&HotKey>,
-        enabled: bool,
-        _selected: bool,
+        _id: u32,
+        _text: &str,
+        _key: Option<&HotKey>,
+        _selected: Option<bool>,
+        _enabled: bool,
     ) {
+        tracing::warn!("unimplemented");
     }
 
-    pub fn add_separator(&mut self) {}
+    pub fn add_separator(&mut self) {
+        tracing::warn!("unimplemented");
+    }
 }

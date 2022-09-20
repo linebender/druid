@@ -71,10 +71,10 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
-        self.0.add_item(id, text, key, enabled, selected)
+        self.0.add_item(id, text, key, selected, enabled)
     }
 
     /// Add a separator to the menu.
