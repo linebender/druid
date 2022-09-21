@@ -32,11 +32,11 @@ use cocoa::foundation::{
 };
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
-use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
+use once_cell::sync::Lazy;
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
@@ -332,198 +332,210 @@ impl WindowBuilder {
     }
 }
 
-// Wrap pointer because lazy_static requires Sync.
+// Wrap pointer because statics requires Sync.
 struct ViewClass(*const Class);
 unsafe impl Sync for ViewClass {}
 unsafe impl Send for ViewClass {}
 
-lazy_static! {
-    static ref VIEW_CLASS: ViewClass = unsafe {
-        let mut decl = ClassDecl::new("DruidView", class!(NSView)).expect("View class defined");
-        decl.add_ivar::<*mut c_void>("viewState");
+static VIEW_CLASS: Lazy<ViewClass> = Lazy::new(|| unsafe {
+    let mut decl = ClassDecl::new("DruidView", class!(NSView)).expect("View class defined");
+    decl.add_ivar::<*mut c_void>("viewState");
 
-        decl.add_method(
-            sel!(isFlipped),
-            isFlipped as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn isFlipped(_this: &Object, _sel: Sel) -> BOOL {
-            YES
+    decl.add_method(
+        sel!(isFlipped),
+        isFlipped as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn isFlipped(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    decl.add_method(
+        sel!(acceptsFirstResponder),
+        acceptsFirstResponder as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    // acceptsFirstMouse is called when a left mouse click would focus the window
+    decl.add_method(
+        sel!(acceptsFirstMouse:),
+        acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
+    );
+    extern "C" fn acceptsFirstMouse(this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
+        unsafe {
+            let view_state: *mut c_void = *this.get_ivar("viewState");
+            let view_state = &mut *(view_state as *mut ViewState);
+            view_state.focus_click = true;
         }
-        decl.add_method(
-            sel!(acceptsFirstResponder),
-            acceptsFirstResponder as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
-            YES
+        YES
+    }
+    decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
+    extern "C" fn dealloc(this: &Object, _sel: Sel) {
+        info!("view is dealloc'ed");
+        unsafe {
+            let view_state: *mut c_void = *this.get_ivar("viewState");
+            drop(Box::from_raw(view_state as *mut ViewState));
         }
-        // acceptsFirstMouse is called when a left mouse click would focus the window
-        decl.add_method(
-            sel!(acceptsFirstMouse:),
-            acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
-        );
-        extern "C" fn acceptsFirstMouse(this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
-            unsafe {
-                let view_state: *mut c_void = *this.get_ivar("viewState");
-                let view_state = &mut *(view_state as *mut ViewState);
-                view_state.focus_click = true;
-            }
-            YES
-        }
-        decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
-        extern "C" fn dealloc(this: &Object, _sel: Sel) {
-            info!("view is dealloc'ed");
-            unsafe {
-                let view_state: *mut c_void = *this.get_ivar("viewState");
-                drop(Box::from_raw(view_state as *mut ViewState));
-            }
-        }
+    }
 
-        decl.add_method(
-            sel!(windowDidBecomeKey:),
-            window_did_become_key as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(windowDidResignKey:),
-            window_did_resign_key as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(setFrameSize:),
-            set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
-        );
-        decl.add_method(
-            sel!(mouseDown:),
-            mouse_down_left as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(rightMouseDown:),
-            mouse_down_right as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseDown:),
-            mouse_down_other as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseUp:),
-            mouse_up_left as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(rightMouseUp:),
-            mouse_up_right as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseUp:),
-            mouse_up_other as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseMoved:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseDragged:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseDragged:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseEntered:),
-            mouse_enter as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseExited:),
-            mouse_leave as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(scrollWheel:),
-            scroll_wheel as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(magnifyWithEvent:),
-            pinch_event as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(keyDown:),
-            key_down as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
-        decl.add_method(
-            sel!(flagsChanged:),
-            mods_changed as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(drawRect:),
-            draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
-        );
-        decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
-        decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
-        decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
-        decl.add_method(
-            sel!(handleTimer:),
-            handle_timer as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(handleMenuItem:),
-            handle_menu_item as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(showContextMenu:),
-            show_context_menu as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(windowShouldClose:),
-            window_should_close as extern "C" fn(&mut Object, Sel, id)->BOOL,
-        );
-        decl.add_method(
-            sel!(windowWillClose:),
-            window_will_close as extern "C" fn(&mut Object, Sel, id),
-        );
+    decl.add_method(
+        sel!(windowDidBecomeKey:),
+        window_did_become_key as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(windowDidResignKey:),
+        window_did_resign_key as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(setFrameSize:),
+        set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
+    );
+    decl.add_method(
+        sel!(mouseDown:),
+        mouse_down_left as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(rightMouseDown:),
+        mouse_down_right as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseDown:),
+        mouse_down_other as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseUp:),
+        mouse_up_left as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(rightMouseUp:),
+        mouse_up_right as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseUp:),
+        mouse_up_other as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseMoved:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseDragged:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseDragged:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseEntered:),
+        mouse_enter as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseExited:),
+        mouse_leave as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(scrollWheel:),
+        scroll_wheel as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(magnifyWithEvent:),
+        pinch_event as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(keyDown:),
+        key_down as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
+    decl.add_method(
+        sel!(flagsChanged:),
+        mods_changed as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(drawRect:),
+        draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
+    );
+    decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+    decl.add_method(
+        sel!(viewWillDraw),
+        view_will_draw as extern "C" fn(&mut Object, Sel),
+    );
+    decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
+    decl.add_method(
+        sel!(handleTimer:),
+        handle_timer as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(handleMenuItem:),
+        handle_menu_item as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(showContextMenu:),
+        show_context_menu as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(windowShouldClose:),
+        window_should_close as extern "C" fn(&mut Object, Sel, id) -> BOOL,
+    );
+    decl.add_method(
+        sel!(windowWillClose:),
+        window_will_close as extern "C" fn(&mut Object, Sel, id),
+    );
 
-        // methods for NSTextInputClient
-        decl.add_method(sel!(hasMarkedText), super::text_input::has_marked_text as extern fn(&mut Object, Sel) -> BOOL);
-        decl.add_method(
-            sel!(markedRange),
-            super::text_input::marked_range as extern fn(&mut Object, Sel) -> NSRange,
-        );
-        decl.add_method(sel!(selectedRange), super::text_input::selected_range as extern fn(&mut Object, Sel) -> NSRange);
-        decl.add_method(
-            sel!(setMarkedText:selectedRange:replacementRange:),
-            super::text_input::set_marked_text as extern fn(&mut Object, Sel, id, NSRange, NSRange),
-        );
-        decl.add_method(sel!(unmarkText), super::text_input::unmark_text as extern fn(&mut Object, Sel));
-        decl.add_method(
-            sel!(validAttributesForMarkedText),
-            super::text_input::valid_attributes_for_marked_text as extern fn(&mut Object, Sel) -> id,
-        );
-        decl.add_method(
-            sel!(attributedSubstringForProposedRange:actualRange:),
-            super::text_input::attributed_substring_for_proposed_range
-                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> id,
-        );
-        decl.add_method(
-            sel!(insertText:replacementRange:),
-            super::text_input::insert_text as extern fn(&mut Object, Sel, id, NSRange),
-        );
-        decl.add_method(
-            sel!(characterIndexForPoint:),
-            super::text_input::character_index_for_point as extern fn(&mut Object, Sel, NSPoint) -> NSUInteger,
-        );
-        decl.add_method(
-            sel!(firstRectForCharacterRange:actualRange:),
-            super::text_input::first_rect_for_character_range
-                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> NSRect,
-        );
-        decl.add_method(
-            sel!(doCommandBySelector:),
-            super::text_input::do_command_by_selector as extern fn(&mut Object, Sel, Sel),
-        );
+    // methods for NSTextInputClient
+    decl.add_method(
+        sel!(hasMarkedText),
+        super::text_input::has_marked_text as extern "C" fn(&mut Object, Sel) -> BOOL,
+    );
+    decl.add_method(
+        sel!(markedRange),
+        super::text_input::marked_range as extern "C" fn(&mut Object, Sel) -> NSRange,
+    );
+    decl.add_method(
+        sel!(selectedRange),
+        super::text_input::selected_range as extern "C" fn(&mut Object, Sel) -> NSRange,
+    );
+    decl.add_method(
+        sel!(setMarkedText:selectedRange:replacementRange:),
+        super::text_input::set_marked_text as extern "C" fn(&mut Object, Sel, id, NSRange, NSRange),
+    );
+    decl.add_method(
+        sel!(unmarkText),
+        super::text_input::unmark_text as extern "C" fn(&mut Object, Sel),
+    );
+    decl.add_method(
+        sel!(validAttributesForMarkedText),
+        super::text_input::valid_attributes_for_marked_text
+            as extern "C" fn(&mut Object, Sel) -> id,
+    );
+    decl.add_method(
+        sel!(attributedSubstringForProposedRange:actualRange:),
+        super::text_input::attributed_substring_for_proposed_range
+            as extern "C" fn(&mut Object, Sel, NSRange, *mut c_void) -> id,
+    );
+    decl.add_method(
+        sel!(insertText:replacementRange:),
+        super::text_input::insert_text as extern "C" fn(&mut Object, Sel, id, NSRange),
+    );
+    decl.add_method(
+        sel!(characterIndexForPoint:),
+        super::text_input::character_index_for_point
+            as extern "C" fn(&mut Object, Sel, NSPoint) -> NSUInteger,
+    );
+    decl.add_method(
+        sel!(firstRectForCharacterRange:actualRange:),
+        super::text_input::first_rect_for_character_range
+            as extern "C" fn(&mut Object, Sel, NSRange, *mut c_void) -> NSRect,
+    );
+    decl.add_method(
+        sel!(doCommandBySelector:),
+        super::text_input::do_command_by_selector as extern "C" fn(&mut Object, Sel, Sel),
+    );
 
-        let protocol = Protocol::get("NSTextInputClient").unwrap();
-        decl.add_protocol(protocol);
+    let protocol = Protocol::get("NSTextInputClient").unwrap();
+    decl.add_protocol(protocol);
 
-        ViewClass(decl.register())
-    };
-}
+    ViewClass(decl.register())
+});
 
 /// Acquires a lock to an `InputHandler`, passes it to a closure, and releases the lock.
 pub(super) fn with_edit_lock_from_window<R>(
@@ -586,20 +598,17 @@ struct WindowClass(*const Class);
 unsafe impl Sync for WindowClass {}
 unsafe impl Send for WindowClass {}
 
-lazy_static! {
-    static ref WINDOW_CLASS: WindowClass = unsafe {
-        let mut decl =
-            ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
-        decl.add_method(
-            sel!(canBecomeKeyWindow),
-            canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
-            YES
-        }
-        WindowClass(decl.register())
-    };
-}
+static WINDOW_CLASS: Lazy<WindowClass> = Lazy::new(|| unsafe {
+    let mut decl = ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
+    decl.add_method(
+        sel!(canBecomeKeyWindow),
+        canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    WindowClass(decl.register())
+});
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     unsafe {
