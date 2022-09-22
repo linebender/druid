@@ -31,12 +31,14 @@ use cocoa::foundation::{
     NSArray, NSAutoreleasePool, NSInteger, NSPoint, NSRect, NSSize, NSString, NSUInteger,
 };
 use core_graphics::context::CGContextRef;
+use core_graphics::sys::CGContext;
 use foreign_types::ForeignTypeRef;
 use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
+use piet_common::InterpolationMode;
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
@@ -850,27 +852,59 @@ extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
 
 extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
     unsafe {
-        let context: id = msg_send![class![NSGraphicsContext], currentContext];
-        //FIXME: when core_graphics is at 0.20, we should be able to use
-        //core_graphics::sys::CGContextRef as our pointer type.
-        let cgcontext_ptr: *mut <CGContextRef as ForeignTypeRef>::CType =
-            msg_send![context, CGContext];
-        let cgcontext_ref = CGContextRef::from_ptr_mut(cgcontext_ptr);
+        let cgcontext_id: id = msg_send![class![NSGraphicsContext], currentContext];
+        let cgcontext_ptr: &mut CGContext = msg_send![cgcontext_id, CGContext];
+        let cgcontext_ref: &mut CGContextRef = CGContextRef::from_ptr_mut(cgcontext_ptr);
+
+        let view_state: *mut c_void = *this.get_ivar("viewState");
+        let view_state: &mut ViewState = &mut *(view_state as *mut ViewState);
 
         // FIXME: use the actual invalid region instead of just this bounding box.
         // https://developer.apple.com/documentation/appkit/nsview/1483772-getrectsbeingdrawn?language=objc
-        let rect = Rect::from_origin_size(
+        let invalid_region_rect = Rect::from_origin_size(
             (dirtyRect.origin.x, dirtyRect.origin.y),
             (dirtyRect.size.width, dirtyRect.size.height),
         );
-        let invalid = Region::from(rect);
+        let invalid_region = Region::from(invalid_region_rect);
 
-        let view_state: *mut c_void = *this.get_ivar("viewState");
-        let view_state = &mut *(view_state as *mut ViewState);
-        let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
+        let context_size = NSView::frame(this as *mut _);
+        let context_width = context_size.size.width;
+        let context_height = context_size.size.height;
 
-        (*view_state).handler.paint(&mut piet_ctx, &invalid);
-        if let Err(e) = piet_ctx.finish() {
+        let mut cache_ctx = core_graphics::context::CGContext::create_bitmap_context(
+            None,
+            context_width as usize,
+            context_height as usize,
+            8,
+            0,
+            &core_graphics::color_space::CGColorSpace::create_device_rgb(),
+            core_graphics::base::kCGImageAlphaPremultipliedLast,
+        );
+
+        let mut piet_bitmap_ctx = Piet::new_y_up(
+            &mut cache_ctx,
+            context_height as f64,
+            Some(view_state.text.clone()),
+        );
+
+        (*view_state)
+            .handler
+            .paint(&mut piet_bitmap_ctx, &invalid_region);
+
+        let cache_capture = piet_bitmap_ctx
+            .capture_image_area(invalid_region_rect)
+            .expect("Failed to retrieve content from render cache context");
+        let unwrapped_cache = cache_capture.as_cgimage().expect("Cropped image was empty");
+        let rewrapped_cache = piet_common::CoreGraphicsImage::YDown(unwrapped_cache.clone());
+
+        let mut window_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
+        window_ctx.draw_image(
+            &rewrapped_cache,
+            invalid_region_rect,
+            InterpolationMode::Bilinear,
+        );
+
+        if let Err(e) = window_ctx.finish() {
             error!("{}", e)
         }
 
