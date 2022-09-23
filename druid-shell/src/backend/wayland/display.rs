@@ -134,9 +134,10 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
         .map_err(error::Error::fatal)?;
 
+    // 3 is the max version supported by wayland-rs 0.29.5
     let xdg_base = registry
-        .instantiate_exact::<xdg_wm_base::XdgWmBase>(2)
-        .map_err(|e| error::Error::global("xdg_wm_base", 2, e))?;
+        .instantiate_range::<xdg_wm_base::XdgWmBase>(1, 3)
+        .map_err(|e| error::Error::global("xdg_wm_base", 1, e))?;
 
     // We do this to make sure wayland knows we're still responsive.
     //
@@ -145,7 +146,7 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
     // computation, network, ... This is good practice for all back-ends: it will improve
     // responsiveness.
     xdg_base.quick_assign(|xdg_base, event, ctx| {
-        tracing::info!(
+        tracing::debug!(
             "global xdg_base events {:?} {:?} {:?}",
             xdg_base,
             event,

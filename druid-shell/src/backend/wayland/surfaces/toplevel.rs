@@ -1,5 +1,4 @@
 use wayland_client as wlc;
-use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_toplevel_decoration_v1 as toplevel_decorations;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 use wayland_protocols::xdg_shell::client::xdg_toplevel;
 
@@ -17,12 +16,8 @@ use super::Popup;
 
 struct Inner {
     wl_surface: surface::Surface,
-    #[allow(unused)]
     pub(super) xdg_surface: wlc::Main<xdg_surface::XdgSurface>,
     pub(super) xdg_toplevel: wlc::Main<xdg_toplevel::XdgToplevel>,
-    #[allow(unused)]
-    pub(super) zxdg_toplevel_decoration_v1:
-        wlc::Main<toplevel_decorations::ZxdgToplevelDecorationV1>,
 }
 
 impl From<Inner> for std::sync::Arc<surface::Data> {
@@ -40,22 +35,20 @@ impl Surface {
     pub fn new(
         c: impl Into<CompositorHandle>,
         handler: Box<dyn window::WinHandler>,
-        initial_size: kurbo::Size,
+        size: kurbo::Size,
         min_size: Option<kurbo::Size>,
     ) -> Self {
+        let min_size = min_size.unwrap_or_else(|| kurbo::Size::from((1.0, 1.0)));
         let compositor = CompositorHandle::new(c);
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
         let xdg_surface = compositor.get_xdg_surface(&wl_surface.inner.wl_surface.borrow());
         let xdg_toplevel = xdg_surface.get_toplevel();
-        let zxdg_toplevel_decoration_v1 = compositor
-            .zxdg_decoration_manager_v1()
-            .get_toplevel_decoration(&xdg_toplevel);
 
         // register to receive xdg_surface events.
         xdg_surface.quick_assign({
             let wl_surface = wl_surface.clone();
             move |xdg_surface, event, _| {
-                tracing::trace!("xdg_surface event configure {:?}", event);
+                tracing::debug!("xdg_surface event configure {:?}", event);
                 match event {
                     xdg_surface::Event::Configure { serial } => {
                         xdg_surface.ack_configure(serial);
@@ -66,9 +59,9 @@ impl Surface {
                 }
             }
         });
+
         xdg_toplevel.quick_assign({
             let wl_surface = wl_surface.clone();
-            let mut dim = initial_size;
             move |_xdg_toplevel, event, a3| match event {
                 xdg_toplevel::Event::Configure {
                     width,
@@ -82,11 +75,19 @@ impl Surface {
                         states,
                         a3
                     );
-                    // compositor is deferring to the client for determining the size
-                    // when values are zero.
-                    if width != 0 && height != 0 {
-                        dim = kurbo::Size::new(width as f64, height as f64);
-                    }
+
+                    // If the width or height arguments are zero, it means the client should decide its own window dimension.
+                    // This may happen when the compositor needs to configure the state of the surface
+                    // but doesn't have any information about any previous or expected dimension.
+                    let (width, height) = if width == 0 || height == 0 {
+                        (size.width, size.height)
+                    } else {
+                        (width as f64, height as f64)
+                    };
+
+                    let dim =
+                        kurbo::Size::new(width.max(min_size.width), height.max(min_size.height));
+
                     wl_surface.update_dimensions(dim);
                 }
                 xdg_toplevel::Event::Close => {
@@ -97,25 +98,16 @@ impl Surface {
             }
         });
 
-        zxdg_toplevel_decoration_v1.quick_assign(move |_zxdg_toplevel_decoration_v1, event, _| {
-            tracing::info!("toplevel decoration unimplemented {:?}", event);
-        });
-
         let inner = Inner {
             wl_surface,
             xdg_toplevel,
             xdg_surface,
-            zxdg_toplevel_decoration_v1,
         };
 
         inner
-            .zxdg_toplevel_decoration_v1
-            .set_mode(toplevel_decorations::Mode::ServerSide);
-        if let Some(size) = min_size {
-            inner
-                .xdg_toplevel
-                .set_min_size(size.width as i32, size.height as i32);
-        }
+            .xdg_toplevel
+            .set_min_size(min_size.width as i32, min_size.height as i32);
+        inner.xdg_toplevel.set_maximized();
 
         let handle = Self {
             inner: std::sync::Arc::new(inner),

@@ -28,7 +28,13 @@ pub struct Menu {
     pub menu: id,
 }
 
-fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, selected: bool) -> id {
+fn make_menu_item(
+    id: u32,
+    text: &str,
+    key: Option<&HotKey>,
+    selected: Option<bool>,
+    enabled: bool,
+) -> id {
     let key_equivalent = key.map(HotKey::key_equivalent).unwrap_or("");
     let stripped_text = strip_access_key(text);
     unsafe {
@@ -49,7 +55,7 @@ fn make_menu_item(id: u32, text: &str, key: Option<&HotKey>, enabled: bool, sele
             let () = msg_send![item, setEnabled: NO];
         }
 
-        if selected {
+        if let Some(true) = selected {
             let () = msg_send![item, setState: 1_isize];
         }
         item
@@ -90,10 +96,10 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
-        let menu_item = make_menu_item(id, text, key, enabled, selected);
+        let menu_item = make_menu_item(id, text, key, selected, enabled);
         unsafe {
             self.menu.addItem_(menu_item);
         }

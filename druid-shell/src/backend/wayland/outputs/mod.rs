@@ -135,6 +135,7 @@ pub struct Mode {
 
 #[derive(Clone, Debug)]
 pub struct Meta {
+    pub output: Option<wl_output::WlOutput>,
     pub gid: u32,
     pub name: String,
     pub description: String,
@@ -153,6 +154,7 @@ pub struct Meta {
 impl Default for Meta {
     fn default() -> Self {
         Self {
+            output: None,
             gid: Default::default(),
             name: Default::default(),
             description: Default::default(),

@@ -14,7 +14,10 @@
 
 //! Platorm specific extensions.
 
-#[cfg(any(doc, any(target_os = "linux", target_os = "openbsd")))]
+#[cfg(any(
+    doc,
+    any(target_os = "freebsd", target_os = "linux", target_os = "openbsd")
+))]
 pub mod linux;
 
 #[cfg(any(doc, target_os = "macos"))]

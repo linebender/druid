@@ -239,7 +239,12 @@ fn make_menu<T: Data>(_window_id: Option<WindowId>, _app_state: &AppState, _env:
     {
         base = base.entry(druid::platform_menus::mac::application::default())
     }
-    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "openbsd"))]
+    #[cfg(any(
+        target_os = "windows",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "openbsd"
+    ))]
     {
         base = base.entry(druid::platform_menus::win::file::default());
     }

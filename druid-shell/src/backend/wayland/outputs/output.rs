@@ -30,11 +30,14 @@ pub fn detect(
                         return;
                     }
 
-                    if !(interface.as_str() == "wl_output" && version >= 3) {
+                    // We rely on wl_output::done() event so version 2 is our minimum,
+                    // it is also 9 years old so we can assume that any non-abandonware compositor uses it.
+                    if !(interface.as_str() == "wl_output" && version >= 2) {
                         return;
                     }
 
-                    let output = registry.bind::<wl_output::WlOutput>(3, id);
+                    let version = version.min(3);
+                    let output = registry.bind::<wl_output::WlOutput>(version, id);
                     let xdgm = (*xdg_output_manager_id.borrow()).map(|xdgm_id| {
                         registry.bind::<zxdg_output_manager_v1::ZxdgOutputManagerV1>(3, xdgm_id)
                     });
@@ -63,6 +66,7 @@ pub fn detect(
                             }
 
                             xdgmeta.modify(&mut m);
+                            m.output = Some(output.detach());
 
                             if let Err(cause) = outputstx.send(outputs::Event::Located(m)) {
                                 tracing::warn!("unable to transmit output {:?}", cause);

@@ -97,7 +97,7 @@ core-graphics = "0.22.0"
 foreign-types = "0.3.2"
 bitflags = "1.2.1"
 
-[target.'cfg(any(target_os="linux", target_os="openbsd"))'.dependencies]
+[target.'cfg(any(target_os = "freebsd", target_os="linux", target_os="openbsd"))'.dependencies]
 ashpd = { version = "0.3.0", optional = true }
 # TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
