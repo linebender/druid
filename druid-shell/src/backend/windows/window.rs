@@ -620,8 +620,13 @@ impl MyWndProc {
                 }
                 DeferredOp::ShowWindow(should_show) => {
                     let show = if should_show { SW_SHOW } else { SW_HIDE };
+
                     unsafe {
                         ShowWindow(hwnd, show);
+
+                        if should_show {
+                            SetForegroundWindow(hwnd);
+                        }
                     }
                 }
                 DeferredOp::SaveAs(options, token) => {
