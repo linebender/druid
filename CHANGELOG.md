@@ -5,6 +5,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ## Unreleased
 
+- Always on top setting for WindowBuilder ([#1953] by [@mgalos999])
+
 ### Highlights
 
 - International text input support (IME) on macOS.
