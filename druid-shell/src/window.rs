@@ -484,6 +484,11 @@ impl WindowBuilder {
         self.0.set_transparent(transparent)
     }
 
+    /// Set whether the window is always on top
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.0.set_always_on_top(always_on_top)
+    }
+
     /// Sets the initial window position in display points.
     /// For windows with a parent, the position is relative to the parent.
     /// For windows without a parent, it is relative to the origin of the virtual screen.
