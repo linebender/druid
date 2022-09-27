@@ -46,7 +46,7 @@ use winapi::um::winuser::*;
 use winapi::Interface;
 use wio::com::ComPtr;
 
-use raw_window_handle::{Win32Handle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, Win32Handle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
@@ -179,7 +179,7 @@ unsafe impl HasRawWindowHandle for WindowHandle {
             handle.hwnd = hwnd as *mut core::ffi::c_void;
             handle.hinstance = unsafe {
                 winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
-                as *mut core::ffi::c_void
+                    as *mut core::ffi::c_void
             };
         }
         RawWindowHandle::Win32(handle)

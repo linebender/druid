@@ -283,9 +283,7 @@ impl CursorDesc {
     /// the image. For example, if the image is a picture of a arrow, the hot spot might be the
     /// coordinates of the arrow's tip.
     pub fn new(hot: impl Into<Point>) -> CursorDesc {
-        CursorDesc {
-            hot: hot.into(),
-        }
+        CursorDesc { hot: hot.into() }
     }
 }
 

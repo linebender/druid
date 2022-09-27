@@ -148,6 +148,7 @@ static_assertions = "1.1.0"
 test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 unicode-segmentation = "1.7.0"
+piet-gpu-hal = { git = "https://github.com/linebender/piet-gpu", rev = "947a85f" }
 
 [build-dependencies]
 bindgen = {version = "0.58", optional = true}
