@@ -1,0 +1,1845 @@
+# FileList, saved  2022-10-06 00:00:08.904106
+[[FileInfo]]
+fullname = "."
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./Cargo.toml"
+is_dir = false
+short = "config for Cargo (build system and package manager)"
+
+[[FileInfo]]
+fullname = "./rustfmt.toml"
+is_dir = false
+short = "config for rustfmt (pretty printer)"
+
+[[FileInfo]]
+fullname = "./LICENSE"
+is_dir = false
+short = "Apache 2.0 license text"
+
+[[FileInfo]]
+fullname = "./CHANGELOG.md"
+is_dir = false
+short = "generated changelog of latest release"
+
+[[FileInfo]]
+fullname = "./AUTHORS"
+is_dir = false
+short = "Partial list of copyright holders (contributors)"
+
+[[FileInfo]]
+fullname = "./FileList.toml"
+is_dir = false
+short = "data file generating FileList.txt"
+
+[[FileInfo]]
+fullname = "./README.md"
+is_dir = false
+short = "project overview"
+
+[[FileInfo]]
+fullname = "./.gitignore"
+is_dir = false
+short = "patterns of files not to placed in git (source control)"
+
+[[FileInfo]]
+fullname = "./CONTRIBUTING.md"
+is_dir = false
+short = "contributor guidelines and how to roll new releases"
+
+[[FileInfo]]
+fullname = "./clippy.toml"
+is_dir = false
+short = "documented config for clippy (lint) tool"
+
+[[FileInfo]]
+fullname = "./FileList.txt"
+is_dir = false
+short = "This file"
+
+[[FileInfo]]
+fullname = "./druid-shell"
+is_dir = true
+short = "common interface for elements across platforms"
+
+[[FileInfo]]
+fullname = "./druid-shell/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/build.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples/edit_text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples/shello.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples/quit.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples/invalidate.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/examples/perftest.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/common_util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/region.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/hotkey.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/scale.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/keyboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/mouse.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/platform"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/platform/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/platform/mac.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/platform/linux.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/keycodes.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/web/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/timer.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/keyboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/linux"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/linux/env.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/linux/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/xkb"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/xkb/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/xkb/keycodes.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/shared/xkb/xkbcommon_sys.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/display.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/events.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/pointers.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/keyboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/.README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/popup.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/toplevel.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/idle.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/layershell.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/surface.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/surfaces/buffers.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/outputs"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/outputs/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/wayland/outputs/output.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/text_input.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/keyboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/appkit.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/mac/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/x11/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/keycodes.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/gtk/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/paint.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/error.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/dcomp.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/screen.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/keyboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/clipboard.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/timers.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/keycodes.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/accels.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/menu.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-shell/src/backend/windows/application.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive"
+is_dir = true
+short = "Implementation of derive macros"
+
+[[FileInfo]]
+fullname = "./druid-derive/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/with_same.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/with_lens.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/data.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/lens_generic.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ignore.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-tuple-struct.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-enum.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-empty-struct.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-enum.stderr"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-union.stderr"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-tuple-struct.stderr"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-snake_case.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-snake_case.stderr"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-union.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/lens-attributes.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/with-empty-struct.stderr"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/tests/ui/simple-lens.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/src"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/src/lens.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/src/attr.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid-derive/src/data.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs"
+is_dir = true
+short = "Druid Book in mdBook format"
+
+[[FileInfo]]
+fullname = "./docs/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/.gitignore"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src"
+is_dir = true
+short = "source of code examples included in book"
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/env_md.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/data_md.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/lens_md.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/custom_widgets_md.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/book_examples/src/widget_md.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src"
+is_dir = true
+short = "Chapters (or topics) of Druid Book"
+
+[[FileInfo]]
+fullname = "./docs/src/localization.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/more_information.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/setup.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/SUMMARY.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/intro.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/data.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/widget.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/env.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/command.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/lens.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/get_started.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/custom_widgets.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./docs/src/resolution_independence.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid"
+is_dir = true
+short = "Implementation of druid"
+
+[[FileInfo]]
+fullname = "./druid/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/README.md"
+is_dir = false
+short = "symbolic link to parent README.md file"
+
+[[FileInfo]]
+fullname = "./druid/resources"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n"
+is_dir = true
+short = "Localized strings for various languages"
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/de-DE"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/de-DE/builtin.ftl"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/fr-CA"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/fr-CA/builtin.ftl"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/en-US"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/resources/i18n/en-US/builtin.ftl"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples"
+is_dir = true
+short = "Many tiny code examples using various features"
+
+[[FileInfo]]
+fullname = "./druid/examples/multiwin.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/disabled.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/switches.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/timer.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/layout.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/invalidation.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/markdown_preview.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/scroll.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/list.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/anim.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/open_save.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/sub_window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/tabs.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/view_switcher.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/widget_gallery.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/blocking_function.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/lens.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/either.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/styled_text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/readme.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/image.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/identity.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/split_demo.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/panels.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/cursor.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/transparency.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/event_viewer.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/flex.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/custom_widget.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/z_stack.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/async_event.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/calc.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/scroll_colors.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/game_of_life.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/slider.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/svg.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/textbox.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web"
+is_dir = true
+short = "builds all druid examples for deploying to web"
+
+[[FileInfo]]
+fullname = "./druid/examples/web/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web/build.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web/.gitignore"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web/src"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/web/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web"
+is_dir = true
+short = "Minimal build of single druid app for the web"
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/index.html"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/index.js"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/src"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/hello_web/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/assets"
+is_dir = true
+short = "Assets (image files) used by examples"
+
+[[FileInfo]]
+fullname = "./druid/examples/assets/tiger.svg"
+is_dir = false
+short = "A detailed multi-color tiger head"
+
+[[FileInfo]]
+fullname = "./druid/examples/assets/xi.image"
+is_dir = false
+short = "bytes to create image for druid::RenderContext"
+
+[[FileInfo]]
+fullname = "./druid/examples/assets/PicWithAlpha.png"
+is_dir = false
+short = "White A and red B on transparent background"
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting"
+is_dir = true
+short = "Adds formatter to a textbox to ensure validity"
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/Cargo.toml"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/README.md"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/src"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/src/formatters.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/src/main.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/examples/value_formatting/src/widgets.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src"
+is_dir = true
+short = "Actual source of the druid system"
+
+[[FileInfo]]
+fullname = "./druid/src/core.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/util.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/env.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/command.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/box_constraints.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/sub_window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/lib.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/dialog.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/window.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/theme.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/scroll_component.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/event.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/bloom.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/data.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/contexts.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/app_delegate.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/win_handler.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/mouse.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/app.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/ext_event.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/localization.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/debug_state.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/maybe.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/switch.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/sized_box.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/painter.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/invalidation.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/scroll.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/align.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/list.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/lens_wrap.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/widget.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/controller.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/intrinsic_width.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/tabs.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/view_switcher.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/env_scope.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/stepper.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/click.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/either.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/scope.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/image.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/padding.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/aspect_ratio_box.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/checkbox.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/widget_wrapper.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/parse.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/progress_bar.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/value_textbox.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/flex.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/spinner.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/disable_if.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/clip_box.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/z_stack.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/label.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/widget_ext.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/radio.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/slider.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/identity_wrapper.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/container.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/split.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/added.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/svg.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/common.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/button.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/widget/textbox.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests/layout_tests.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests/harness.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests/helpers.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/tests/invalidation_tests.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/lens"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/lens/lens.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/lens/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/menu"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/menu/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/menu/sys.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/format.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/movement.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/layout.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/font_descriptor.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/backspace.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/attribute.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/editable_text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/input_component.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/mod.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/rich_text.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/input_methods.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./druid/src/text/storage.rs"
+is_dir = false
+short = ""
+
+[[FileInfo]]
+fullname = "./.github"
+is_dir = true
+short = ""
+
+[[FileInfo]]
+fullname = "./.github/workflows"
+is_dir = true
+short = "Configuration files for automated tasks on github.com"
+
+[[FileInfo]]
+fullname = "./.github/workflows/gh-pages.yml"
+is_dir = false
+short = "Build docs with mdbook and push to github pages"
+
+[[FileInfo]]
+fullname = "./.github/workflows/bloat.yml"
+is_dir = false
+short = "Config for cargo-bloat, watching changing compiled sizes"
+
+[[FileInfo]]
+fullname = "./.github/workflows/ci.yml"
+is_dir = false
+short = "Continuous Integration including clippy (lint-like) tests"

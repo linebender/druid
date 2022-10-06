@@ -1,0 +1,285 @@
+FileList generated 2022-10-06 00:00:08.895157
+
+Project Directory Tree
++  .                                                                             
++--+  .github                                                                    
++--+--+  workflows                       Configuration files for automated tasks on github.com
++--+  docs                               Druid Book in mdBook format             
++--+--+  book_examples                                                           
++--+--+--+  src                          Source of code examples included in book
++--+--+  src                             Chapters (or topics) of Druid Book      
++--+  druid                              Implementation of druid                 
++--+  druid-derive                       Implementation of derive macros         
++--+--+  src                                                                     
++--+--+  tests                                                                   
++--+--+--+  ui                                                                   
++--+  druid-shell                        Common interface for elements across platforms
++--+--+  examples                                                                
++--+--+  src                                                                     
++--+--+--+  backend                                                              
++--+--+--+--+  gtk                                                               
++--+--+--+--+  mac                                                               
++--+--+--+--+  shared                                                            
++--+--+--+--+--+  linux                                                          
++--+--+--+--+--+  xkb                                                            
++--+--+--+--+  wayland                                                           
++--+--+--+--+--+  outputs                                                        
++--+--+--+--+--+  surfaces                                                       
++--+--+--+--+  web                                                               
++--+--+--+--+  windows                                                           
++--+--+--+--+  x11                                                               
++--+--+--+  platform                                                             
++--+--+  examples                        Many tiny code examples using various features
++--+--+--+  assets                       Assets (image files) used by examples   
++--+--+--+  hello_web                    Minimal build of single druid app for the web
++--+--+--+--+  src                                                               
++--+--+--+  value_formatting             Adds formatter to a textbox to ensure validity
++--+--+--+--+  src                                                               
++--+--+--+  web                          Builds all druid examples for deploying to web
++--+--+--+--+  src                                                               
++--+--+  resources                                                               
++--+--+--+  i18n                         Localized strings for various languages 
++--+--+--+--+  de-DE                                                             
++--+--+--+--+  en-US                                                             
++--+--+--+--+  fr-CA                                                             
++--+--+  src                             Actual source of the druid system       
++--+--+--+  lens                                                                 
++--+--+--+  menu                                                                 
++--+--+--+  tests                                                                
++--+--+--+  text                                                                 
++--+--+--+  widget                                                               
+
+Directory .                                                                      
+    Files:
+        .gitignore                       Patterns of files not to placed in git (source control)
+        AUTHORS                          Partial list of copyright holders (contributors)
+        Cargo.toml                       Config for Cargo (build system and package manager)
+        CHANGELOG.md                     Generated changelog of latest release   
+        clippy.toml                      Documented config for clippy (lint) tool
+        CONTRIBUTING.md                  Contributor guidelines and how to roll new releases
+        FileList.toml                    Data file generating FileList.txt       
+        FileList.txt                     This file                               
+        LICENSE                          Apache 2.0 license text                 
+        README.md                        Project overview                        
+        rustfmt.toml                     Config for rustfmt (pretty printer)     
+    Subdirectories:
+        .github/                                                                 
+        docs/                            Druid Book in mdBook format             
+        druid/                           Implementation of druid                 
+        druid-derive/                    Implementation of derive macros         
+        druid-shell/                     Common interface for elements across platforms
+
+Directory ./.github/workflows            Configuration files for automated tasks on github.com
+    Files:
+        bloat.yml                        Config for cargo-bloat, watching changing compiled sizes
+        ci.yml                           Continuous Integration including clippy (lint-like) tests
+        gh-pages.yml                     Build docs with mdbook and push to github pages
+
+Directory: ./docs, 2 Subdirectories, 3 files.
+    Description: Druid Book in mdBook format
+    Subdirectories: book_examples/, src/
+    Files: .gitignore, book.toml, README.md
+
+Directory: ./docs/book_examples, 1 Subdirectories, 1 files.
+    Subdirectories: src/
+    Files: Cargo.toml
+
+Directory: ./docs/book_examples/src, 0 Subdirectories, 6 files.
+    Description: Source of code examples included in book
+    Files: custom_widgets_md.rs, data_md.rs, env_md.rs, lens_md.rs,
+           lib.rs, widget_md.rs
+
+Directory: ./docs/src, 0 Subdirectories, 13 files.
+    Description: Chapters (or topics) of Druid Book
+    Files: command.md, custom_widgets.md, data.md, env.md,
+           get_started.md, intro.md, lens.md, localization.md,
+           more_information.md, resolution_independence.md, setup.md,
+           SUMMARY.md, widget.md
+
+Directory ./druid                        Implementation of druid                 
+    Files:
+        Cargo.toml                                                               
+        README.md                        Symbolic link to parent README.md file  
+    Subdirectories:
+        examples/                        Many tiny code examples using various features
+        resources/                                                               
+        src/                             Actual source of the druid system       
+
+Directory: ./druid-derive, 2 Subdirectories, 2 files.
+    Description: Implementation of derive macros
+    Subdirectories: src/, tests/
+    Files: Cargo.toml, README.md
+
+Directory: ./druid-derive/src, 0 Subdirectories, 4 files.
+    Files: attr.rs, data.rs, lens.rs, lib.rs
+
+Directory: ./druid-derive/tests, 1 Subdirectories, 6 files.
+    Subdirectories: ui/
+    Files: data.rs, ignore.rs, lens_generic.rs, ui.rs, with_lens.rs,
+           with_same.rs
+
+Directory: ./druid-derive/tests/ui, 0 Subdirectories, 12 files.
+    Files: lens-attributes.rs, simple-lens.rs, with-empty-struct.rs,
+           with-empty-struct.stderr, with-enum.rs, with-enum.stderr,
+           with-snake_case.rs, with-snake_case.stderr,
+           with-tuple-struct.rs, with-tuple-struct.stderr,
+           with-union.rs, with-union.stderr
+
+Directory: ./druid-shell, 2 Subdirectories, 3 files.
+    Description: Common interface for elements across platforms
+    Subdirectories: examples/, src/
+    Files: build.rs, Cargo.toml, README.md
+
+Directory: ./druid-shell/examples, 0 Subdirectories, 5 files.
+    Files: edit_text.rs, invalidate.rs, perftest.rs, quit.rs,
+           shello.rs
+
+Directory: ./druid-shell/src, 2 Subdirectories, 16 files.
+    Subdirectories: backend/, platform/
+    Files: application.rs, clipboard.rs, common_util.rs, dialog.rs,
+           error.rs, hotkey.rs, keyboard.rs, lib.rs, menu.rs,
+           mouse.rs, region.rs, scale.rs, screen.rs, text.rs, util.rs,
+           window.rs
+
+Directory: ./druid-shell/src/backend, 7 Subdirectories, 1 files.
+    Subdirectories: gtk/, mac/, shared/, wayland/, web/, windows/, x11/
+    Files: mod.rs
+
+Directory: ./druid-shell/src/backend/gtk, 0 Subdirectories, 10 files.
+    Files: application.rs, clipboard.rs, dialog.rs, error.rs,
+           keycodes.rs, menu.rs, mod.rs, screen.rs, util.rs, window.rs
+
+Directory: ./druid-shell/src/backend/mac, 0 Subdirectories, 12 files.
+    Files: appkit.rs, application.rs, clipboard.rs, dialog.rs,
+           error.rs, keyboard.rs, menu.rs, mod.rs, screen.rs,
+           text_input.rs, util.rs, window.rs
+
+Directory: ./druid-shell/src/backend/shared, 2 Subdirectories, 3 files.
+    Subdirectories: linux/, xkb/
+    Files: keyboard.rs, mod.rs, timer.rs
+
+Directory: ./druid-shell/src/backend/shared/linux, 0 Subdirectories, 2 files.
+    Files: env.rs, mod.rs
+
+Directory: ./druid-shell/src/backend/shared/xkb, 0 Subdirectories, 3 files.
+    Files: keycodes.rs, mod.rs, xkbcommon_sys.rs
+
+Directory: ./druid-shell/src/backend/wayland, 2 Subdirectories, 12 files.
+    Subdirectories: outputs/, surfaces/
+    Files: .README.md, application.rs, clipboard.rs, display.rs,
+           error.rs, events.rs, keyboard.rs, menu.rs, mod.rs,
+           pointers.rs, screen.rs, window.rs
+
+Directory: ./druid-shell/src/backend/wayland/outputs, 0 Subdirectories, 2 files.
+    Files: mod.rs, output.rs
+
+Directory: ./druid-shell/src/backend/wayland/surfaces, 0 Subdirectories, 7 files.
+    Files: buffers.rs, idle.rs, layershell.rs, mod.rs, popup.rs,
+           surface.rs, toplevel.rs
+
+Directory: ./druid-shell/src/backend/web, 0 Subdirectories, 8 files.
+    Files: application.rs, clipboard.rs, error.rs, keycodes.rs,
+           menu.rs, mod.rs, screen.rs, window.rs
+
+Directory: ./druid-shell/src/backend/windows, 0 Subdirectories, 15 files.
+    Files: accels.rs, application.rs, clipboard.rs, dcomp.rs,
+           dialog.rs, error.rs, keyboard.rs, keycodes.rs, menu.rs,
+           mod.rs, paint.rs, screen.rs, timers.rs, util.rs, window.rs
+
+Directory: ./druid-shell/src/backend/x11, 0 Subdirectories, 9 files.
+    Files: application.rs, clipboard.rs, dialog.rs, error.rs, menu.rs,
+           mod.rs, screen.rs, util.rs, window.rs
+
+Directory: ./druid-shell/src/platform, 0 Subdirectories, 3 files.
+    Files: linux.rs, mac.rs, mod.rs
+
+Directory: ./druid/examples, 4 Subdirectories, 39 files.
+    Description: Many tiny code examples using various features
+    Subdirectories: assets/, hello_web/, value_formatting/, web/
+    Files: anim.rs, async_event.rs, blocking_function.rs, calc.rs,
+           cursor.rs, custom_widget.rs, disabled.rs, either.rs,
+           event_viewer.rs, flex.rs, game_of_life.rs, hello.rs,
+           identity.rs, image.rs, invalidation.rs, layout.rs, lens.rs,
+           list.rs, markdown_preview.rs, multiwin.rs, open_save.rs,
+           panels.rs, readme.md, scroll.rs, scroll_colors.rs,
+           slider.rs, split_demo.rs, styled_text.rs, sub_window.rs,
+           svg.rs, switches.rs, tabs.rs, text.rs, textbox.rs,
+           timer.rs, transparency.rs, view_switcher.rs,
+           widget_gallery.rs, z_stack.rs
+
+Directory ./druid/examples/assets        Assets (image files) used by examples   
+    Files:
+        PicWithAlpha.png                 White A and red B on transparent background
+        tiger.svg                        A detailed multi-color tiger head       
+        xi.image                         Bytes to create image for druid::RenderContext
+
+Directory: ./druid/examples/hello_web, 1 Subdirectories, 4 files.
+    Description: Minimal build of single druid app for the web
+    Subdirectories: src/
+    Files: Cargo.toml, index.html, index.js, README.md
+
+Directory: ./druid/examples/hello_web/src, 0 Subdirectories, 1 files.
+    Files: lib.rs
+
+Directory: ./druid/examples/value_formatting, 1 Subdirectories, 2 files.
+    Description: Adds formatter to a textbox to ensure validity
+    Subdirectories: src/
+    Files: Cargo.toml, README.md
+
+Directory: ./druid/examples/value_formatting/src, 0 Subdirectories, 3 files.
+    Files: formatters.rs, main.rs, widgets.rs
+
+Directory: ./druid/examples/web, 1 Subdirectories, 4 files.
+    Description: Builds all druid examples for deploying to web
+    Subdirectories: src/
+    Files: .gitignore, build.rs, Cargo.toml, README.md
+
+Directory: ./druid/examples/web/src, 0 Subdirectories, 1 files.
+    Files: lib.rs
+
+Directory: ./druid/resources/i18n/de-DE, 0 Subdirectories, 1 files.
+    Files: builtin.ftl
+
+Directory: ./druid/resources/i18n/en-US, 0 Subdirectories, 1 files.
+    Files: builtin.ftl
+
+Directory: ./druid/resources/i18n/fr-CA, 0 Subdirectories, 1 files.
+    Files: builtin.ftl
+
+Directory: ./druid/src, 5 Subdirectories, 22 files.
+    Description: Actual source of the druid system
+    Subdirectories: lens/, menu/, tests/, text/, widget/
+    Files: app.rs, app_delegate.rs, bloom.rs, box_constraints.rs,
+           command.rs, contexts.rs, core.rs, data.rs, debug_state.rs,
+           dialog.rs, env.rs, event.rs, ext_event.rs, lib.rs,
+           localization.rs, mouse.rs, scroll_component.rs,
+           sub_window.rs, theme.rs, util.rs, win_handler.rs, window.rs
+
+Directory: ./druid/src/lens, 0 Subdirectories, 2 files.
+    Files: lens.rs, mod.rs
+
+Directory: ./druid/src/menu, 0 Subdirectories, 2 files.
+    Files: mod.rs, sys.rs
+
+Directory: ./druid/src/tests, 0 Subdirectories, 5 files.
+    Files: harness.rs, helpers.rs, invalidation_tests.rs,
+           layout_tests.rs, mod.rs
+
+Directory: ./druid/src/text, 0 Subdirectories, 12 files.
+    Files: attribute.rs, backspace.rs, editable_text.rs,
+           font_descriptor.rs, format.rs, input_component.rs,
+           input_methods.rs, layout.rs, mod.rs, movement.rs,
+           rich_text.rs, storage.rs
+
+Directory: ./druid/src/widget, 0 Subdirectories, 45 files.
+    Files: added.rs, align.rs, aspect_ratio_box.rs, button.rs,
+           checkbox.rs, click.rs, clip_box.rs, common.rs,
+           container.rs, controller.rs, disable_if.rs, either.rs,
+           env_scope.rs, flex.rs, identity_wrapper.rs, image.rs,
+           intrinsic_width.rs, invalidation.rs, label.rs,
+           lens_wrap.rs, list.rs, maybe.rs, mod.rs, padding.rs,
+           painter.rs, parse.rs, progress_bar.rs, radio.rs, scope.rs,
+           scroll.rs, sized_box.rs, slider.rs, spinner.rs, split.rs,
+           stepper.rs, svg.rs, switch.rs, tabs.rs, textbox.rs,
+           value_textbox.rs, view_switcher.rs, widget.rs,
+           widget_ext.rs, widget_wrapper.rs, z_stack.rs
