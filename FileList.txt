@@ -1,12 +1,12 @@
-FileList generated 2022-10-06 00:00:08.895157
+FileList of 47 directories and 322 files, generated 2022-10-06 19:13:30.002405
 
 Project Directory Tree
 +  .                                                                             
-+--+  .github                                                                    
++--+  .github                            Configurations for github.com (repository)
 +--+--+  workflows                       Configuration files for automated tasks on github.com
 +--+  docs                               Druid Book in mdBook format             
-+--+--+  book_examples                                                           
-+--+--+--+  src                          Source of code examples included in book
++--+--+  book_examples                   Source of code examples included in Druid Book
++--+--+--+  src                          Source of code examples included in Druid Book
 +--+--+  src                             Chapters (or topics) of Druid Book      
 +--+  druid                              Implementation of druid                 
 +--+  druid-derive                       Implementation of derive macros         
@@ -37,11 +37,11 @@ Project Directory Tree
 +--+--+--+--+  src                                                               
 +--+--+--+  web                          Builds all druid examples for deploying to web
 +--+--+--+--+  src                                                               
-+--+--+  resources                                                               
++--+--+  resources                       >Localized strings for various languages
 +--+--+--+  i18n                         Localized strings for various languages 
-+--+--+--+--+  de-DE                                                             
-+--+--+--+--+  en-US                                                             
-+--+--+--+--+  fr-CA                                                             
++--+--+--+--+  de-DE                     Localized for German as written in Germany
++--+--+--+--+  en-US                     Localized for English as written in the United States
++--+--+--+--+  fr-CA                     Localizd for French as written in Canada
 +--+--+  src                             Actual source of the druid system       
 +--+--+--+  lens                                                                 
 +--+--+--+  menu                                                                 
@@ -51,25 +51,25 @@ Project Directory Tree
 
 Directory .                                                                      
     Files:
-        .gitignore                       Patterns of files not to placed in git (source control)
+        .gitignore                       Patterns for files not to placed in git (source control)
         AUTHORS                          Partial list of copyright holders (contributors)
-        Cargo.toml                       Config for Cargo (build system and package manager)
+        Cargo.toml                       Makefile for Cargo (build system and package manager)
         CHANGELOG.md                     Generated changelog of latest release   
         clippy.toml                      Documented config for clippy (lint) tool
         CONTRIBUTING.md                  Contributor guidelines and how to roll new releases
-        FileList.toml                    Data file generating FileList.txt       
+        FileList.toml                    TOML file generating this file          
         FileList.txt                     This file                               
         LICENSE                          Apache 2.0 license text                 
-        README.md                        Project overview                        
+        README.md                        Project overview ReadMe file            
         rustfmt.toml                     Config for rustfmt (pretty printer)     
     Subdirectories:
-        .github/                                                                 
+        .github/                         Configurations for github.com (repository)
         docs/                            Druid Book in mdBook format             
         druid/                           Implementation of druid                 
         druid-derive/                    Implementation of derive macros         
         druid-shell/                     Common interface for elements across platforms
 
-Directory ./.github/workflows            Configuration files for automated tasks on github.com
+Directory ./.github/workflows                                                    
     Files:
         bloat.yml                        Config for cargo-bloat, watching changing compiled sizes
         ci.yml                           Continuous Integration including clippy (lint-like) tests
@@ -81,11 +81,12 @@ Directory: ./docs, 2 Subdirectories, 3 files.
     Files: .gitignore, book.toml, README.md
 
 Directory: ./docs/book_examples, 1 Subdirectories, 1 files.
+    Description: Source of code examples included in Druid Book
     Subdirectories: src/
     Files: Cargo.toml
 
 Directory: ./docs/book_examples/src, 0 Subdirectories, 6 files.
-    Description: Source of code examples included in book
+    Description: Source of code examples included in Druid Book
     Files: custom_widgets_md.rs, data_md.rs, env_md.rs, lens_md.rs,
            lib.rs, widget_md.rs
 
@@ -98,11 +99,11 @@ Directory: ./docs/src, 0 Subdirectories, 13 files.
 
 Directory ./druid                        Implementation of druid                 
     Files:
-        Cargo.toml                                                               
+        Cargo.toml                       Makefile for Cargo (build system and package manager)
         README.md                        Symbolic link to parent README.md file  
     Subdirectories:
         examples/                        Many tiny code examples using various features
-        resources/                                                               
+        resources/                       >Localized strings for various languages
         src/                             Actual source of the druid system       
 
 Directory: ./druid-derive, 2 Subdirectories, 2 files.
@@ -238,12 +239,15 @@ Directory: ./druid/examples/web/src, 0 Subdirectories, 1 files.
     Files: lib.rs
 
 Directory: ./druid/resources/i18n/de-DE, 0 Subdirectories, 1 files.
+    Description: Localized for German as written in Germany
     Files: builtin.ftl
 
 Directory: ./druid/resources/i18n/en-US, 0 Subdirectories, 1 files.
+    Description: Localized for English as written in the United States
     Files: builtin.ftl
 
 Directory: ./druid/resources/i18n/fr-CA, 0 Subdirectories, 1 files.
+    Description: Localizd for French as written in Canada
     Files: builtin.ftl
 
 Directory: ./druid/src, 5 Subdirectories, 22 files.

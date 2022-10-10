@@ -1,4 +1,4 @@
-# FileList, saved  2022-10-06 00:00:08.904106
+# FileList, saved  2022-10-06 19:13:30.031416
 [[FileInfo]]
 fullname = "."
 is_dir = true
@@ -7,7 +7,7 @@ short = ""
 [[FileInfo]]
 fullname = "./Cargo.toml"
 is_dir = false
-short = "config for Cargo (build system and package manager)"
+short = ""
 
 [[FileInfo]]
 fullname = "./rustfmt.toml"
@@ -32,17 +32,17 @@ short = "Partial list of copyright holders (contributors)"
 [[FileInfo]]
 fullname = "./FileList.toml"
 is_dir = false
-short = "data file generating FileList.txt"
+short = ""
 
 [[FileInfo]]
 fullname = "./README.md"
 is_dir = false
-short = "project overview"
+short = ""
 
 [[FileInfo]]
 fullname = "./.gitignore"
 is_dir = false
-short = "patterns of files not to placed in git (source control)"
+short = ""
 
 [[FileInfo]]
 fullname = "./CONTRIBUTING.md"
@@ -57,7 +57,7 @@ short = "documented config for clippy (lint) tool"
 [[FileInfo]]
 fullname = "./FileList.txt"
 is_dir = false
-short = "This file"
+short = ""
 
 [[FileInfo]]
 fullname = "./druid-shell"
@@ -857,7 +857,7 @@ short = ""
 [[FileInfo]]
 fullname = "./docs/book_examples"
 is_dir = true
-short = ""
+short = "source of code examples included in Druid Book"
 
 [[FileInfo]]
 fullname = "./docs/book_examples/Cargo.toml"
@@ -867,7 +867,7 @@ short = ""
 [[FileInfo]]
 fullname = "./docs/book_examples/src"
 is_dir = true
-short = "source of code examples included in book"
+short = "source of code examples included in Druid Book"
 
 [[FileInfo]]
 fullname = "./docs/book_examples/src/env_md.rs"
@@ -997,7 +997,7 @@ short = "Localized strings for various languages"
 [[FileInfo]]
 fullname = "./druid/resources/i18n/de-DE"
 is_dir = true
-short = ""
+short = "Localized for German as written in Germany"
 
 [[FileInfo]]
 fullname = "./druid/resources/i18n/de-DE/builtin.ftl"
@@ -1007,7 +1007,7 @@ short = ""
 [[FileInfo]]
 fullname = "./druid/resources/i18n/fr-CA"
 is_dir = true
-short = ""
+short = "Localizd for French as written in Canada"
 
 [[FileInfo]]
 fullname = "./druid/resources/i18n/fr-CA/builtin.ftl"
@@ -1017,7 +1017,7 @@ short = ""
 [[FileInfo]]
 fullname = "./druid/resources/i18n/en-US"
 is_dir = true
-short = ""
+short = "Localized for English as written in the United States"
 
 [[FileInfo]]
 fullname = "./druid/resources/i18n/en-US/builtin.ftl"
@@ -1827,7 +1827,7 @@ short = ""
 [[FileInfo]]
 fullname = "./.github/workflows"
 is_dir = true
-short = "Configuration files for automated tasks on github.com"
+short = ""
 
 [[FileInfo]]
 fullname = "./.github/workflows/gh-pages.yml"
