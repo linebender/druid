@@ -445,7 +445,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --vers "^0.3" mdbook
+          args: --vers "^0.4" mdbook
 
       - name: mdbook build
         run: mdbook build
