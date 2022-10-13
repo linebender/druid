@@ -374,7 +374,7 @@ lazy_static! {
             info!("view is dealloc'ed");
             unsafe {
                 let view_state: *mut c_void = *this.get_ivar("viewState");
-                Box::from_raw(view_state as *mut ViewState);
+                drop(Box::from_raw(view_state as *mut ViewState));
             }
         }
 

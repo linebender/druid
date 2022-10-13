@@ -320,7 +320,7 @@ impl<T: 'static> Data for std::mem::Discriminant<T> {
 
 impl<T: 'static + ?Sized + Data> Data for std::mem::ManuallyDrop<T> {
     fn same(&self, other: &Self) -> bool {
-        (&**self).same(&**other)
+        (**self).same(&**other)
     }
 }
 
