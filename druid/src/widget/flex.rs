@@ -888,7 +888,8 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         let baseline_offset = match self.direction {
             Axis::Horizontal => max_below_baseline,
-            Axis::Vertical => self.children
+            Axis::Vertical => self
+                .children
                 .last()
                 .map(|last| {
                     let child = last.widget();
