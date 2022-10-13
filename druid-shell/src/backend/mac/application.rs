@@ -75,7 +75,7 @@ impl Application {
 
             // Clean up the delegate
             let () = msg_send![self.ns_app, setDelegate: nil];
-            Box::from_raw(state_ptr); // Causes it to drop & dealloc automatically
+            drop(Box::from_raw(state_ptr)); // Causes it to drop & dealloc automatically
         }
     }
 

@@ -659,7 +659,7 @@ impl<T: Data> Window<T> {
         self.ime_handlers
             .iter()
             .find(|(token, _)| req_token == *token)
-            .and_then(|(_, reg)| reg.document.release().then(|| reg.widget_id))
+            .and_then(|(_, reg)| reg.document.release().then_some(reg.widget_id))
     }
 
     fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {

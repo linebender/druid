@@ -892,8 +892,8 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// is inside its bounds.
     pub fn ignore_hot<'c>(&'c mut self, ignore: bool) -> LayoutCtx<'c, 'b> {
         LayoutCtx {
-            state: &mut self.state,
-            widget_state: &mut self.widget_state,
+            state: self.state,
+            widget_state: self.widget_state,
             mouse_pos: if ignore { None } else { self.mouse_pos },
         }
     }
