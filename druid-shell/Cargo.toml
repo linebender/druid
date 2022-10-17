@@ -134,5 +134,5 @@ tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 unicode-segmentation = "1.7.0"
 
 [build-dependencies]
-bindgen = {version = "0.58", optional = true}
+bindgen = { version = "0.61", optional = true }
 pkg-config = { version = "0.3", optional = true }
