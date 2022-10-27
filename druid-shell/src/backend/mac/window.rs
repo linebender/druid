@@ -290,6 +290,18 @@ impl WindowBuilder {
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
 
+            // The rect of the tracking area doesn't matter, because
+            // we use the InVisibleRect option where the OS syncs the size automatically.
+            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
+            let opts = NSTrackingAreaOptions::MouseEnteredAndExited
+                | NSTrackingAreaOptions::MouseMoved
+                | NSTrackingAreaOptions::ActiveAlways
+                | NSTrackingAreaOptions::InVisibleRect;
+            let tracking_area = NSTrackingArea::alloc(nil)
+                .initWithRect_options_owner_userInfo(rect, opts, view, nil)
+                .autorelease();
+            view.addTrackingArea(tracking_area);
+
             let () = msg_send![window, setDelegate: view];
 
             if let Some(menu) = self.menu {
@@ -577,18 +589,6 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
         (*view).set_ivar("viewState", state_ptr as *mut c_void);
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
-
-        // The rect of the tracking area doesn't matter, because
-        // we use the InVisibleRect option where the OS syncs the size automatically.
-        let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
-        let opts = NSTrackingAreaOptions::MouseEnteredAndExited
-            | NSTrackingAreaOptions::MouseMoved
-            | NSTrackingAreaOptions::ActiveAlways
-            | NSTrackingAreaOptions::InVisibleRect;
-        let tracking_area = NSTrackingArea::alloc(nil)
-            .initWithRect_options_owner_userInfo(rect, opts, view, nil)
-            .autorelease();
-        view.addTrackingArea(tracking_area);
 
         (view.autorelease(), queue_handle)
     }
