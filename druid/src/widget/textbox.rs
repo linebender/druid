@@ -285,7 +285,7 @@ impl<T> TextBox<T> {
     /// # struct AppState {
     /// #     name: String,
     /// # }
-    /// use druid::{ FontDescriptor, FontFamily };
+    /// use druid::{ FontDescriptor, FontFamily, Key };
     ///
     /// const FONT : Key<FontDescriptor> = Key::new("font");
     ///
@@ -328,7 +328,7 @@ impl<T> TextBox<T> {
     ///     .lens(AppState::name);
     ///
     /// let text_box = TextBox::new()
-    ///     .with_font(COLOR)
+    ///     .with_text_color(COLOR)
     ///     .lens(AppState::name);
     /// ```
     /// [`Key<Color>`]: ../struct.Key.html
