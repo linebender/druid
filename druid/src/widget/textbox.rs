@@ -84,6 +84,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     /// ```
     /// use druid::widget::TextBox;
     /// use druid::WidgetExt;
+    ///
     /// #[derive(Clone, Data, Lens)]
     /// struct AppState {
     ///     name: String,
@@ -153,14 +154,17 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     /// let scroll_text_box = TextBox::new()
     ///     .with_line_wrapping(false)
     ///     .lens(AppState::name);
+    ///
     /// //will wrap only for a single line
     /// let wrap_text_box = TextBox::new()
     ///     .with_line_wrapping(true)
     ///     .lens(AppState::name);
+    ///
     /// //will scroll as well as having multiple lines
     /// let scroll_multi_line_text_box = TextBox::multiline()
     ///     .with_line_wrapping(false)
     ///     .lens(AppState::name);
+    ///
     /// //will wrap for each line
     /// let wrap_multi_line_text_box = TextBox::multiline()
     ///     .with_line_wrapping(true) // this is default can be removed for the same result
