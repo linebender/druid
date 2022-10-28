@@ -83,7 +83,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// ```
     /// use druid::widget::TextBox;
-    /// use druid::{ WidgetExt, Lens };
+    /// use druid::{ WidgetExt, Data, Lens };
     ///
     /// #[derive(Clone, Data, Lens)]
     /// struct AppState {
@@ -126,7 +126,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -155,7 +155,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -198,7 +198,7 @@ impl<T> TextBox<T> {
     ///
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -211,7 +211,7 @@ impl<T> TextBox<T> {
     ///
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -250,7 +250,7 @@ impl<T> TextBox<T> {
     /// # Examples
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -279,7 +279,7 @@ impl<T> TextBox<T> {
     ///
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
@@ -313,7 +313,7 @@ impl<T> TextBox<T> {
     /// # Examples
     /// ```
     /// # use druid::widget::TextBox;
-    /// # use druid::{ WidgetExt, Lens };
+    /// # use druid::{ WidgetExt, Data, Lens };
     /// #
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
