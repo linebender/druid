@@ -83,15 +83,12 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// ```
     /// use druid::widget::TextBox;
-    /// use druid::WidgetExt;
+    /// use druid::{ WidgetExt, Lens };
     ///
     /// #[derive(Clone, Data, Lens)]
     /// struct AppState {
     ///     name: String,
     /// }
-    ///
-    /// let _: TextBox<String> = TextBox::new()
-    ///     .lens(AppState::name);
     ///
     /// let _ = TextBox::new()
     ///     .with_placeholder("placeholder text")
@@ -128,6 +125,13 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     /// # Examples
     ///
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// let multiline = TextBox::multiline()
     ///     .lens(AppState::name);
     /// ```
@@ -150,6 +154,13 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     /// # Examples
     ///
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// //will scroll horizontally
     /// let scroll_text_box = TextBox::new()
     ///     .with_line_wrapping(false)
@@ -186,12 +197,26 @@ impl<T> TextBox<T> {
     /// # Examples
     ///
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// let text_box = TextBox::new()
     ///     .with_text_size(14.)
     ///     .lens(AppState::name);
     /// ```
     ///
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// use druid::Key;
     ///
     /// const FONT_SIZE : Key<f64> = Key::new("font-size");
@@ -224,6 +249,13 @@ impl<T> TextBox<T> {
     ///
     /// # Examples
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// use druid::TextAlignment;
     ///
     /// let text_box = TextBox::new()
@@ -242,10 +274,17 @@ impl<T> TextBox<T> {
     ///
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
-    /// 
-    /// # Examples 
+    ///
+    /// # Examples
     ///
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// use druid::{ FontDescriptor, FontFamily };
     ///
     /// const FONT : Key<FontDescriptor> Key::new("font");
@@ -273,6 +312,13 @@ impl<T> TextBox<T> {
     /// The argument can be either a `Color` or a [`Key<Color>`].
     /// # Examples
     /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
     /// use druid::Color;
     ///
     /// const COLOR : Key<Color> Key::new("color");
