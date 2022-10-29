@@ -150,7 +150,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 - Fix `Controller` links for `Click` ([#2158] by [@yrns])
 - Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
-- Added examples in `TextBox` ([] by [@ThomasMcAndrew])
+- Added examples in `TextBox` ([#2280] by [@ThomasMcAndrew])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
