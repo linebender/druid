@@ -67,7 +67,7 @@ piet-common = "=0.5.0"
 kurbo = "0.8.2"
 
 tracing = "0.1.22"
-lazy_static = "1.4.0"
+once_cell = "1.14.0"
 time = "0.3.0"
 cfg-if = "1.0.0"
 instant = { version = "0.1.6", features = ["wasm-bindgen"] }
@@ -134,5 +134,5 @@ tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
 unicode-segmentation = "1.7.0"
 
 [build-dependencies]
-bindgen = {version = "0.58", optional = true}
+bindgen = { version = "0.61", optional = true }
 pkg-config = { version = "0.3", optional = true }
