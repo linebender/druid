@@ -737,7 +737,7 @@ impl WndProc for MyWndProc {
                     state.hwnd.set(hwnd);
                 }
                 
-                let origin_pos = self.handle.borrow().get_position());
+                let origin_pos = self.handle.borrow().get_position();
                 self.set_scale(scale);
                 self.handle_deferred(DeferredOp::SetPosition(origin_pos));
                 
