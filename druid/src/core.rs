@@ -271,8 +271,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    //TODO: we are using CommandCtx because it allows every context but paint, but it might be a
-    // confusing name.
     pub fn set_origin<'a>(
         &mut self,
         ctx: &mut impl ChangeCtx<'a>,
