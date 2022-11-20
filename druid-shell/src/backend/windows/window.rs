@@ -732,11 +732,15 @@ impl WndProc for MyWndProc {
                     1.0
                 };
                 let scale = Scale::new(scale_factor, scale_factor);
-                self.set_scale(scale);
 
                 if let Some(state) = self.handle.borrow().state.upgrade() {
                     state.hwnd.set(hwnd);
                 }
+                
+                let origin_pos = self.handle.borrow().get_position());
+                self.set_scale(scale);
+                self.handle_deferred(DeferredOp::SetPosition(origin_pos));
+                
                 if let Some(state) = self.state.borrow_mut().as_mut() {
                     let dxgi_state = unsafe {
                         create_dxgi_state(self.present_strategy, hwnd, self.is_transparent())
