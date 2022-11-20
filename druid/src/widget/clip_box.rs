@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::commands::SCROLL_TO_VIEW;
-use crate::contexts::CommandCtx;
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::kurbo::{Point, Rect, Size, Vec2};
 use crate::widget::prelude::*;
@@ -362,7 +362,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pans by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_by<'a, C: CommandCtx<'a>>(
+    pub fn pan_by<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,
@@ -378,7 +378,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn pan_to_visible<'a, C: CommandCtx<'a>>(
+    pub fn pan_to_visible<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,
@@ -393,7 +393,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pan to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_to_on_axis<'a, C: CommandCtx<'a>>(
+    pub fn pan_to_on_axis<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,
@@ -410,7 +410,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// The provided callback function can modify its argument, and when it is
     /// done then this `ClipBox` will be modified to have the new viewport rectangle.
-    pub fn with_port<'a, C: CommandCtx<'a>, F: FnOnce(&mut C, &mut Viewport)>(
+    pub fn with_port<'a, C: ChangeCtx<'a>, F: FnOnce(&mut C, &mut Viewport)>(
         &mut self,
         ctx: &mut C,
         data: &T,

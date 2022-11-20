@@ -141,7 +141,7 @@ pub(crate) struct ZOrderPaintOp {
 /// commands.
 pub struct PaintCtx<'a, 'b, 'c> {
     pub(crate) state: &'a mut ContextState<'b>,
-    pub(crate) widget_state: &'a mut WidgetState,
+    pub(crate) widget_state: &'a WidgetState,
     /// The render context for actually painting.
     pub render_ctx: &'a mut Piet<'c>,
     /// The z-order paint operations.
@@ -159,20 +159,11 @@ pub struct State<'a, 'b> {
     pub(crate) widget_state: &'a mut WidgetState,
 }
 
-/// trait for accessing state and widget_state of the context.
-pub trait AnyCtx<'b> {
-    /// Get the state of a widget.
-    ///
-    /// This method can be used to perform merge_up of the widget state with a generic ctx
-    /// This method is intended to be used only by the framework.
-    fn state<'a>(&'a mut self) -> State<'a, 'b>;
-}
-
 /// Convenience trait for code generic over contexts.
 ///
 /// Methods to do with commands and timers.
 /// Available to all contexts but PaintCtx.
-pub trait CommandCtx<'b>: AnyCtx<'b> {
+pub trait ChangeCtx<'b> {
     /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
     ///
     /// [`submit_command`]: EventCtx::submit_command
@@ -185,12 +176,17 @@ pub trait CommandCtx<'b>: AnyCtx<'b> {
     ///
     /// [`request_timer`]: EventCtx::request_timer
     fn request_timer(&mut self, deadline: Duration) -> TimerToken;
+
+    /// Returns the state of the widget.
+    ///
+    /// This method should only be used by the framework to do mergeups.
+    fn state<'a>(&'a mut self) -> State<'a, 'b>;
 }
 
 /// Convenience trait for invalidation and request methods available on multiple contexts.
 ///
 /// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
-pub trait RequestCtx<'b>: CommandCtx<'b> {
+pub trait RequestCtx<'b>: ChangeCtx<'b> {
     /// Request a [`paint`] pass. See ['request_paint']
     ///
     /// ['request_paint']: EventCtx::request_paint
@@ -242,19 +238,7 @@ pub trait RequestCtx<'b>: CommandCtx<'b> {
 }
 
 impl_context_trait!(
-    AnyCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>, PaintCtx<'_, 'b, '_>,
-    {
-        fn state<'a>(&'a mut self) -> State<'a, 'b> {
-            State {
-                state: &mut *self.state,
-                widget_state: &mut *self.widget_state,
-            }
-        }
-    }
-);
-
-impl_context_trait!(
-    CommandCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>,
+    ChangeCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>,
     {
 
         fn submit_command(&mut self, cmd: impl Into<Command>) {
@@ -267,6 +251,13 @@ impl_context_trait!(
 
         fn request_timer(&mut self, deadline: Duration) -> TimerToken {
             Self::request_timer(self, deadline)
+        }
+
+        fn state<'a>(&'a mut self) -> State<'a, 'b> {
+            State {
+                state: &mut *self.state,
+                widget_state: &mut *self.widget_state,
+            }
         }
     }
 );

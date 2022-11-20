@@ -15,7 +15,7 @@
 //! A container that scrolls its contents.
 
 use crate::commands::SCROLL_TO_VIEW;
-use crate::contexts::CommandCtx;
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::widget::{Axis, ClipBox};
@@ -55,7 +55,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by<'a, C: CommandCtx<'a>>(
+    pub fn scroll_by<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,
@@ -69,7 +69,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to<'a, C: CommandCtx<'a>>(
+    pub fn scroll_to<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,
@@ -82,7 +82,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_to_on_axis<'a, C: CommandCtx<'a>>(
+    pub fn scroll_to_on_axis<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
         data: &T,

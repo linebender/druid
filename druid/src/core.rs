@@ -14,7 +14,7 @@
 
 //! The fundamental druid types.
 
-use druid::contexts::CommandCtx;
+use druid::contexts::ChangeCtx;
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
 
@@ -275,7 +275,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     // confusing name.
     pub fn set_origin<'a>(
         &mut self,
-        ctx: &mut impl CommandCtx<'a>,
+        ctx: &mut impl ChangeCtx<'a>,
         _data: &T,
         _env: &Env,
         origin: Point,

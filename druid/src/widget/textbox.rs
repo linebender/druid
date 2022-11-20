@@ -17,7 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
-use crate::contexts::CommandCtx;
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
@@ -338,7 +338,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         Rect::new(x, y0, x, y1)
     }
 
-    fn scroll_to_selection_end<'a, C: CommandCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env) {
+    fn scroll_to_selection_end<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, data: &T, env: &Env) {
         let rect = self.rect_for_selection_end();
         let view_rect = self.inner.viewport_rect();
         let is_visible =
