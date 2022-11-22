@@ -135,7 +135,7 @@ impl<const N: usize> Buffers<N> {
 
         window.paint(
             self.size.get(),
-            &mut *buf_data,
+            &mut buf_data,
             self.recreate_buffers.replace(false),
         );
     }

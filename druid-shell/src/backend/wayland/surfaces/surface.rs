@@ -441,7 +441,7 @@ impl Data {
             let region = self.damaged_region.borrow();
 
             // The handler must not be already borrowed. This may mean deferring this call.
-            self.handler.borrow_mut().paint(&mut piet, &*region);
+            self.handler.borrow_mut().paint(&mut piet, &region);
         }
 
         // reset damage ready for next frame.

@@ -528,7 +528,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                     || next_char == Some('\r')
                     || next_char == Some('\u{2029}')
                     || next_char == Some('\u{2028}')
-                    || next_char == None
+                    || next_char.is_none()
                 {
                     // next char is a newline or end of doc; so end of transpose range will actually be the starting selection.anchor
                     edit_lock.set_selection(old_selection);
