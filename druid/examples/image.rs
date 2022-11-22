@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! This showcase demonstrates how to use the image widget and is
-//! propperties. You can change the parameters in the GUI to see how
+//! properties. You can change the parameters in the GUI to see how
 //! everything behaves.
 
 // On Windows platform, don't show a console when opening the app.
