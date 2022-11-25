@@ -127,7 +127,7 @@ impl<T: Data> Widget<T> for Spinner {
         let t = self.t;
         let (width, height) = (ctx.size().width, ctx.size().height);
         let center = Point::new(width / 2.0, height / 2.0);
-        let (r, g, b, original_alpha) = Color::as_rgba(&self.color.resolve(env));
+        let (r, g, b, original_alpha) = Color::as_rgba(self.color.resolve(env));
         let scale_factor = width.min(height) / 40.0;
 
         for step in 1..=12 {
