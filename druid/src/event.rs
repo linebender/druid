@@ -448,6 +448,13 @@ impl Event {
             | Event::Zoom(_) => false,
         }
     }
+
+    pub fn is_pointer_event(&self) -> bool {
+        matches!(
+                event,
+                Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_)
+            )
+    }
 }
 
 impl LifeCycle {
