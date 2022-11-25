@@ -98,7 +98,9 @@ impl<T: Data> Widget<T> for ZStack<T> {
                     ctx.set_handled();
                     layer.child.event(ctx, event, data, env);
                 } else {
-                    layer.child.event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
+                    layer
+                        .child
+                        .event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
                 }
             } else {
                 layer.child.event(ctx, event, data, env);

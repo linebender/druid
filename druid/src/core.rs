@@ -670,8 +670,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         // in this case we dont discard events when ctx.is_handled is set but just dont set our hot
         // state to true
         let follow_up_event = event.is_pointer_event() && self.state.has_active;
-        if ctx.is_handled && !follow_up_event
-        {
+        if ctx.is_handled && !follow_up_event {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.
