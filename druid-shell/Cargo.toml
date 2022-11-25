@@ -63,8 +63,8 @@ serde = ["kurbo/serde"]
 [dependencies]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
-piet-common = "=0.5.0"
-kurbo = "0.8.2"
+piet-common = "=0.6.0"
+kurbo = "0.9"
 
 tracing = "0.1.22"
 once_cell = "1.14.0"
@@ -100,14 +100,14 @@ bitflags = "1.2.1"
 [target.'cfg(any(target_os = "freebsd", target_os="linux", target_os="openbsd"))'.dependencies]
 ashpd = { version = "0.3.0", optional = true }
 # TODO(x11/dependencies): only use feature "xcb" if using X11
-cairo-rs = { version = "0.14.0", default_features = false, features = ["xcb"] }
-cairo-sys-rs = { version = "0.14.0", default_features = false, optional = true }
+cairo-rs = { version = "0.16.3", default_features = false, features = ["xcb"] }
+cairo-sys-rs = { version = "0.16.3", default_features = false, optional = true }
 futures = { version = "0.3.21", optional = true, features = ["executor"]}
-gdk-sys = { version = "0.14.0", optional = true }
+gdk-sys = { version = "0.16.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
-gtk-rs = { version = "0.14.0", features = ["v3_22"], package = "gtk", optional = true }
-glib-sys = { version = "0.14.0", optional = true }
-gtk-sys = { version = "0.14.0", optional = true }
+gtk-rs = { version = "0.16.1", package = "gtk", optional = true }
+glib-sys = { version = "0.16.3", optional = true }
+gtk-sys = { version = "0.16.0", optional = true }
 nix = { version = "0.24.0", optional = true }
 x11rb = { version = "0.10", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "xkb", "resource_manager", "cursor"], optional = true }
 wayland-client = { version = "0.29", optional = true }
@@ -127,7 +127,7 @@ version = "0.3.44"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "=0.5.0", features = ["png"] }
+piet-common = { version = "=0.6.0", features = ["png"] }
 static_assertions = "1.1.0"
 test-log = { version = "0.2.5", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }

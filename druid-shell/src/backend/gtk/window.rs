@@ -293,7 +293,7 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
         let mut transparent = false;
         if self.transparent {
-            if let Some(screen) = window.screen() {
+            if let Some(screen) = gtk::prelude::GtkWindowExt::screen(&window) {
                 let visual = screen.rgba_visual();
                 transparent = visual.is_some();
                 window.set_visual(visual.as_ref());
@@ -475,13 +475,13 @@ impl WindowBuilder {
                 // Create a new cairo surface if necessary (either because there is no surface, or
                 // because the size or scale changed).
                 let extents = widget.allocation();
-                let size_px = Size::new(extents.width as f64, extents.height as f64);
+                let size_px = Size::new(extents.width() as f64, extents.height() as f64);
                 let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
                 if no_surface || scale_changed || state.area.get().size_px() != size_px {
                     let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
-                    if let Err(e) = state.resize_surface(extents.width, extents.height) {
+                    if let Err(e) = state.resize_surface(extents.width(), extents.height()) {
                         error!("Failed to resize surface: {}", e);
                     }
                     state.with_handler(|h| h.size(size_dp));
@@ -526,7 +526,7 @@ impl WindowBuilder {
                        // TODO: how are we supposed to handle these errors? What can we do besides panic? Probably nothing right?
                         let alloc = widget.allocation();
                         context.set_source_surface(surface, 0.0, 0.0).unwrap();
-                        context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
+                        context.rectangle(0.0, 0.0, alloc.width() as f64, alloc.height() as f64);
                         context.fill().unwrap();
                     });
                 } else {
@@ -1025,24 +1025,24 @@ impl WindowHandle {
             let scale = state.scale.get();
             let (width_px, height_px) = state.window.size();
             let alloc_px = state.drawing_area.allocation();
-            let menu_height_px = height_px - alloc_px.height;
+            let menu_height_px = height_px - alloc_px.height();
 
             if let Some(window) = state.window.window() {
                 let frame = window.frame_extents();
                 let (pos_x, pos_y) = window.position();
                 Insets::new(
-                    (pos_x - frame.x) as f64,
-                    (pos_y - frame.y + menu_height_px) as f64,
-                    (frame.x + frame.width - (pos_x + width_px)) as f64,
-                    (frame.y + frame.height - (pos_y + height_px)) as f64,
+                    (pos_x - frame.x()) as f64,
+                    (pos_y - frame.y() + menu_height_px) as f64,
+                    (frame.x() + frame.width() - (pos_x + width_px)) as f64,
+                    (frame.y() + frame.height() - (pos_y + height_px)) as f64,
                 )
                 .to_dp(scale)
                 .nonnegative()
             } else {
                 let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
                 let alloc = Rect::from_origin_size(
-                    (alloc_px.x as f64, alloc_px.y as f64),
-                    (alloc_px.width as f64, alloc_px.height as f64),
+                    (alloc_px.x() as f64, alloc_px.y() as f64),
+                    (alloc_px.width() as f64, alloc_px.height() as f64),
                 )
                 .to_dp(scale);
                 window.to_rect() - alloc
