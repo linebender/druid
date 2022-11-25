@@ -631,7 +631,7 @@ fn mouse_event(
     unsafe {
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
-        let pos = Point::new(view_point.x as f64, view_point.y as f64);
+        let pos = Point::new(view_point.x, view_point.y);
         let buttons = get_mouse_buttons(NSEvent::pressedMouseButtons(nsevent));
         let modifiers = make_modifiers(nsevent.modifierFlags());
         MouseEvent {
@@ -776,8 +776,8 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let (dx, dy) = {
-            let dx = -nsevent.scrollingDeltaX() as f64;
-            let dy = -nsevent.scrollingDeltaY() as f64;
+            let dx = -nsevent.scrollingDeltaX();
+            let dy = -nsevent.scrollingDeltaY();
             if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
                 (dx, dy)
             } else {
@@ -803,7 +803,7 @@ extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
 
         let delta: CGFloat = msg_send![nsevent, magnification];
-        view_state.handler.zoom(delta as f64);
+        view_state.handler.zoom(delta);
     }
 }
 
