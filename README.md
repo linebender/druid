@@ -67,6 +67,7 @@ Druid's existing functionality and widgets. Check [druid_widget_nursery](https:/
 
 [![calc.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/calc.png)](/druid/examples/calc.rs)
 [![flex.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/flex.png)](/druid/examples/flex.rs)
+[![lapce.rs example](https://raw.githubusercontent.com/lapce/lapce/master/extra/images/screenshot.png)](https://github.com/lapce/lapce/tree/master/lapce-ui/src)
 [![custom_widget.rs example](https://raw.githubusercontent.com/linebender/druid/screenshots/images/0.6.0/custom_widget.png)](/druid/examples/custom_widget.rs)
 
 ## Using Druid
