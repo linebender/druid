@@ -469,7 +469,7 @@ impl<T, W: Widget<T>> Annotated<T, W> {
         while walk < self.mapping.max + f64::EPSILON * 10.0 {
             let layout = text
                 .new_text_layout(format!("{}", walk))
-                .text_color(text_color.clone())
+                .text_color(text_color)
                 .build()
                 .unwrap();
 

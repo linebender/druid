@@ -806,6 +806,7 @@ impl<T: Data> InitialTab<T> {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum TabsContent<TP: TabsPolicy> {
     Building {
         tabs: TP::Build,

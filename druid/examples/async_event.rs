@@ -70,10 +70,9 @@ fn generate_colors(event_sink: druid::ExtEventSink) {
             (_, _) => Color::rgb8(r, g, b.wrapping_add(3)),
         };
 
-        let color_clone = color.clone();
         // schedule idle callback to change the data
         event_sink.add_idle_callback(move |data: &mut Color| {
-            *data = color_clone;
+            *data = color;
         });
         thread::sleep(Duration::from_millis(20));
     }
