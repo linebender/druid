@@ -1448,6 +1448,7 @@ const MODIFIER_MAP: &[(ModifierType, Modifiers)] = &[
     // Note: this is the usual value on X11, not sure how consistent it is.
     // Possibly we should use `Keymap::get_num_lock_state()` instead.
     (ModifierType::MOD2_MASK, Modifiers::NUM_LOCK),
+    (ModifierType::MOD4_MASK, Modifiers::META),
 ];
 
 fn get_modifiers(modifiers: ModifierType) -> Modifiers {
