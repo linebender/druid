@@ -1,6 +1,6 @@
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    Point, Rect, Size, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, InternalEvent, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, Rect, Size, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod,
 };
 
 /// A container that stacks its children on top of each other.
@@ -94,17 +94,22 @@ impl<T: Data> ZStack<T> {
 
 impl<T: Data> Widget<T> for ZStack<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let is_pointer_event = matches!(
-            event,
-            Event::MouseDown(_) | Event::MouseMove(_) | Event::MouseUp(_) | Event::Wheel(_)
-        );
-
+        let mut previous_hot = false;
         for layer in self.layers.iter_mut() {
-            layer.child.event(ctx, event, data, env);
-
-            if is_pointer_event && layer.child.is_hot() {
-                ctx.set_handled();
+            if event.is_pointer_event() && previous_hot {
+                if layer.child.is_active() {
+                    ctx.set_handled();
+                    layer.child.event(ctx, event, data, env);
+                } else {
+                    layer
+                        .child
+                        .event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
+                }
+            } else {
+                layer.child.event(ctx, event, data, env);
             }
+
+            previous_hot |= layer.child.is_hot();
         }
     }
 
