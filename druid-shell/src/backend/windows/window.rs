@@ -1940,7 +1940,7 @@ impl WindowHandle {
         }
     }
 
-    // Gets the position of the window in virtual screen coordinates
+    /// Gets the position of the window in virtual screen coordinates
     pub fn get_position(&self) -> Point {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -1994,12 +1994,12 @@ impl WindowHandle {
         Insets::ZERO
     }
 
-    // Sets the size of the window in display points
+    /// Sets the size of the window in display points
     pub fn set_size(&self, size: Size) {
         self.defer(DeferredOp::SetSize(size));
     }
 
-    // Gets the size of the window in display points
+    /// Gets the size of the window in display points
     pub fn get_size(&self) -> Size {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -2028,12 +2028,12 @@ impl WindowHandle {
         self.defer(DeferredOp::SetResizable(resizable));
     }
 
-    // Sets the window state.
+    /// Sets the window state.
     pub fn set_window_state(&self, state: window::WindowState) {
         self.defer(DeferredOp::SetWindowState(state));
     }
 
-    // Gets the window state.
+    /// Gets the window state.
     pub fn get_window_state(&self) -> window::WindowState {
         // We can not store state internally because it could be modified externally.
         if let Some(w) = self.state.upgrade() {
@@ -2059,7 +2059,7 @@ impl WindowHandle {
         }
     }
 
-    // Allows windows to handle a custom titlebar like it was the default one.
+    /// Allows windows to handle a custom titlebar like it was the default one.
     pub fn handle_titlebar(&self, val: bool) {
         if let Some(w) = self.state.upgrade() {
             w.handle_titlebar.set(val);
