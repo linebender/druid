@@ -178,7 +178,7 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     ///
     /// //will wrap for each line
     /// let wrap_multi_line_text_box = TextBox::multiline()
-    ///     .with_line_wrapping(true) // this is default can be removed for the same result
+    ///     .with_line_wrapping(true) // this is default and can be removed for the same result
     ///     .lens(AppState::name);
     ///
     /// ```
