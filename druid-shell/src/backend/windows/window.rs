@@ -560,14 +560,15 @@ impl MyWndProc {
         if let Some(hwnd) = self.handle.borrow().get_hwnd() {
             match op {
                 DeferredOp::SetSize(size_dp) => unsafe {
-                    let size_px = size_dp.to_px(self.scale());
+                    let area = ScaledArea::from_dp(size_dp, self.scale());
+                    let size_px = area.size_px();
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        size_px.width.round() as i32,
-                        size_px.height.round() as i32,
+                        size_px.width as i32,
+                        size_px.height as i32,
                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
@@ -1248,9 +1249,10 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 self.with_wnd_state(|s| {
                     if let Some(min_size_dp) = s.min_size {
-                        let min_size_px = min_size_dp.to_px(self.scale());
-                        min_max_info.ptMinTrackSize.x = min_size_px.width.round() as i32;
-                        min_max_info.ptMinTrackSize.y = min_size_px.height.round() as i32;
+                        let min_area = ScaledArea::from_dp(min_size_dp, self.scale());
+                        let min_size_px = min_area.size_px();
+                        min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
+                        min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
                     }
                 });
                 Some(0)
@@ -1938,7 +1940,7 @@ impl WindowHandle {
         }
     }
 
-    // Gets the position of the window in virtual screen coordinates
+    /// Gets the position of the window in virtual screen coordinates
     pub fn get_position(&self) -> Point {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -1992,12 +1994,12 @@ impl WindowHandle {
         Insets::ZERO
     }
 
-    // Sets the size of the window in DP
+    /// Sets the size of the window in display points
     pub fn set_size(&self, size: Size) {
         self.defer(DeferredOp::SetSize(size));
     }
 
-    // Gets the size of the window in pixels
+    /// Gets the size of the window in display points
     pub fn get_size(&self) -> Size {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -2016,7 +2018,7 @@ impl WindowHandle {
                 };
                 let width = rect.right - rect.left;
                 let height = rect.bottom - rect.top;
-                return Size::new(width as f64, height as f64);
+                return Size::new(width as f64, height as f64).to_dp(w.scale.get());
             }
         }
         Size::new(0.0, 0.0)
@@ -2026,12 +2028,12 @@ impl WindowHandle {
         self.defer(DeferredOp::SetResizable(resizable));
     }
 
-    // Sets the window state.
+    /// Sets the window state.
     pub fn set_window_state(&self, state: window::WindowState) {
         self.defer(DeferredOp::SetWindowState(state));
     }
 
-    // Gets the window state.
+    /// Gets the window state.
     pub fn get_window_state(&self) -> window::WindowState {
         // We can not store state internally because it could be modified externally.
         if let Some(w) = self.state.upgrade() {
@@ -2057,7 +2059,7 @@ impl WindowHandle {
         }
     }
 
-    // Allows windows to handle a custom titlebar like it was the default one.
+    /// Allows windows to handle a custom titlebar like it was the default one.
     pub fn handle_titlebar(&self, val: bool) {
         if let Some(w) = self.state.upgrade() {
             w.handle_titlebar.set(val);

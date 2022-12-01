@@ -1415,8 +1415,8 @@ impl WindowHandle {
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, Error> {
-        // TODO: Get actual Scale
-        Ok(Scale::new(1.0, 1.0))
+        let scale_factor: CGFloat = unsafe { msg_send![*self.nsview.load(), backingScaleFactor] };
+        Ok(Scale::new(scale_factor, scale_factor))
     }
 }
 
