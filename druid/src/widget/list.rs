@@ -46,6 +46,7 @@ use crate::{
 /// ```
 ///
 /// # Examples
+///
 /// ## Define the data
 ///
 /// ```
