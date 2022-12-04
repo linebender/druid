@@ -34,6 +34,10 @@ use crate::{
 };
 
 /// A list widget for a variable-size collection of items.
+/// The list widget uses ['Vector'] from
+///
+///
+/// ['Vector']: im::Vector
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
