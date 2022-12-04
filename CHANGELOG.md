@@ -252,6 +252,7 @@ values and their textual representations. ([#1377])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 - The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
 - Part of the `SAVE_FILE` command is now `SAVE_FILE_AS` ([#1463] by [@jneem])
+- Windows: Use custom application icon, if present ([#2274] by [@tay64])
 
 ### Deprecated
 - Parse widget (replaced with `Formatter` trait) ([#1377] by [@cmyr])
@@ -864,7 +865,9 @@ Last release without a changelog :(
 [#2203]: https://github.com/linebender/druid/pull/2203
 [#2235]: https://github.com/linebender/druid/pull/2235
 [#2247]: https://github.com/linebender/druid/pull/2247
+[#2274]: https://github.com/linebender/druid/pull/2274
 [#2284]: https://github.com/linebender/druid/pull/2284
+
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
