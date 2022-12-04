@@ -35,7 +35,7 @@ use crate::{
 
 /// A list widget for a variable-size collection of items.
 /// For a static sized collection of items use [`Flex`].
-/// The best data structure to use with the list widget is [`Vector`] from the [`im`] feature. 
+/// The best data structure to use with the list widget is [`Vector`] from the [`im`] feature.
 /// To include the [`im`] feature, update Cargo.toml
 /// ```
 /// [dependencies]
@@ -61,6 +61,14 @@ use crate::{
 /// ## Create initial State
 ///
 /// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::im::{ Vector, WidgetExt };
+///
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
+///
 /// let initial_state = AppState {
 ///     list_data: Vector::from(
 ///         vec!(
@@ -74,25 +82,41 @@ use crate::{
 /// ## Create widgets
 ///
 /// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::im::{ Vector, WidgetExt };
+///
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
+///
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
 ///         .lens(AppState::list_data);
 ///     list
 /// }
-/// 
+///
 /// fn list_item() -> impl Widget<String> {
-///     let label = Label::new(|data: &String, _env: &Env| 
+///     let label = Label::new(|data: &String, _env: &Env|
 ///         data.clone())
 ///     label
 /// }
 /// ```
 /// ## Scrollable List
 /// Commonly a list should be able to scroll, the [`Scroll`] widget can be used to implement this
-/// feature. 
+/// feature.
 /// See docs for more info.
 ///
 /// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::im::{ Vector, WidgetExt };
+///
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
 /// # use druid::widget::Scroll;
+///
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
 ///         .lens(AppState::list_data);
@@ -102,9 +126,14 @@ use crate::{
 /// ## Complex widgets
 /// List can be used with any complex widgets.
 /// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::im::{ Vector, WidgetExt };
+///
+/// #[derive(Clone, Data, Lens)]
 /// struct AppState {
 ///     list_data: Vector<InnerState>,
 /// }
+/// #[derive(Clone, Data, Lens)]
 /// struct InnerState {
 ///     name: String,
 /// }
@@ -114,9 +143,9 @@ use crate::{
 ///         .lens(AppState::list_data);
 ///     list
 /// }
-/// 
+///
 /// fn list_item() -> impl Widget<InnerState> {
-///     let label = Label::new(|data: &InnerState, _env: &Env| 
+///     let label = Label::new(|data: &InnerState, _env: &Env|
 ///         data.name.clone())
 ///     label
 /// }
@@ -142,21 +171,29 @@ impl<T: Data> List<T> {
     ///
     /// # Example
     /// ```
+    /// # use druid::widget::{ Label, List };
+    /// # use druid::im::{ Vector, WidgetExt };
+    ///
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     list_data: Vector<String>,
+    /// # }
+    ///
     /// fn root() -> impl Widget<AppState> {
     ///     let list = List::new(list_item)
     ///         .lens(AppState::list_data);
     ///     list
     /// }
     /// fn list_item -> impl Widget<AppState> {
-    ///     let label = Label::new(|data: &String, _env: &Env| 
+    ///     let label = Label::new(|data: &String, _env: &Env|
     ///         data.clone());
     ///     label
     /// }
-    /// //This widget is the same as the two widgets above 
+    /// //This widget is the same as the two widgets above
     /// //combined.
     /// fn combined -> impl Widget<AppState> {
-    ///     let list = List::new(|| 
-    ///             Label::new(|data: &String, _env: &Env| 
+    ///     let list = List::new(||
+    ///             Label::new(|data: &String, _env: &Env|
     ///                 data.clone()))
     ///         .lens(AppState::list_data);
     ///     list
