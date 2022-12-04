@@ -365,7 +365,7 @@ impl ClipboardState {
         if Some(event.owner) == window {
             // We lost ownership of the selection, clean up
             if let Some(mut contents) = self.contents.take() {
-                contents.destroy(&*self.connection)?;
+                contents.destroy(&self.connection)?;
             }
         }
         Ok(())
@@ -453,7 +453,7 @@ impl ClipboardState {
             property: event.property,
             time: event.time,
         };
-        conn.send_event(false, event.requestor, EventMask::NO_EVENT, &event)?;
+        conn.send_event(false, event.requestor, EventMask::NO_EVENT, event)?;
 
         Ok(())
     }
@@ -473,7 +473,7 @@ impl ClipboardState {
             .iter_mut()
             .find(|transfer| matches(transfer, event))
         {
-            let done = transfer.continue_incremental(&*self.connection)?;
+            let done = transfer.continue_incremental(&self.connection)?;
             if done {
                 debug!("INCR transfer finished");
                 // Remove the transfer
@@ -650,7 +650,7 @@ fn reject_transfer(
         property: x11rb::NONE,
         time: event.time,
     };
-    conn.send_event(false, event.requestor, EventMask::NO_EVENT, &event)?;
+    conn.send_event(false, event.requestor, EventMask::NO_EVENT, event)?;
     Ok(())
 }
 

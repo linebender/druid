@@ -666,12 +666,11 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
         }
 
         // TODO: factor as much logic as possible into monomorphic functions.
-        if ctx.is_handled
-            && !matches!(
-                event,
-                Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_) | Event::Wheel(_)
-            )
-        {
+        // a follow_up event should reach the widget which handled the first event.
+        // in this case we dont discard events when ctx.is_handled is set but just dont set our hot
+        // state to true
+        let follow_up_event = event.is_pointer_event() && self.state.has_active;
+        if ctx.is_handled && !follow_up_event {
             // This function is called by containers to propagate an event from
             // containers to children. Non-recurse events will be invoked directly
             // from other points in the library.

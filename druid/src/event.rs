@@ -448,6 +448,16 @@ impl Event {
             | Event::Zoom(_) => false,
         }
     }
+
+    /// Returns true if the event involves a cursor.
+    ///
+    /// These events interact with the hot state and
+    pub fn is_pointer_event(&self) -> bool {
+        matches!(
+            self,
+            Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_) | Event::Wheel(_)
+        )
+    }
 }
 
 impl LifeCycle {
