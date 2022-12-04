@@ -161,8 +161,10 @@ pub struct State<'a, 'b> {
 
 /// Convenience trait for code generic over contexts.
 ///
-/// Methods to do with commands and timers.
-/// Available to all contexts but PaintCtx.
+/// Methods that deal with commands and timers.
+/// Available to all contexts but [`PaintCtx`].
+///
+/// [`PaintCtx`](PaintCtx)
 pub trait ChangeCtx<'b> {
     /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
     ///
@@ -446,7 +448,7 @@ impl_context_method!(
         /// Returns `true` if either this specific widget or any one of its descendants is focused.
         /// To check if only this specific widget is focused use [`is_focused`],
         ///
-        /// [`is_focused`]: #method.is_focused
+        /// [`is_focused`]: crate::EventCtx::is_focused
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus
         }
@@ -463,7 +465,7 @@ impl_context_method!(
         /// For an example the decrease button of a counter of type `usize` should be disabled if the
         /// value is `0`.
         ///
-        /// [`set_disabled`]: EventCtx::set_disabled
+        /// [`set_disabled`]: crate::EventCtx::set_disabled
         pub fn is_disabled(&self) -> bool {
             self.widget_state.is_disabled()
         }
@@ -478,10 +480,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// cursor, the child widget's cursor will take precedence. (If that isn't what you want, use
     /// [`override_cursor`] instead.)
     ///
-    /// [`clear_cursor`]: EventCtx::clear_cursor
-    /// [`override_cursor`]: EventCtx::override_cursor
-    /// [`hot`]: EventCtx::is_hot
-    /// [`active`]: EventCtx::is_active
+    /// [`clear_cursor`]: crate::EventCtx::clear_cursor
+    /// [`override_cursor`]: crate::EventCtx::override_cursor
+    /// [`hot`]: crate::EventCtx::is_hot
+    /// [`active`]: crate::EventCtx::is_active
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         trace!("set_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Set(cursor.clone());
@@ -493,10 +495,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// effect when this widget is either [`hot`] or [`active`]. This will override the cursor
     /// preferences of a child widget. (If that isn't what you want, use [`set_cursor`] instead.)
     ///
-    /// [`clear_cursor`]: EventCtx::clear_cursor
-    /// [`set_cursor`]: EventCtx::override_cursor
-    /// [`hot`]: EventCtx::is_hot
-    /// [`active`]: EventCtx::is_active
+    /// [`clear_cursor`]: crate::EventCtx::clear_cursor
+    /// [`set_cursor`]: crate::EventCtx::set_cursor
+    /// [`hot`]: crate::EventCtx::is_hot
+    /// [`active`]: crate::EventCtx::is_active
     pub fn override_cursor(&mut self, cursor: &Cursor) {
         trace!("override_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Override(cursor.clone());
@@ -506,20 +508,26 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     ///
     /// This undoes the effect of [`set_cursor`] and [`override_cursor`].
     ///
-    /// [`override_cursor`]: EventCtx::override_cursor
-    /// [`set_cursor`]: EventCtx::set_cursor
+    /// [`override_cursor`]: crate::EventCtx::override_cursor
+    /// [`set_cursor`]: crate::EventCtx::set_cursor
     pub fn clear_cursor(&mut self) {
         trace!("clear_cursor");
         self.widget_state.cursor_change = CursorChange::Default;
     }
 });
 
-//methods on event, update and layout.
+// methods on event, update and layout.
 impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LayoutCtx<'_, '_>, {
-    /// Indicate that your view_context has changed.
+    /// Indicate that your [`ViewContext`] has changed.
     ///
-    /// Widgets must call this method after changing the clip region of thier children.
-    /// The other parts of view_context (cursor_position and global origin) are tracked internally.
+    /// This event is sent after layout is done and before paint is called. Note that you can still
+    /// receive this event even if there was no prior call to layout.
+    ///
+    /// Widgets must call this method after changing the clip region of their children.
+    /// Changes to the other parts of [`ViewContext`] (cursor position and global origin) are tracked
+    /// internally.
+    ///
+    /// [`ViewContext`]: crate::ViewContext
     pub fn view_context_changed(&mut self) {
         self.widget_state.view_context_changed = true;
     }

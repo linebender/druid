@@ -87,10 +87,10 @@ impl Viewport {
         }
     }
 
-    /// Sets the component selected by axis of viewport origin to `pos`, while trying to keep the
+    /// Sets the component selected by `axis` of viewport origin to `pos`, while trying to keep the
     /// view rectangle inside the content rectangle.
     ///
-    /// Returns true if the position changed. Note that the valid values for the viewport origin
+    /// Returns `true` if the position changed. Note that the valid values for the viewport origin
     /// are constrained by the size of the child, and so the origin might not get set to exactly
     /// `pos`.
     pub fn pan_to_on_axis(&mut self, axis: Axis, pos: f64) -> bool {
@@ -374,7 +374,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         })
     }
 
-    /// Pans the minimal distance to show the target rect.
+    /// Pans the minimal distance to show the `region`.
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.

@@ -74,7 +74,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 - `ZStack` widget ([#2235] by [@xarvic])
-- `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([2149] by [@xarvic])
+- `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
 
 ### Changed
 

@@ -14,11 +14,11 @@
 
 //! Events.
 
-use crate::kurbo::{Rect, Size};
 use std::ops::{Add, Sub};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
+use crate::kurbo::{Rect, Size};
 use crate::mouse::MouseEvent;
 use crate::{Command, Notification, Point, WidgetId};
 
@@ -304,7 +304,12 @@ pub enum LifeCycle {
     ///
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
+    /// Called when the [`ViewContext`] of this widget changed.
     ///
+    /// See [`view_context_changed`] on how and when to request this event.
+    ///
+    /// [`view_context_changed`]: crate::EventCtx::view_context_changed
+    /// [`ViewContext`]: ViewContext
     ViewContextChanged(ViewContext),
     /// Internal druid lifecycle event.
     ///
@@ -334,7 +339,8 @@ pub enum InternalLifeCycle {
     },
     /// Used to route the `DisabledChanged` event to the required widgets.
     RouteDisabledChanged,
-    /// The parents widget origin in window coordinate space has changed.
+
+    /// Used to route the `ViewContextChanged` event to the required widgets.
     RouteViewContextChanged(ViewContext),
     /// For testing: request the `WidgetState` of a specific widget.
     ///
@@ -364,18 +370,25 @@ pub enum InternalLifeCycle {
     DebugInspectState(StateCheckFn),
 }
 
-/// Information about the widgets surroundings.
+/// Information about the widget's surroundings.
+///
+/// The global origin is also saved in the widget state.
+///
+/// When the `ViewContext` of a widget changes it receives a `ViewContextChanged` event.
 #[derive(Debug, Copy, Clone)]
 pub struct ViewContext {
-    /// The origin of this widget's parent relative to the window.
-    pub parent_window_origin: Point,
+    /// The origin of this widget relative to the window.
+    ///
+    /// This is written from the perspective of the Widget and not the Pod.
+    /// For the Pod this is its parent's window origin.
+    pub window_origin: Point,
 
-    /// The last position the cursor was on, relative to the widget.
+    /// The last position the cursor was at, relative to the widget.
     pub last_mouse_position: Option<Point>,
 
     /// The visible area, this widget is contained in, relative to the widget.
     ///
-    /// The area may be larger than the widgets paint_rect.
+    /// The area may be larger than the widgets `paint_rect`.
     pub clip: Rect,
 }
 
@@ -444,7 +457,7 @@ impl LifeCycle {
 
     /// Returns an event for a widget which maybe is overlapped by another widget.
     ///
-    /// When ignore is set to `true` the widget will set its hot state to `false` even if the cursor
+    /// When `ignore` is set to `true` the widget will set its hot state to `false` even if the cursor
     /// is inside its bounds.
     pub fn ignore_hot(&self, ignore: bool) -> Self {
         if ignore {
@@ -490,11 +503,11 @@ impl InternalLifeCycle {
 }
 
 impl ViewContext {
-    /// Transforms the `ViewContext` into the coordinate_space of its child.
+    /// Transforms the `ViewContext` into the coordinate space of its child.
     pub(crate) fn for_child_widget(&self, child_origin: Point) -> Self {
         let child_origin = child_origin.to_vec2();
         ViewContext {
-            parent_window_origin: self.parent_window_origin.add(child_origin),
+            window_origin: self.window_origin.add(child_origin),
             last_mouse_position: self.last_mouse_position.map(|pos| pos.sub(child_origin)),
             clip: self.clip.sub(child_origin),
         }

@@ -65,7 +65,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
         self.clip.pan_by(ctx, data, env, delta)
     }
 
-    /// Scroll the minimal distance to show the target rect.
+    /// Scroll the minimal distance to show the target `region`.
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.

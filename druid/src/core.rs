@@ -14,14 +14,13 @@
 
 //! The fundamental druid types.
 
-use druid::contexts::ChangeCtx;
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
 
 use crate::bloom::Bloom;
 use crate::command::sys::{CLOSE_WINDOW, SUB_WINDOW_HOST_TO_PARENT, SUB_WINDOW_PARENT_TO_HOST};
 use crate::commands::SCROLL_TO_VIEW;
-use crate::contexts::ContextState;
+use crate::contexts::{ChangeCtx, ContextState};
 use crate::kurbo::{Affine, Insets, Point, Rect, Shape, Size};
 use crate::sub_window::SubWindowUpdate;
 use crate::{
@@ -82,6 +81,10 @@ pub struct WidgetState {
     /// `size` these constitute the child's layout rect.
     origin: Point,
     /// The origin of the parent in the window coordinate space;
+    //TODO: decide whether we should remove this. With this PR (https://github.com/linebender/druid/pull/2149)
+    // the position of a widget can change during event, but its global position only gets updated
+    // after layout while calling some_pod.layout_rect() gives you the correct local position every
+    // time.
     pub(crate) parent_window_origin: Point,
     /// A flag used to track and debug missing calls to set_origin.
     is_expecting_set_origin_call: bool,
@@ -125,7 +128,12 @@ pub struct WidgetState {
     /// Some of our children have the `view_context_changed` flag set.
     pub(crate) children_view_context_changed: bool,
 
+    /// indicate that the [`ViewContext`] changed.
     ///
+    /// When this flag is set, the associated widget will receive a `LifeCycle::ViewContextChanged
+    /// event`.
+    ///
+    /// [`ViewContext`]: crate::ViewContext
     pub(crate) view_context_changed: bool,
 
     /// Any descendant is active.
@@ -354,12 +362,12 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.baseline_offset
     }
 
-    /// Determines if the provided `mouse_pos` is inside `rect`
+    /// Determines if the provided `mouse_pos` is inside the widget's `layout_rect`
     /// and if so updates the hot state and sends `LifeCycle::HotChanged`.
     ///
     /// Returns `true` if the hot state changed.
     ///
-    /// The provided `child_state` should be merged up if this returns `true`.
+    /// The WidgetPod should merge up its state when `true` is returned.
     fn set_hot_state(
         &mut self,
         state: &mut ContextState,
@@ -1070,7 +1078,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 ));
 
                 self.set_hot_state(ctx.state, view_context.last_mouse_position, data, env);
-                self.state.parent_window_origin = view_context.parent_window_origin;
+                self.state.parent_window_origin = view_context.window_origin;
 
                 self.state.children_view_context_changed = false;
                 self.state.view_context_changed = false;

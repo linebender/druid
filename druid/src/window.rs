@@ -185,7 +185,7 @@ impl<T: Data> Window<T> {
         if self.root.state().children_view_context_changed && !self.root.state().needs_layout {
             let event =
                 LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
-                    parent_window_origin: Point::ORIGIN,
+                    window_origin: Point::ORIGIN,
                     last_mouse_position: self.last_mouse_pos,
                     clip: self.size.to_rect(),
                 }));
