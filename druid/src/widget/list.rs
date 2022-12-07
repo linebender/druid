@@ -37,7 +37,7 @@ use crate::{
 /// For a static sized collection of items use [`Flex`].
 /// The best data structure to use with the list widget is [`Vector`] from the [`im`] feature.
 /// To include the [`im`] feature, update Cargo.toml
-/// ```ignore 
+/// ```ignore
 /// [dependencies]
 /// // before
 /// druid = "0.7.0"
