@@ -51,9 +51,9 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::Label;
-/// # use druid::{ Data, Lens };
+/// # use druid::{ Data, Lens, WidgetExt};
 /// #[cfg(feature = "im")]
-/// use druid::im::{ Vector, WidgetExt };
+/// use druid::im::Vector;
 /// use druid::widget::list;
 ///
 /// #[derive(Clone, Data, Lens)]
@@ -65,7 +65,8 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::im::{ Vector, WidgetExt };
+/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
@@ -86,7 +87,8 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::im::{ Vector, WidgetExt };
+/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
@@ -112,7 +114,8 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::im::{ Vector, WidgetExt };
+/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
@@ -130,7 +133,8 @@ use crate::{
 /// List can be used with any complex widgets.
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::im::{ Vector, WidgetExt };
+/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::im::Vector;
 ///
 /// #[derive(Clone, Data, Lens)]
 /// struct AppState {
@@ -175,7 +179,8 @@ impl<T: Data> List<T> {
     /// # Example
     /// ```
     /// # use druid::widget::{ Label, List };
-    /// # use druid::im::{ Vector, WidgetExt };
+    /// # use druid::{ Data, Lens, WidgetExt};
+    /// # use druid::im::Vector;
     ///
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
