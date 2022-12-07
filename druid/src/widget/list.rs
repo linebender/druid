@@ -51,7 +51,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::Label;
-/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// #[cfg(feature = "im")]
 /// use druid::im::Vector;
 /// use druid::widget::list;
@@ -65,7 +65,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -87,7 +87,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -114,7 +114,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -133,7 +133,7 @@ use crate::{
 /// List can be used with any complex widgets.
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// # use druid::im::Vector;
 ///
 /// #[derive(Clone, Data, Lens)]
@@ -153,7 +153,7 @@ use crate::{
 ///
 /// fn list_item() -> impl Widget<InnerState> {
 ///     let label = Label::new(|data: &InnerState, _env: &Env|
-///         data.name.clone())
+///         data.name.clone());
 ///     label
 /// }
 /// ```
@@ -179,7 +179,7 @@ impl<T: Data> List<T> {
     /// # Example
     /// ```
     /// # use druid::widget::{ Label, List };
-    /// # use druid::{ Data, Lens, WidgetExt};
+    /// # use druid::{ Data, Lens, Widget, WidgetExt};
     /// # use druid::im::Vector;
     ///
     /// # #[derive(Clone, Data, Lens)]
@@ -192,7 +192,7 @@ impl<T: Data> List<T> {
     ///         .lens(AppState::list_data);
     ///     list
     /// }
-    /// fn list_item -> impl Widget<AppState> {
+    /// fn list_item() -> impl Widget<AppState> {
     ///     let label = Label::new(|data: &String, _env: &Env|
     ///         data.clone());
     ///     label
