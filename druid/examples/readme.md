@@ -128,22 +128,6 @@ cargo run --example panels
 ```
 Very similar to [layout](#Layout) but it splits the screen into 2 segments
 
-## Value Formatting
-
-To run this example, make sure you are in `druid/examples/value_formatting`
-And then run `cargo run`
-
-Druid doesn't have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
-This example shows you how to parse, and validate text input. 
-
-## Split
-```
-cargo run --example split_demo
-```
-
-The split widget allows you to put multiple widgets next, or on top of each other.
-This also allows the user to resize them.
-
 ## Scroll
 ```
 cargo run --example scroll
@@ -154,7 +138,15 @@ Scrolling is a great way to show more content then can be displayed on the scree
 ```
 cargo run --example split_demo
 ```
-An example of how to split a widget in 2 in various ways. This also includes having the user drag the border!! 
+
+The split widget allows you to put multiple widgets next, or on top of each other.
+This also allows the user to resize them.
+
+## Slider
+This shows the settings of Slider and RangeSlider, to let the user pick a value in a range.
+```
+cargo run --example slider
+```
 
 ## Sub Window
 Not working, no sub-window seen?
@@ -206,11 +198,20 @@ cargo run --example transparency
 ```
 This shows you how to make the window transparent, so the rest of the desktop shows behind it.
 
+## Value Formatting
+
+To run this example, make sure you are in `druid/examples/value_formatting`
+And then run `cargo run`
+
+Druid doesn't have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
+This example shows you how to parse, and validate text input. 
+
 ## View Switcher
 ```
 cargo run --example view_switcher
 ```
 Very similar to [tabs](#Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
+
 
 # Showcases
 

@@ -117,7 +117,7 @@ pub struct UpdateCtx<'a, 'b> {
     pub(crate) env: &'a Env,
 }
 
-/// A context provided to layout handling methods of widgets.
+/// A context provided to layout-handling methods of widgets.
 ///
 /// As of now, the main service provided is access to a factory for
 /// creating text layout objects, which are likely to be useful
@@ -390,34 +390,18 @@ impl_context_method!(
             content_origin + self.to_window(widget_point).to_vec2()
         }
 
-        /// The "hot" (aka hover) status of a widget.
+        /// Query the "hot" state of the widget.
         ///
-        /// A widget is "hot" when the mouse is hovered over it. Widgets will
-        /// often change their appearance as a visual indication that they
-        /// will respond to mouse interaction.
-        ///
-        /// The hot status is computed from the widget's layout rect. In a
-        /// container hierarchy, all widgets with layout rects containing the
-        /// mouse position have hot status.
-        ///
-        /// Discussion: there is currently some confusion about whether a
-        /// widget can be considered hot when some other widget is active (for
-        /// example, when clicking to one widget and dragging to the next).
-        /// The documentation should clearly state the resolution.
+        /// See [`WidgetPod::is_hot`](struct.WidgetPod.html#method.is_hot) for
+        /// additional information.
         pub fn is_hot(&self) -> bool {
             self.widget_state.is_hot
         }
 
-        /// The active status of a widget.
+        /// Query the "active" state of the widget.
         ///
-        /// Active status generally corresponds to a mouse button down. Widgets
-        /// with behavior similar to a button will call [`set_active`] on mouse
-        /// down and then up.
-        ///
-        /// When a widget is active, it gets mouse events even when the mouse
-        /// is dragged away.
-        ///
-        /// [`set_active`]: struct.EventCtx.html#method.set_active
+        /// See [`WidgetPod::is_active`](struct.WidgetPod.html#method.is_active) for
+        /// additional information.
         pub fn is_active(&self) -> bool {
             self.widget_state.is_active
         }
@@ -1016,7 +1000,7 @@ impl LifeCycleCtx<'_, '_> {
         self.widget_state.children.add(&child_id);
     }
 
-    /// Register this widget to be eligile to accept focus automatically.
+    /// Register this widget to be eligible to accept focus automatically.
     ///
     /// This should only be called in response to a [`LifeCycle::BuildFocusChain`] event.
     ///

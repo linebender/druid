@@ -641,7 +641,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    /// Handle a 'command' message from druid-shell. These map to  an item
+    /// Handle a 'command' message from druid-shell. These map to an item
     /// in an application, window, or context (right-click) menu.
     ///
     /// If the menu is  associated with a window (the general case) then

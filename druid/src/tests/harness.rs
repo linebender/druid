@@ -117,7 +117,7 @@ impl<T: Data> Harness<'_, T> {
     ///
     /// The create functions are used to test a widget. The function takes a `root` widget
     /// and a data structure and uses them to create a `Harness`. The Harness can then be interacted
-    /// with via the `harness_closure` callback. The the final render of
+    /// with via the `harness_closure` callback. The final render of
     /// the widget can be inspected with the `render_context_closure` callback.
     ///
     /// # Arguments

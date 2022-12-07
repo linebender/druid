@@ -247,7 +247,7 @@ pub mod sys {
     /// Show the application preferences.
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
 
-    /// Show the application about window.
+    /// Show the application's "about" window.
     pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
 
     /// Show all applications.
@@ -271,7 +271,7 @@ pub mod sys {
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
 
-    /// Open a path, must be handled by the application.
+    /// Open a set of paths, must be handled by the application.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILES: Selector<Vec<FileInfo>> = Selector::new("druid-builtin.open-files-path");
@@ -335,18 +335,18 @@ pub mod sys {
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
         Selector::new("druid-builtin.invalidate-ime");
 
-    /// Informs this widget, that a child wants a specific region to be shown. The payload is the
+    /// Informs this widget that a child wants a specific region to be shown. The payload is the
     /// requested region in global coordinates.
     ///
-    /// This notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
-    /// are called.
+    /// This notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// is called.
     ///
-    /// Widgets which hide their children, should always call `ctx.set_handled()` in response to
+    /// Widgets which hide their children should always call `ctx.set_handled()` when receiving this to
     /// avoid unintended behaviour from widgets further down the tree.
     /// If possible the widget should move its children to bring the area into view and then submit
     /// a new `SCROLL_TO_VIEW` notification with the same region relative to the new child position.
     ///
-    /// When building a new widget using ClipBox take a look at [`ClipBox::managed`] and
+    /// When building a new widget using ClipBox, take a look at [`ClipBox::managed`] and
     /// [`Viewport::default_scroll_to_view_handling`].
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
