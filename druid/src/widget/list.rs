@@ -54,7 +54,7 @@ use crate::{
 /// # use druid::{ Data, Lens, Widget, WidgetExt};
 /// #[cfg(feature = "im")]
 /// use druid::im::Vector;
-/// use druid::widget::list;
+/// use druid::widget::List;
 ///
 /// #[derive(Clone, Data, Lens)]
 /// struct AppState {
@@ -87,7 +87,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, Widget, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -103,7 +103,7 @@ use crate::{
 ///
 /// fn list_item() -> impl Widget<String> {
 ///     let label = Label::new(|data: &String, _env: &Env|
-///         data.clone())
+///         data.clone());
 ///     label
 /// }
 /// ```
@@ -133,7 +133,7 @@ use crate::{
 /// List can be used with any complex widgets.
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, Widget, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
 ///
 /// #[derive(Clone, Data, Lens)]
@@ -199,7 +199,7 @@ impl<T: Data> List<T> {
     /// }
     /// //This widget is the same as the two widgets above
     /// //combined.
-    /// fn combined -> impl Widget<AppState> {
+    /// fn combined() -> impl Widget<AppState> {
     ///     let list = List::new(||
     ///             Label::new(|data: &String, _env: &Env|
     ///                 data.clone()))
