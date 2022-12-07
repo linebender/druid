@@ -76,10 +76,10 @@ use crate::{
 /// let initial_state = AppState {
 ///     list_data: Vector::from(
 ///         vec!(
-///             "one",
-///             "two",
-///             "three",
-///             "four",
+///             "one".into(),
+///             "two".into(),
+///             "three".into(),
+///             "four".into(),
 ///         )),
 /// };
 /// ```
@@ -114,7 +114,7 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, Widget, WidgetExt};
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -122,6 +122,11 @@ use crate::{
 /// #     list_data: Vector<String>,
 /// # }
 /// # use druid::widget::Scroll;
+/// # fn list_item() -> impl Widget<String> {
+/// #     let label = Label::new(|data: &String, _env: &Env|
+/// #         data.clone());
+/// #     label
+/// # }
 ///
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
@@ -179,7 +184,7 @@ impl<T: Data> List<T> {
     /// # Example
     /// ```
     /// # use druid::widget::{ Label, List };
-    /// # use druid::{ Data, Lens, Widget, WidgetExt};
+    /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
     /// # use druid::im::Vector;
     ///
     /// # #[derive(Clone, Data, Lens)]
