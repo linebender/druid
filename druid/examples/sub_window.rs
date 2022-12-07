@@ -328,8 +328,10 @@ impl<W: Widget<bool>> Controller<bool, W> for CancelClose {
 }
 
 fn build_root_widget() -> impl Widget<HelloState> {
+    let env = Env::new().adding(theme::TEXT_COLOR, Color::rgb8(0x5c, 0xc4, 0xff));
+
     let label = EnvScope::new(
-        |env, _t| env.set(theme::TEXT_COLOR, env.get(theme::PRIMARY_LIGHT)),
+        env,
         ControllerHost::new(
             Label::new(|data: &HelloState, _env: &Env| {
                 format!("Hello {}! {} ", data.name, data.sub.my_stuff)

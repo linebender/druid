@@ -14,7 +14,7 @@
 
 //! Convenience methods for widgets.
 
-use super::invalidation::DebugInvalidation;
+use super::{env_scope::EnvOverride, invalidation::DebugInvalidation};
 use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
     IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
@@ -154,12 +154,25 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     }
 
     /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
-    /// [`Env`] with the provided closure.
+    /// [`Env`] with the provided `Env`.
     ///
-    /// [`EnvScope`]: widget/struct.EnvScope.html
-    /// [`Env`]: struct.Env.html
-    fn env_scope(self, f: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, Self> {
-        EnvScope::new(f, self)
+    /// [`EnvScope`]: crate::widget::EnvScope
+    /// [`Env`]: crate::Env
+    fn env_scope(self, env: Env) -> EnvScope<T, Self> {
+        EnvScope::new(env, self)
+    }
+
+    /// Wrap this widget in a [`EnvScope`] widget, modifying the parent
+    /// [`Env`] with the provided `Env`.
+    ///
+    /// [`EnvScope`]: crate::widget::EnvScope
+    /// [`Env`]: crate::Env
+    fn env_scope_dynamic(
+        self,
+        overrides: impl Fn(&T, &mut Env) + 'static,
+        invalidate_env: impl Fn(&T, &T, &Env) -> bool + 'static,
+    ) -> EnvScope<T, Self> {
+        EnvScope::dynamic(overrides, invalidate_env, self)
     }
 
     /// Wrap this widget with the provided [`Controller`].
@@ -203,9 +216,11 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Draw the [`layout`] `Rect`s of  this widget and its children.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: crate::Widget::layout
     fn debug_paint_layout(self) -> EnvScope<T, Self> {
-        EnvScope::new(|env, _| env.set(Env::DEBUG_PAINT, true), self)
+        let mut env = Env::new();
+        env.set(Env::DEBUG_PAINT, true);
+        EnvScope::new(env, self)
     }
 
     /// Display the `WidgetId`s for this widget and its children, when hot.
@@ -216,7 +231,9 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// These ids may overlap; in this case the id of a child will obscure
     /// the id of its parent.
     fn debug_widget_id(self) -> EnvScope<T, Self> {
-        EnvScope::new(|env, _| env.set(Env::DEBUG_WIDGET_ID, true), self)
+        let mut env = Env::new();
+        env.set(Env::DEBUG_WIDGET_ID, true);
+        EnvScope::new(env, self)
     }
 
     /// Draw a color-changing rectangle over this widget, allowing you to see the
@@ -230,9 +247,11 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
     /// This does nothing by default, but you can use this variable while
     /// debugging to only print messages from particular instances of a widget.
     ///
-    /// [`DEBUG_WIDGET`]: struct.Env.html#associatedconstant.DEBUG_WIDGET
+    /// [`DEBUG_WIDGET`]: crate::Env::DEBUG_WIDGET
     fn debug_widget(self) -> EnvScope<T, Self> {
-        EnvScope::new(|env, _| env.set(Env::DEBUG_WIDGET, true), self)
+        let mut env = Env::new();
+        env.set(Env::DEBUG_WIDGET, true);
+        EnvScope::new(env, self)
     }
 
     /// Wrap this widget in a [`LensWrap`] widget for the provided [`Lens`].
@@ -307,20 +326,30 @@ impl<T: Data> SizedBox<T> {
 // if two things are modifying an env one after another, just combine the modifications
 #[doc(hidden)]
 impl<T: Data, W> EnvScope<T, W> {
-    pub fn env_scope(self, f2: impl Fn(&mut Env, &T) + 'static) -> EnvScope<T, W> {
-        let EnvScope { f, child } = self;
-        let new_f = move |env: &mut Env, data: &T| {
-            f(env, data);
-            f2(env, data);
-        };
-        EnvScope {
-            f: Box::new(new_f),
+    pub fn env_scope(self, env: Env) -> EnvScope<T, W> {
+        let EnvScope {
+            mut overrides,
             child,
+            current_child_env,
+            prev_super_env,
+        } = self;
+
+        if let EnvOverride::Static(ref mut env_overrides) = overrides {
+            *env_overrides = env_overrides.with_overrides(&env);
+        }
+
+        EnvScope {
+            overrides,
+            child,
+            current_child_env,
+            prev_super_env,
         }
     }
 
     pub fn debug_paint_layout(self) -> EnvScope<T, W> {
-        self.env_scope(|env, _| env.set(Env::DEBUG_PAINT, true))
+        let mut env = Env::new();
+        env.set(Env::DEBUG_PAINT, true);
+        self.env_scope(env)
     }
 }
 

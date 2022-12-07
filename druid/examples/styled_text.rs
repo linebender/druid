@@ -25,6 +25,13 @@ use druid::{
     theme, AppLauncher, Color, Data, FontDescriptor, FontFamily, Key, Lens, LensExt,
     LocalizedString, PlatformError, RenderContext, Widget, WidgetExt, WindowDesc,
 };
+use druid::{
+    widget::{
+        Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse,
+        Scroll, Stepper, TextBox,
+    },
+    Env,
+};
 use std::fmt::Display;
 
 // This is a custom key we'll use with Env to set and get our font.
@@ -100,15 +107,26 @@ fn ui_builder() -> impl Widget<AppData> {
         .on_click(|_, data, _| {
             data.size *= 1.1;
         })
-        .env_scope(|env: &mut druid::Env, data: &AppData| {
-            let new_font = if data.mono {
-                FontDescriptor::new(FontFamily::MONOSPACE)
-            } else {
-                FontDescriptor::new(FontFamily::SYSTEM_UI)
-            }
-            .with_size(data.size);
-            env.set(MY_CUSTOM_FONT, new_font);
-        });
+        .env_scope_dynamic(
+            |data: &AppData, env: &mut druid::Env| {
+                const MY_CUSTOM_FONT: Key<FontDescriptor> =
+                    Key::new("org.linebender.example.my-custom-font");
+                let font = FontDescriptor::new(FontFamily::SYSTEM_UI).with_size(data.size);
+                env.set(MY_CUSTOM_FONT, font);
+
+                let new_font = if data.mono {
+                    FontDescriptor::new(FontFamily::MONOSPACE)
+                } else {
+                    FontDescriptor::new(FontFamily::SYSTEM_UI)
+                }
+                .with_size(data.size);
+                env.set(MY_CUSTOM_FONT, new_font);
+            },
+            |old_data, data, _env| {
+                // println!("invalidate env: {}", !data.mono.same(&old_data.mono));
+                !data.mono.same(&old_data.mono)
+            },
+        );
 
     let labels = Scroll::new(
         Flex::column()
