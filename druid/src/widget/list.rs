@@ -51,6 +51,8 @@ use crate::{
 ///
 /// ```
 /// # use druid::widget::Label;
+/// # use druid::{ Data, Lens };
+/// #[cfg(feature = "im")]
 /// use druid::im::{ Vector, WidgetExt };
 /// use druid::widget::list;
 ///
