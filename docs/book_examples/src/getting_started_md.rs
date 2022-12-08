@@ -1,3 +1,5 @@
+#![allow(clippy::let_unit_value)]
+
 // ANCHOR: example_1_imports
 use druid::widget::Label;
 use druid::{AppLauncher, Widget, WindowDesc};
