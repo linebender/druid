@@ -52,7 +52,6 @@ use crate::{
 /// ```
 /// # use druid::{ Data, Lens };
 /// use druid::im::Vector;
-///
 /// #[derive(Clone, Data, Lens)]
 /// struct AppState {
 ///     list_data: Vector<String>,
@@ -63,12 +62,10 @@ use crate::{
 /// ```
 /// # use druid::{ Data, Lens};
 /// # use druid::im::Vector;
-///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
 /// #     list_data: Vector<String>,
 /// # }
-///
 /// let initial_state = AppState {
 ///     list_data: Vector::from(
 ///         vec!(
@@ -85,12 +82,10 @@ use crate::{
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
-///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
 /// #     list_data: Vector<String>,
 /// # }
-///
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
 ///         .lens(AppState::list_data);
@@ -112,7 +107,6 @@ use crate::{
 /// # use druid::widget::{ Label, List, Scroll };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
-///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
 /// #     list_data: Vector<String>,
@@ -122,7 +116,6 @@ use crate::{
 /// #         data.clone());
 /// #     label
 /// # }
-///
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
 ///         .lens(AppState::list_data);
@@ -135,11 +128,11 @@ use crate::{
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
 /// # use druid::im::Vector;
-///
 /// #[derive(Clone, Data, Lens)]
 /// struct AppState {
 ///     list_data: Vector<InnerState>,
 /// }
+/// 
 /// #[derive(Clone, Data, Lens)]
 /// struct InnerState {
 ///     name: String,
@@ -181,22 +174,22 @@ impl<T: Data> List<T> {
     /// # use druid::widget::{ Label, List };
     /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
     /// # use druid::im::Vector;
-    ///
     /// # #[derive(Clone, Data, Lens)]
     /// # struct AppState {
     /// #     list_data: Vector<String>,
     /// # }
-    ///
     /// fn root() -> impl Widget<AppState> {
     ///     let list = List::new(list_item)
     ///         .lens(AppState::list_data);
     ///     list
     /// }
+    ///
     /// fn list_item() -> impl Widget<String> {
     ///     let label = Label::new(|data: &String, _env: &Env|
     ///         data.clone());
     ///     label
     /// }
+    ///
     /// //This widget is the same as the two widgets above
     /// //combined.
     /// fn combined() -> impl Widget<AppState> {
