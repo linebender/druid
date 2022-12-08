@@ -50,11 +50,8 @@ use crate::{
 /// ## Define the data
 ///
 /// ```
-/// # use druid::widget::Label;
-/// # use druid::{ Data, Lens, Widget, WidgetExt};
-/// #[cfg(feature = "im")]
+/// # use druid::{ Data, Lens };
 /// use druid::im::Vector;
-/// use druid::widget::List;
 ///
 /// #[derive(Clone, Data, Lens)]
 /// struct AppState {
@@ -64,9 +61,7 @@ use crate::{
 /// ## Create initial State
 ///
 /// ```
-/// # use druid::widget::{ Label, List };
-/// # use druid::{ Data, Lens, Widget, WidgetExt};
-/// #[cfg(feature = "im")]
+/// # use druid::{ Data, Lens};
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -89,7 +84,6 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
-/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -115,16 +109,14 @@ use crate::{
 /// See docs for more info.
 ///
 /// ```
-/// # use druid::widget::{ Label, List };
+/// # use druid::widget::{ Label, List, Scroll };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
-/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
 /// # struct AppState {
 /// #     list_data: Vector<String>,
 /// # }
-/// # use druid::widget::Scroll;
 /// # fn list_item() -> impl Widget<String> {
 /// #     let label = Label::new(|data: &String, _env: &Env|
 /// #         data.clone());
@@ -142,7 +134,6 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
-/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// #[derive(Clone, Data, Lens)]
@@ -189,7 +180,6 @@ impl<T: Data> List<T> {
     /// ```
     /// # use druid::widget::{ Label, List };
     /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
-    /// #[cfg(feature = "im")]
     /// # use druid::im::Vector;
     ///
     /// # #[derive(Clone, Data, Lens)]
