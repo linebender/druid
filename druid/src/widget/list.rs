@@ -134,7 +134,7 @@ use crate::{
 /// fn root() -> impl Widget<AppState> {
 ///     let list = List::new(list_item)
 ///         .lens(AppState::list_data);
-///     Scroll(list)
+///     Scroll::new(list)
 /// }
 /// ```
 /// ## Complex widgets
@@ -202,7 +202,7 @@ impl<T: Data> List<T> {
     ///         .lens(AppState::list_data);
     ///     list
     /// }
-    /// fn list_item() -> impl Widget<AppState> {
+    /// fn list_item() -> impl Widget<String> {
     ///     let label = Label::new(|data: &String, _env: &Env|
     ///         data.clone());
     ///     label
