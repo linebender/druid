@@ -132,7 +132,7 @@ use crate::{
 /// struct AppState {
 ///     list_data: Vector<InnerState>,
 /// }
-/// 
+///
 /// #[derive(Clone, Data, Lens)]
 /// struct InnerState {
 ///     name: String,
