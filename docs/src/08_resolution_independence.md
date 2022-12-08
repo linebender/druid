@@ -68,7 +68,3 @@ Remember there might be multiple displays connected with different pixel densiti
 and your application might have multiple windows - with each window on a different display.
 It will all just work, because druid will adjust the actual pixel dimensions
 based on the display that the window is currently located on.
-
-## High pixel density images with druid
-
-*TODO: Write this section after it's more clear how this works and if its even solved.*

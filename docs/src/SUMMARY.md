@@ -1,14 +1,11 @@
 # Summary
 - [Overview](./01_intro.md)
-- [Set up Druid](./02_setup.md)
-- [Get started with Druid](./03_get_started.md)
+- [Getting started](./02_getting_started.md)
 - [Data trait](./04_data.md)
 - [Widget trait](./05_widget.md)
 - [Lens trait](./06_lens.md)
 - [Env](./07_env.md)
 - [Resolution independence](./08_resolution_independence.md)
-- [Localization (TODO)](./09_localization.md)
-- [Command (TODO)](./10_command.md)
-- [Widgets in depth (TODO)](./11_custom_widgets.md)
+- [Widgets in depth](./11_custom_widgets.md)
 ---
 - [More information](./12_more_information.md)
