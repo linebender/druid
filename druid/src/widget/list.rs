@@ -66,6 +66,7 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt};
+/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -88,6 +89,7 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -115,6 +117,7 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// # #[derive(Clone, Data, Lens)]
@@ -139,6 +142,7 @@ use crate::{
 /// ```
 /// # use druid::widget::{ Label, List };
 /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// #[cfg(feature = "im")]
 /// # use druid::im::Vector;
 ///
 /// #[derive(Clone, Data, Lens)]
@@ -185,6 +189,7 @@ impl<T: Data> List<T> {
     /// ```
     /// # use druid::widget::{ Label, List };
     /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+    /// #[cfg(feature = "im")]
     /// # use druid::im::Vector;
     ///
     /// # #[derive(Clone, Data, Lens)]
