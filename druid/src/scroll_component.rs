@@ -244,7 +244,7 @@ impl ScrollComponent {
         let usable_space = viewport_major - major_padding;
 
         let length = (percent_visible * viewport_major).ceil();
-        let length = length.max(bar_min_size).min(usable_space);
+        let length = length.clamp(bar_min_size, usable_space);
 
         let left_x_offset = bar_pad + ((usable_space - length) * percent_scrolled).ceil();
         let right_x_offset = left_x_offset + length;

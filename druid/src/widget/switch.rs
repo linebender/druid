@@ -127,7 +127,7 @@ impl Widget<bool> for Switch {
             Event::MouseMove(mouse) => {
                 if !ctx.is_disabled() {
                     if ctx.is_active() {
-                        self.knob_pos.x = mouse.pos.x.min(on_pos).max(off_pos);
+                        self.knob_pos.x = mouse.pos.x.clamp(off_pos, on_pos);
                         self.knob_dragged = true;
                     }
                     if ctx.is_hot() {
@@ -140,11 +140,6 @@ impl Widget<bool> for Switch {
             }
             Event::AnimFrame(interval) => {
                 let delta = Duration::from_nanos(*interval).as_secs_f64();
-                let switch_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-                let switch_width = switch_height * SWITCH_WIDTH_RATIO;
-                let knob_size = switch_height - 2. * SWITCH_PADDING;
-                let on_pos = switch_width - knob_size / 2. - SWITCH_PADDING;
-                let off_pos = knob_size / 2. + SWITCH_PADDING;
 
                 // move knob to right position depending on the value
                 if self.animation_in_progress {
@@ -154,7 +149,7 @@ impl Widget<bool> for Switch {
                         -SWITCH_CHANGE_TIME
                     };
                     let change = (switch_width / change_time) * delta;
-                    self.knob_pos.x = (self.knob_pos.x + change).min(on_pos).max(off_pos);
+                    self.knob_pos.x = (self.knob_pos.x + change).clamp(off_pos, on_pos);
 
                     if (self.knob_pos.x > off_pos && !*data) || (self.knob_pos.x < on_pos && *data)
                     {
