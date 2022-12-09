@@ -45,6 +45,7 @@ impl Viewport {
     /// fail if the content is smaller than the view, and we return `0.0` in each dimension where
     /// the content is smaller.)
     pub fn clamp_view_origin(&self, origin: Point) -> Point {
+        #![allow(clippy::manual_clamp)]
         let x = origin
             .x
             .min(self.content_size.width - self.view_size.width)

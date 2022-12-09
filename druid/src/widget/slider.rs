@@ -634,9 +634,8 @@ impl SliderValueMapping {
         let scalar = (self.axis.major_pos(mouse_pos) - knob_size / 2.)
             / (self.axis.major(slider_size) - knob_size);
 
-        let mut value = (self.min + scalar * (self.max - self.min) + offset)
-            .min(self.max)
-            .max(self.min);
+        let mut value =
+            (self.min + scalar * (self.max - self.min) + offset).clamp(self.min, self.max);
 
         if let Some(step) = self.step {
             let max_step_value = ((self.max - self.min) / step).floor() * step + self.min;
@@ -665,7 +664,7 @@ impl SliderValueMapping {
     }
 
     fn normalize(&self, data: f64) -> f64 {
-        (data.max(self.min).min(self.max) - self.min) / (self.max - self.min)
+        (data.clamp(self.min, self.max) - self.min) / (self.max - self.min)
     }
 
     /// check self.min <= self.max, if not swaps the values.
