@@ -182,7 +182,7 @@ impl<T: Data> Window<T> {
             );
         }
 
-        if self.root.state().children_view_context_changed && !self.root.state().needs_layout {
+        if widget_state.children_view_context_changed && !widget_state.needs_layout {
             let event =
                 LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
                     window_origin: Point::ORIGIN,
@@ -194,14 +194,14 @@ impl<T: Data> Window<T> {
 
         // Update the disabled state if necessary
         // Always do this before updating the focus-chain
-        if self.root.state().tree_disabled_changed() {
+        if widget_state.tree_disabled_changed() {
             let event = LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged);
             self.lifecycle(queue, &event, data, env, false);
         }
 
         // Update the focus-chain if necessary
         // Always do this before sending focus change, since this event updates the focus chain.
-        if self.root.state().update_focus_chain {
+        if widget_state.update_focus_chain {
             let event = LifeCycle::BuildFocusChain;
             self.lifecycle(queue, &event, data, env, false);
         }
@@ -524,7 +524,7 @@ impl<T: Data> Window<T> {
         let mut ctx = PaintCtx {
             render_ctx: piet,
             state: &mut state,
-            widget_state: &mut widget_state,
+            widget_state: &widget_state,
             z_ops: Vec::new(),
             region: invalid.clone(),
             depth: 0,

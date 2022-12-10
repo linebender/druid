@@ -107,6 +107,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
 - `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
 - changing hot state is now done in `Lifecycle::ChangeViewState` instead of `layout` ([#2149] by [@xarvic])
+- `WidgetPod::set_origin` no longer takes `data` and `env` as parameters. ([#2149] by [@xarvic])
 
 ### Deprecated
 
