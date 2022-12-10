@@ -511,7 +511,7 @@ impl<T: Data> Window<T> {
         data: &T,
         env: &Env,
     ) {
-        let mut widget_state = WidgetState::new(self.root.id(), Some(self.size));
+        let widget_state = WidgetState::new(self.root.id(), Some(self.size));
         let mut state = ContextState::new::<T>(
             queue,
             &self.ext_handle,

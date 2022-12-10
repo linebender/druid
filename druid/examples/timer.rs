@@ -76,7 +76,7 @@ impl Widget<u32> for TimerWidget {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &u32, env: &Env) -> Size {
         self.simple_box.layout(ctx, &bc.loosen(), data, env);
-        self.simple_box.set_origin(ctx, data, env, self.pos);
+        self.simple_box.set_origin(ctx, self.pos);
         bc.constrain((500.0, 500.0))
     }
 
