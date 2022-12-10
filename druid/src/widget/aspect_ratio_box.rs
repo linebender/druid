@@ -144,7 +144,6 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
 
             return self.child.layout(ctx, bc, data, env);
         }
-
         if bc.max().width == f64::INFINITY && bc.max().height == f64::INFINITY {
             warn!("Box constraints are INFINITE. Aspect ratio box won't be able to choose a size because the constraints given by the parent widget are INFINITE.");
 

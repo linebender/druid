@@ -130,8 +130,8 @@ pub struct WidgetState {
 
     /// indicate that the [`ViewContext`] changed.
     ///
-    /// When this flag is set, the associated widget will receive a `LifeCycle::ViewContextChanged
-    /// event`.
+    /// When this flag is set, the associated widget will receive a `LifeCycle::ViewContextChanged`
+    /// event.
     ///
     /// [`ViewContext`]: crate::ViewContext
     pub(crate) view_context_changed: bool,
@@ -260,11 +260,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// This is soft-deprecated; you should use [`set_origin`] instead for new code.
     ///
     /// [`set_origin`]: WidgetPod::set_origin
-    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, data: &T, env: &Env, layout_rect: Rect) {
+    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, layout_rect: Rect) {
         if layout_rect.size() != self.state.size {
             warn!("set_layout_rect passed different size than returned by layout method");
         }
-        self.set_origin(ctx, data, env, layout_rect.origin());
+        self.set_origin(ctx, layout_rect.origin());
     }
 
     /// Set the origin of this widget, in the parent's coordinate space.
@@ -273,20 +273,18 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// its own [`Widget::layout`] implementation, and then call `set_origin` to
     /// position those children.
     ///
+    /// The widget container can also call `set_origin` from other context, but calling `set_origin`
+    /// after the widget received [`LifeCycle::ViewContextChanged`] and before the next event results
+    /// in an inconsistent state of the widget tree.
+    ///
     /// The child will receive the [`LifeCycle::Size`] event informing them of the final [`Size`].
     ///
     /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
     /// [`Rect`]: struct.Rect.html
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    pub fn set_origin<'a>(
-        &mut self,
-        ctx: &mut impl ChangeCtx<'a>,
-        _data: &T,
-        _env: &Env,
-        origin: Point,
-    ) {
-        //TODO: decide whether we should keep data and env for compatibility or do a breaking change
+    /// [`LifeCycle::ViewContextChanged`]: enum.LifeCycle.html#variant.ViewContextChanged
+    pub fn set_origin<'a>(&mut self, ctx: &mut impl ChangeCtx<'a>, origin: Point) {
         self.state.is_expecting_set_origin_call = false;
 
         if origin != self.state.origin {
@@ -968,12 +966,10 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                     if self.state.view_context_changed {
                         self.lifecycle(
                             ctx,
-                            &LifeCycle::ViewContextChanged(*view_context),
+                            &LifeCycle::ViewContextChanged(*view_context), // we dont aplly our origin. This happens in self.lifecycle(...).
                             data,
                             env,
                         );
-                        self.state.view_context_changed = false;
-                        self.state.children_view_context_changed = false;
 
                         return;
                     } else if self.state.children_view_context_changed {
@@ -983,7 +979,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                             ),
                         ));
 
-                        self.state.view_context_changed = false;
                         self.state.children_view_context_changed = false;
                     }
 

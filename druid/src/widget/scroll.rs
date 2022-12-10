@@ -55,28 +55,16 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by<'a, C: ChangeCtx<'a>>(
-        &mut self,
-        ctx: &mut C,
-        data: &T,
-        env: &Env,
-        delta: Vec2,
-    ) -> bool {
-        self.clip.pan_by(ctx, data, env, delta)
+    pub fn scroll_by<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
+        self.clip.pan_by(ctx, delta)
     }
 
     /// Scroll the minimal distance to show the target `region`.
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to<'a, C: ChangeCtx<'a>>(
-        &mut self,
-        ctx: &mut C,
-        data: &T,
-        env: &Env,
-        region: Rect,
-    ) -> bool {
-        self.clip.pan_to_visible(ctx, data, env, region)
+    pub fn scroll_to<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, region: Rect) -> bool {
+        self.clip.pan_to_visible(ctx, region)
     }
 
     /// Scroll to this position on a particular axis.
@@ -85,12 +73,10 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     pub fn scroll_to_on_axis<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
-        data: &T,
-        env: &Env,
         axis: Axis,
         position: f64,
     ) -> bool {
-        self.clip.pan_to_on_axis(ctx, data, env, axis, position)
+        self.clip.pan_to_on_axis(ctx, axis, position)
     }
 }
 
@@ -198,7 +184,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
     #[instrument(name = "Scroll", level = "trace", skip(self, ctx, event, data, env))]
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         let scroll_component = &mut self.scroll_component;
-        self.clip.with_port(ctx, data, env, |ctx, port| {
+        self.clip.with_port(ctx, |ctx, port| {
             scroll_component.event(port, ctx, event, env);
         });
         if !ctx.is_handled() {
@@ -207,7 +193,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Scroll<T, W> {
 
         // Handle scroll after the inner widget processed the events, to prefer inner widgets while
         // scrolling.
-        self.clip.with_port(ctx, data, env, |ctx, port| {
+        self.clip.with_port(ctx, |ctx, port| {
             scroll_component.handle_scroll(port, ctx, event, env);
 
             if !scroll_component.are_bars_held() {

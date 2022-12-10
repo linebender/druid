@@ -388,7 +388,7 @@ pub struct ViewContext {
 
     /// The visible area, this widget is contained in, relative to the widget.
     ///
-    /// The area may be larger than the widgets `paint_rect`.
+    /// The area may be larger than the widget's `paint_rect`.
     pub clip: Rect,
 }
 

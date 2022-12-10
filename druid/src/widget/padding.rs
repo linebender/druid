@@ -101,7 +101,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
         let child_bc = bc.shrink((hpad, vpad));
         let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(insets.x0, insets.y0);
-        self.child.set_origin(ctx, data, env, origin);
+        self.child.set_origin(ctx, origin);
 
         let my_size = Size::new(size.width + hpad, size.height + vpad);
         let my_insets = self.child.compute_parent_paint_insets(my_size);

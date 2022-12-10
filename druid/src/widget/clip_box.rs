@@ -362,14 +362,8 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pans by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_by<'a, C: ChangeCtx<'a>>(
-        &mut self,
-        ctx: &mut C,
-        data: &T,
-        env: &Env,
-        delta: Vec2,
-    ) -> bool {
-        self.with_port(ctx, data, env, |_, port| {
+    pub fn pan_by<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
+        self.with_port(ctx, |_, port| {
             port.pan_by(delta);
         })
     }
@@ -378,14 +372,8 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn pan_to_visible<'a, C: ChangeCtx<'a>>(
-        &mut self,
-        ctx: &mut C,
-        data: &T,
-        env: &Env,
-        region: Rect,
-    ) -> bool {
-        self.with_port(ctx, data, env, |_, port| {
+    pub fn pan_to_visible<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, region: Rect) -> bool {
+        self.with_port(ctx, |_, port| {
             port.pan_to_visible(region);
         })
     }
@@ -396,12 +384,10 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     pub fn pan_to_on_axis<'a, C: ChangeCtx<'a>>(
         &mut self,
         ctx: &mut C,
-        data: &T,
-        env: &Env,
         axis: Axis,
         position: f64,
     ) -> bool {
-        self.with_port(ctx, data, env, |_, port| {
+        self.with_port(ctx, |_, port| {
             port.pan_to_on_axis(axis, position);
         })
     }
@@ -413,8 +399,6 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     pub fn with_port<'a, C: ChangeCtx<'a>, F: FnOnce(&mut C, &mut Viewport)>(
         &mut self,
         ctx: &mut C,
-        data: &T,
-        env: &Env,
         f: F,
     ) -> bool {
         f(ctx, &mut self.port);
@@ -422,7 +406,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
         let new_content_origin = (Point::ZERO - self.port.view_origin).to_point();
 
         if new_content_origin != self.child.layout_rect().origin() {
-            self.child.set_origin(ctx, data, env, new_content_origin);
+            self.child.set_origin(ctx, new_content_origin);
             true
         } else {
             false
@@ -440,7 +424,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
                     // prevent unexpected behaviour, by clipping SCROLL_TO_VIEW notifications
                     // to this ClipBox's viewport.
                     ctx.set_handled();
-                    self.with_port(ctx, data, env, |ctx, port| {
+                    self.with_port(ctx, |ctx, port| {
                         port.fixed_scroll_to_view_handling(
                             ctx,
                             *global_highlight_rect,
@@ -516,12 +500,8 @@ impl<T: Data, W: Widget<T>> Widget<T> for ClipBox<T, W> {
         self.port.view_size = bc.constrain(content_size);
         self.port.sanitize_view_origin();
 
-        self.child.set_origin(
-            ctx,
-            data,
-            env,
-            (Point::ZERO - self.port.view_origin).to_point(),
-        );
+        self.child
+            .set_origin(ctx, (Point::ZERO - self.port.view_origin).to_point());
 
         if self.viewport_size() != self.old_size {
             ctx.view_context_changed();

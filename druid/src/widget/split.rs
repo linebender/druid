@@ -496,8 +496,8 @@ impl<T: Data> Widget<T> for Split<T> {
                 Point::new(0.0, child1_size.height + bar_area)
             }
         };
-        self.child1.set_origin(ctx, data, env, child1_pos);
-        self.child2.set_origin(ctx, data, env, child2_pos);
+        self.child1.set_origin(ctx, child1_pos);
+        self.child2.set_origin(ctx, child2_pos);
 
         let paint_rect = self.child1.paint_rect().union(self.child2.paint_rect());
         let insets = paint_rect - my_size.to_rect();

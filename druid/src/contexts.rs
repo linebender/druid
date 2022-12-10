@@ -52,7 +52,7 @@ macro_rules! impl_context_method {
 }
 
 /// A macro for implementing context traits for multiple contexts.
-macro_rules! impl_context_trait{
+macro_rules! impl_context_trait {
     ($tr:ty => $ty:ty,  { $($method:item)+ } ) => {
         impl<'b> $tr for $ty { $($method)+ }
     };
@@ -154,6 +154,9 @@ pub struct PaintCtx<'a, 'b, 'c> {
 
 /// The state of a widget and its global context.
 pub struct State<'a, 'b> {
+    // currently the only method using the State struct is set_origin.
+    // the context state is included into this struct to signal that its also valid to change the
+    // context_state of widget from a context trait.
     #[allow(dead_code)]
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,

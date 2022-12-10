@@ -145,7 +145,7 @@ impl<T: Data> Widget<T> for ZStack<T> {
         for layer in self.layers.iter_mut() {
             let remaining = base_size - layer.child.layout_rect().size();
             let origin = layer.resolve_point(remaining);
-            layer.child.set_origin(ctx, data, env, origin);
+            layer.child.set_origin(ctx, origin);
 
             paint_rect = paint_rect.union(layer.child.paint_rect());
         }

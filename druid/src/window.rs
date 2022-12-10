@@ -492,8 +492,7 @@ impl<T: Data> Window<T> {
                 self.handle.set_size(full_size)
             }
         }
-        self.root
-            .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
+        self.root.set_origin(&mut layout_ctx, Point::ORIGIN);
 
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
