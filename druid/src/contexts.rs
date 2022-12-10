@@ -54,7 +54,7 @@ macro_rules! impl_context_method {
 /// A macro for implementing context traits for multiple contexts.
 macro_rules! impl_context_trait {
     ($tr:ty => $ty:ty,  { $($method:item)+ } ) => {
-        impl<'b> $tr for $ty { $($method)+ }
+        impl $tr for $ty { $($method)+ }
     };
     ($tr:ty => $ty:ty, $($more:ty),+, { $($method:item)+ } ) => {
         impl_context_trait!($tr => $ty, { $($method)+ });
@@ -153,12 +153,11 @@ pub struct PaintCtx<'a, 'b, 'c> {
 }
 
 /// The state of a widget and its global context.
-pub struct State<'a, 'b> {
+pub struct State<'a> {
     // currently the only method using the State struct is set_origin.
-    // the context state is included into this struct to signal that its also valid to change the
-    // context_state of widget from a context trait.
-    #[allow(dead_code)]
-    pub(crate) state: &'a mut ContextState<'b>,
+    // the context state could be included into this struct to allow changes to context state
+    // changes from Context traits
+    // pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
 }
 
@@ -168,7 +167,7 @@ pub struct State<'a, 'b> {
 /// Available to all contexts but [`PaintCtx`].
 ///
 /// [`PaintCtx`](PaintCtx)
-pub trait ChangeCtx<'b> {
+pub trait ChangeCtx {
     /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
     ///
     /// [`submit_command`]: EventCtx::submit_command
@@ -185,13 +184,13 @@ pub trait ChangeCtx<'b> {
     /// Returns the state of the widget.
     ///
     /// This method should only be used by the framework to do mergeups.
-    fn state<'a>(&'a mut self) -> State<'a, 'b>;
+    fn state<'a>(&'a mut self) -> State<'a>;
 }
 
 /// Convenience trait for invalidation and request methods available on multiple contexts.
 ///
 /// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
-pub trait RequestCtx<'b>: ChangeCtx<'b> {
+pub trait RequestCtx: ChangeCtx {
     /// Request a [`paint`] pass. See ['request_paint']
     ///
     /// ['request_paint']: EventCtx::request_paint
@@ -243,7 +242,7 @@ pub trait RequestCtx<'b>: ChangeCtx<'b> {
 }
 
 impl_context_trait!(
-    ChangeCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>, LayoutCtx<'_, 'b>,
+    ChangeCtx => EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, LayoutCtx<'_, '_>,
     {
 
         fn submit_command(&mut self, cmd: impl Into<Command>) {
@@ -258,9 +257,9 @@ impl_context_trait!(
             Self::request_timer(self, deadline)
         }
 
-        fn state<'a>(&'a mut self) -> State<'a, 'b> {
+        fn state<'a>(&'a mut self) -> State<'a> {
             State {
-                state: &mut *self.state,
+                //state: &mut *self.state,
                 widget_state: &mut *self.widget_state,
             }
         }
@@ -268,7 +267,7 @@ impl_context_trait!(
 );
 
 impl_context_trait!(
-    RequestCtx<'b> => EventCtx<'_, 'b>, UpdateCtx<'_, 'b>, LifeCycleCtx<'_, 'b>,
+    RequestCtx => EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>,
     {
         fn request_paint(&mut self) {
             Self::request_paint(self)

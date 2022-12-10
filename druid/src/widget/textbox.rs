@@ -338,7 +338,7 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         Rect::new(x, y0, x, y1)
     }
 
-    fn scroll_to_selection_end<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C) {
+    fn scroll_to_selection_end<C: ChangeCtx>(&mut self, ctx: &mut C) {
         let rect = self.rect_for_selection_end();
         let view_rect = self.inner.viewport_rect();
         let is_visible =

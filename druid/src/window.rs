@@ -185,7 +185,7 @@ impl<T: Data> Window<T> {
         if widget_state.children_view_context_changed && !widget_state.needs_layout {
             let event =
                 LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
-                    window_origin: Point::ORIGIN,
+                    window_origin: Point::ORIGIN, // not the same as the root widget's origin
                     last_mouse_position: self.last_mouse_pos,
                     clip: self.size.to_rect(),
                 }));

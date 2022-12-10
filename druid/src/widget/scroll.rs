@@ -55,7 +55,7 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     /// Scroll by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_by<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
+    pub fn scroll_by<C: ChangeCtx>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
         self.clip.pan_by(ctx, delta)
     }
 
@@ -63,14 +63,14 @@ impl<T, W: Widget<T>> Scroll<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn scroll_to<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, region: Rect) -> bool {
+    pub fn scroll_to<C: ChangeCtx>(&mut self, ctx: &mut C, region: Rect) -> bool {
         self.clip.pan_to_visible(ctx, region)
     }
 
     /// Scroll to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn scroll_to_on_axis<'a, C: ChangeCtx<'a>>(
+    pub fn scroll_to_on_axis<C: ChangeCtx>(
         &mut self,
         ctx: &mut C,
         axis: Axis,

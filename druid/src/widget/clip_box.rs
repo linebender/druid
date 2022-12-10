@@ -362,7 +362,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pans by `delta` units.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_by<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
+    pub fn pan_by<C: ChangeCtx>(&mut self, ctx: &mut C, delta: Vec2) -> bool {
         self.with_port(ctx, |_, port| {
             port.pan_by(delta);
         })
@@ -372,7 +372,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// If the target region is larger than the viewport, we will display the
     /// portion that fits, prioritizing the portion closest to the origin.
-    pub fn pan_to_visible<'a, C: ChangeCtx<'a>>(&mut self, ctx: &mut C, region: Rect) -> bool {
+    pub fn pan_to_visible<C: ChangeCtx>(&mut self, ctx: &mut C, region: Rect) -> bool {
         self.with_port(ctx, |_, port| {
             port.pan_to_visible(region);
         })
@@ -381,7 +381,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pan to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_to_on_axis<'a, C: ChangeCtx<'a>>(
+    pub fn pan_to_on_axis<C: ChangeCtx>(
         &mut self,
         ctx: &mut C,
         axis: Axis,
@@ -396,7 +396,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     ///
     /// The provided callback function can modify its argument, and when it is
     /// done then this `ClipBox` will be modified to have the new viewport rectangle.
-    pub fn with_port<'a, C: ChangeCtx<'a>, F: FnOnce(&mut C, &mut Viewport)>(
+    pub fn with_port<C: ChangeCtx, F: FnOnce(&mut C, &mut Viewport)>(
         &mut self,
         ctx: &mut C,
         f: F,

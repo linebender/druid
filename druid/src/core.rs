@@ -284,13 +284,13 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// [`Size`]: struct.Size.html
     /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
     /// [`LifeCycle::ViewContextChanged`]: enum.LifeCycle.html#variant.ViewContextChanged
-    pub fn set_origin<'a>(&mut self, ctx: &mut impl ChangeCtx<'a>, origin: Point) {
+    pub fn set_origin(&mut self, ctx: &mut impl ChangeCtx, origin: Point) {
         self.state.is_expecting_set_origin_call = false;
 
         if origin != self.state.origin {
             self.state.origin = origin;
             self.state.view_context_changed = true;
-            // identical to calling merge up but faster!
+            // Instead of calling merge_up we directly propagate the flag we care about, to gain performance
             ctx.state().widget_state.children_view_context_changed = true;
         }
     }
