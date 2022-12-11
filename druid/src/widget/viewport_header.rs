@@ -59,8 +59,8 @@ impl ViewportHeaderConfig {
         self.header_side.from_inset(insets).max(0.0).min(max)
     }
 
-    /// The amount of pixels inside the viewport with is overlapped by the header.
-    pub fn visual_overlapping(&self) -> f64 {
+    /// The amount of pixels the viewport of the content gets cropped by the header.
+    pub fn viewport_crop(&self) -> f64 {
         self.overlapping().min(self.header_size)
     }
 
@@ -86,12 +86,12 @@ impl ViewportHeaderConfig {
     pub fn transform_content_scroll_to_view(&self, ctx: &mut EventCtx, rect: Rect) {
         let axis = self.header_side.axis();
         // The length on the major axis with is overlapped by the header.
-        let overlapping = self.visual_overlapping();
+        let viewport_crop = self.viewport_crop();
 
-        if overlapping != 0.0 {
+        if viewport_crop != 0.0 {
             ctx.set_handled();
 
-            let new_rect = rect + self.header_side.direction() * overlapping;
+            let new_rect = rect + self.header_side.direction() * viewport_crop;
             ctx.submit_notification_without_warning(SCROLL_TO_VIEW.with(new_rect));
         }
     }
@@ -141,6 +141,8 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
         if let Event::Notification(notification) = event {
             if let Some(rect) = notification.get(SCROLL_TO_VIEW) {
                 if notification.route() == self.content.id() {
+                    // The content is additionally cropped by the header, therefore we move the scroll
+                    // request by the amount
                     self.header_config.transform_content_scroll_to_view(ctx, *rect);
                 }
                 return;
@@ -169,7 +171,7 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
                     content_view_context.last_mouse_position = None;
                 }
                 content_view_context.clip = content_view_context.clip -
-                    self.header_config.side().as_insets(self.header_config.visual_overlapping());
+                    self.header_config.side().as_insets(self.header_config.viewport_crop());
 
                 self.content.lifecycle(ctx, event, data, env);
             }
