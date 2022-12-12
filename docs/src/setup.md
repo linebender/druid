@@ -1,5 +1,5 @@
 # Set up Druid
-This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
+This tutorial assumes basic familiarity with Rust and a working setup with the basic tooling like
 Rustup and Cargo. This tutorial will use stable Rust (v1.39.0 at the time of writing) and the latest
 released version of Druid.
 
@@ -44,4 +44,4 @@ druid = { git = "https://github.com/linebender/druid.git" }
 ```
 This book is written against the latest code on git, so some examples may not work with `0.7.0`.
 
-[GTK installation page]: https://www.gtk.org/docs/installations/linux/
+[GTK installation page]: https://www.gtk.osudo rg/docs/installations/linux/
