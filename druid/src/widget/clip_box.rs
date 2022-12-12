@@ -381,12 +381,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Pan to this position on a particular axis.
     ///
     /// Returns `true` if the scroll offset has changed.
-    pub fn pan_to_on_axis<C: ChangeCtx>(
-        &mut self,
-        ctx: &mut C,
-        axis: Axis,
-        position: f64,
-    ) -> bool {
+    pub fn pan_to_on_axis<C: ChangeCtx>(&mut self, ctx: &mut C, axis: Axis, position: f64) -> bool {
         self.with_port(ctx, |_, port| {
             port.pan_to_on_axis(axis, position);
         })
