@@ -80,11 +80,10 @@ pub struct WidgetState {
     /// The origin of the child in the parent's coordinate space; together with
     /// `size` these constitute the child's layout rect.
     origin: Point,
-    /// The origin of the parent in the window coordinate space;
-    //TODO: decide whether we should remove this. With this PR (https://github.com/linebender/druid/pull/2149)
-    // the position of a widget can change during event, but its global position only gets updated
-    // after layout while calling some_pod.layout_rect() gives you the correct local position every
-    // time.
+    /// The origin of the parent in the window coordinate space.
+    ///
+    /// Note that this value can be stale after `set_origin` was called
+    /// but before `LifeCycle::ViewContextChanged` has fully propagated.
     pub(crate) parent_window_origin: Point,
     /// A flag used to track and debug missing calls to set_origin.
     is_expecting_set_origin_call: bool,
@@ -272,6 +271,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// A container widget should call the [`Widget::layout`] method on its children in
     /// its own [`Widget::layout`] implementation, and then call `set_origin` to
     /// position those children.
+    ///
+    /// The changed origin won't be fully in effect until [`LifeCycle::ViewContextChanged`] has
+    /// finished propagating. Specifically methods that depend on the widget's origin in relation
+    /// to the window will return stale results during the period after calling `set_origin` but
+    /// before [`LifeCycle::ViewContextChanged`] has finished propagating.
     ///
     /// The widget container can also call `set_origin` from other context, but calling `set_origin`
     /// after the widget received [`LifeCycle::ViewContextChanged`] and before the next event results
