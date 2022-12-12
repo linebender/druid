@@ -5,6 +5,8 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ## Unreleased
 
+- Fix book example in chapter 3 that didn't compile ([#2305] by [@nihonjinrxs])
+
 ### Highlights
 
 - International text input support (IME) on macOS.
@@ -567,6 +569,7 @@ Last release without a changelog :(
 [@barsae]: https://github.com/barsae
 [@amtep]: https://github.com/amtep
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
+[@nihonjinrxs]: https://github.com/nihonjinrxs
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -867,6 +870,7 @@ Last release without a changelog :(
 [#2247]: https://github.com/linebender/druid/pull/2247
 [#2274]: https://github.com/linebender/druid/pull/2274
 [#2284]: https://github.com/linebender/druid/pull/2284
+[#2305]: https://github.com/linebender/druid/pull/2305
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
