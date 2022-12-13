@@ -326,7 +326,7 @@ impl<SP: ScopePolicy, W: Widget<SP::State>> Widget<SP::In> for Scope<SP, W> {
     ) -> Size {
         self.with_state(data, |state, inner| {
             let size = inner.layout(ctx, bc, state, env);
-            inner.set_origin(ctx, state, env, Point::ORIGIN);
+            inner.set_origin(ctx, Point::ORIGIN);
             size
         })
     }

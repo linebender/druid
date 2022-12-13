@@ -369,7 +369,7 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
                 data,
                 env,
             );
-            widget.set_origin(ctx, data, env, Point::new(x_position, y_position));
+            widget.set_origin(ctx, Point::new(x_position, y_position));
             // Increment position for the next cell
             x_position += self.cell_size.width + self.spacing;
             // If we can't fit in another cell in this row ...

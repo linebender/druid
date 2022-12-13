@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
@@ -489,13 +490,13 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         Rect::new(x, y0, x, y1)
     }
 
-    fn scroll_to_selection_end(&mut self) {
+    fn scroll_to_selection_end<C: ChangeCtx>(&mut self, ctx: &mut C) {
         let rect = self.rect_for_selection_end();
         let view_rect = self.inner.viewport_rect();
         let is_visible =
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
-            self.inner.scroll_to(rect + SCROLL_TO_INSETS);
+            self.inner.scroll_to(ctx, rect + SCROLL_TO_INSETS);
         }
     }
 
@@ -540,7 +541,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                         ctx.request_layout();
                         self.scroll_to_selection_after_layout = true;
                     } else {
-                        self.scroll_to_selection_end();
+                        self.scroll_to_selection_end(ctx);
                     }
                     ctx.set_handled();
                     ctx.request_paint();
@@ -680,7 +681,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 self.text_mut().has_focus = false;
                 if !self.multiline {
-                    self.inner.scroll_to(Rect::ZERO);
+                    self.inner.scroll_to(ctx, Rect::ZERO);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -739,7 +740,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
-            self.scroll_to_selection_end();
+            self.scroll_to_selection_end(ctx);
             self.scroll_to_selection_after_layout = false;
         }
 

@@ -211,7 +211,7 @@ pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
 pub use data::Data;
 pub use dialog::FileDialogOptions;
 pub use env::{Env, Key, KeyOrValue, Value, ValueType, ValueTypeError};
-pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle};
+pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle, ViewContext};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;

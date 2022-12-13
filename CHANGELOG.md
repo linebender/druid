@@ -74,6 +74,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 - `ZStack` widget ([#2235] by [@xarvic])
+- `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
 
 ### Changed
 
@@ -105,6 +106,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
 - Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
 - `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
+- changing hot state is now done in `Lifecycle::ChangeViewState` instead of `layout` ([#2149] by [@xarvic])
+- `WidgetPod::set_origin` no longer takes `data` and `env` as parameters. ([#2149] by [@xarvic])
 
 ### Deprecated
 
@@ -856,6 +859,7 @@ Last release without a changelog :(
 [#2117]: https://github.com/linebender/druid/pull/2141
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
+[#2149]: https://github.com/linebender/druid/pull/2149
 [#2151]: https://github.com/linebender/druid/pull/2151
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
