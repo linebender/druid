@@ -14,11 +14,11 @@
 
 //! A widget that aligns its child (for example, centering it).
 
+use crate::contexts::CommandCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 use tracing::{instrument, trace};
-use crate::contexts::CommandCtx;
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -107,7 +107,8 @@ impl<T> Align<T> {
 
         if self.in_viewport {
             // The part of the viewport the origin of the child is allowed to be in
-            let viewport = Rect::from_origin_size(self.viewport.origin(), self.viewport.size() - size);
+            let viewport =
+                Rect::from_origin_size(self.viewport.origin(), self.viewport.size() - size);
 
             // Essentially Rect::intersect but this implementation chooses the point closed to viewport
             // inside extra_space to give the child a valid origin even if extra_space and viewport
@@ -118,10 +119,7 @@ impl<T> Align<T> {
             extra_space.y1 = extra_space.y1.min(viewport.y1).max(extra_space.y0);
         }
 
-        let origin = self
-            .align
-            .resolve(extra_space)
-            .expand();
+        let origin = self.align.resolve(extra_space).expand();
         self.child.set_origin(ctx, origin);
     }
 }
@@ -183,7 +181,9 @@ impl<T: Data> Widget<T> for Align<T> {
         if self.height_factor.is_some() {
             let baseline_offset = self.child.baseline_offset();
             if baseline_offset > 0f64 {
-                ctx.set_baseline_offset(my_size.height - self.child.layout_rect().y1 + baseline_offset);
+                ctx.set_baseline_offset(
+                    my_size.height - self.child.layout_rect().y1 + baseline_offset,
+                );
             }
         }
 

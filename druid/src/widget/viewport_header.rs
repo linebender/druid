@@ -1,7 +1,10 @@
-use druid::RenderContext;
-use crate::{BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetExt, WidgetId, WidgetPod};
 use crate::commands::SCROLL_TO_VIEW;
 use crate::widget::flex::{Orientation, Side};
+use crate::{
+    BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetExt, WidgetId, WidgetPod,
+};
+use druid::RenderContext;
 
 /// A widget, containing two widgets with horizontal or vertical layout.
 ///
@@ -78,15 +81,10 @@ impl ViewportHeaderConfig {
         let orientation = self.header_side.orientation();
         let axis = self.header_side.axis();
 
-        let (first, _) = orientation.order(
-            axis.major(self.content_size),
-            self.header_size
-        );
+        let (first, _) = orientation.order(axis.major(self.content_size), self.header_size);
 
-        let (content_origin, header_origin) = orientation.order(
-            Point::ZERO,
-            Point::from(axis.pack(first, 0.0))
-        );
+        let (content_origin, header_origin) =
+            orientation.order(Point::ZERO, Point::from(axis.pack(first, 0.0)));
         let header_origin = header_origin - self.header_side.direction() * self.overlapping();
 
         (content_origin, header_origin)
@@ -135,12 +133,15 @@ impl ViewportHeaderConfig {
     pub fn set_minimum_visible_content(&mut self, visible: f64) {
         self.minimum_visible_content = visible;
     }
-
 }
 
 impl<T: Data> ViewportHeader<T> {
     /// Creates a new ViewportHeader widget with a given side for the header.
-    pub fn new(content: impl Widget<T> + 'static, header: impl Widget<T> + 'static, side: Side) -> Self {
+    pub fn new(
+        content: impl Widget<T> + 'static,
+        header: impl Widget<T> + 'static,
+        side: Side,
+    ) -> Self {
         Self {
             header: WidgetPod::new(Box::new(header)),
             content: WidgetPod::new(Box::new(content)),
@@ -151,7 +152,8 @@ impl<T: Data> ViewportHeader<T> {
 
     /// The amount of Pixels
     pub fn with_minimum_visible_content(mut self, minimum_visible_content: f64) -> Self {
-        self.header_config.set_minimum_visible_content(minimum_visible_content);
+        self.header_config
+            .set_minimum_visible_content(minimum_visible_content);
         self
     }
 
@@ -170,7 +172,8 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
                 if notification.route() == self.content.id() {
                     // The content is additionally cropped by the header, therefore we move the scroll
                     // request by the amount
-                    self.header_config.transform_content_scroll_to_view(ctx, *rect);
+                    self.header_config
+                        .transform_content_scroll_to_view(ctx, *rect);
                 }
                 return;
             }
@@ -197,12 +200,17 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
                 if self.header.is_hot() {
                     content_view_context.last_mouse_position = None;
                 }
-                content_view_context.clip = content_view_context.clip -
-                    self.header_config.side().as_insets(self.header_config.viewport_crop());
+                content_view_context.clip = content_view_context.clip
+                    - self
+                        .header_config
+                        .side()
+                        .as_insets(self.header_config.viewport_crop());
 
                 self.content.lifecycle(ctx, event, data, env);
             }
-            LifeCycle::BuildFocusChain if self.header_config.side().orientation() == Orientation::End => {
+            LifeCycle::BuildFocusChain
+                if self.header_config.side().orientation() == Orientation::End =>
+            {
                 self.content.lifecycle(ctx, event, data, env);
                 self.header.lifecycle(ctx, event, data, env);
             }
@@ -242,8 +250,11 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         ctx.with_save(|ctx| {
             if self.clip_content {
-                let content_rect = self.content.layout_rect() -
-                    self.header_config.side().as_insets(self.header_config.overlapping());
+                let content_rect = self.content.layout_rect()
+                    - self
+                        .header_config
+                        .side()
+                        .as_insets(self.header_config.overlapping());
                 ctx.clip(content_rect);
             }
             self.content.paint(ctx, data, env);

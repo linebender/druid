@@ -20,8 +20,14 @@
 
 use druid::lens::Unit;
 use druid::widget::prelude::*;
-use druid::widget::{BackgroundBrush, Button, ClipBox, Flex, Label, List, Side, Slider, Tabs, TextBox, ViewportHeader};
-use druid::{AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii, Vec2, WidgetExt, WidgetPod, WindowDesc};
+use druid::widget::{
+    BackgroundBrush, Button, ClipBox, Flex, Label, List, Side, Slider, Tabs, TextBox,
+    ViewportHeader,
+};
+use druid::{
+    AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii, Vec2,
+    WidgetExt, WidgetPod, WindowDesc,
+};
 use im::Vector;
 use std::sync::Arc;
 
@@ -47,13 +53,14 @@ pub fn main() {
 
     AppLauncher::with_window(window)
         .log_to_console()
-        .launch(AppData { list: Vector::new()})
+        .launch(AppData {
+            list: Vector::new(),
+        })
         .expect("launch failed");
 }
 
 fn build_widget() -> impl Widget<AppData> {
-    let list = List::new(||{
-
+    let list = List::new(|| {
         let body = Flex::column()
             .with_child(Label::new("Name:"))
             .with_default_spacer()
@@ -62,9 +69,13 @@ fn build_widget() -> impl Widget<AppData> {
             .with_default_spacer()
             .with_child(Label::new("Info:"))
             .with_default_spacer()
-            .with_child(List::new(||TextBox::new().padding(Insets::from(5.0))).lens(Contact::info))
+            .with_child(List::new(|| TextBox::new().padding(Insets::from(5.0))).lens(Contact::info))
             .with_default_spacer()
-            .with_child(Button::new("Add Info").on_click(|_, data: &mut Contact, _|data.info.push_back(Arc::new(String::new()))))
+            .with_child(
+                Button::new("Add Info").on_click(|_, data: &mut Contact, _| {
+                    data.info.push_back(Arc::new(String::new()))
+                }),
+            )
             .align_left()
             .fix_width(150.0)
             .padding(Insets::uniform_xy(25.0, 0.0))
@@ -73,24 +84,28 @@ fn build_widget() -> impl Widget<AppData> {
 
         ViewportHeader::new(
             body,
-            Label::dynamic(|data: &Contact, _|format!("Contact \"{}\"", &data.name))
+            Label::dynamic(|data: &Contact, _| format!("Contact \"{}\"", &data.name))
                 .center()
                 .background(Color::BLACK)
                 .rounded(RoundedRectRadii::new(5.0, 5.0, 0.0, 0.0)),
             Side::Top,
         )
-            .clipped_content(true)
-            .with_minimum_visible_content(20.0)
-            .padding(Insets::uniform_xy(0.0, 5.0))
+        .clipped_content(true)
+        .with_minimum_visible_content(20.0)
+        .padding(Insets::uniform_xy(0.0, 5.0))
     })
-        .lens(AppData::list)
-        .scroll();
+    .lens(AppData::list)
+    .scroll();
 
     Flex::column()
         .with_flex_child(list, 1.0)
         .with_default_spacer()
-        .with_child(Button::new("Add Contact").on_click(|_, data: &mut AppData, _|data.list.push_back(Contact {
-            name: Arc::new("New Contact".to_string()),
-            info: Default::default(),
-        })))
+        .with_child(
+            Button::new("Add Contact").on_click(|_, data: &mut AppData, _| {
+                data.list.push_back(Contact {
+                    name: Arc::new("New Contact".to_string()),
+                    info: Default::default(),
+                })
+            }),
+        )
 }

@@ -256,10 +256,18 @@ impl Side {
     pub fn as_insets(&self, amount: f64) -> Insets {
         let mut insets = Insets::ZERO;
         match self {
-            Side::Top => {insets.y0 = amount;}
-            Side::Left => {insets.x0 = amount;}
-            Side::Right => {insets.x1 = amount;}
-            Side::Bottom => {insets.y1 = amount;}
+            Side::Top => {
+                insets.y0 = amount;
+            }
+            Side::Left => {
+                insets.x0 = amount;
+            }
+            Side::Right => {
+                insets.x1 = amount;
+            }
+            Side::Bottom => {
+                insets.y1 = amount;
+            }
         }
         insets
     }
