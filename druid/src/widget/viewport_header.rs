@@ -3,7 +3,10 @@ use crate::{BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx
 use crate::commands::SCROLL_TO_VIEW;
 use crate::widget::flex::{Orientation, Side};
 
-
+/// A widget, containing two widgets with horizontal or vertical layout.
+///
+/// When the `ViewportHeader` is moved out of the viewport, the `header` widget tries to stay inside
+/// the viewport by moving over the `content` if necessary.
 pub struct ViewportHeader<T> {
     header: WidgetPod<T, Box<dyn Widget<T>>>,
     content: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -12,6 +15,7 @@ pub struct ViewportHeader<T> {
     clip_content: bool,
 }
 
+/// ViewportHeaderConfig contains the information necessary to create the layout of [`ViewportHeader`]
 pub struct ViewportHeaderConfig {
     content_size: Size,
     viewport: Rect,
@@ -21,6 +25,9 @@ pub struct ViewportHeaderConfig {
 }
 
 impl ViewportHeaderConfig {
+    /// creates a new config.
+    ///
+    /// side: the side at which the header is located.
     pub fn new(side: Side) -> Self {
         Self {
             content_size: Size::ZERO,
@@ -34,10 +41,12 @@ impl ViewportHeaderConfig {
         }
     }
 
+    /// The the layout size of header and content together, when both are fully in view.
     pub fn size(&self) -> Size {
         self.content_size + Size::from(self.header_side.axis().pack(self.header_size, 0.0))
     }
 
+    /// The side of the header.
     pub fn side(&self) -> Side {
         self.header_side
     }
@@ -83,6 +92,10 @@ impl ViewportHeaderConfig {
         (content_origin, header_origin)
     }
 
+    /// Updates a `scroll_to_view` request of the content to take the additional viewport crop into
+    /// account.
+    ///
+    /// Dont call call this with requests of the header widget.
     pub fn transform_content_scroll_to_view(&self, ctx: &mut EventCtx, rect: Rect) {
         let axis = self.header_side.axis();
         // The length on the major axis with is overlapped by the header.
@@ -96,19 +109,29 @@ impl ViewportHeaderConfig {
         }
     }
 
+    /// Updates the ViewContext of the widget.
+    ///
+    /// Should be called when the widget receives a `Lifecycle::ViewContextChanged` event.
     pub fn update_context(&mut self, view_context: ViewContext) {
         self.viewport = view_context.clip;
     }
 
+    /// Updates the content size.
+    ///
+    /// Should be called in layout.
     pub fn set_content_size(&mut self, content_size: Size) {
         self.content_size = content_size;
     }
 
+    /// Updates the header size.
+    ///
+    /// should be called in layout
     pub fn set_header_size(&mut self, header_size: Size) {
         let axis = self.header_side.axis();
         self.header_size = axis.major(header_size);
     }
 
+    /// Sets the minimum visible content.
     pub fn set_minimum_visible_content(&mut self, visible: f64) {
         self.minimum_visible_content = visible;
     }
@@ -116,6 +139,7 @@ impl ViewportHeaderConfig {
 }
 
 impl<T: Data> ViewportHeader<T> {
+    /// Creates a new ViewportHeader widget with a given side for the header.
     pub fn new(content: impl Widget<T> + 'static, header: impl Widget<T> + 'static, side: Side) -> Self {
         Self {
             header: WidgetPod::new(Box::new(header)),
@@ -125,11 +149,14 @@ impl<T: Data> ViewportHeader<T> {
         }
     }
 
+    /// The amount of Pixels
     pub fn with_minimum_visible_content(mut self, minimum_visible_content: f64) -> Self {
         self.header_config.set_minimum_visible_content(minimum_visible_content);
         self
     }
 
+    /// Builder-style method to set whether the additional cropped viewport should be clipped from
+    /// from the content.
     pub fn clipped_content(mut self, clipped_content: bool) -> Self {
         self.clip_content = clipped_content;
         self
@@ -163,7 +190,7 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
                 self.header_config.update_context(*view_context);
                 let (_, header_origin) = self.header_config.origins();
 
-                self.header.set_origin(ctx, data, env, header_origin);
+                self.header.set_origin(ctx, header_origin);
                 self.header.lifecycle(ctx, event, data, env);
 
                 let mut content_view_context = *view_context;
@@ -206,8 +233,8 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
 
         let (content_origin, header_origin) = self.header_config.origins();
 
-        self.header.set_origin(ctx, data, env, header_origin);
-        self.content.set_origin(ctx, data, env, content_origin);
+        self.header.set_origin(ctx, header_origin);
+        self.content.set_origin(ctx, content_origin);
 
         self.header_config.size()
     }
