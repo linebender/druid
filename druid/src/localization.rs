@@ -256,7 +256,7 @@ impl L10nManager {
         &'args self,
         key: &str,
         args: impl Into<Option<&'args FluentArgs<'args>>>,
-    ) -> Option<ArcStr> {
+    ) -> Option<Cow<str>> {
         let args = args.into();
         let value = match self
             .current_bundle
@@ -274,7 +274,7 @@ impl L10nManager {
             warn!("localization error {:?}", err);
         }
 
-        Some(result.into())
+        Some(result)
     }
     //TODO: handle locale change
 }
@@ -353,9 +353,16 @@ impl<T> LocalizedString<T> {
 
             self.resolved_lang = Some(manager.current_locale.clone());
             let next = manager.localize(self.key, args.as_ref());
-            let result = next != self.resolved;
-            self.resolved = next;
-            result
+            {
+                let next = next.as_ref().map(|cow| cow.as_ref());
+                let prev = self.resolved.as_ref().map(|arc| arc.as_ref());
+                if next == prev {
+                    // still the same value, no need to update the field
+                    return false;
+                }
+            }
+            self.resolved = next.map(|cow| cow.into());
+            true
         } else {
             false
         }
