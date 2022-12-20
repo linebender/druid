@@ -34,6 +34,7 @@
 //! [`Env`]: struct.Env.html
 //! [`Data`]: trait.Data.html
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
@@ -104,19 +105,19 @@ impl BundleStack {
         self.0.iter().flat_map(|b| b.get_message(id)).next()
     }
 
-    fn format_pattern(
-        &self,
+    fn format_pattern<'bundle>(
+        &'bundle self,
         id: &str,
-        pattern: &FluentPattern<&str>,
-        args: Option<&FluentArgs>,
+        pattern: &'bundle FluentPattern<&str>,
+        args: Option<&'bundle FluentArgs>,
         errors: &mut Vec<FluentError>,
-    ) -> String {
+    ) -> Cow<'bundle, str> {
         for bundle in self.0.iter() {
             if bundle.has_message(id) {
-                return bundle.format_pattern(pattern, args, errors).to_string();
+                return bundle.format_pattern(pattern, args, errors);
             }
         }
-        format!("localization failed for key '{}'", id)
+        Cow::Owned(format!("localization failed for key '{}'", id))
     }
 }
 
