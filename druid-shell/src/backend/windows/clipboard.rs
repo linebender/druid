@@ -18,19 +18,25 @@ use std::ffi::CString;
 use std::mem;
 use std::ptr;
 
+use winapi::shared::minwindef::MAX_PATH;
 use winapi::shared::minwindef::{FALSE, UINT};
 use winapi::shared::ntdef::{CHAR, HANDLE, LPWSTR, WCHAR};
 use winapi::shared::winerror::ERROR_SUCCESS;
 use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::shellapi::DragQueryFileW;
 use winapi::um::winbase::{GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE};
+use winapi::um::winuser::CF_HDROP;
 use winapi::um::winuser::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
     GetClipboardFormatNameA, IsClipboardFormatAvailable, OpenClipboard, RegisterClipboardFormatA,
     SetClipboardData, CF_UNICODETEXT,
 };
+use winapi::um::shellapi::{HDROP};
 
-use super::util::{FromWide, ToWide};
 use crate::clipboard::{ClipboardFormat, FormatId};
+
+use super::util::ToWide;
+use super::util::FromWide;
 
 #[derive(Debug, Clone, Default)]
 pub struct Clipboard;
@@ -80,9 +86,22 @@ impl Clipboard {
                 None
             } else {
                 let unic_str = GlobalLock(handle) as LPWSTR;
-                let result = unic_str.to_string();
+                let result = unic_str .to_string();
                 GlobalUnlock(handle);
                 result
+            }
+        })
+        .flatten()
+    }
+
+    pub fn get_files(&self) -> Option<impl Iterator<Item = String>>{
+        with_clipboard(||{
+            unsafe{
+                if IsClipboardFormatAvailable(CF_HDROP) == 0 {
+                    return None;
+                }
+                let hdrop = GetClipboardData(CF_HDROP) as HDROP;
+                Some(iter_clipboard_files(hdrop))
             }
         })
         .flatten()
@@ -216,6 +235,23 @@ fn register_identifier(ident: &str) -> Option<UINT> {
         }
         Some(pb_format)
     }
+}
+
+unsafe fn iter_clipboard_files(hdrop: HDROP) -> impl Iterator<Item = String> {
+    let count = if hdrop.is_null() { 0 } else {
+        DragQueryFileW(hdrop, 0xFFFFFFFF, ptr::null_mut(), 0)
+    };
+    let mut files = Vec::with_capacity(count as usize);
+    for i in 0 .. count {
+        let mut buf = Vec::<u16>::with_capacity(MAX_PATH as usize);
+        let size = DragQueryFileW(hdrop , i, buf.as_mut_ptr(), MAX_PATH as u32);
+        if size == 0 {continue;};
+        buf.set_len(size as usize);
+        let f = buf.as_slice().to_string();
+        files.push(f.unwrap());
+    }    
+    let it = files.into_iter();
+    return it;
 }
 
 fn iter_clipboard_types() -> impl Iterator<Item = UINT> {
