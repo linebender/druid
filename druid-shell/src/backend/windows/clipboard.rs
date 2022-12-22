@@ -94,14 +94,14 @@ impl Clipboard {
         .flatten()
     }
 
-    pub fn get_files(&self) -> Option<impl Iterator<Item = String>>{
+    pub fn get_files(&self) -> Option<Vec<String>>{
         with_clipboard(||{
             unsafe{
                 if IsClipboardFormatAvailable(CF_HDROP) == 0 {
                     return None;
                 }
                 let hdrop = GetClipboardData(CF_HDROP) as HDROP;
-                Some(iter_clipboard_files(hdrop))
+                Some(get_clipboard_files(hdrop))
             }
         })
         .flatten()
@@ -237,7 +237,7 @@ fn register_identifier(ident: &str) -> Option<UINT> {
     }
 }
 
-unsafe fn iter_clipboard_files(hdrop: HDROP) -> impl Iterator<Item = String> {
+unsafe fn get_clipboard_files(hdrop: HDROP) -> Vec<String> {
     let count = if hdrop.is_null() { 0 } else {
         DragQueryFileW(hdrop, 0xFFFFFFFF, ptr::null_mut(), 0)
     };
@@ -250,8 +250,7 @@ unsafe fn iter_clipboard_files(hdrop: HDROP) -> impl Iterator<Item = String> {
         let f = buf.as_slice().to_string();
         files.push(f.unwrap());
     }    
-    let it = files.into_iter();
-    return it;
+    return files;
 }
 
 fn iter_clipboard_types() -> impl Iterator<Item = UINT> {

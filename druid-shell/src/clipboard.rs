@@ -161,6 +161,11 @@ impl Clipboard {
         self.0.get_format(format)
     }
 
+    #[cfg(windows)]
+    pub fn get_files(&self) -> Option<Vec<String>>{
+        self.0.get_files()
+    }
+
     /// For debugging: print the resolved identifiers for each type currently
     /// on the clipboard.
     #[doc(hidden)]
