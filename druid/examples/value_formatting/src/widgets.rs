@@ -169,7 +169,7 @@ impl<T, W: Widget<Option<ValidationError>>> Widget<T> for ErrorController<W> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &T, env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, &self.error, env);
-        self.child.set_origin(ctx, &self.error, env, Point::ZERO);
+        self.child.set_origin(ctx, Point::ZERO);
         size
     }
 

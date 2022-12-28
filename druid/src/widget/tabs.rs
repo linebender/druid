@@ -414,7 +414,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabBar<TP> {
         let mut minor: f64 = 0.;
         for (_, tab) in self.tabs.iter_mut() {
             let size = tab.layout(ctx, bc, data, env);
-            tab.set_origin(ctx, data, env, self.axis.pack(major, 0.).into());
+            tab.set_origin(ctx, self.axis.pack(major, 0.).into());
             major += self.axis.major(size);
             minor = minor.max(self.axis.minor(size));
         }
@@ -692,7 +692,7 @@ impl<TP: TabsPolicy> Widget<TabsState<TP>> for TabsBody<TP> {
         // Laying out all children so events can be delivered to them.
         for child in self.child_pods() {
             child.layout(ctx, bc, inner, env);
-            child.set_origin(ctx, inner, env, Point::ORIGIN);
+            child.set_origin(ctx, Point::ORIGIN);
         }
 
         bc.max()
@@ -1059,7 +1059,7 @@ impl<TP: TabsPolicy> Widget<TP::Input> for Tabs<TP> {
     ) -> Size {
         if let TabsContent::Running { scope } = &mut self.content {
             let size = scope.layout(ctx, bc, data, env);
-            scope.set_origin(ctx, data, env, Point::ORIGIN);
+            scope.set_origin(ctx, Point::ORIGIN);
             size
         } else {
             bc.min()

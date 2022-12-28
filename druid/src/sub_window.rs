@@ -161,8 +161,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
     )]
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &(), _env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, &self.data, &self.env);
-        self.child
-            .set_origin(ctx, &self.data, &self.env, Point::ORIGIN);
+        self.child.set_origin(ctx, Point::ORIGIN);
         size
     }
 

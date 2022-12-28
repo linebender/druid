@@ -524,14 +524,14 @@ impl<T: Data, W: Widget<T>> Widget<T> for Annotated<T, W> {
                 let child_bc = bc.shrink((label_size.width, 0.0));
                 let child_size = self.inner.layout(ctx, &child_bc, data, env);
                 self.inner
-                    .set_origin(ctx, data, env, Point::new(label_size.width, 0.0));
+                    .set_origin(ctx, Point::new(label_size.width, 0.0));
 
                 Size::new(child_size.width + label_size.width, child_size.height)
             }
             Axis::Horizontal => {
                 let child_bc = bc.shrink((0.0, label_size.height));
                 let child_size = self.inner.layout(ctx, &child_bc, data, env);
-                self.inner.set_origin(ctx, data, env, Point::ZERO);
+                self.inner.set_origin(ctx, Point::ZERO);
 
                 ctx.set_baseline_offset(self.inner.baseline_offset() + label_size.height);
                 Size::new(child_size.width, child_size.height + label_size.height)

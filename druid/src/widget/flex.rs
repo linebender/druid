@@ -850,7 +850,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                     };
 
                     let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
-                    widget.set_origin(ctx, data, env, child_pos);
+                    widget.set_origin(ctx, child_pos);
                     child_paint_rect = child_paint_rect.union(widget.paint_rect());
                     major += self.direction.major(child_size).expand();
                     major += spacing.next().unwrap_or(0.);
