@@ -44,4 +44,4 @@ druid = { git = "https://github.com/linebender/druid.git" }
 ```
 This book is written against the latest code on git, so some examples may not work with `0.7.0`.
 
-[GTK installation page]: https://www.gtk.osudo rg/docs/installations/linux/
+[GTK installation page]: https://www.gtk.org/docs/installations/linux/
