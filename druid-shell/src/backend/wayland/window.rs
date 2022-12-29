@@ -300,10 +300,10 @@ impl std::default::Default for WindowHandle {
         WindowHandle {
             inner: std::sync::Arc::new(Inner {
                 id: surfaces::GLOBAL_ID.next(),
-                outputs: Box::new(surfaces::surface::Dead::default()),
-                decor: Box::new(surfaces::surface::Dead::default()),
-                surface: Box::new(surfaces::surface::Dead::default()),
-                popup: Box::new(surfaces::surface::Dead::default()),
+                outputs: Box::<surfaces::surface::Dead>::default(),
+                decor: Box::<surfaces::surface::Dead>::default(),
+                surface: Box::<surfaces::surface::Dead>::default(),
+                popup: Box::<surfaces::surface::Dead>::default(),
                 appdata: std::sync::Weak::new(),
             }),
         }

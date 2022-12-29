@@ -869,10 +869,10 @@ impl WndProc for MyWndProc {
                             if let Some(mut s) = s.as_mut() {
                                 let border = self.get_system_metric(SM_CXPADDEDBORDER);
                                 let frame = self.get_system_metric(SM_CYSIZEFRAME);
-                                s.rgrc[0].top += (border + frame) as i32;
-                                s.rgrc[0].right -= (border + frame) as i32;
-                                s.rgrc[0].left += (border + frame) as i32;
-                                s.rgrc[0].bottom -= (border + frame) as i32;
+                                s.rgrc[0].top += border + frame;
+                                s.rgrc[0].right -= border + frame;
+                                s.rgrc[0].left += border + frame;
+                                s.rgrc[0].bottom -= border + frame;
                             }
                         }
                     }
@@ -1529,7 +1529,7 @@ impl WindowBuilder {
             // Dark mode support
             // https://docs.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes
             const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
-            let value: BOOL = if should_use_light_theme() { 0 } else { 1 };
+            let value = should_use_light_theme() as BOOL;
             let value_ptr = &value as *const _ as *const c_void;
             DwmSetWindowAttribute(
                 hwnd,
