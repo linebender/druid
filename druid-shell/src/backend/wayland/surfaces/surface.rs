@@ -511,10 +511,7 @@ impl Data {
         // size in pixels, so we must apply scale.
         let logical_size = self.logical_size.get();
         let scale = self.scale.get() as f64;
-        kurbo::Size::new(
-            logical_size.width as f64 * scale,
-            logical_size.height as f64 * scale,
-        )
+        kurbo::Size::new(logical_size.width * scale, logical_size.height * scale)
     }
 
     pub(super) fn request_anim_frame(&self) {
