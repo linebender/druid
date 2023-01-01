@@ -34,6 +34,126 @@ use crate::{
 };
 
 /// A list widget for a variable-size collection of items.
+/// For a static sized collection of items use [`Flex`].
+/// The best data structure to use with the list widget is [`Vector`] from the [`im`] feature.
+/// To include the [`im`] feature, update Cargo.toml
+/// ```ignore
+/// [dependencies]
+/// // before
+/// druid = "0.7.0"
+/// // after
+/// druid = { version = "0.7.0", features = ["im"] }
+/// ```
+///
+/// # Examples
+///
+/// ## Define the data
+///
+/// ```
+/// # use druid::{ Data, Lens };
+/// use druid::im::Vector;
+/// #[derive(Clone, Data, Lens)]
+/// struct AppState {
+///     list_data: Vector<String>,
+/// }
+/// ```
+/// ## Create initial State
+///
+/// ```
+/// # use druid::{ Data, Lens};
+/// # use druid::im::Vector;
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
+/// let initial_state = AppState {
+///     list_data: Vector::from(
+///         vec!(
+///             "one".into(),
+///             "two".into(),
+///             "three".into(),
+///             "four".into(),
+///         )),
+/// };
+/// ```
+/// ## Create widgets
+///
+/// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// # use druid::im::Vector;
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
+/// fn root() -> impl Widget<AppState> {
+///     let list = List::new(list_item)
+///         .lens(AppState::list_data);
+///     list
+/// }
+///
+/// fn list_item() -> impl Widget<String> {
+///     let label = Label::new(|data: &String, _env: &Env|
+///         data.clone());
+///     label
+/// }
+/// ```
+/// ## Scrollable List
+/// Commonly a list should be able to scroll, the [`Scroll`] widget can be used to implement this
+/// feature.
+/// See docs for more info.
+///
+/// ```
+/// # use druid::widget::{ Label, List, Scroll };
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// # use druid::im::Vector;
+/// # #[derive(Clone, Data, Lens)]
+/// # struct AppState {
+/// #     list_data: Vector<String>,
+/// # }
+/// # fn list_item() -> impl Widget<String> {
+/// #     let label = Label::new(|data: &String, _env: &Env|
+/// #         data.clone());
+/// #     label
+/// # }
+/// fn root() -> impl Widget<AppState> {
+///     let list = List::new(list_item)
+///         .lens(AppState::list_data);
+///     Scroll::new(list)
+/// }
+/// ```
+/// ## Complex widgets
+/// List can be used with any complex widgets.
+/// ```
+/// # use druid::widget::{ Label, List };
+/// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+/// # use druid::im::Vector;
+/// #[derive(Clone, Data, Lens)]
+/// struct AppState {
+///     list_data: Vector<InnerState>,
+/// }
+///
+/// #[derive(Clone, Data, Lens)]
+/// struct InnerState {
+///     name: String,
+/// }
+///
+/// fn root() -> impl Widget<AppState> {
+///     let list = List::new(list_item)
+///         .lens(AppState::list_data);
+///     list
+/// }
+///
+/// fn list_item() -> impl Widget<InnerState> {
+///     let label = Label::new(|data: &InnerState, _env: &Env|
+///         data.name.clone());
+///     label
+/// }
+/// ```
+/// [`im`]: https://docs.rs/druid/0.6.0/druid/im/index.html
+/// [`Flex`]: crate::widget::Flex
+/// [`Vector`]: https://docs.rs/druid/0.6.0/druid/im/vector/index.html
+/// [`Scroll`]: crate::widget::Scroll
 pub struct List<T> {
     closure: Box<dyn Fn() -> Box<dyn Widget<T>>>,
     children: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
@@ -45,6 +165,41 @@ pub struct List<T> {
 impl<T: Data> List<T> {
     /// Create a new list widget. Closure will be called every time when a new child
     /// needs to be constructed.
+    ///
+    /// The list widget can have a function passed in as a closure, or an abstract closure can also
+    /// be provided.
+    ///
+    /// # Example
+    /// ```
+    /// # use druid::widget::{ Label, List };
+    /// # use druid::{ Data, Lens, Widget, WidgetExt, Env};
+    /// # use druid::im::Vector;
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     list_data: Vector<String>,
+    /// # }
+    /// fn root() -> impl Widget<AppState> {
+    ///     let list = List::new(list_item)
+    ///         .lens(AppState::list_data);
+    ///     list
+    /// }
+    ///
+    /// fn list_item() -> impl Widget<String> {
+    ///     let label = Label::new(|data: &String, _env: &Env|
+    ///         data.clone());
+    ///     label
+    /// }
+    ///
+    /// //This widget is the same as the two widgets above
+    /// //combined.
+    /// fn combined() -> impl Widget<AppState> {
+    ///     let list = List::new(||
+    ///             Label::new(|data: &String, _env: &Env|
+    ///                 data.clone()))
+    ///         .lens(AppState::list_data);
+    ///     list
+    /// }
+    /// ```
     pub fn new<W: Widget<T> + 'static>(closure: impl Fn() -> W + 'static) -> Self {
         List {
             closure: Box::new(move || Box::new(closure())),
