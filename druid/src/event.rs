@@ -249,14 +249,7 @@ pub enum LifeCycle {
     /// itself will handle registering those children with the system; this is
     /// required for things like correct routing of events.
     ///
-    /// ## Participating in focus
-    ///
-    /// Widgets which wish to participate in automatic focus (using tab to change
-    /// focus) must handle this event and call [`LifeCycleCtx::register_for_focus`].
-    ///
-    /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
     /// [`WidgetPod`]: struct.WidgetPod.html
-    /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
     /// Called when the [`Size`] of the widget changes.
     ///
@@ -287,7 +280,7 @@ pub enum LifeCycle {
     /// This is called when the widget-tree changes and druid wants to rebuild the
     /// Focus-chain.
     ///
-    /// It is the only place from witch [`register_for_focus`] should be called.
+    /// It is the only place from which [`register_for_focus`] should be called.
     /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
     ///
     /// [`register_for_focus`]: crate::LifeCycleCtx::register_for_focus
