@@ -154,6 +154,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Fix `Controller` links for `Click` ([#2158] by [@yrns])
 - Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
 - Added examples in `TextBox` ([#2284] by [@ThomasMcandrew])
+- Removed outdated section in docs for `LifeCycle::WidgetAdded` ([#2320] by [@sprocklem])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -570,6 +571,7 @@ Last release without a changelog :(
 [@barsae]: https://github.com/barsae
 [@amtep]: https://github.com/amtep
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
+[@sprocklem]: https://github.com/sprocklem
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -871,6 +873,7 @@ Last release without a changelog :(
 [#2247]: https://github.com/linebender/druid/pull/2247
 [#2274]: https://github.com/linebender/druid/pull/2274
 [#2284]: https://github.com/linebender/druid/pull/2284
+[#2320]: https://github.com/linebender/druid/pull/2320
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
