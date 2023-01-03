@@ -1263,7 +1263,7 @@ impl WidgetState {
             sub_window_hosts: Vec::new(),
             is_explicitly_disabled_new: false,
             update_focus_chain: false,
-            view_context_changed: false,
+            view_context_changed: true,
         }
     }
 
