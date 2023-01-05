@@ -574,7 +574,16 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.widget_state.needs_layout = true;
     }
 
-    /// Request an animation frame.
+    /// Request an [`AnimFrame`] event.
+    ///
+    /// Note that if you call this when handling an [`AnimFrame`] event,
+    /// you should also call [`request_paint`] or [`request_paint_rect`] to ensure
+    /// an actual rendered frame. Otherwise you will end up with a lot of useless
+    /// animation frames for every actual frame.
+    ///
+    /// [`AnimFrame`]: crate::Event::AnimFrame
+    /// [`request_paint`]: #method.request_paint
+    /// [`request_paint_rect`]: #method.request_paint_rect
     pub fn request_anim_frame(&mut self) {
         trace!("request_anim_frame");
         self.widget_state.request_anim = true;

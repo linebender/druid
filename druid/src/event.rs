@@ -133,10 +133,17 @@ pub enum Event {
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
     ///
-    /// The `paint` method will be called shortly after this event is finished.
+    /// Note that receiving `AnimFrame` does not necessarily mean a rendered frame will follow.
+    /// If you want something actually rendered you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`].
+    ///
+    /// If you do that, then the `paint` method will be called shortly after this event is finished.
     /// As a result, you should try to avoid doing anything computationally
     /// intensive in response to an `AnimFrame` event: it might make Druid miss
     /// the monitor's refresh, causing lag or jerky animation.
+    ///
+    /// [`request_paint`]: crate::EventCtx::request_paint
+    /// [`request_paint_rect`]: crate::EventCtx::request_paint_rect
     AnimFrame(u64),
     /// An event containing a [`Command`] to be handled by the widget.
     ///
