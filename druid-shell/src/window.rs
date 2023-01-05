@@ -226,6 +226,10 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
+    pub fn set_position_within_parent(&self, position: impl Into<Point>) {
+        self.0.set_position_within_parent(position.into())
+    }
+
     /// Returns the position of the top left corner of the window.
     ///
     /// The position is returned in [display points], measured relative to the parent window if

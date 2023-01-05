@@ -1004,6 +1004,23 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_position_within_parent(&self, mut position: Point) {
+        if let Some(state) = self.state.upgrade() {
+            if let Some(parent_state) = &state.parent {
+                println!("HAS PARENT");
+                let pos = (*parent_state).get_position();
+                position += (pos.x, pos.y)
+            } else {
+                println!("NO PARENT");
+            }
+        };
+
+        if let Some(state) = self.state.upgrade() {
+            let px = position.to_px(state.scale.get());
+            //state.window.move_(px.x as i32, px.y as i32)
+        }
+    }
+
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.position();
