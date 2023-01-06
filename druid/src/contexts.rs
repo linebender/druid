@@ -581,7 +581,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// or [`request_paint_rect`] when handling the [`AnimFrame`] event.
     ///
     /// Note that not requesting paint when handling the [`AnimFrame`] event and then
-    /// recursively requesting another [`AnimFrame`] will lead to rapid event fire,
+    /// recursively requesting another [`AnimFrame`] can lead to rapid event fire,
     /// which is probably not what you want and would most likely be wasted compute cycles.
     ///
     /// [`AnimFrame`]: crate::Event::AnimFrame
