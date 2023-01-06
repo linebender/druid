@@ -576,10 +576,13 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
 
     /// Request an [`AnimFrame`] event.
     ///
-    /// Note that if you call this when handling an [`AnimFrame`] event,
-    /// you should also call [`request_paint`] or [`request_paint_rect`] to ensure
-    /// an actual rendered frame. Otherwise you will end up with a lot of useless
-    /// animation frames for every actual frame.
+    /// Receiving [`AnimFrame`] does not inherently mean a `paint` invocation will follow.
+    /// If you want something actually painted you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`].
+    ///
+    /// Note that not requesting paint when when handling the [`AnimFrame`] event and then
+    /// recursively requesting another [`AnimFrame`] will lead to rapid event fire,
+    /// which is probably not what you want and would most likely be wasted compute cycles.
     ///
     /// [`AnimFrame`]: crate::Event::AnimFrame
     /// [`request_paint`]: #method.request_paint
