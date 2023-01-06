@@ -578,7 +578,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// Receiving [`AnimFrame`] does not inherently mean a `paint` invocation will follow.
     /// If you want something actually painted you need to explicitly call [`request_paint`]
-    /// or [`request_paint_rect`].
+    /// or [`request_paint_rect`] when handling the [`AnimFrame`] event.
     ///
     /// Note that not requesting paint when handling the [`AnimFrame`] event and then
     /// recursively requesting another [`AnimFrame`] will lead to rapid event fire,
