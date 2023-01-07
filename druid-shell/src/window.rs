@@ -226,8 +226,8 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
-    pub fn set_position_within_parent(&self, position: impl Into<Point>) {
-        self.0.set_position_within_parent(position.into())
+    pub fn set_interactable_area(&self, region: &Region) {
+        self.0.set_interactable_area(region)
     }
 
     /// Returns the position of the top left corner of the window.

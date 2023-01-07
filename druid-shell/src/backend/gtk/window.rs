@@ -1004,21 +1004,24 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_position_within_parent(&self, mut position: Point) {
+    pub fn set_interactable_area(&self, area: &Region) {
         if let Some(state) = self.state.upgrade() {
-            if let Some(parent_state) = &state.parent {
-                println!("HAS PARENT");
-                let pos = (*parent_state).get_position();
-                position += (pos.x, pos.y)
-            } else {
-                println!("NO PARENT");
+            let region = cairo::Region::create();
+            for contained_rect in area.rects() {
+                let cairo_rect = cairo::RectangleInt::new(
+                    contained_rect.x0.floor() as i32,
+                    contained_rect.y0.floor() as i32,
+                    contained_rect.width().ceil() as i32,
+                    contained_rect.height().ceil() as i32,
+                );
+                let union_result = region.union_rectangle(&cairo_rect);
+                if union_result.is_err() {
+                    warn!("Unable to add rectangle to GTK region: {:?}", union_result.err());
+                }
             }
+            let some_region = Some(&region);
+            state.window.input_shape_combine_region(some_region)
         };
-
-        if let Some(state) = self.state.upgrade() {
-            let px = position.to_px(state.scale.get());
-            //state.window.move_(px.x as i32, px.y as i32)
-        }
     }
 
     pub fn get_position(&self) -> Point {
