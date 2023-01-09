@@ -99,6 +99,7 @@ pub(crate) struct WindowBuilder {
     min_size: Option<Size>,
     position: Option<Point>,
     level: Option<WindowLevel>,
+    always_on_top: bool,
     state: window::WindowState,
 }
 
@@ -162,6 +163,8 @@ enum DeferredOp {
     SetResizable(bool),
     SetWindowState(window::WindowState),
     ReleaseMouseCapture,
+    SetRegion(Option<Region>),
+    SetAlwaysOnTop(bool),
 }
 
 #[derive(Clone, Debug)]
@@ -237,6 +240,7 @@ struct WindowState {
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
     window_level: WindowLevel,
+    is_always_on_top: Cell<bool>,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -425,6 +429,58 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
     }
 }
 
+/// The ex style is different from the non-ex styles.
+fn set_ex_style(hwnd: HWND, always_on_top: bool) {
+    unsafe {
+        let mut style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        if style == 0 {
+            warn!(
+                "failed to get window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+            return;
+        }
+
+        if !always_on_top {
+            style &= !WS_EX_TOPMOST;
+        } else {
+            style |= WS_EX_TOPMOST;
+        }
+        if SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style as _) == 0 {
+            warn!(
+                "failed to set the window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        }
+        // This is necessary to ensure it properly changes the z order.
+        let z_insert_after = if always_on_top {
+            HWND_TOPMOST
+        } else {
+            HWND_NOTOPMOST
+        };
+        // Since ES_EX_TOPMOST can change the z order, don't disable changing the z order on SetWindowPos
+        if SetWindowPos(
+            hwnd,
+            z_insert_after,
+            0,
+            0,
+            0,
+            0,
+            SWP_SHOWWINDOW
+                | SWP_NOMOVE
+                | SWP_FRAMECHANGED
+                | SWP_NOSIZE
+                | SWP_NOACTIVATE,
+        ) == 0
+        {
+            warn!(
+                "failed to update window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        };
+    }
+}
+
 impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) -> Result<(), Error> {
         unsafe {
@@ -604,6 +660,10 @@ impl MyWndProc {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
                     set_style(hwnd, resizable, self.has_titlebar());
                 }
+                DeferredOp::SetAlwaysOnTop(always_on_top) => {
+                    self.with_window_state(|s| s.is_always_on_top.set(always_on_top));
+                    set_ex_style(hwnd, always_on_top);
+                }
                 DeferredOp::SetWindowState(val) => {
                     let show = if self.handle.borrow().is_focusable() {
                         match val {
@@ -663,6 +723,31 @@ impl MyWndProc {
                         // (which can easily happen since this is deferred).
                         if result != 0 {
                             warn!("failed to release mouse capture: {}", Error::Hr(result));
+                        }
+                    }
+                },
+                DeferredOp::SetRegion(region) => {
+                    unsafe {
+                        match region {
+                            Some(region) => {
+                                let scale = self.scale();
+                                let win32_region: HRGN = CreateRectRgn(0, 0, 0, 0);
+                                for rect in region.rects() {
+                                    // Create the region as win32 expects it. Round down for low coords and up for high coords
+                                    let region_part = CreateRectRgn((rect.x0 * scale.x()).floor() as i32, (rect.y0 * scale.y()).floor() as i32, (rect.x1 * scale.x()).ceil() as i32, (rect.y1 * scale.y()).ceil() as i32);
+                                    let region_tmp = win32_region.clone();
+                                    let result = CombineRgn(win32_region, region_part, region_tmp, RGN_OR /* area from both */);
+                                    if result == ERROR {
+                                        warn!("Error combining regions in SetRegion deferred op");
+                                    }
+                                }
+
+                                SetWindowRgn(hwnd, win32_region, 1);
+                            }
+                            None => {
+                                // Set it to have no region
+                                SetWindowRgn(hwnd, null_mut(), 1);
+                            }
                         }
                     }
                 },
@@ -1288,6 +1373,7 @@ impl WindowBuilder {
             min_size: None,
             position: None,
             level: None,
+            always_on_top: false,
             state: window::WindowState::Restored,
         }
     }
@@ -1311,6 +1397,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
@@ -1432,7 +1522,8 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
-                window_level,
+                window_level: window_level,
+                is_always_on_top: Cell::new(self.always_on_top),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1464,6 +1555,10 @@ impl WindowBuilder {
 
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
+            }
+
+            if self.always_on_top {
+                dwExStyle |= WS_EX_TOPMOST;
             }
 
             match self.state {
@@ -2026,6 +2121,14 @@ impl WindowHandle {
             }
         }
         Size::new(0.0, 0.0)
+    }
+
+    pub fn set_interactable_area(&self, area: Option<Region>) {
+        self.defer(DeferredOp::SetRegion(area));
+    }
+
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        self.defer(DeferredOp::SetAlwaysOnTop(always_on_top));
     }
 
     pub fn resizable(&self, resizable: bool) {

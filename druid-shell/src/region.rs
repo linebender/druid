@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use kurbo::{BezPath, Rect, Shape, Vec2};
+use kurbo::{BezPath, Point, Rect, Shape, Vec2};
 
 /// A union of rectangles, useful for describing an area that needs to be repainted.
 #[derive(Clone, Debug)]
@@ -69,6 +69,10 @@ impl Region {
     /// Returns `true` if this region has a non-empty intersection with the given rectangle.
     pub fn intersects(&self, rect: Rect) -> bool {
         self.rects.iter().any(|r| r.intersect(rect).area() > 0.0)
+    }
+
+    pub fn contains(&self, point: Point) -> bool {
+        self.rects.iter().any(|r| r.contains(point))
     }
 
     /// Returns `true` if this region is empty.

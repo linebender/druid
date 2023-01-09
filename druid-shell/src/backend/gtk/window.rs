@@ -1004,26 +1004,6 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_interactable_area(&self, area: &Region) {
-        if let Some(state) = self.state.upgrade() {
-            let region = cairo::Region::create();
-            for contained_rect in area.rects() {
-                let cairo_rect = cairo::RectangleInt::new(
-                    contained_rect.x0.floor() as i32,
-                    contained_rect.y0.floor() as i32,
-                    contained_rect.width().ceil() as i32,
-                    contained_rect.height().ceil() as i32,
-                );
-                let union_result = region.union_rectangle(&cairo_rect);
-                if union_result.is_err() {
-                    warn!("Unable to add rectangle to GTK region: {:?}", union_result.err());
-                }
-            }
-            let some_region = Some(&region);
-            state.window.input_shape_combine_region(some_region)
-        };
-    }
-
     pub fn get_position(&self) -> Point {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.position();
@@ -1121,6 +1101,26 @@ impl WindowHandle {
             }
         }
         Restored
+    }
+
+    pub fn set_interactable_area(&self, area: &Option<Region>) {
+        if let Some(state) = self.state.upgrade() {
+            let region = cairo::Region::create();
+            for contained_rect in area.rects() {
+                let cairo_rect = cairo::RectangleInt::new(
+                    contained_rect.x0.floor() as i32,
+                    contained_rect.y0.floor() as i32,
+                    contained_rect.width().ceil() as i32,
+                    contained_rect.height().ceil() as i32,
+                );
+                let union_result = region.union_rectangle(&cairo_rect);
+                if union_result.is_err() {
+                    warn!("Unable to add rectangle to GTK region: {:?}", union_result.err());
+                }
+            }
+            let some_region = Some(&region);
+            state.window.input_shape_combine_region(some_region)
+        };
     }
 
     pub fn handle_titlebar(&self, val: bool) {

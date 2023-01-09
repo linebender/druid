@@ -226,7 +226,11 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
-    pub fn set_interactable_area(&self, region: &Region) {
+    pub fn set_always_on_top(&self, on_top: bool) {
+        self.0.set_always_on_top(on_top);
+    }
+
+    pub fn set_interactable_area(&self, region: Option<Region>) {
         self.0.set_interactable_area(region)
     }
 
@@ -481,6 +485,11 @@ impl WindowBuilder {
     /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Set whether the window should be always positioned above all other windows
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.0.set_always_on_top(always_on_top);
     }
 
     /// Set whether the window background should be transparent
