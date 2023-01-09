@@ -137,6 +137,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
 - X11: window focus events ([#1938] by [@Maan2003]
 - Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
+- GTK: Hot state now properly resets when the mouse leaves the window via an occluded part. ([#2324] by [@xStrom])
 
 ### Visual
 
@@ -874,6 +875,7 @@ Last release without a changelog :(
 [#2274]: https://github.com/linebender/druid/pull/2274
 [#2284]: https://github.com/linebender/druid/pull/2284
 [#2320]: https://github.com/linebender/druid/pull/2320
+[#2324]: https://github.com/linebender/druid/pull/2324
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
