@@ -549,7 +549,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
             let selection = edit_lock.selection();
             let first_grapheme = edit_lock.slice(selection.min()..middle_idx).into_owned();
             let second_grapheme = edit_lock.slice(middle_idx..selection.max());
-            let new_string = format!("{}{}", second_grapheme, first_grapheme);
+            let new_string = format!("{second_grapheme}{first_grapheme}");
             // replace_range should automatically set selection to end of inserted range
             edit_lock.replace_range(selection.range(), &new_string);
         }
@@ -594,7 +594,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
         }
         "noop:" => {}
         e => {
-            eprintln!("unknown text editing command from macOS: {}", e);
+            eprintln!("unknown text editing command from macOS: {e}");
         }
     };
 }
