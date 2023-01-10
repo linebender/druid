@@ -15,8 +15,8 @@
 /// A trait for widgets that wrap a single child to expose that child for access and mutation
 pub trait WidgetWrapper {
     /// The type of the wrapped widget.
-    /// Maybe we would like to constrain this to Widget<impl Data> (if existential bounds were supported).
-    /// Any other scheme leads to T being unconstrained in unification at some point
+    /// Maybe we would like to constrain this to `Widget<impl Data>` (if existential bounds were supported).
+    /// Any other scheme leads to `T` being unconstrained in unification at some point
     type Wrapped;
     /// Get immutable access to the wrapped child
     fn wrapped(&self) -> &Self::Wrapped;
