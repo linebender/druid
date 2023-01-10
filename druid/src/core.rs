@@ -232,8 +232,8 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// with behavior similar to a button will call [`set_active`] on mouse
     /// down and then up.
     ///
-    /// The active status can only be set manually. Druid doesn't eg automatically
-    /// set it to false on mouse release.
+    /// The active status can only be set manually. Druid doesn't automatically
+    /// set it to `false` on mouse release or anything like that.
     ///
     /// There is no special handling of the active status for multi-pointer devices.
     ///

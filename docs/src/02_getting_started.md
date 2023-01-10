@@ -181,7 +181,7 @@ To complete our todo-list, we need to change our app data type. Instead of just 
 {{#include ../book_examples/src/getting_started_2_md.rs:example_6_struct}}
 ```
 
-However, now we have a problem: our List widget which expected a `Vector<...>` won't know how to handle a struct. So, we need to modify druid's dataflow so that, given the TodoList above, the List widget will have access to the `items` field. This is done with a `Lens`, which we'll explain next chapter.
+However, now we have a problem: our List widget which expected a `Vector<...>` won't know how to handle a struct. So, we need to modify Druid's dataflow so that, given the TodoList above, the List widget will have access to the `items` field. This is done with a `Lens`, which we'll explain next chapter.
 
 Furthermore, to pass our type as the a generic parameter to `Widget`, we need it to implement the `Data` trait (and `Clone`), more on that next chapter.
 
