@@ -609,7 +609,7 @@ mod state_cell {
             } else {
                 "None"
             };
-            write!(f, "StateCell({})", inner)
+            write!(f, "StateCell({inner})")
         }
     }
 
@@ -620,7 +620,7 @@ mod state_cell {
             } else {
                 "None"
             };
-            write!(f, "DebugStateCell({})", inner)
+            write!(f, "DebugStateCell({inner})")
         }
     }
 
