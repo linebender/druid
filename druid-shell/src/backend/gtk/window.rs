@@ -642,21 +642,9 @@ impl WindowBuilder {
         );
 
         win_state.drawing_area.connect_leave_notify_event(
-            clone!(handle => move |_widget, crossing| {
+            clone!(handle => move |_widget, _crossing| {
                 if let Some(state) = handle.state.upgrade() {
-                    let scale = state.scale.get();
-                    let crossing_state = crossing.state();
-                    let mouse_event = MouseEvent {
-                        pos: Point::from(crossing.position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                        mods: get_modifiers(crossing_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
-
-                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                    state.with_handler(|h| h.mouse_leave());
                 }
 
                 Inhibit(true)

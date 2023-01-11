@@ -133,10 +133,20 @@ pub enum Event {
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
     ///
-    /// The `paint` method will be called shortly after this event is finished.
+    /// Receiving `AnimFrame` does not inherently mean a `paint` invocation will follow.
+    /// If you want something actually painted you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`].
+    ///
+    /// If you do that, then the `paint` method will be called shortly after this event is finished.
     /// As a result, you should try to avoid doing anything computationally
     /// intensive in response to an `AnimFrame` event: it might make Druid miss
     /// the monitor's refresh, causing lag or jerky animation.
+    ///
+    /// You can request an `AnimFrame` via [`request_anim_frame`].
+    ///
+    /// [`request_paint`]: crate::EventCtx::request_paint
+    /// [`request_paint_rect`]: crate::EventCtx::request_paint_rect
+    /// [`request_anim_frame`]: crate::EventCtx::request_anim_frame
     AnimFrame(u64),
     /// An event containing a [`Command`] to be handled by the widget.
     ///
@@ -249,14 +259,7 @@ pub enum LifeCycle {
     /// itself will handle registering those children with the system; this is
     /// required for things like correct routing of events.
     ///
-    /// ## Participating in focus
-    ///
-    /// Widgets which wish to participate in automatic focus (using tab to change
-    /// focus) must handle this event and call [`LifeCycleCtx::register_for_focus`].
-    ///
-    /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
     /// [`WidgetPod`]: struct.WidgetPod.html
-    /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
     /// Called when the [`Size`] of the widget changes.
     ///
@@ -287,7 +290,7 @@ pub enum LifeCycle {
     /// This is called when the widget-tree changes and druid wants to rebuild the
     /// Focus-chain.
     ///
-    /// It is the only place from witch [`register_for_focus`] should be called.
+    /// It is the only place from which [`register_for_focus`] should be called.
     /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
     ///
     /// [`register_for_focus`]: crate::LifeCycleCtx::register_for_focus
