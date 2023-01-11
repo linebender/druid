@@ -28,7 +28,7 @@ fn file_filter(fs: &FileSpec) -> FileFilter {
     let ret = FileFilter::new();
     ret.set_name(Some(fs.name));
     for ext in fs.extensions {
-        ret.add_pattern(&format!("*.{}", ext));
+        ret.add_pattern(&format!("*.{ext}"));
     }
     ret
 }

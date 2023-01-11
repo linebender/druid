@@ -118,7 +118,7 @@ impl From<crate::FileSpec> for file_chooser::FileFilter {
     fn from(spec: crate::FileSpec) -> file_chooser::FileFilter {
         let mut filter = file_chooser::FileFilter::new(spec.name);
         for ext in spec.extensions {
-            filter = filter.glob(&format!("*.{}", ext));
+            filter = filter.glob(&format!("*.{ext}"));
         }
         filter
     }
