@@ -122,7 +122,7 @@ impl WinHandler for AppState {
                 self.handle.close();
                 Application::global().quit()
             }
-            _ => println!("unexpected id {}", id),
+            _ => println!("unexpected id {id}"),
         }
     }
 
@@ -259,7 +259,7 @@ impl InputHandler for AppInputHandler {
 
     fn handle_action(&mut self, action: Action) {
         let handled = apply_default_behavior(self, action);
-        println!("action: {:?} handled: {:?}", action, handled);
+        println!("action: {action:?} handled: {handled:?}");
     }
 }
 

@@ -94,7 +94,7 @@ impl From<HRESULT> for Error {
 impl Debug for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+            Error::WinapiError(hr) => write!(f, "hresult {hr:x}"),
         }
     }
 }
@@ -102,7 +102,7 @@ impl Debug for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+            Error::WinapiError(hr) => write!(f, "hresult {hr:x}"),
         }
     }
 }
