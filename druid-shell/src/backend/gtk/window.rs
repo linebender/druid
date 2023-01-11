@@ -1109,7 +1109,7 @@ impl WindowHandle {
         Restored
     }
 
-    pub fn set_interactable_area(&self, region: Option<Region>) {
+    pub fn set_input_region(&self, region: Option<Region>) {
         if let Some(state) = self.state.upgrade() {
             match region {
                 Some(region) => {
