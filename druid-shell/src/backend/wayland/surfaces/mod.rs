@@ -78,7 +78,7 @@ pub trait Handle {
     fn invalidate_rect(&self, rect: kurbo::Rect);
     fn remove_text_field(&self, token: TextFieldToken);
     fn set_focused_text_field(&self, active_field: Option<TextFieldToken>);
-    fn set_interactable_area(&self, region: Option<Region>);
+    fn set_input_region(&self, region: Option<Region>);
     fn get_idle_handle(&self) -> idle::Handle;
     fn get_scale(&self) -> Scale;
     fn run_idle(&self);

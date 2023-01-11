@@ -2123,7 +2123,7 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
-    pub fn set_interactable_area(&self, area: Option<Region>) {
+    pub fn set_input_region(&self, area: Option<Region>) {
         self.defer(DeferredOp::SetRegion(area));
     }
 

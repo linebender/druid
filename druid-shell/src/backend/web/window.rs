@@ -513,8 +513,8 @@ impl WindowHandle {
         warn!("WindowHandle::set_position unimplemented for web");
     }
 
-    pub fn set_interactable_area(&self, _region: Option<Region>) {
-        warn!("WindowHandle::set_interactable_area unimplemented for web");
+    pub fn set_input_region(&self, _region: Option<Region>) {
+        warn!("WindowHandle::set_input_region unimplemented for web");
     }
 
     pub fn set_always_on_top(&self, _always_on_top: bool) {

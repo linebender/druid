@@ -407,8 +407,8 @@ impl Handle for Surface {
             .set_focused_text_field(active_field);
     }
 
-    fn set_interactable_area(&self, region: Option<crate::Region>) {
-        self.inner.wl_surface.borrow().set_interactable_area(region);
+    fn set_input_region(&self, region: Option<crate::Region>) {
+        self.inner.wl_surface.borrow().set_input_region(region);
     }
 
     fn get_idle_handle(&self) -> super::idle::Handle {

@@ -192,7 +192,7 @@ impl Handle for Surface {
         self.inner.set_focused_text_field(active_field)
     }
 
-    fn set_interactable_area(&self, region: Option<Region>) {
+    fn set_input_region(&self, region: Option<Region>) {
         self.inner.set_interactable_region(region);
     }
 
@@ -655,8 +655,8 @@ impl Handle for Dead {
         tracing::warn!("set_focused_text_field invoked on a dead surface")
     }
 
-    fn set_interactable_area(&self, _region: Option<Region>) {
-        tracing::warn!("set_interactable_area invoked on a dead surface")
+    fn set_input_region(&self, _region: Option<Region>) {
+        tracing::warn!("set_input_region invoked on a dead surface")
     }
 
     fn get_idle_handle(&self) -> idle::Handle {

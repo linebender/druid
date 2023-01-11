@@ -120,8 +120,8 @@ impl WindowHandle {
         tracing::warn!("set_always_on_top is unimplemented on wayland");
     }
 
-    pub fn set_interactable_area(&self, region: Option<Region>) {
-        self.inner.surface.set_interactable_area(region);
+    pub fn set_input_region(&self, region: Option<Region>) {
+        self.inner.surface.set_input_region(region);
     }
 
     pub fn get_position(&self) -> Point {

@@ -1315,7 +1315,7 @@ impl WindowHandle {
         }
     }
 
-    pub fn set_interactable_area(&self, _region: Option<Region>) {
+    pub fn set_input_region(&self, _region: Option<Region>) {
         // Not necessary for mac, due to it automatically doing
         // this for transparent regions.
     }

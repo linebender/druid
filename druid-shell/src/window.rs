@@ -250,8 +250,8 @@ impl WindowHandle {
     /// On Web, this does nothing.
     ///
     /// [display points]: crate::Scale
-    pub fn set_interactable_area(&self, region: Option<Region>) {
-        self.0.set_interactable_area(region)
+    pub fn set_input_region(&self, region: Option<Region>) {
+        self.0.set_input_region(region)
     }
 
     /// Returns the position of the top left corner of the window.
