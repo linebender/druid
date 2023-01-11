@@ -226,8 +226,8 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
-    pub fn set_always_on_top(&self, on_top: bool) {
-        self.0.set_always_on_top(on_top);
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        self.0.set_always_on_top(always_on_top);
     }
 
     pub fn set_interactable_area(&self, region: Option<Region>) {

@@ -41,6 +41,7 @@ use wayland_client::{
         wl_seat::{self, WlSeat},
         wl_shm::{self, WlShm},
         wl_surface::WlSurface,
+        wl_region::WlRegion,
     },
 };
 use wayland_cursor::CursorTheme;
@@ -417,6 +418,10 @@ impl surfaces::Compositor for Data {
 
     fn create_surface(&self) -> wl::Main<WlSurface> {
         self.wl_compositor.create_surface()
+    }
+
+    fn create_region(&self) -> wl::Main<WlRegion> {
+        self.wl_compositor.create_region()
     }
 
     fn shared_mem(&self) -> wl::Main<WlShm> {

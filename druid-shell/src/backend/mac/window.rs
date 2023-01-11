@@ -1320,9 +1320,9 @@ impl WindowHandle {
         // this for transparent regions.
     }
 
-    pub fn set_always_on_top(&self, on_top: bool) {
+    pub fn set_always_on_top(&self, always_on_top: bool) {
         unsafe {
-            let level = if on_top {
+            let level = if always_on_top {
                 NSFloatingWindowLevel
             } else {
                 NSNormalWindowLevel
