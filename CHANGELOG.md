@@ -75,6 +75,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 - `ZStack` widget ([#2235] by [@xarvic])
 - `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
+- Add a public constructor to `StringCursor` ([#2319] by [@benoitryder])
 
 ### Changed
 
@@ -573,6 +574,7 @@ Last release without a changelog :(
 [@barsae]: https://github.com/barsae
 [@amtep]: https://github.com/amtep
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
+[@benoitryder]: https://github.com/benoitryder
 [@sprocklem]: https://github.com/sprocklem
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -875,6 +877,7 @@ Last release without a changelog :(
 [#2247]: https://github.com/linebender/druid/pull/2247
 [#2274]: https://github.com/linebender/druid/pull/2274
 [#2284]: https://github.com/linebender/druid/pull/2284
+[#2319]: https://github.com/linebender/druid/pull/2319
 [#2320]: https://github.com/linebender/druid/pull/2320
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
