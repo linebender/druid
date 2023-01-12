@@ -574,7 +574,19 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
         self.widget_state.needs_layout = true;
     }
 
-    /// Request an animation frame.
+    /// Request an [`AnimFrame`] event.
+    ///
+    /// Receiving [`AnimFrame`] does not inherently mean a `paint` invocation will follow.
+    /// If you want something actually painted you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`] when handling the [`AnimFrame`] event.
+    ///
+    /// Note that not requesting paint when handling the [`AnimFrame`] event and then
+    /// recursively requesting another [`AnimFrame`] can lead to rapid event fire,
+    /// which is probably not what you want and would most likely be wasted compute cycles.
+    ///
+    /// [`AnimFrame`]: crate::Event::AnimFrame
+    /// [`request_paint`]: #method.request_paint
+    /// [`request_paint_rect`]: #method.request_paint_rect
     pub fn request_anim_frame(&mut self) {
         trace!("request_anim_frame");
         self.widget_state.request_anim = true;

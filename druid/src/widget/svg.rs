@@ -403,7 +403,9 @@ impl SvgRenderer {
 
 type Def = piet::PaintBrush;
 
-/// A map from id to <def>
+/// A map from id to [`Def`]
+///
+/// [`Def`]: Def
 struct Defs(HashMap<String, Rc<Def>>);
 
 impl Defs {
