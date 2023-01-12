@@ -127,16 +127,17 @@ fn main() {
     let main_window = WindowDesc::new(InputRegionExampleWidget::new())
         .title("Input Region Demo")
         .window_size((600.0, 300.0))
-        // Show the tital bar so clients have some control over it
+        // Disable the titlebar since it breaks the desired effect on mac.
+        // It can be turned on with the button, but not on mac.
         // A lot of apps that will use the interaction features will turn this off
-        // On Windows, this will be invisible, but still there.
-        .show_titlebar(true)
+        // On Windows, if on, this will be invisible, but still there.
+        .show_titlebar(false)
         .transparent(true);
 
     let state = AppState {
         limit_input_region: true,
         always_on_top: false,
-        show_titlebar: true,
+        show_titlebar: false,
     };
 
     AppLauncher::with_window(main_window)
