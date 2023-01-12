@@ -732,7 +732,7 @@ impl MyWndProc {
 
                                 // Add header if there is a frame
                                 if self.has_titlebar() {
-                                    let region_tmp = win32_region.clone();
+                                    let region_tmp = win32_region;
                                     let header_rect = CreateRectRgn(0, 0, client_width, y_offset);
                                     CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
                                 }
@@ -746,7 +746,7 @@ impl MyWndProc {
                                         (rect.x1 * scale.x()).ceil() as i32 + x_offset,
                                         (rect.y1 * scale.y()).ceil() as i32 + y_offset,
                                     );
-                                    let region_tmp = win32_region.clone();
+                                    let region_tmp = win32_region;
                                     let result = CombineRgn(
                                         win32_region,
                                         region_part,

@@ -76,6 +76,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - `ZStack` widget ([#2235] by [@xarvic])
 - `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
 - Add a public constructor to `StringCursor` ([#2319] by [@benoitryder])
+- Input Region and Always On Top support ([#2328] by [@jaredoconnell])
 
 ### Changed
 
