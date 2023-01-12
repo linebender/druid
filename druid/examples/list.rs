@@ -74,7 +74,7 @@ fn ui_builder() -> impl Widget<AppData> {
     // Build a simple list
     lists.add_flex_child(
         Scroll::new(List::new(|| {
-            Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+            Label::new(|item: &u32, _env: &_| format!("List item #{item}"))
                 .align_vertical(UnitPoint::LEFT)
                 .padding(10.0)
                 .expand()
@@ -93,7 +93,7 @@ fn ui_builder() -> impl Widget<AppData> {
                 Flex::row()
                     .with_child(
                         Label::new(|(_, item): &(Vector<u32>, u32), _env: &_| {
-                            format!("List item #{}", item)
+                            format!("List item #{item}")
                         })
                         .align_vertical(UnitPoint::LEFT),
                     )
@@ -132,7 +132,7 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_child(
             Scroll::new(
                 List::new(|| {
-                    Label::new(|item: &u32, _env: &_| format!("List item #{}", item))
+                    Label::new(|item: &u32, _env: &_| format!("List item #{item}"))
                         .padding(10.0)
                         .background(Color::rgb(0.5, 0.5, 0.0))
                         .fix_height(50.0)

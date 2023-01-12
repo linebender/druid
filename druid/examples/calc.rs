@@ -160,7 +160,7 @@ fn digit_button(digit: u8) -> impl Widget<CalcState> {
         }
     });
 
-    Label::new(format!("{}", digit))
+    Label::new(format!("{digit}"))
         .with_text_size(24.)
         .center()
         .background(painter)
