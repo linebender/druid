@@ -7,7 +7,7 @@ description = "Platform abstracting application shell used for druid toolkit."
 repository = "https://github.com/linebender/druid"
 readme = "README.md"
 categories = ["os::macos-apis", "os::windows-apis", "gui"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

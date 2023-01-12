@@ -601,7 +601,6 @@ impl WindowHandle {
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
-        use std::convert::TryFrom;
         let interval = deadline.duration_since(Instant::now()).as_millis();
         let interval = match i32::try_from(interval) {
             Ok(iv) => iv,
