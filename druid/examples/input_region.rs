@@ -3,6 +3,13 @@ use druid::widget::prelude::*;
 use druid::{AppLauncher, Lens, Rect, WidgetPod, WidgetExt, Point, Color, Region, WindowDesc};
 
 const EXAMPLE_BORDER_SIZE: f64 = 3.0;
+const INFO_TEXT: &str = "Only this text and the borders can be interacted with.
+You can click through the other parts
+
+This demo is useful for observing the limitations of each OS.
+- Windows is well supported. Observation: When the titlebar is enabled and the input region is set, the border becomes invisible. Always on top is supported.
+- Mac OS has good support, but doesn't allow toggling titlebar after the Window is opened. Also, it just makes transparent regions transparent automatically when set to have no titlebar. Always on top is supported.
+- Linux support varies by desktop environment and display server. Wayland is much more restrictive, with it not allowing things like setting position and always on top. Fortunately desktop environments often allow you to manually set window decoration and always on top on the Window itself";
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
@@ -18,7 +25,7 @@ struct InputRegionExampleWidget {
 
 impl InputRegionExampleWidget {
     pub fn new() -> Self {
-        let info_label = Label::new("Only this text and the borders can be interacted with. You can click through the other parts")
+        let info_label = Label::new(INFO_TEXT)
             .with_line_break_mode(LineBreaking::WordWrap)
             .padding(20.0)
             .background(Color::rgba(0.2, 0.2, 0.2, 1.0));
@@ -73,18 +80,18 @@ impl Widget<AppState> for InputRegionExampleWidget {
 
     fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, data: &AppState, env: &druid::Env) -> druid::Size {
         let mut interactable_area = Region::EMPTY;
-        let half_size_bc = BoxConstraints::new(
+        let smaller_bc = BoxConstraints::new(
             Size::new(0.0, 0.0),
-            Size::new(bc.max().width / 2.0, bc.max().height / 2.0)
+            Size::new(bc.max().width - 100.0, bc.max().height - 100.0)
         );
         let full_bc = BoxConstraints::new(
             Size::new(0.0, 0.0),
             bc.max()
         );
-        let _label_size = self.info_label.layout(ctx, &half_size_bc, data, env);
-        let _controls_size = self.controls.layout(ctx, &full_bc, data, env);
+        let _label_size = self.info_label.layout(ctx, &smaller_bc, data, env);
+        let controls_size = self.controls.layout(ctx, &full_bc, data, env);
 
-        let text_origin_point = Point::new(bc.max().width / 4.0, bc.max().width / 4.0);
+        let text_origin_point = Point::new(50.0, 50.0 + controls_size.height);
         self.info_label.set_origin(ctx, text_origin_point);
         let controls_origin_point = Point::new(EXAMPLE_BORDER_SIZE, EXAMPLE_BORDER_SIZE);
         self.controls.set_origin(ctx, controls_origin_point);
@@ -126,7 +133,7 @@ impl Widget<AppState> for InputRegionExampleWidget {
 fn main() {
     let main_window = WindowDesc::new(InputRegionExampleWidget::new())
         .title("Input Region Demo")
-        .window_size((600.0, 300.0))
+        .window_size((750.0, 500.0))
         // Disable the titlebar since it breaks the desired effect on mac.
         // It can be turned on with the button, but not on mac.
         // A lot of apps that will use the interaction features will turn this off
