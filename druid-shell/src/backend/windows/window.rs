@@ -730,11 +730,26 @@ impl MyWndProc {
                     unsafe {
                         match region {
                             Some(region) => {
-                                let scale = self.scale();
+                                let (x_offset, y_offset, client_width) = self.get_client_area_specs(hwnd);
                                 let win32_region: HRGN = CreateRectRgn(0, 0, 0, 0);
+
+                                // Add header if there is a frame
+                                if self.has_titlebar() {
+                                    let region_tmp = win32_region.clone();
+                                    let header_rect = CreateRectRgn(0, 0,
+                                        client_width, y_offset);
+                                    CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
+                                }
+
+                                let scale = self.scale();
                                 for rect in region.rects() {
                                     // Create the region as win32 expects it. Round down for low coords and up for high coords
-                                    let region_part = CreateRectRgn((rect.x0 * scale.x()).floor() as i32, (rect.y0 * scale.y()).floor() as i32, (rect.x1 * scale.x()).ceil() as i32, (rect.y1 * scale.y()).ceil() as i32);
+                                    let region_part = CreateRectRgn(
+                                        (rect.x0 * scale.x()).floor() as i32 + x_offset,
+                                        (rect.y0 * scale.y()).floor() as i32 + y_offset,
+                                        (rect.x1 * scale.x()).ceil() as i32 + x_offset,
+                                        (rect.y1 * scale.y()).ceil() as i32 + y_offset
+                                    );
                                     let region_tmp = win32_region.clone();
                                     let result = CombineRgn(win32_region, region_part, region_tmp, RGN_OR /* area from both */);
                                     if result == ERROR {
@@ -754,6 +769,38 @@ impl MyWndProc {
             }
         } else {
             warn!("Could not get HWND");
+        }
+    }
+
+    // Returns the top offset, and the side offsets, window width
+    fn get_client_area_specs(&self, hwnd: HWND) -> (i32, i32, i32) {
+        unsafe {
+            // First get window rect
+            // Then get client rect
+            // Convert to same units, then subtract
+
+            let mut window_rect = RECT { left: 0, top: 0, right: 0, bottom: 0, };
+            if GetWindowRect(hwnd, &mut window_rect) == 0 {
+                warn!(
+                    "failed to get window rect: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            };
+            let mut client_rect = RECT { left: 0, right: 0, top: 0, bottom: 0 };
+            if GetClientRect(hwnd, &mut client_rect) == FALSE {
+                warn!(
+                    "failed to get client rect: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            }
+            // Convert client rect to screen coords to match the window rect
+            let mut client_screen_offset_point = POINT {x: 0, y: 0};
+            ClientToScreen(hwnd, &mut client_screen_offset_point);
+            let top_offset = client_screen_offset_point.y - window_rect.top;
+
+            let left_offset = client_screen_offset_point.x - window_rect.left;
+
+            (left_offset, top_offset, client_rect.right)
         }
     }
 
