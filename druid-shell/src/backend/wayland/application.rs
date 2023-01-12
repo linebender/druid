@@ -38,10 +38,10 @@ use wayland_client::{
     protocol::{
         wl_compositor::WlCompositor,
         wl_pointer::WlPointer,
+        wl_region::WlRegion,
         wl_seat::{self, WlSeat},
         wl_shm::{self, WlShm},
         wl_surface::WlSurface,
-        wl_region::WlRegion,
     },
 };
 use wayland_cursor::CursorTheme;

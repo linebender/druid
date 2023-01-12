@@ -1,6 +1,6 @@
-use druid::widget::{Widget, Flex, Label, Button, Container, LineBreaking};
 use druid::widget::prelude::*;
-use druid::{AppLauncher, Lens, Rect, WidgetPod, WidgetExt, Point, Color, Region, WindowDesc};
+use druid::widget::{Button, Container, Flex, Label, LineBreaking, Widget};
+use druid::{AppLauncher, Color, Lens, Point, Rect, Region, WidgetExt, WidgetPod, WindowDesc};
 
 const EXAMPLE_BORDER_SIZE: f64 = 3.0;
 const INFO_TEXT: &str = "Only this text and the borders can be interacted with.
@@ -63,31 +63,52 @@ impl InputRegionExampleWidget {
 }
 
 impl Widget<AppState> for InputRegionExampleWidget {
-    fn event(&mut self, ctx: &mut druid::EventCtx, event: &druid::Event, data: &mut AppState, env: &druid::Env) {
+    fn event(
+        &mut self,
+        ctx: &mut druid::EventCtx,
+        event: &druid::Event,
+        data: &mut AppState,
+        env: &druid::Env,
+    ) {
         self.info_label.event(ctx, event, data, env);
         self.controls.event(ctx, event, data, env);
     }
 
-    fn lifecycle(&mut self, ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &AppState, env: &druid::Env) {
+    fn lifecycle(
+        &mut self,
+        ctx: &mut druid::LifeCycleCtx,
+        event: &druid::LifeCycle,
+        data: &AppState,
+        env: &druid::Env,
+    ) {
         self.info_label.lifecycle(ctx, event, data, env);
         self.controls.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut druid::UpdateCtx, _old_data: &AppState, data: &AppState, env: &druid::Env) {
+    fn update(
+        &mut self,
+        ctx: &mut druid::UpdateCtx,
+        _old_data: &AppState,
+        data: &AppState,
+        env: &druid::Env,
+    ) {
         self.info_label.update(ctx, data, env);
         self.controls.update(ctx, data, env);
     }
 
-    fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, data: &AppState, env: &druid::Env) -> druid::Size {
+    fn layout(
+        &mut self,
+        ctx: &mut druid::LayoutCtx,
+        bc: &druid::BoxConstraints,
+        data: &AppState,
+        env: &druid::Env,
+    ) -> druid::Size {
         let mut interactable_area = Region::EMPTY;
         let smaller_bc = BoxConstraints::new(
             Size::new(0.0, 0.0),
-            Size::new(bc.max().width - 100.0, bc.max().height - 100.0)
+            Size::new(bc.max().width - 100.0, bc.max().height - 100.0),
         );
-        let full_bc = BoxConstraints::new(
-            Size::new(0.0, 0.0),
-            bc.max()
-        );
+        let full_bc = BoxConstraints::new(Size::new(0.0, 0.0), bc.max());
         let _label_size = self.info_label.layout(ctx, &smaller_bc, data, env);
         let controls_size = self.controls.layout(ctx, &full_bc, data, env);
 
@@ -98,8 +119,18 @@ impl Widget<AppState> for InputRegionExampleWidget {
 
         // Add side rects to clarify the dimensions of the window.
         let left_rect = Rect::new(0.0, 0.0, EXAMPLE_BORDER_SIZE, bc.max().height);
-        let right_rect = Rect::new(bc.max().width - EXAMPLE_BORDER_SIZE, 0.0, bc.max().width, bc.max().height);
-        let bottom_rect = Rect::new(0.0, bc.max().height - EXAMPLE_BORDER_SIZE, bc.max().width, bc.max().height);
+        let right_rect = Rect::new(
+            bc.max().width - EXAMPLE_BORDER_SIZE,
+            0.0,
+            bc.max().width,
+            bc.max().height,
+        );
+        let bottom_rect = Rect::new(
+            0.0,
+            bc.max().height - EXAMPLE_BORDER_SIZE,
+            bc.max().width,
+            bc.max().height,
+        );
         interactable_area.add_rect(left_rect);
         interactable_area.add_rect(right_rect);
         interactable_area.add_rect(bottom_rect);
@@ -118,8 +149,18 @@ impl Widget<AppState> for InputRegionExampleWidget {
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &AppState, env: &druid::Env) {
         let window_area = ctx.size();
         let left_rect = Rect::new(0.0, 0.0, EXAMPLE_BORDER_SIZE, window_area.height);
-        let right_rect = Rect::new(window_area.width - 3.0, 0.0, window_area.width, window_area.height);
-        let bottom_rect = Rect::new(0.0, window_area.height - EXAMPLE_BORDER_SIZE, window_area.width, window_area.height);
+        let right_rect = Rect::new(
+            window_area.width - EXAMPLE_BORDER_SIZE,
+            0.0,
+            window_area.width,
+            window_area.height,
+        );
+        let bottom_rect = Rect::new(
+            0.0,
+            window_area.height - EXAMPLE_BORDER_SIZE,
+            window_area.width,
+            window_area.height,
+        );
 
         ctx.fill(left_rect, &Color::rgba(1.0, 0., 0., 0.7));
         ctx.fill(right_rect, &Color::rgba(1.0, 0., 0., 0.7));
@@ -128,7 +169,6 @@ impl Widget<AppState> for InputRegionExampleWidget {
         self.controls.paint(ctx, data, env);
     }
 }
-
 
 fn main() {
     let main_window = WindowDesc::new(InputRegionExampleWidget::new())

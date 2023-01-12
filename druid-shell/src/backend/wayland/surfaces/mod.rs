@@ -13,15 +13,15 @@
 // limitations under the License.
 
 use wayland_client::protocol::wl_shm::WlShm;
-use wayland_client::{self as wlc, protocol::wl_surface::WlSurface, protocol::wl_region::WlRegion};
+use wayland_client::{self as wlc, protocol::wl_region::WlRegion, protocol::wl_surface::WlSurface};
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
 
-use crate::{kurbo, Region};
 use crate::Scale;
 use crate::TextFieldToken;
+use crate::{kurbo, Region};
 
 use super::error;
 use super::outputs;

@@ -1111,12 +1111,15 @@ impl WindowHandle {
                         );
                         let union_result = cairo_region.union_rectangle(&cairo_rect);
                         if union_result.is_err() {
-                            warn!("Unable to add rectangle to GTK region: {:?}", union_result.err());
+                            warn!(
+                                "Unable to add rectangle to GTK region: {:?}",
+                                union_result.err()
+                            );
                         }
                     }
                     let some_region = Some(&cairo_region);
                     state.window.input_shape_combine_region(some_region);
-                },
+                }
                 None => {
                     state.window.input_shape_combine_region(None);
                 }

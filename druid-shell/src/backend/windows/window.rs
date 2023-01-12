@@ -466,11 +466,7 @@ fn set_ex_style(hwnd: HWND, always_on_top: bool) {
             0,
             0,
             0,
-            SWP_SHOWWINDOW
-                | SWP_NOMOVE
-                | SWP_FRAMECHANGED
-                | SWP_NOSIZE
-                | SWP_NOACTIVATE,
+            SWP_SHOWWINDOW | SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOACTIVATE,
         ) == 0
         {
             warn!(
@@ -730,14 +726,14 @@ impl MyWndProc {
                     unsafe {
                         match region {
                             Some(region) => {
-                                let (x_offset, y_offset, client_width) = self.get_client_area_specs(hwnd);
+                                let (x_offset, y_offset, client_width) =
+                                    self.get_client_area_specs(hwnd);
                                 let win32_region: HRGN = CreateRectRgn(0, 0, 0, 0);
 
                                 // Add header if there is a frame
                                 if self.has_titlebar() {
                                     let region_tmp = win32_region.clone();
-                                    let header_rect = CreateRectRgn(0, 0,
-                                        client_width, y_offset);
+                                    let header_rect = CreateRectRgn(0, 0, client_width, y_offset);
                                     CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
                                 }
 
@@ -748,10 +744,15 @@ impl MyWndProc {
                                         (rect.x0 * scale.x()).floor() as i32 + x_offset,
                                         (rect.y0 * scale.y()).floor() as i32 + y_offset,
                                         (rect.x1 * scale.x()).ceil() as i32 + x_offset,
-                                        (rect.y1 * scale.y()).ceil() as i32 + y_offset
+                                        (rect.y1 * scale.y()).ceil() as i32 + y_offset,
                                     );
                                     let region_tmp = win32_region.clone();
-                                    let result = CombineRgn(win32_region, region_part, region_tmp, RGN_OR /* area from both */);
+                                    let result = CombineRgn(
+                                        win32_region,
+                                        region_part,
+                                        region_tmp,
+                                        RGN_OR, /* area from both */
+                                    );
                                     if result == ERROR {
                                         warn!("Error combining regions in SetRegion deferred op");
                                     }
@@ -765,7 +766,7 @@ impl MyWndProc {
                             }
                         }
                     }
-                },
+                }
             }
         } else {
             warn!("Could not get HWND");
@@ -779,14 +780,24 @@ impl MyWndProc {
             // Then get client rect
             // Convert to same units, then subtract
 
-            let mut window_rect = RECT { left: 0, top: 0, right: 0, bottom: 0, };
+            let mut window_rect = RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
             if GetWindowRect(hwnd, &mut window_rect) == 0 {
                 warn!(
                     "failed to get window rect: {}",
                     Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                 );
             };
-            let mut client_rect = RECT { left: 0, right: 0, top: 0, bottom: 0 };
+            let mut client_rect = RECT {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+            };
             if GetClientRect(hwnd, &mut client_rect) == FALSE {
                 warn!(
                     "failed to get client rect: {}",
@@ -794,7 +805,7 @@ impl MyWndProc {
                 );
             }
             // Convert client rect to screen coords to match the window rect
-            let mut client_screen_offset_point = POINT {x: 0, y: 0};
+            let mut client_screen_offset_point = POINT { x: 0, y: 0 };
             ClientToScreen(hwnd, &mut client_screen_offset_point);
             let top_offset = client_screen_offset_point.y - window_rect.top;
 
@@ -1569,7 +1580,7 @@ impl WindowBuilder {
                 handle_titlebar: Cell::new(false),
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
-                window_level: window_level,
+                window_level,
                 is_always_on_top: Cell::new(self.always_on_top),
             };
             let win = Rc::new(window);

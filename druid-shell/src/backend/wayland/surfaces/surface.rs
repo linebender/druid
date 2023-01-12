@@ -345,11 +345,18 @@ impl Data {
 
                 let detached_region: WlRegion = wl_region.detach();
                 for rect in region.rects() {
-                    detached_region.add(rect.x0 as i32, rect.y0 as i32, rect.width().ceil() as i32, rect.height().ceil() as i32);
+                    detached_region.add(
+                        rect.x0 as i32,
+                        rect.y0 as i32,
+                        rect.width().ceil() as i32,
+                        rect.height().ceil() as i32,
+                    );
                 }
-                self.wl_surface.borrow().set_input_region(Some(&detached_region));
+                self.wl_surface
+                    .borrow()
+                    .set_input_region(Some(&detached_region));
                 detached_region.destroy();
-            },
+            }
             None => {
                 // This, for some reason, causes a shift in the cursor.
                 self.wl_surface.borrow().set_input_region(None);
