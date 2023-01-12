@@ -9,7 +9,7 @@ You can click through the other parts
 This demo is useful for observing the limitations of each OS.
 - Windows is well supported. Observation: When the titlebar is enabled and the input region is set, the border becomes invisible. Always on top is supported.
 - Mac OS has good support, but doesn't allow toggling titlebar after the Window is opened. Also, it just makes transparent regions transparent automatically when set to have no titlebar. Always on top is supported.
-- Linux support varies by desktop environment and display server. Wayland is much more restrictive, with it not allowing things like setting position and always on top. Fortunately desktop environments often allow you to manually set window decoration and always on top on the Window itself";
+- Linux support varies by desktop environment and display server. Wayland is much more restrictive, with it not allowing things like setting position and always on top. Fortunately desktop environments often allow you to manually set window decoration and always on top on the Window itself. The offsets can differ between desktop environments, and sometimes you need to open the window with the titlebar, then turn it off, for it to work.";
 
 #[derive(Clone, Data, Lens)]
 struct AppState {
