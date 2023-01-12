@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Data trait - Druid</title>
+        <title>Overview - Druid</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="chapter-item expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="chapter-item expanded "><a href="data.html" class="active"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="chapter-item expanded "><a href="resolution_independence.html"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="chapter-item expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="chapter-item expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html" class="active"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -163,102 +163,39 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#model-data-and-the-data-trait" id="model-data-and-the-data-trait">Model data and the <code>Data</code> trait</a></h1>
-<p>The heart of a Druid application is your application model. Your model drives
-your UI. When you mutate your model, Druid compares the old and new version,
-and propagates the change to the components ('widgets') of your application that
-are affected by the change.</p>
-<p>For this to work, your model must implement the <code>Clone</code> and <code>Data</code> traits. It
-is important that your model be cheap to clone; we encourage the use of
-reference counted pointers to allow cheap cloning of more expensive types. <code>Arc</code>
-and <code>Rc</code> have blanket <code>Data</code> impls, so if you have a type that does not
-implement <code>Data</code>, you can always just wrap it in one of those smart pointers.</p>
-<p>The <code>Data</code> trait has a single method:</p>
-<pre><code class="language-rust no_run noplaypen">    /// Determine whether two values are the same.
-    ///
-    /// This is intended to always be a fast operation. If it returns
-    /// `true`, the two values *must* be equal, but two equal values
-    /// need not be considered the same here, as will often be the
-    /// case when two copies are separately allocated.
-    ///
-    /// Note that &quot;equal&quot; above has a slightly different meaning than
-    /// `PartialEq`, for example two floating point NaN values should
-    /// be considered equal when they have the same bit representation.
-    fn same(&amp;self, other: &amp;Self) -&gt; bool;
-</code></pre>
-<h4><a class="header" href="#derive" id="derive">Derive</a></h4>
-<p><code>Data</code> can be derived. This is recursive; it requires <code>Data</code> to be implemented
-for all members. For 'C style' enums (enums where no variant has any fields)
-this also requires an implementation of <code>PartialEq</code>. <code>Data</code> is implemented for
-a number of <code>std</code> types, including all primitive types, <code>String</code>, <code>Arc</code>, <code>Rc</code>,
-as well as <code>Option</code>, <code>Result</code>, and various tuples whose members implement
-<code>Data</code>.</p>
-<p>Here is an example of using <code>Data</code> to implement a simple data model.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>use druid::Data;
-use std::sync::Arc;
-
-#[derive(Clone, Data)]
-/// The main model for a todo list application.
-struct TodoList {
-    items: Arc&lt;Vec&lt;TodoItem&gt;&gt;,
-}
-
-#[derive(Clone, Data)]
-/// A single todo item.
-struct TodoItem {
-    category: Category,
-    title: String,
-    note: Option&lt;String&gt;,
-    completed: bool,
-
-    // `Data` is implemented for any `Arc`.
-    due_date: Option&lt;Arc&lt;DateTime&gt;&gt;,
-
-    // You can specify a custom comparison fn
-    // (anything with the signature (&amp;T, &amp;T) -&gt; bool).
-    #[data(same_fn = &quot;PartialEq::eq&quot;)]
-    added_date: DateTime,
-
-    // You can specify that a field should
-    // be skipped when computing same-ness
-    #[data(ignore)]
-    debug_timestamp: usize,
-}
-
-#[derive(Clone, Data, PartialEq)]
-/// The three types of tasks in the world.
-enum Category {
-    Work,
-    Play,
-    Revolution,
-}
-<span class="boring">}
-</span></code></pre></pre>
-<h4><a class="header" href="#collections" id="collections">Collections</a></h4>
-<p><code>Data</code> is expected to be cheap to clone and cheap to compare, which can cause
-issues with collection types. For this reason, <code>Data</code> is not implemented for
-<code>std</code> types like <code>Vec</code> or <code>HashMap</code>. This is not a huge issue, however; you can
-always put these types inside an <code>Rc</code> or an <code>Arc</code>, or if you're dealing with
-larger collections you can build Druid with the <code>im</code> feature, which brings in
-the [<code>im crate</code>], and adds a <code>Data</code> impl for the collections there. The <a href="https://docs.rs/im"><code>im</code>
-crate</a> is a collection of immutable data structures that act a lot like the <code>std</code>
-collections, but can be cloned efficiently.</p>
+                        <h1><a class="header" href="#druid" id="druid">Druid</a></h1>
+<p><strong>Note:</strong> Druid is being discontinued in favor of other projects based on the same general principles, such as <a href="https://github.com/linebender/xilem/">Xilem</a>.</p>
+<p>Druid is a framework for building simple graphical applications.</p>
+<p>Druid is composed of a number of related projects. <a href="https://docs.rs/druid-shell"><code>druid-shell</code></a> is a
+low-level library that provides a common abstraction for interacting with the
+current OS &amp; window manager. <a href="https://docs.rs/piet"><code>piet</code></a> is an abstraction for doing 2D graphics;
+<a href="https://docs.rs/kurbo"><code>kurbo</code></a> is a library for 2D geometry; and <a href="https://docs.rs/druid"><code>druid</code></a> itself is an opinionated set of
+high-level APIs for building cross-platform desktop applications.</p>
+<p>The framework is <em>data oriented</em>. It shares many ideas (and is directly inspired by)
+contemporary declarative UI frameworks such as <a href="https://flutter.dev">Flutter</a>, <a href="https://developer.android.com/jetpack/compose">Jetpack Compose</a>,
+and <a href="https://developer.apple.com/documentation/swiftui">SwiftUI</a>, while also attempting to be conceptually simple and largely
+<em>non-magical</em>. A programmer familiar with Rust should be able to understand how
+Druid works without special difficulty.</p>
+<h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
+<p>This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
+Rustup and Cargo. This tutorial will use stable Rust (v1.65.0 at the time of writing) and the latest
+released version of Druid (v0.8).</p>
+<h2><a class="header" href="#key-concepts" id="key-concepts">Key Concepts</a></h2>
+<ul>
+<li><strong><a href="./data.html">the <code>Data</code> trait</a></strong>: How you represent your application model.</li>
+<li><strong><a href="./widget.html">the <code>Widget</code> trait</a></strong>: How you represent your UI.</li>
+<li><strong><a href="./lens.html">the <code>Lens</code> trait</a></strong>: How you associate parts of your model with parts of
+your UI.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="get_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
-                            </a>
-                        
 
                         
-                            <a rel="next" href="widget.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="02_getting_started.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -270,13 +207,9 @@ collections, but can be cloned efficiently.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="get_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
-                    </a>
-                
 
                 
-                    <a rel="next" href="widget.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="02_getting_started.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

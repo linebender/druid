@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Resolution independence - Druid</title>
+        <title>Env - Druid</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="chapter-item expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="chapter-item expanded "><a href="resolution_independence.html" class="active"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="chapter-item expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="chapter-item expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html" class="active"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -163,75 +163,102 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
-<h2><a class="header" href="#what-is-a-pixel-anyway" id="what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
-<p>Pixel is short for <em>picture element</em> and although due to its popularity
-it has many meanings depending on context, when talking about pixels in the context of druid
-a pixel means always only one thing. It is <strong>the smallest configurable area of color
-that the underlying platform allows <code>druid-shell</code> to manipulate</strong>.</p>
-<p>The actual physical display might have a different resolution from what the platform knows or uses.
-Even if the display pixel resolution matches the platform resolution,
-the display itself can control even smaller elements than pixels - the sub-pixels.</p>
-<p>The shape of the physical pixel could be complex and definitely varies from display model to model.
-However for simplicity you can think of a pixel as a square which you can choose a color for.</p>
-<h2><a class="header" href="#display-pixel-density" id="display-pixel-density">Display pixel density</a></h2>
-<p>As technology advances the physical size of pixels is getting smaller and smaller.
-This allows display manufacturers to put more and more pixels into the same sized screen.
-The <strong>pixel densities of displays are increasing</strong>.</p>
-<p>There is also an <strong>increasing variety in the pixel density</strong> of the displays used by people.
-Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
-while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
-It might even be the same person on the same computer with a multi-display setup.</p>
-<h2><a class="header" href="#the-naive-old-school-approach-to-ui" id="the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
-<p>For a very long time UIs have been designed without thinking about pixel density at all.
-People tended to have displays with roughly similar pixel densities, so it all kind of
-worked most of the time. However <strong>it breaks down horribly</strong> in a modern world.
-The <em>200px * 200px</em> UI that looks decent on that <em>HD ready</em> display is barely visible
-on the <em>8K UHD</em> display. If you redesign it according to the <em>8K UHD</em> display then
-it won't even fit on the <em>HD ready</em> screen.</p>
-<h2><a class="header" href="#platform-specific-band-aids" id="platform-specific-band-aids">Platform specific band-aids</a></h2>
-<p>Some platforms have mitigations in place where that small <em>200px * 200px</em> UI
-will get scaled up by essentially <strong>taking a screenshot of it and enlarging the image.</strong>
-This will result in a blurry UI with diagonal and curved lines suffering the most.
-There is more hope with fonts where the vector information is still available to the platform,
-and instead of scaling up the image the text can be immediately drawn at the larger size.</p>
-<h2><a class="header" href="#a-better-solution" id="a-better-solution">A better solution</a></h2>
-<p>The application should draw everything it can with <strong>vector graphics</strong>,
-and have <strong>very large resolution image</strong> assets available where vectors aren't viable.
-Then at runtime the application should identify the display pixel density
-and resize everything accordingly. The vector graphics are easy to resize and
-the large image assets would be scaled down to the size that makes sense for the specific display.</p>
-<h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
-<p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
-Druid has expressive vector drawing capabilities that you should use whenever possible.
-Vector drawing is also used by the widgets that come included with druid.
-Handling different pixel densities is done at the <code>druid-shell</code> level already.
-In fact pixels mostly don't even enter the conversation at the <code>druid</code> level.
-The <code>druid</code> coordinate system is instead measured in <strong>display points</strong> (<strong>dp</strong>),
-e.g. you might say a widget has a width of <strong>100dp</strong>.
-<em>Display points</em> are conceptually similar to Microsoft's <em>device-independent pixels</em>,
-Google's <em>density-independent pixels</em>, Apple's <em>points</em>, and CSS's <em>pixel units</em>.</p>
-<p>You <strong>describe the UI using display points and then druid will automatically
-translate that into pixels</strong> based on the pixel density of the platform.
-Remember there might be multiple displays connected with different pixel densities,
-and your application might have multiple windows - with each window on a different display.
-It will all just work, because druid will adjust the actual pixel dimensions
-based on the display that the window is currently located on.</p>
-<h2><a class="header" href="#high-pixel-density-images-with-druid" id="high-pixel-density-images-with-druid">High pixel density images with druid</a></h2>
-<p><em>TODO: Write this section after it's more clear how this works and if its even solved.</em></p>
+                        <h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
+<p>The <a href="https://docs.rs/druid/latest/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
+and accessing state about your specific application, such as color schemes,
+localized strings, and other resources.</p>
+<p>The <code>Env</code> is created when the application is launched, and is passed down to all
+widgets. The <code>Env</code> may be modified at various points in the tree; values in the
+environment can be overridden with other values of the same type, but they can
+never be removed. If something exists in the <code>Env</code> at a given level of the tree,
+it will exist for everything 'below' that level; that is, for all children of that
+widget.</p>
+<h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
+<p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
+<code>Env</code> can only store a few types of things; these are represented by the
+<a href="https://docs.rs/druid/latest/druid/enum.Value.html"><code>Value</code></a> type, which looks like this:</p>
+<pre><code class="language-rust noplaypen">pub enum Value {
+    Point(Point),
+    Size(Size),
+    Rect(Rect),
+    Insets(Insets),
+    Color(Color),
+    Float(f64),
+    Bool(bool),
+    UnsignedInt(u64),
+    String(ArcStr),
+    Font(FontDescriptor),
+    RoundedRectRadii(RoundedRectRadii),
+    Other(Arc&lt;dyn Any + Send + Sync&gt;),
+}
+</code></pre>
+<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a> is
+a combination of a string identifier and a type.</p>
+<p>You can think of this as strict types, enforced at runtime. <strong>It is the programmer's responsibility to ensure that the key used to get a value has the same type as the one used to set it</strong>. The API is aggressive about checking for misuse, and many methods will panic if anything is amiss. In practice this shouldn't almost never happen if you follow these guidelines:</p>
+<ol>
+<li>
+<p><strong><code>Key</code>s should be <code>const</code>s with unique names.</strong> If you need to use a custom
+key, you should declare it as a <code>const</code>, and give it a unique name. By
+convention, you should namespace your keys using something like <a href="https://en.wikipedia.org/wiki/Reverse_domain_name_notation">reverse-DNS</a>
+notation, or even just prefixing them with the name of your app.</p>
+<pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new(&quot;height&quot;);
+const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);
+</code></pre>
+</li>
+<li>
+<p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
+that most keys are set when your application launches, using
+<a href="https://docs.rs/druid/latest/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
+cannot be deleted, although it can be overwritten.</p>
+</li>
+<li>
+<p><strong>Values can only be overwritten by values of the same type.</strong> If you have a
+<code>Key&lt;f64&gt;</code>, assuming that key has already been added to the <code>Env</code>, you cannot
+replace it with any other type.</p>
+</li>
+</ol>
+<p>Assuming these rules are followed, <code>Env</code> should just work.</p>
+<h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
+<p>Druid includes a <a href="https://docs.rs/druid/latest/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
+of widgets. This is a type that can be <em>either</em> a concrete instance of some
+type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
+<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;org.linebender.example.important-label-color&quot;);
+const RED: Color = Color::rgb8(0xFF, 0, 0);
+
+fn make_labels() {
+    let with_value = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(RED);
+    let with_key = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(IMPORTANT_LABEL_COLOR);
+}
+</code></pre>
+<h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
+<p>You may override values in the environment for a given widget (and all of its
+children) by using the <a href="https://docs.rs/druid/latest/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
+the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
+<pre><code class="language-rust noplaypen">fn scoped_label() {
+    let my_label = Label::&lt;()&gt;::new(&quot;Warning!&quot;).env_scope(|env, _| {
+        env.set(druid::theme::TEXT_COLOR, Color::BLACK);
+        env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
+    });
+}
+</code></pre>
+<h2><a class="header" href="#localization" id="localization">Localization</a></h2>
+<p><em>Localization is currently half-baked.</em></p>
+<p>The <code>Env</code> contains the localization resources for the current locale. A
+<a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
+calling its <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="env.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="05_lens.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="localization.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="07_resolution_independence.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -243,13 +270,13 @@ based on the display that the window is currently located on.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="env.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="05_lens.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="localization.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="07_resolution_independence.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

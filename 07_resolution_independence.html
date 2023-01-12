@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Get started with Druid - Druid</title>
+        <title>Resolution independence - Druid</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="chapter-item expanded "><a href="get_started.html" class="active"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="chapter-item expanded "><a href="resolution_independence.html"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="chapter-item expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="chapter-item expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html" class="active"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -163,94 +163,73 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
-<p><em>this is outdated, and should be replaced with a walkthrough of getting a simple
-app built and running</em>.</p>
-<p>This chapter will walk you through setting up a simple Druid application from start to finish.</p>
-<h2><a class="header" href="#set-up-a-druid-project" id="set-up-a-druid-project">Set up a Druid project</a></h2>
-<p>Setting up a project is a simple as creating a new Rust project;</p>
-<pre><code class="language-bash">&gt; cargo new druid-example
-</code></pre>
-<p>And then adding Druid as a dependency to Cargo.toml</p>
-<pre><code class="language-toml">[dependencies]
-druid = { git = &quot;https://github.com/linebender/druid.git&quot; }
-</code></pre>
-<p>To show a minimal window with a label replace <code>main.rs</code> with this;</p>
-<pre><code class="language-rust noplaypen">use druid::{AppLauncher, WindowDesc, Widget, PlatformError};
-use druid::widget::Label;
-
-fn build_ui() -&gt; impl Widget&lt;()&gt; {
-    Label::new(&quot;Hello world&quot;)
-}
-
-fn main() -&gt; Result&lt;(), PlatformError&gt; {
-    AppLauncher::with_window(WindowDesc::new(build_ui())).launch(())?;
-    Ok(())
-}
-</code></pre>
-<p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code>, and launch it. We use <code>build_ui</code> to create a tree of widgets to pass to our <code>WindowDesc</code>. For now this tree consists of one simple label widget.</p>
-<p>This is a very simple example application and it's missing some important pieces. We will add these in the coming few paragraphs.</p>
-<h2><a class="header" href="#draw-more-widgets" id="draw-more-widgets">Draw more widgets</a></h2>
-<p>The first thing we could do to make our example application more interesting is to draw more than one widget. Unfortunately <code>WindowDesc::new</code> expects a function that returns only one Widget. We also need a way to tell Druid how to lay-out our widgets.
-We solve both these problems by passing in a widget-tree with one single widget at the top. Widgets can have children and widgets higher up in the tree know how to lay-out their children. That way we describe a window as a widget-tree with layout containers as the branches and widgets as the leaves. Our <code>build_ui</code> function is then responsible for building this widget tree.</p>
-<p>To see how this works we will divide our window in four. We'll have two rows and two columns with a single label in each of the quadrants. We can lay-out our labels using the <code>Flex</code> widget.</p>
-<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
-    Flex::row()
-        .with_flex_child(
-            Flex::column()
-                .with_flex_child(Label::new(&quot;top left&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;bottom left&quot;), 1.0),
-            1.0)
-        .with_flex_child(
-            Flex::column()
-                .with_flex_child(Label::new(&quot;top right&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;bottom right&quot;), 1.0),
-            1.0)
-}
-</code></pre>
-<p>This looks nice but the labels on the left are drawn right against the window edge, so we needs some padding. Lets say we also want to center the two bottom labels. Unlike many other UI frameworks, widgets in Druid don't have padding or alignment properties themselves. Widgets are kept as simple as possible.</p>
-<p>Features like padding or alignment are implemented in separate widgets. To add padding you simply wrap the labels in a <code>Padding</code> widget. Centering widgets is done using the <code>Align</code> widget set to <code>centered</code>.</p>
-<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;()&gt; {
-    Padding::new(
-        10.0,
-        Flex::row()
-            .with_flex_child(
-                Flex::column()
-                    .with_flex_child(Label::new(&quot;top left&quot;), 1.0)
-                    .with_flex_child(Align::centered(Label::new(&quot;bottom left&quot;)), 1.0),
-                1.0)
-            .with_flex_child(
-                Flex::column()
-                    .with_flex_child(Label::new(&quot;top right&quot;), 1.0)
-                    .with_flex_child(Align::centered(Label::new(&quot;bottom right&quot;)), 1.0),
-                1.0))
-}
-</code></pre>
-<p>Do not forget to import the new widgets;</p>
-<pre><code class="language-rust noplaypen">use druid::widget::{Label, Flex, Padding, Align};
-</code></pre>
-<h2><a class="header" href="#application-state" id="application-state">Application state</a></h2>
-<p>We can display a window and draw and position widgets in it. Now it's time to find out how we can tie these widgets to
-the rest of our application. First lets see how we can display information from our application in the user interface.
-For this we need to define what our application's state looks like.</p>
-<p>...</p>
-<h2><a class="header" href="#handle-user-input" id="handle-user-input">Handle user input</a></h2>
-<p>...</p>
-<h2><a class="header" href="#putting-it-all-together" id="putting-it-all-together">Putting it all together</a></h2>
-<p>...</p>
+                        <h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
+<h2><a class="header" href="#what-is-a-pixel-anyway" id="what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
+<p>Pixel is short for <em>picture element</em> and although due to its popularity
+it has many meanings depending on context, when talking about pixels in the context of druid
+a pixel means always only one thing. It is <strong>the smallest configurable area of color
+that the underlying platform allows <code>druid-shell</code> to manipulate</strong>.</p>
+<p>The actual physical display might have a different resolution from what the platform knows or uses.
+Even if the display pixel resolution matches the platform resolution,
+the display itself can control even smaller elements than pixels - the sub-pixels.</p>
+<p>The shape of the physical pixel could be complex and definitely varies from display model to model.
+However for simplicity you can think of a pixel as a square which you can choose a color for.</p>
+<h2><a class="header" href="#display-pixel-density" id="display-pixel-density">Display pixel density</a></h2>
+<p>As technology advances the physical size of pixels is getting smaller and smaller.
+This allows display manufacturers to put more and more pixels into the same sized screen.
+The <strong>pixel densities of displays are increasing</strong>.</p>
+<p>There is also an <strong>increasing variety in the pixel density</strong> of the displays used by people.
+Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
+while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
+It might even be the same person on the same computer with a multi-display setup.</p>
+<h2><a class="header" href="#the-naive-old-school-approach-to-ui" id="the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
+<p>For a very long time UIs have been designed without thinking about pixel density at all.
+People tended to have displays with roughly similar pixel densities, so it all kind of
+worked most of the time. However <strong>it breaks down horribly</strong> in a modern world.
+The <em>200px * 200px</em> UI that looks decent on that <em>HD ready</em> display is barely visible
+on the <em>8K UHD</em> display. If you redesign it according to the <em>8K UHD</em> display then
+it won't even fit on the <em>HD ready</em> screen.</p>
+<h2><a class="header" href="#platform-specific-band-aids" id="platform-specific-band-aids">Platform specific band-aids</a></h2>
+<p>Some platforms have mitigations in place where that small <em>200px * 200px</em> UI
+will get scaled up by essentially <strong>taking a screenshot of it and enlarging the image.</strong>
+This will result in a blurry UI with diagonal and curved lines suffering the most.
+There is more hope with fonts where the vector information is still available to the platform,
+and instead of scaling up the image the text can be immediately drawn at the larger size.</p>
+<h2><a class="header" href="#a-better-solution" id="a-better-solution">A better solution</a></h2>
+<p>The application should draw everything it can with <strong>vector graphics</strong>,
+and have <strong>very large resolution image</strong> assets available where vectors aren't viable.
+Then at runtime the application should identify the display pixel density
+and resize everything accordingly. The vector graphics are easy to resize and
+the large image assets would be scaled down to the size that makes sense for the specific display.</p>
+<h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
+<p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
+Druid has expressive vector drawing capabilities that you should use whenever possible.
+Vector drawing is also used by the widgets that come included with druid.
+Handling different pixel densities is done at the <code>druid-shell</code> level already.
+In fact pixels mostly don't even enter the conversation at the <code>druid</code> level.
+The <code>druid</code> coordinate system is instead measured in <strong>display points</strong> (<strong>dp</strong>),
+e.g. you might say a widget has a width of <strong>100dp</strong>.
+<em>Display points</em> are conceptually similar to Microsoft's <em>device-independent pixels</em>,
+Google's <em>density-independent pixels</em>, Apple's <em>points</em>, and CSS's <em>pixel units</em>.</p>
+<p>You <strong>describe the UI using display points and then druid will automatically
+translate that into pixels</strong> based on the pixel density of the platform.
+Remember there might be multiple displays connected with different pixel densities,
+and your application might have multiple windows - with each window on a different display.
+It will all just work, because druid will adjust the actual pixel dimensions
+based on the display that the window is currently located on.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="setup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="06_env.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="data.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="08_widgets_in_depth.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -262,13 +241,13 @@ For this we need to define what our application's state looks like.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="setup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="06_env.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="data.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="08_widgets_in_depth.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

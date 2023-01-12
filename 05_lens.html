@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="chapter-item expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="lens.html" class="active"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="env.html"><strong aria-hidden="true">7.</strong> Env</a></li><li class="chapter-item expanded "><a href="resolution_independence.html"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="chapter-item expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="chapter-item expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html" class="active"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -164,11 +164,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#lenses-and-the-lens-trait" id="lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
-<p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es may seem complicated at first, but they are also very powerful, allowing you to write code that is reusable, concise, and understandable (once you understand <code>Lens</code>es themselves).</p>
+<p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es are a complex but powerful concept, that allow you to abstract over the notion of &quot;X owns an instance of Y&quot;.</p>
 <h2><a class="header" href="#fundamentals-definition-and-implementation" id="fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
-<p>Like Rust itself, lenses are one of those things that require effort up front to learn, but are very fun and effective to use once you understand them. This section represents the effort part of the equation. I promise if you stick with it you will reap the rewards.</p>
 <h3><a class="header" href="#definition" id="definition">Definition</a></h3>
-<p>Let's start with the definition of a <code>Lens</code>:</p>
+<p>Let's start with the (simplified) definition of a <code>Lens</code>:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -179,10 +178,9 @@
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>I've copied this definition from the <code>druid</code> source code, but then simplified it a little, by removing the return types, as they are not fundamental to the way lenses work.</p>
-<p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involve in the lens: the lens itself, <code>T</code> and <code>U</code>. The two type parameters represent the mismatch that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
+<p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involved in the lens: <code>Self</code> (the lens itself), <code>T</code> and <code>U</code>. The two type parameters represent the mismatch that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
 <h3><a class="header" href="#implementation" id="implementation">Implementation</a></h3>
-<p>Time for an example. Let's implement &amp; use <code>Lens</code> manually so we can see what's going on.</p>
+<p>As an example, let's write a manual implementation of the <code>Lens</code> trait:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -191,8 +189,8 @@
     another: String,
 }
 
-// Here the lens doesn't have any data, but there are cases where
-// it might, for example it might contain an index into a collection.
+// This lens doesn't have any data, because it will always map to the same field.
+// A lens that mapped to, say, an index in a collection, would need to store that index.
 struct InnerLens;
 
 // Our lens will apply functions that operate on a `String` to a `Container`.
@@ -207,11 +205,8 @@ impl Lens&lt;Container, String&gt; for InnerLens {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>This is a very simple case. All we need to do is project the function onto the field. Notice that this isn't the only valid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>. We made the choice how to transform <code>Container</code> into <code>String</code> when we implemented <code>Lens</code>.</p>
-<blockquote>
-<p>Side note: Actually we could project on to any string we have access to, including something in a global mutex, or a string that we create and discard in the lens. Lenses made like this are usually not what you want.</p>
-</blockquote>
-<p>You'll also notice that both methods take an immutable reference to <code>self</code>, even the <code>mut</code> variant. The lense itself should be thought of as a fixed thing that knows how to do the mapping. In the above case it contains no data, and will most likely not even be present in the final compiled/optimized code.</p>
+<p>The implementation is straightforward: it projects the given function onto the <code>inner</code> field of our struct. (Notice that this isn't the only valid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>).</p>
+<p>You'll also notice that both methods take an immutable reference to <code>self</code>, even the <code>mut</code> variant. The lense itself should be thought of as a fixed value that knows how to do the mapping. In the above case it contains no data, and will likely not even be present in the final compiled/optimized code.</p>
 <p>Now for a slightly more involved example</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -297,21 +292,8 @@ impl Lens&lt;Container2, Name&gt; for NameLens {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>Now in addition to almost free <code>Clone</code>s, we also have cheap incremental updates to the data itself. In the case of names, this isn't that important, but if the vector had <code>1_000_000_000</code> elements, we could still make changes in only <em>O(log(n))</em> time (in this case the difference between <code>1_000_000_000</code> and <code>30</code> - pretty big!).</p>
-<p>Right, now you understand how <code>Lens</code>es work. Congratulations, you've done the hardest bit! If you get lost later on, read this section again, and eventually it will all make sense.</p>
-<h3><a class="header" href="#bonus---the-actual-lens-definition" id="bonus---the-actual-lens-definition">Bonus - The actual <code>Lens</code> definition</a></h3>
-<p>The actual definition of <code>Lens</code> in <code>druid</code> allows the user to return values from the lens. This isn't necessary for the core functioning of the lens, but it is useful. Also, because the types <code>T</code> and <code>U</code> always appear behind pointers (<code>&amp;</code> and <code>&amp;mut</code>), we can relax the <code>Sized</code> requirement that is applied by default, meaning we can implement <code>Lens</code> for types like <code>[T]</code> (slice) and <code>str</code>.</p>
-<p>Here is the real definition for completeness:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub trait Lens&lt;T: ?Sized, U: ?Sized&gt; {
-    fn with&lt;V, F: FnOnce(&amp;U) -&gt; V&gt;(&amp;self, data: &amp;T, f: F) -&gt; V;
-
-    fn with_mut&lt;V, F: FnOnce(&amp;mut U) -&gt; V&gt;(&amp;self, data: &amp;mut T, f: F) -&gt; V;
-}
-<span class="boring">}
-</span></code></pre></pre>
+<p>Now in addition to almost free <code>Clone</code>s, we also have cheap incremental updates to the data itself. That means your UI won't get slowdowns if your data structure gets very large (eg a list of entries in a database).</p>
+<p>Hopefully, this makes sense to you. This was a technical overview of lenses as generic data structures. The next section will cover how lenses are integrated in Druid in more detail.</p>
 <h2><a class="header" href="#lenses-in-druid" id="lenses-in-druid">Lenses in Druid</a></h2>
 <p>Now on to the more fun bit: how we can use <code>Lens</code>es to get all those lovely qualities we talked about in the introduction. What you'll notice in this section is that we rarely have to build lenses ourself: we can often get what we want using the <code>Lens</code> proc macro, or through the functions in <code>LensExt</code>.</p>
 <h3><a class="header" href="#deriving-lenses" id="deriving-lenses">Deriving lenses</a></h3>
@@ -370,50 +352,26 @@ struct Inner {
 let composed_lens = Outer::inner.then(Inner::text);
 <span class="boring">}
 </span></code></pre></pre>
-<blockquote>
-<p>Side note: Because unlike Haskell, Rust has all the type information during monomorphisation, it can inline all these functions and the extra cost of having 2 lens functions disappears, leaving what you would have written by hand. When you're waiting for Rust's infamously long compilations to finish, know that you're waiting for a potentially significant run-time benefit in exchange.</p>
-</blockquote>
 <p><code>LensExt</code> contains a few more useful methods for handling things like negating a boolean, or auto-<code>Deref</code>ing a value.</p>
 <p>There are also 3 special structs in <code>druid::lens</code>: <code>Constant</code>, <code>Identity</code> and <code>Unit</code>. <code>Constant</code> is a lens that always returns the same value, and always discards any changes, while <code>Identity</code> is a lens that does nothing. You might say &quot;what is the point of a lens that does nothing&quot;, which would be a fair question. Well, there are some places where a lens is required, and having an identity allows the user to say act as if there was no lens. It's also used to begin a composition chain using the combinators like <code>then</code>. <code>Unit</code> is a special case of <code>Constant</code> where the constant in question is <code>()</code>.</p>
-<blockquote>
-<p>Side note: Because <code>()</code> only has 1 value, it does actually respect mutations. It's just that mutations always result in the same value again (<code>()</code>).</p>
-</blockquote>
 <h3><a class="header" href="#the-lens-macro" id="the-lens-macro">The <code>lens</code> macro</a></h3>
 <p>Finally, there is a macro for constructing lenses on the fly. It allows you to lens into fields of a struct you don't control (so you can't derive <code>Lens</code> for it), it also allows lensing into tuples and tuple structs, and lastly it will create index lenses into slices.</p>
 <h3><a class="header" href="#wrapping-up" id="wrapping-up">Wrapping up</a></h3>
-<p>Whew, that was quite complicated. Hopefully now you have a solid understanding of the problem that lenses solve, how they solve it, and how to use them effectively. Now you have the ability to relate your application data to widget data, allowing you to use reusable widgets in any configuration you want. If any parts of this page are confusing, please open an issue on the issue tracker or mention it on zulip, and we will see if we can improve the docs (and clear up any misunderstandings you might have).</p>
-<h3><a class="header" href="#bonus---mapping-between-complex-structs-automatically" id="bonus---mapping-between-complex-structs-automatically">Bonus - mapping between complex structs automatically</a></h3>
-<p>Way back in the first section, we discussed lenses between the following:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>#[derive(Lens)]
-struct Container {
-    first_name: Rc&lt;str&gt;,
-    last_name: Rc&lt;str&gt;,
-    age: u16,
-}
-
-struct Name {
-    first: Rc&lt;str&gt;,
-    last: Rc&lt;str&gt;,
-}
-<span class="boring">}
-</span></code></pre></pre>
-<p>We showed that you can construct a lens from <code>Container</code> to <code>Name</code>, but it was a bit involved and required knowledge of the inner workings of <code>Lens</code>, something you probably don't want to think about. The crate <code>druid-lens-compose</code> is an experiment to allow for building a lens to a struct out of lenses to its fields. It's not well documented, but usage is fairly simple: derive the macro for the inner struct you want to lens to, run <code>cargo doc</code>, and look at the signature of the generated method/build struct. We'd be interested to hear if you found it useful, so please drop by the zulip and let us know!</p>
+<p>Whew, that was quite complicated. Hopefully now you have a solid understanding of the problem that lenses solve, how they solve it, and how to use them effectively.</p>
+<p>If any parts of this page are confusing, please open an issue on the issue tracker or mention it on zulip, and we will see if we can improve the docs (and clear up any misunderstandings you might have).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="widget.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="04_widget.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="env.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="06_env.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -425,13 +383,13 @@ struct Name {
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="widget.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="04_widget.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="env.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="06_env.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

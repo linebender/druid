@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Env - Druid</title>
+        <title>Widget trait - Druid</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="setup.html"><strong aria-hidden="true">2.</strong> Set up Druid</a></li><li class="chapter-item expanded "><a href="get_started.html"><strong aria-hidden="true">3.</strong> Get started with Druid</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="widget.html"><strong aria-hidden="true">5.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="lens.html"><strong aria-hidden="true">6.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="env.html" class="active"><strong aria-hidden="true">7.</strong> Env</a></li><li class="chapter-item expanded "><a href="resolution_independence.html"><strong aria-hidden="true">8.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="localization.html"><strong aria-hidden="true">9.</strong> Localization (TODO)</a></li><li class="chapter-item expanded "><a href="command.html"><strong aria-hidden="true">10.</strong> Command (TODO)</a></li><li class="chapter-item expanded "><a href="custom_widgets.html"><strong aria-hidden="true">11.</strong> Widgets in depth (TODO)</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="more_information.html"><strong aria-hidden="true">12.</strong> More information</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html" class="active"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -163,109 +163,137 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
-<p>The <a href="https://docs.rs/druid/0.7.0/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
-and accessing state about your specific application, such as color schemes,
-localized strings, and other resources.</p>
-<p>The <code>Env</code> is created when the application is launched, and is passed down to all
-widgets. The <code>Env</code> may be modified at various points in the tree; values in the
-environment can be overridden with other values of the same type, but they can
-never be removed. If something exists in the <code>Env</code> at a given level of the tree,
-it will exist for everything 'below' that level; that is, for all children of that
-widget.</p>
-<h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
-<p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
-<code>Env</code> can only store a few types of things; these are represented by the
-<a href="https://docs.rs/druid/0.7.0/druid/struct.Value.html"><code>Value</code></a> type, which looks like this:</p>
-<pre><code class="language-rust noplaypen">pub enum Value {
-    Point(Point),
-    Size(Size),
-    Rect(Rect),
-    Insets(Insets),
-    Color(Color),
-    Float(f64),
-    Bool(bool),
-    UnsignedInt(u64),
-    String(ArcStr),
-    Font(FontDescriptor),
-    RoundedRectRadii(RoundedRectRadii),
-    Other(Arc&lt;dyn Any + Send + Sync&gt;),
-}
-</code></pre>
-<p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/0.7.0/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/0.7.0/druid/struct.Key.html"><code>Key</code></a> is
-a combination of a string identifier and a type.</p>
-<p>You can think of this as strict types, enforced at runtime. This is less scary
-than it sounds, assuming the user follows a few simple guidelines. That said, <strong>It is the
-programmer's responsibility to ensure that the environment is used correctly</strong>.
-The API is aggressive about checking for misuse, and many methods will panic if
-anything is amiss. In practice this should be easy to avoid, by following a few
-simple guidelines.</p>
-<ol>
-<li>
-<p><strong><code>Key</code>s should be <code>const</code>s with unique names.</strong> If you need to use a custom
-key, you should declare it as a <code>const</code>, and give it a unique name. By
-convention, you should namespace your keys using something like <a href="https://en.wikipedia.org/wiki/Reverse_domain_name_notation">reverse-DNS</a>
-notation, or even just prefixing them with the name of your app.</p>
-<pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new(&quot;height&quot;);
-const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);
-</code></pre>
-</li>
-<li>
-<p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
-that most keys are set when your application launches, using
-<a href="https://docs.rs/druid/0.7.0/druid/struct.AppLauncher.html#method.configure_env"><code>AppLauncher::configure_env</code></a>. Once a key has been added to the <code>Env</code>, it
-cannot be deleted, although it can be overwritten.</p>
-</li>
-<li>
-<p><strong>Values can only be overwritten by values of the same type.</strong> If you have a
-<code>Key&lt;f64&gt;</code>, assuming that key has already been added to the <code>Env</code>, you cannot
-replace it with any other type.</p>
-</li>
-</ol>
-<p>Assuming these rules are followed, <code>Env</code> should just work.</p>
-<h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
-<p>Druid includes a <a href="https://docs.rs/druid/0.7.0/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
-of widgets. This is a type that can be <em>either</em> a concrete instance of some
-type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
-<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;org.linebender.example.important-label-color&quot;);
-const RED: Color = Color::rgb8(0xFF, 0, 0);
+                        <h1><a class="header" href="#widgets-and-the-widget-trait" id="widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
+<p>The <code>Widget</code> trait represents components of your UI. Druid includes a set of
+built-in widgets, and you can also write your own. You combine the built-in
+and custom widgets to create a <em>widget tree</em>; you will start with some single
+<em>root widget</em>, which will (generally) have children, which may themselves have
+children, and so on. <code>Widget</code> has a generic parameter <code>T</code> that represents
+the <a href="./data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
+may be entirely agnostic about what sort of <code>Data</code> they encounter, while other
+widgets (such as a slider) may expect a single type (such as <code>f64</code>).</p>
+<blockquote>
+<p><strong>Note</strong>: For more information on how different parts of your <a href="./data.html"><code>Data</code></a> are exposed
+to different widgets, see <a href="./lens.html"><code>Lens</code></a>.</p>
+</blockquote>
+<p>At a high level, Druid works like this:</p>
+<ul>
+<li><strong>event</strong>: an <code>Event</code> arrives from the operating system, such as a key press,
+a mouse movement, or a timer firing. This event is delivered to your root
+widget's <code>event</code> method. This method is provided <strong>mutable</strong> access to your
+application model; this is the only place where your model can change. Depending
+on the type of <code>Event</code> and the implementation of your <code>event</code> method, this
+event is then delivered recursively down the tree until it is handled.</li>
+<li><strong>update</strong>: After this call returns, the framework checks to see if the data was mutated.
+If so, it calls your root widget's <code>update</code> method, passing in both the new
+data as well as the previous data. Your widget can then update any internal
+state (data that the widget uses that is not part of the application model,
+such as appearance data) and can request a <code>layout</code> or a <code>paint</code> call if
+its appearance is no longer valid.</li>
+<li>After <code>update</code> returns, the framework checks to see if any widgets in a
+given window have indicated that they need layout or paint. If so, the
+framework will call the following methods:</li>
+<li><strong>layout</strong>: This is where the framework determines where to position each
+widget on the screen. Druid uses a layout system heavily inspired by Flutter's
+<a href="https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html">box layout model</a>: widgets are passed constraints, in the form of a minimum
+and a maximum allowed size, and they return a size in that range.</li>
+<li><strong>paint</strong>: After <code>layout</code>, the framework calls your widget's <code>paint</code> method.
+This is where your widget draws itself, using a familiar imperative 2D graphics
+API.</li>
+<li>In addition to these four methods, there is also <strong>lifecycle</strong>, which is
+called in response to various changes to framework state; it is not called
+predictably during event handling, but only when extra information (such
+as if a widget has gained focus) happens as a consequence of other events.</li>
+</ul>
+<p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
+widgets</a>.</p>
+<h2><a class="header" href="#modularity-and-composition" id="modularity-and-composition">Modularity and composition</a></h2>
+<p>Widgets are intended to be modular and composable, not monolithic. For instance,
+widgets generally do not control their own alignment or padding; if you have
+a label, and you would like it to have 8dp of horizontal padding and 4dp of
+vertical padding, you can just do,</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Label, Padding};
 
-fn make_labels() {
-    let with_value = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(RED);
-    let with_key = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(IMPORTANT_LABEL_COLOR);
+fn padded_label() {
+    let label: Label&lt;()&gt; = Label::new(&quot;Humour me&quot;);
+    let padded = Padding::new((4.0, 8.0), label);
 }
 </code></pre>
-<h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
-<p>You may override values in the environment for a given widget (and all of its
-children) by using the <a href="https://docs.rs/druid/0.7.0/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
-the <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
-<pre><code class="language-rust noplaypen">fn scoped_label() {
-    let my_label = Label::&lt;()&gt;::new(&quot;Warning!&quot;).env_scope(|env, _| {
-        env.set(druid::theme::TEXT_COLOR, Color::BLACK);
-        env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
-    });
+<p>to force the label to be center-aligned if it is given extra space you can write,</p>
+<pre><code class="language-rust noplaypen">use druid::widget::Align;
+
+fn align_center() {
+    let label: Label&lt;()&gt; = Label::new(&quot;Center me&quot;);
+    let centered = Align::centered(label);
 }
 </code></pre>
-<h2><a class="header" href="#localization" id="localization">Localization</a></h2>
-<p><em>localization is currently half-baked</em></p>
-<p>The <code>Env</code> contains the localization resources for the current locale. A
-<a href="https://docs.rs/druid/0.7.0/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
-calling its <a href="https://docs.rs/druid/0.7.0/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
-<p>In general, you should not need to worry about localization directly. See the
-<a href="./localization.html">localization</a> chapter for an overview of localization in Druid.</p>
+<h2><a class="header" href="#builder-methods-and-widgetext" id="builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
+<p>Widgets are generally constructed using builder-style methods. Unlike the normal
+<a href="https://doc.rust-lang.org/1.0.0/style/ownership/builders.html">builder pattern</a>, we generally do not separate the type that is
+built from the builder type; instead the builder methods are on the widget
+itself.</p>
+<pre><code class="language-rust noplaypen">use druid::widget::Stepper;
+
+fn steppers() {
+    // A Stepper with default parameters
+    let stepper1 = Stepper::new();
+
+    // A Stepper that operates over a custom range
+    let stepper2 = Stepper::new().with_range(10.0, 50.0);
+
+    // A Stepper with a custom range *and* a custom step size, that
+    // wraps around past its min and max values:
+    let stepper3 = Stepper::new()
+        .with_range(10.0, 50.0)
+        .with_step(2.5)
+        .with_wraparound(true);
+}
+</code></pre>
+<p>Additionally, there are a large number of helper methods available on all
+widgets, as part of the <code>WidgetExt</code> trait. These builder-style methods take one
+widget and wrap it in another. The following two functions produce the same
+output:</p>
+<p><strong>Explicit</strong>:</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Align, Padding, Stepper};
+
+fn padded_stepper() {
+    let stepper = Stepper::new().with_range(10.0, 50.0);
+    let padding = Padding::new(8.0, stepper);
+    let padded_and_center_aligned_stepper = Align::centered(padding);
+}
+</code></pre>
+<p><strong>WidgetExt</strong>:</p>
+<pre><code class="language-rust noplaypen">use druid::widget::{Stepper, WidgetExt};
+
+fn padded_stepper() {
+    let padded_and_center_aligned_stepper =
+        Stepper::new().with_range(10.0, 50.0).padding(8.0).center();
+}
+</code></pre>
+<p>These builder-style methods also exist on containers. For instance, to create
+a stack of three labels, you can do:</p>
+<pre><code class="language-rust noplaypen">use druid::widget::Flex;
+
+fn flex_builder() -&gt; Flex&lt;()&gt; {
+    Flex::column()
+        .with_child(Label::new(&quot;Number One&quot;))
+        .with_child(Label::new(&quot;Number Two&quot;))
+        .with_child(Label::new(&quot;Some Other Number&quot;))
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="lens.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="03_data.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="resolution_independence.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="05_lens.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -277,13 +305,13 @@ calling its <a href="https://docs.rs/druid/0.7.0/druid/struct.LocalizedString.ht
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="lens.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="03_data.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="resolution_independence.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="05_lens.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
