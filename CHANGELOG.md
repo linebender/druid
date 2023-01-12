@@ -577,6 +577,7 @@ Last release without a changelog :(
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
 [@benoitryder]: https://github.com/benoitryder
 [@sprocklem]: https://github.com/sprocklem
+[@jaredoconnell]: https://github.com/jaredoconnell
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -882,6 +883,7 @@ Last release without a changelog :(
 [#2320]: https://github.com/linebender/druid/pull/2320
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
+[#2328]: https://github.com/linebender/druid/pull/2328
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
