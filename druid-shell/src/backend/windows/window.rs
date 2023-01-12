@@ -141,7 +141,7 @@ pub enum PresentStrategy {
 /// we'd try to call the `WinHandler` again).
 ///
 /// The solution is that for every `WindowHandle` method that *wants* to return control to the
-/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// system's event loop, instead of doing that we queue up a deferred operation and return
 /// immediately. The deferred operations will run whenever the currently running `WinHandler`
 /// method returns.
 ///

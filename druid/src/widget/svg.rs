@@ -53,7 +53,7 @@ impl Svg {
         self.fill = newfil;
     }
 
-    /// Set the svg data.
+    /// Set the SVG data.
     pub fn set_svg_data(&mut self, svg_data: SvgData) {
         self.svg_data = svg_data;
     }
@@ -144,7 +144,7 @@ impl SvgData {
         }
     }
 
-    /// Get the viewbox for the svg. This is the area that should be drawn.
+    /// Get the viewbox for the SVG. This is the area that should be drawn.
     pub fn viewbox(&self) -> Rect {
         let root = self.tree.root();
         let rect = match *root.borrow() {
@@ -162,7 +162,7 @@ impl SvgData {
         rect
     }
 
-    /// Get the size of the svg. This is the size that the svg requests to be drawn. If it is
+    /// Get the size of the SVG. This is the size that the SVG requests to be drawn. If it is
     /// different from the viewbox size, then scaling will be required.
     pub fn size(&self) -> Size {
         let root = self.tree.root();
@@ -181,7 +181,7 @@ impl SvgData {
         rect
     }
 
-    /// Calculates the transform that should be applied first to the svg path data, to convert from
+    /// Calculates the transform that should be applied first to the SVG path data, to convert from
     /// image coordinates to piet coordinates.
     fn inner_affine(&self) -> Affine {
         let viewbox = self.viewbox();

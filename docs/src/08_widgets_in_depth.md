@@ -66,20 +66,6 @@ textbox fire some action (say doing a search) 300ms after the last keypress:
 {{#include ../book_examples/src/custom_widgets_md.rs:annoying_textbox}}
 ```
 
-## todo
-
-v controller, painter
-- how to do layout
-    - how constraints work
-    - child widget, set_layout_rect
-    - paint bounds
-- container widgets
-- widgetpod & architecture
-- commands and widgetid
-- focus / active / hot
-- request paint & request layout
-- changing widgets at runtime
-
 [`Controller`]: https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html
 [`Widget`]: ./widget.md
 [`Painter`]: https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html

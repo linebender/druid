@@ -143,7 +143,7 @@ impl Slider {
         self
     }
 
-    /// Builder-style method to the the axis on which the slider moves.
+    /// Builder-style method to the axis on which the slider moves.
     ///
     /// The default is `Horizontal`.
     pub fn axis(mut self, axis: Axis) -> Self {
@@ -278,7 +278,7 @@ impl RangeSlider {
         self
     }
 
-    /// Builder-style method to the the axis on which the slider moves.
+    /// Builder-style method to set the axis on which the slider moves.
     ///
     /// The default is `Horizontal`.
     pub fn axis(mut self, axis: Axis) -> Self {

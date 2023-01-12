@@ -172,7 +172,7 @@ pub enum Event {
     /// A [`Notification`] from one of this widget's descendants.
     ///
     /// While handling events, widgets can submit notifications to be
-    /// delivered to their ancestors immdiately after they return.
+    /// delivered to their ancestors immediately after they return.
     ///
     /// If you handle a [`Notification`], you should call [`EventCtx::set_handled`]
     /// to stop the notification from being delivered to further ancestors.
@@ -405,7 +405,7 @@ impl Event {
     /// This distinction between scroll and tabs is due to one of the main purposes of
     /// this method: determining which widgets are allowed to receive focus. As a rule
     /// of thumb a widget counts as `hidden` if it makes no sense for it to receive focus
-    /// when the user presses thee 'tab' key.
+    /// when the user presses the 'tab' key.
     ///
     /// If a widget changes which children are hidden it must call [`children_changed`].
     ///

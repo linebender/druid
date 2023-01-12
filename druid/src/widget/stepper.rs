@@ -24,9 +24,9 @@ use crate::piet::{LinearGradient, RenderContext, UnitPoint};
 use crate::widget::prelude::*;
 use crate::{theme, Point, Rect, TimerToken};
 
-// Delay until stepper starts automatically changing valued when one of the button is held down.
+// Delay until stepper starts automatically changing value when one of the buttons is held down.
 const STEPPER_REPEAT_DELAY: Duration = Duration::from_millis(500);
-// Delay between value changes when one of the button is held down.
+// Delay between value changes when one of the buttons is held down.
 const STEPPER_REPEAT: Duration = Duration::from_millis(200);
 
 /// A stepper widget for step-wise increasing and decreasing a value.

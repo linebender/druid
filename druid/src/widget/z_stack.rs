@@ -88,7 +88,7 @@ impl<T: Data> ZStack<T> {
     /// Builder-style method to add a new child to the Z-Stack.
     ///
     /// The child is added directly above the base layer, is positioned in the center and has no
-    /// size constrains.
+    /// size constraints.
     pub fn with_centered_child(self, child: impl Widget<T> + 'static) -> Self {
         self.with_aligned_child(child, UnitPoint::CENTER)
     }
@@ -96,7 +96,7 @@ impl<T: Data> ZStack<T> {
     /// Builder-style method to add a new child to the Z-Stack.
     ///
     /// The child is added directly above the base layer, uses the given alignment and has no
-    /// size constrains.
+    /// size constraints.
     pub fn with_aligned_child(self, child: impl Widget<T> + 'static, alignment: UnitPoint) -> Self {
         self.with_child(
             child,

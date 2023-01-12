@@ -295,14 +295,14 @@ impl Axis {
 pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
-    /// In a vertical container, widgets are top aligned. In a horiziontal
+    /// In a vertical container, widgets are top aligned. In a horizontal
     /// container, their leading edges are aligned.
     Start,
     /// Widgets are centered in the container.
     Center,
     /// Bottom or trailing.
     ///
-    /// In a vertical container, widgets are bottom aligned. In a horiziontal
+    /// In a vertical container, widgets are bottom aligned. In a horizontal
     /// container, their trailing edges are aligned.
     End,
     /// Align on the baseline.
@@ -571,7 +571,7 @@ impl<T: Data> Flex<T> {
                 flex: params.flex,
             }
         } else {
-            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.0/druid/widget/struct.Flex.html");
             Child::Fixed {
                 widget: WidgetPod::new(Box::new(child)),
                 alignment: None,

@@ -1,7 +1,10 @@
 # How to contribute
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+**IMPORTANT:** The Druid project is being discontinued. While we will still accept
+all contributions, we'll prefer bugfixes and documentations improvements to new
+features.
+
+If you still want to contribute, here are the guidelines you need to follow.
 
 ## Changelog
 
@@ -102,7 +105,7 @@ adds Druid as a dependency and it won't even compile.
 For that reason our CI testing always uses the highest version that is still compatible.
 This mimics what a new developer would experience when they start using Druid.
 
-What about the the minimum supported version or all the versions between the minimum and maximum?
+What about the minimum supported version or all the versions between the minimum and maximum?
 It is not practical for us to test all the combinations of possible sub-dependency versions.
 Without testing there can easily be mistakes. Let's say our `Cargo.toml` specifies that
 we depend on the package `foo` version `^1.1.1` and the latest `foo` version is `1.1.3`.

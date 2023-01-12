@@ -144,7 +144,7 @@ impl Viewport {
 
     /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
     ///
-    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// The [`SCROLL_TO_VIEW`] notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
     /// are called.
     ///
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
@@ -182,7 +182,7 @@ impl Viewport {
 
     /// This method handles SCROLL_TO_VIEW by clipping the view_rect to the content rect.
     ///
-    /// The [`SCROLL_TO_VIEW`] notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// The [`SCROLL_TO_VIEW`] notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
     /// are called.
     ///
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW

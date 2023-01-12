@@ -119,7 +119,7 @@ pub fn active_value() -> impl Widget<AppData> {
 /// clears or sets this error based on `Command`s sent to it from some other
 /// widget.
 ///
-/// It's child's data is this `Option<Error>`; the incoming data is ignored
+/// Its child's data is this `Option<Error>`; the incoming data is ignored
 /// completely.
 pub struct ErrorController<W> {
     child: WidgetPod<Option<ValidationError>, W>,

@@ -63,7 +63,7 @@ fn make_ui() -> impl Widget<OurData> {
     // We can also generate these dynamically whenever we need it.
     let id_two = WidgetId::next();
     // We have a column with 2 labels and 2 buttons.
-    // Each of the 2 labels only have access to their own counter and are given a `WidgetId`.
+    // Each of the 2 labels only has access to its own counter and is given a `WidgetId`.
     // Both labels have a controller, this handles commands send to children.
     // The 2 buttons send a command when clicked. Both send the exact same command.
     // The key diference is that they both give a different `WidgetId` as target.

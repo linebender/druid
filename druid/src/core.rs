@@ -226,20 +226,48 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.has_focus
     }
 
-    /// Query the "active" state of the widget.
+    /// The "active" (aka pressed) status of a widget.
+    ///
+    /// Active status generally corresponds to a mouse button down. Widgets
+    /// with behavior similar to a button will call [`set_active`] on mouse
+    /// down and then up.
+    ///
+    /// The active status can only be set manually. Druid doesn't automatically
+    /// set it to `false` on mouse release or anything like that.
+    ///
+    /// There is no special handling of the active status for multi-pointer devices.
+    ///
+    /// When a widget is active, it gets mouse events even when the mouse
+    /// is dragged away.
+    ///
+    /// [`set_active`]: struct.EventCtx.html#method.set_active
     pub fn is_active(&self) -> bool {
         self.state.is_active
     }
 
-    /// Returns `true` if any descendant is active.
+    /// Returns `true` if any descendant is [`active`].
+    ///
+    /// [`active`]: struct.WidgetPod.html#method.is_active
     pub fn has_active(&self) -> bool {
         self.state.has_active
     }
 
-    /// Query the "hot" state of the widget.
+    /// The "hot" (aka hover) status of a widget.
     ///
-    /// See [`EventCtx::is_hot`](struct.EventCtx.html#method.is_hot) for
-    /// additional information.
+    /// A widget is "hot" when the mouse is hovered over it. Some Widgets (eg buttons)
+    /// will change their appearance when hot as a visual indication that they
+    /// will respond to mouse interaction.
+    ///
+    /// The hot status is automatically computed from the widget's layout rect. In a
+    /// container hierarchy, all widgets with layout rects containing the mouse position
+    /// have hot status. The hot status cannot be set manually.
+    ///
+    /// There is no special handling of the hot status for multi-pointer devices.
+    ///
+    /// Note: a widget can be hot while another is [`active`] (for example, when
+    /// clicking a button and dragging the cursor to another widget).
+    ///
+    /// [`active`]: struct.WidgetPod.html#method.is_active
     pub fn is_hot(&self) -> bool {
         self.state.is_hot
     }
@@ -592,23 +620,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             let name = self.widget().type_name();
             warn!("Widget `{}` has an infinite height.", name);
         }
-    }
-
-    /// Execute the closure with this widgets `EventCtx`.
-    #[cfg(feature = "crochet")]
-    pub fn with_event_context<F>(&mut self, parent_ctx: &mut EventCtx, mut fun: F)
-    where
-        F: FnMut(&mut W, &mut EventCtx),
-    {
-        let mut ctx = EventCtx {
-            state: parent_ctx.state,
-            widget_state: &mut self.state,
-            notifications: parent_ctx.notifications,
-            is_handled: false,
-            is_root: false,
-        };
-        fun(&mut self.inner, &mut ctx);
-        parent_ctx.widget_state.merge_up(&mut self.state);
     }
 
     /// Propagate an event.

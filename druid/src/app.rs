@@ -67,6 +67,11 @@ pub struct WindowConfig {
 }
 
 /// A description of a window to be instantiated.
+///
+/// This struct has builder methods to specify some window properties. Each of
+/// these methods usually corresponds to a platform API call when constructing the
+/// function. Except for `title()`, they have no default values and the APIS
+/// won't be called if the method is not used.
 pub struct WindowDesc<T> {
     pub(crate) pending: PendingWindow<T>,
     pub(crate) config: WindowConfig,
@@ -468,6 +473,8 @@ impl<T: Data> WindowDesc<T> {
     /// Set the title for this window. This is a [`LabelText`]; it can be either
     /// a `String`, a [`LocalizedString`], or a closure that computes a string;
     /// it will be kept up to date as the application's state changes.
+    ///
+    /// If this method isn't called, the default title will be `LocalizedString::new("app-name")`.
     ///
     /// [`LabelText`]: widget/enum.LocalizedString.html
     /// [`LocalizedString`]: struct.LocalizedString.html

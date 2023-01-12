@@ -13,11 +13,11 @@ performance, a rich palette of interactions (hence a widget library to support
 them), and playing well with the native platform.
 See the [goals section](#Goals) for more details.
 
-Druid's current development is largely driven by its use in [Runebender], a new
-font editor.
+**IMPORTANT:** The Druid project is being discontinued. While we will still accept
+all contributions, we'll prefer bugfixes and documentations improvements to new
+features. Current development effort is focused on [Xilem](https://github.com/linebender/xilem).
 
-We have been doing periodic releases of Druid on crates.io, but it is under
-active development and its API might change. All changes are documented
+We have been doing periodic releases of Druid on crates.io, but the API is still unstable. All changes are documented
 in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
 For an overview of some key concepts, see the (work in progress) [Druid book].
@@ -130,7 +130,7 @@ the Rust community is working on a variety of different libraries with
 different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
 
-- Use the the platform-native widgets or mimic them. ([Relm], [Slint])
+- Use the platform-native widgets or mimic them. ([Relm], [Slint])
 - Embed easily into custom render pipelines. ([Conrod])
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when targeting the web. ([Iced], [Moxie])
