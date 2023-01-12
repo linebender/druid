@@ -16,6 +16,13 @@
 //! This is a very simple example, it uses a bool to determine
 //! which widget gets shown.
 
+//! A demo of a few window features, including input region, always on top,
+//! and titlebar visibility.
+//! The demo is setup so that there are parts of the window that you can click through.
+//! There are also buttons for setting always on top and setting the visibility of the
+//! titlebar.
+//! The window's region is managed by the root custom widget.
+
 use druid::widget::prelude::*;
 use druid::widget::{Button, Container, Flex, Label, LineBreaking, Widget};
 use druid::{AppLauncher, Color, Lens, Point, Rect, Region, WidgetExt, WidgetPod, WindowDesc};
