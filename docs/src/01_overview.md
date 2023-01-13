@@ -18,7 +18,7 @@ Druid works without special difficulty.
 
 ## Prerequisites
 
-This tutorial assumes basic familliarity with Rust and a working setup with the basic tooling like
+This tutorial assumes basic familiarity with Rust and a working setup with the basic tooling like
 Rustup and Cargo. This tutorial will use stable Rust (v1.65.0 at the time of writing) and the latest
 released version of Druid (v0.8).
 
