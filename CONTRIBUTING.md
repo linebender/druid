@@ -1,7 +1,7 @@
 # How to contribute
 
 **IMPORTANT:** The Druid project is being discontinued. While we will still accept
-all contributions, we'll prefer bugfixes and documentations improvements to new
+all contributions, we'll prefer bug fixes and documentation improvements to new
 features.
 
 If you still want to contribute, here are the guidelines you need to follow.

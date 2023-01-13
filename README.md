@@ -13,16 +13,29 @@ performance, a rich palette of interactions (hence a widget library to support
 them), and playing well with the native platform.
 See the [goals section](#Goals) for more details.
 
-**IMPORTANT:** The Druid project is being discontinued. While we will still accept
-all contributions, we'll prefer bugfixes and documentations improvements to new
-features. Current development effort is focused on [Xilem](https://github.com/linebender/xilem).
-
 We have been doing periodic releases of Druid on crates.io, but the API is still unstable. All changes are documented
 in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
 For an overview of some key concepts, see the (work in progress) [Druid book].
 
+## Project status
+
+**The Druid project is being discontinued by the core developer team.**
+
+New development effort is focused on [Xilem], which has a lot of fundamental changes to allow for
+a wider variety of applications with better performance, but it also heavily inherits from Druid.
+We see [Xilem] as the future of Druid.
+
+Druid is reasonably usable for [some subset of applications](https://github.com/linebender/druid/issues/1360)
+and has a significant testing history, which ensures some stability and correctness.
+However we don't expect any major new features to be added to Druid. As such we don't recommend
+using Druid for brand new applications. If you insist, then at least make sure your application
+doesn't require a feature that Druid doesn't have, e.g. accessibility or 3D support.
+
 ## Contributions
+
+As the Druid project is being discontinued, we will still accept all contributions,
+but we'll prefer bug fixes and documentation improvements to new features.
 
 A very good place to ask questions and discuss development work is our [Zulip
 chat instance], in the #druid-help and #druid channels, respectively.
@@ -324,3 +337,4 @@ active and friendly community.
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
 [Slint]: https://github.com/slint-ui/slint
+[Xilem]: https://github.com/linebender/xilem
