@@ -163,7 +163,7 @@ fn main() {
 
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
-    builder.set_handler(Box::new(HelloState::default()));
+    builder.set_handler(Box::<HelloState>::default());
     builder.set_title("Hello example");
     builder.set_menu(menubar);
 

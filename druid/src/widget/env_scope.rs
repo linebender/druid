@@ -94,7 +94,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         (self.f)(&mut new_env, data);
 
         let size = self.child.layout(ctx, bc, data, &new_env);
-        self.child.set_origin(ctx, data, env, Point::ORIGIN);
+        self.child.set_origin(ctx, Point::ORIGIN);
         size
     }
 

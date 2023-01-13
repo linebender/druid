@@ -75,6 +75,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
 - Windows: Dark mode support for the title bar ([#2196] by [@dristic])
 - `ZStack` widget ([#2235] by [@xarvic])
+- `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
+- Add a public constructor to `StringCursor` ([#2319] by [@benoitryder])
 
 ### Changed
 
@@ -106,6 +108,8 @@ You can find its changes [documented below](#070---2021-01-01).
 - `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
 - Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
 - `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
+- changing hot state is now done in `Lifecycle::ChangeViewState` instead of `layout` ([#2149] by [@xarvic])
+- `WidgetPod::set_origin` no longer takes `data` and `env` as parameters. ([#2149] by [@xarvic])
 
 ### Deprecated
 
@@ -135,6 +139,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
 - X11: window focus events ([#1938] by [@Maan2003]
 - Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
+- GTK: Hot state now properly resets when the mouse leaves the window via an occluded part. ([#2324] by [@xStrom])
 
 ### Visual
 
@@ -151,6 +156,9 @@ You can find its changes [documented below](#070---2021-01-01).
 - Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
 - Fix `Controller` links for `Click` ([#2158] by [@yrns])
 - Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
+- Added examples in `TextBox` ([#2284] by [@ThomasMcandrew])
+- Removed outdated section in docs for `LifeCycle::WidgetAdded` ([#2320] by [@sprocklem])
+- Updated `Event::AnimFrame` docs with info about when `paint` happens. ([#2323] by [@xStrom])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -252,6 +260,7 @@ values and their textual representations. ([#1377])
 - All Image formats are now optional, reducing compile time and binary size by default ([#1340] by [@JAicewizard])
 - The `Cursor` API has changed to a stateful one ([#1433] by [@jneem])
 - Part of the `SAVE_FILE` command is now `SAVE_FILE_AS` ([#1463] by [@jneem])
+- Windows: Use custom application icon, if present ([#2274] by [@tay64])
 
 ### Deprecated
 - Parse widget (replaced with `Formatter` trait) ([#1377] by [@cmyr])
@@ -565,6 +574,9 @@ Last release without a changelog :(
 [@NickLarsenNZ]: https://github.com/NickLarsenNZ
 [@barsae]: https://github.com/barsae
 [@amtep]: https://github.com/amtep
+[@ThomasMcandrew]: https:github.com/ThomasMcandrew
+[@benoitryder]: https://github.com/benoitryder
+[@sprocklem]: https://github.com/sprocklem
 [@newcomb-luke]: https://github.com/newcomb-luke
 
 [#599]: https://github.com/linebender/druid/pull/599
@@ -855,6 +867,7 @@ Last release without a changelog :(
 [#2117]: https://github.com/linebender/druid/pull/2141
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
+[#2149]: https://github.com/linebender/druid/pull/2149
 [#2151]: https://github.com/linebender/druid/pull/2151
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
@@ -864,6 +877,12 @@ Last release without a changelog :(
 [#2203]: https://github.com/linebender/druid/pull/2203
 [#2235]: https://github.com/linebender/druid/pull/2235
 [#2247]: https://github.com/linebender/druid/pull/2247
+[#2274]: https://github.com/linebender/druid/pull/2274
+[#2284]: https://github.com/linebender/druid/pull/2284
+[#2319]: https://github.com/linebender/druid/pull/2319
+[#2320]: https://github.com/linebender/druid/pull/2320
+[#2323]: https://github.com/linebender/druid/pull/2323
+[#2324]: https://github.com/linebender/druid/pull/2324
 [#2191]: https://github.com/linebender/druid/pull/2191
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master

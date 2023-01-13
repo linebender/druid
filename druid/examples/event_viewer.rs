@@ -95,7 +95,7 @@ struct LoggedEvent {
     typ: EventType,
     number: usize,
     // To see what #[data(ignore)] does look at the docs.rs page on `Data`:
-    // https://docs.rs/druid/0.6.0/druid/trait.Data.html
+    // https://docs.rs/druid/latest/druid/trait.Data.html
     #[data(ignore)]
     mouse: Option<MouseEvent>,
     #[data(ignore)]

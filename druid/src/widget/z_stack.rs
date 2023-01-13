@@ -1,6 +1,22 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! A ZStack widget.
+
 use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
-    Point, Rect, Size, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, InternalEvent, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, Rect, Size, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod,
 };
 
 /// A container that stacks its children on top of each other.
@@ -72,7 +88,7 @@ impl<T: Data> ZStack<T> {
     /// Builder-style method to add a new child to the Z-Stack.
     ///
     /// The child is added directly above the base layer, is positioned in the center and has no
-    /// size constrains.
+    /// size constraints.
     pub fn with_centered_child(self, child: impl Widget<T> + 'static) -> Self {
         self.with_aligned_child(child, UnitPoint::CENTER)
     }
@@ -80,7 +96,7 @@ impl<T: Data> ZStack<T> {
     /// Builder-style method to add a new child to the Z-Stack.
     ///
     /// The child is added directly above the base layer, uses the given alignment and has no
-    /// size constrains.
+    /// size constraints.
     pub fn with_aligned_child(self, child: impl Widget<T> + 'static, alignment: UnitPoint) -> Self {
         self.with_child(
             child,
@@ -94,23 +110,31 @@ impl<T: Data> ZStack<T> {
 
 impl<T: Data> Widget<T> for ZStack<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        let is_pointer_event = matches!(
-            event,
-            Event::MouseDown(_) | Event::MouseMove(_) | Event::MouseUp(_) | Event::Wheel(_)
-        );
-
+        let mut previous_hot = false;
         for layer in self.layers.iter_mut() {
-            layer.child.event(ctx, event, data, env);
-
-            if is_pointer_event && layer.child.is_hot() {
-                ctx.set_handled();
+            if event.is_pointer_event() && previous_hot {
+                if layer.child.is_active() {
+                    ctx.set_handled();
+                    layer.child.event(ctx, event, data, env);
+                } else {
+                    layer
+                        .child
+                        .event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
+                }
+            } else {
+                layer.child.event(ctx, event, data, env);
             }
+
+            previous_hot |= layer.child.is_hot();
         }
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        let mut previous_hot = false;
         for layer in self.layers.iter_mut() {
-            layer.child.lifecycle(ctx, event, data, env);
+            let inner_event = event.ignore_hot(previous_hot);
+            layer.child.lifecycle(ctx, &inner_event, data, env);
+            previous_hot |= layer.child.is_hot();
         }
     }
 
@@ -137,18 +161,14 @@ impl<T: Data> Widget<T> for ZStack<T> {
         }
 
         //Set origin for all Layers and calculate paint insets
-        let mut previous_child_hot = false;
         let mut paint_rect = Rect::ZERO;
 
         for layer in self.layers.iter_mut() {
-            let mut inner_ctx = ctx.ignore_hot(previous_child_hot);
-
             let remaining = base_size - layer.child.layout_rect().size();
             let origin = layer.resolve_point(remaining);
-            layer.child.set_origin(&mut inner_ctx, data, env, origin);
+            layer.child.set_origin(ctx, origin);
 
             paint_rect = paint_rect.union(layer.child.paint_rect());
-            previous_child_hot |= layer.child.is_hot();
         }
 
         ctx.set_paint_insets(paint_rect - base_size.to_rect());

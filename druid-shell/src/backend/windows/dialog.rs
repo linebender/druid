@@ -60,7 +60,7 @@ unsafe fn make_wstrs(spec: &FileSpec) -> (Vec<u16>, Vec<u16>) {
     let exts = spec
         .extensions
         .iter()
-        .map(|s| normalize_extension(*s))
+        .map(|s| normalize_extension(s))
         .collect::<Vec<_>>();
     let name = format!("{} ({})", spec.name, exts.as_slice().join("; ")).to_wide();
     let extensions = exts.as_slice().join(";").to_wide();

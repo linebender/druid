@@ -40,7 +40,7 @@ pub mod window;
 //
 // https://docs.microsoft.com/en-us/windows/win32/direct2d/devices-and-device-contexts
 // A Device Context, ID2D1DeviceContext, is available as of windows 7 platform update. This
-// is the the minimum compatibility target for druid. We are not making an effort to do
+// is the minimum compatibility target for druid. We are not making an effort to do
 // RenderTarget only.
 //
 // Basically, go from HwndRenderTarget or DxgiSurfaceRenderTarget (2d or 3d) to a Device Context.

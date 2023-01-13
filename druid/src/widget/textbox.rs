@@ -17,6 +17,7 @@
 use std::time::Duration;
 use tracing::{instrument, trace};
 
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::kurbo::Insets;
 use crate::piet::TextLayout as _;
@@ -78,6 +79,22 @@ pub struct TextBox<T> {
 
 impl<T: EditableText + TextStorage> TextBox<T> {
     /// Create a new TextBox widget.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use druid::widget::TextBox;
+    /// use druid::{ WidgetExt, Data, Lens };
+    ///
+    /// #[derive(Clone, Data, Lens)]
+    /// struct AppState {
+    ///     name: String,
+    /// }
+    ///
+    /// let _ = TextBox::new()
+    ///     .with_placeholder("placeholder text")
+    ///     .lens(AppState::name);
+    /// ```
     pub fn new() -> Self {
         let placeholder_text = ArcStr::from("");
         let mut placeholder_layout = TextLayout::new();
@@ -105,6 +122,20 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     }
 
     /// Create a new multi-line `TextBox`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// let multiline = TextBox::multiline()
+    ///     .lens(AppState::name);
+    /// ```
     pub fn multiline() -> Self {
         let mut this = TextBox::new();
         this.inner
@@ -121,6 +152,37 @@ impl<T: EditableText + TextStorage> TextBox<T> {
     /// If `false`, lines will not be wrapped, and horizontal scrolling will
     /// be enabled.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// //will scroll horizontally
+    /// let scroll_text_box = TextBox::new()
+    ///     .with_line_wrapping(false)
+    ///     .lens(AppState::name);
+    ///
+    /// //will wrap only for a single line
+    /// let wrap_text_box = TextBox::new()
+    ///     .with_line_wrapping(true)
+    ///     .lens(AppState::name);
+    ///
+    /// //will scroll as well as having multiple lines
+    /// let scroll_multi_line_text_box = TextBox::multiline()
+    ///     .with_line_wrapping(false)
+    ///     .lens(AppState::name);
+    ///
+    /// //will wrap for each line
+    /// let wrap_multi_line_text_box = TextBox::multiline()
+    ///     .with_line_wrapping(true) // this is default and can be removed for the same result
+    ///     .lens(AppState::name);
+    ///
+    /// ```
     /// [`multiline`]: TextBox::multiline
     pub fn with_line_wrapping(mut self, wrap_lines: bool) -> Self {
         self.inner.set_horizontal_scroll_enabled(!wrap_lines);
@@ -133,6 +195,37 @@ impl<T> TextBox<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// let text_box = TextBox::new()
+    ///     .with_text_size(14.)
+    ///     .lens(AppState::name);
+    /// ```
+    ///
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// use druid::Key;
+    ///
+    /// const FONT_SIZE : Key<f64> = Key::new("font-size");
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_text_size(FONT_SIZE)
+    ///     .lens(AppState::name);
+    /// ```
     /// [`Key<f64>`]: ../struct.Key.html
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.set_text_size(size);
@@ -155,6 +248,22 @@ impl<T> TextBox<T> {
     /// This should be considered a bug, but it will not be fixed until proper
     /// BiDi support is implemented.
     ///
+    /// # Examples
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// use druid::TextAlignment;
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_text_alignment(TextAlignment::Center)
+    ///     .lens(AppState::name);
+    /// ```
+    ///
     /// [`TextAlignment`]: enum.TextAlignment.html
     /// [`multiline`]: #method.multiline
     pub fn with_text_alignment(mut self, alignment: TextAlignment) -> Self {
@@ -167,6 +276,30 @@ impl<T> TextBox<T> {
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// use druid::{ FontDescriptor, FontFamily, Key };
+    ///
+    /// const FONT : Key<FontDescriptor> = Key::new("font");
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_font(FontDescriptor::new(FontFamily::MONOSPACE))
+    ///     .lens(AppState::name);
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_font(FONT)
+    ///     .lens(AppState::name);
+    /// ```
+    ///
+    ///
     /// [`Env`]: ../struct.Env.html
     /// [`FontDescriptor`]: ../struct.FontDescriptor.html
     /// [`Key<FontDescriptor>`]: ../struct.Key.html
@@ -178,7 +311,27 @@ impl<T> TextBox<T> {
     /// Builder-style method for setting the text color.
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
+    /// # Examples
+    /// ```
+    /// # use druid::widget::TextBox;
+    /// # use druid::{ WidgetExt, Data, Lens };
+    /// #
+    /// # #[derive(Clone, Data, Lens)]
+    /// # struct AppState {
+    /// #     name: String,
+    /// # }
+    /// use druid::{ Color, Key };
     ///
+    /// const COLOR : Key<Color> = Key::new("color");
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_text_color(Color::RED)
+    ///     .lens(AppState::name);
+    ///
+    /// let text_box = TextBox::new()
+    ///     .with_text_color(COLOR)
+    ///     .lens(AppState::name);
+    /// ```
     /// [`Key<Color>`]: ../struct.Key.html
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.set_text_color(color);
@@ -337,13 +490,13 @@ impl<T: TextStorage + EditableText> TextBox<T> {
         Rect::new(x, y0, x, y1)
     }
 
-    fn scroll_to_selection_end(&mut self) {
+    fn scroll_to_selection_end<C: ChangeCtx>(&mut self, ctx: &mut C) {
         let rect = self.rect_for_selection_end();
         let view_rect = self.inner.viewport_rect();
         let is_visible =
             view_rect.contains(rect.origin()) && view_rect.contains(Point::new(rect.x1, rect.y1));
         if !is_visible {
-            self.inner.scroll_to(rect + SCROLL_TO_INSETS);
+            self.inner.scroll_to(ctx, rect + SCROLL_TO_INSETS);
         }
     }
 
@@ -388,7 +541,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                         ctx.request_layout();
                         self.scroll_to_selection_after_layout = true;
                     } else {
-                        self.scroll_to_selection_end();
+                        self.scroll_to_selection_end(ctx);
                     }
                     ctx.set_handled();
                     ctx.request_paint();
@@ -528,7 +681,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 }
                 self.text_mut().has_focus = false;
                 if !self.multiline {
-                    self.inner.scroll_to(Rect::ZERO);
+                    self.inner.scroll_to(ctx, Rect::ZERO);
                 }
                 self.cursor_timer = TimerToken::INVALID;
                 self.was_focused_from_click = false;
@@ -587,7 +740,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             + textbox_insets.y1;
         ctx.set_baseline_offset(baseline_off);
         if self.scroll_to_selection_after_layout {
-            self.scroll_to_selection_end();
+            self.scroll_to_selection_end(ctx);
             self.scroll_to_selection_after_layout = false;
         }
 

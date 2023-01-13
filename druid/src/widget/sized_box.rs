@@ -109,7 +109,7 @@ impl<T> SizedBox<T> {
         let (min_width, max_width) = match &self.width {
             Some(width) => {
                 let width = width.resolve(env);
-                let w = width.max(bc.min().width).min(bc.max().width);
+                let w = width.clamp(bc.min().width, bc.max().width);
                 (w, w)
             }
             None => (bc.min().width, bc.max().width),
@@ -118,7 +118,7 @@ impl<T> SizedBox<T> {
         let (min_height, max_height) = match &self.height {
             Some(height) => {
                 let height = height.resolve(env);
-                let h = height.max(bc.min().height).min(bc.max().height);
+                let h = height.clamp(bc.min().height, bc.max().height);
                 (h, h)
             }
             None => (bc.min().height, bc.max().height),

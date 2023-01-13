@@ -141,7 +141,7 @@ pub enum PresentStrategy {
 /// we'd try to call the `WinHandler` again).
 ///
 /// The solution is that for every `WindowHandle` method that *wants* to return control to the
-/// system's event loop, instead of doing that we queue up a deferrred operation and return
+/// system's event loop, instead of doing that we queue up a deferred operation and return
 /// immediately. The deferred operations will run whenever the currently running `WinHandler`
 /// method returns.
 ///
@@ -561,14 +561,15 @@ impl MyWndProc {
         if let Some(hwnd) = self.handle.borrow().get_hwnd() {
             match op {
                 DeferredOp::SetSize(size_dp) => unsafe {
-                    let size_px = size_dp.to_px(self.scale());
+                    let area = ScaledArea::from_dp(size_dp, self.scale());
+                    let size_px = area.size_px();
                     if SetWindowPos(
                         hwnd,
                         HWND_TOPMOST,
                         0,
                         0,
-                        size_px.width.round() as i32,
-                        size_px.height.round() as i32,
+                        size_px.width as i32,
+                        size_px.height as i32,
                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
                     ) == 0
                     {
@@ -883,10 +884,10 @@ impl WndProc for MyWndProc {
                             if let Some(mut s) = s.as_mut() {
                                 let border = self.get_system_metric(SM_CXPADDEDBORDER);
                                 let frame = self.get_system_metric(SM_CYSIZEFRAME);
-                                s.rgrc[0].top += (border + frame) as i32;
-                                s.rgrc[0].right -= (border + frame) as i32;
-                                s.rgrc[0].left += (border + frame) as i32;
-                                s.rgrc[0].bottom -= (border + frame) as i32;
+                                s.rgrc[0].top += border + frame;
+                                s.rgrc[0].right -= border + frame;
+                                s.rgrc[0].left += border + frame;
+                                s.rgrc[0].bottom -= border + frame;
                             }
                         }
                     }
@@ -1263,9 +1264,10 @@ impl WndProc for MyWndProc {
                 let min_max_info = unsafe { &mut *(lparam as *mut MINMAXINFO) };
                 self.with_wnd_state(|s| {
                     if let Some(min_size_dp) = s.min_size {
-                        let min_size_px = min_size_dp.to_px(self.scale());
-                        min_max_info.ptMinTrackSize.x = min_size_px.width.round() as i32;
-                        min_max_info.ptMinTrackSize.y = min_size_px.height.round() as i32;
+                        let min_area = ScaledArea::from_dp(min_size_dp, self.scale());
+                        let min_size_px = min_area.size_px();
+                        min_max_info.ptMinTrackSize.x = min_size_px.width as i32;
+                        min_max_info.ptMinTrackSize.y = min_size_px.height as i32;
                     }
                 });
                 Some(0)
@@ -1374,32 +1376,14 @@ impl WindowBuilder {
                 present_strategy: self.present_strategy,
             };
 
-            // TODO: pos_x and pos_y are only scaled for windows with parents. But they need to be
-            // scaled for windows without parents too.
-            let (mut pos_x, mut pos_y) = match self.position {
-                Some(pos) => (pos.x as i32, pos.y as i32),
-                None => (CW_USEDEFAULT, CW_USEDEFAULT),
-            };
-            let scale = Scale::new(1.0, 1.0);
-
-            let mut area = ScaledArea::default();
-            let (width, height) = self
-                .size
-                .map(|size| {
-                    area = ScaledArea::from_dp(size, scale);
-                    let size_px = area.size_px();
-                    (size_px.width as i32, size_px.height as i32)
-                })
-                .unwrap_or((CW_USEDEFAULT, CW_USEDEFAULT));
-
-            let (hmenu, accels, has_menu) = match self.menu {
-                Some(menu) => {
-                    let accels = menu.accels();
-                    (menu.into_hmenu(), accels, true)
-                }
-                None => (0 as HMENU, None, false),
-            };
-
+            // TODO: Can we know the DPI of the screen where the window will be created ahead of time?
+            //       Could probably make a better guess, e.g. if all screens have some non-1.0 ratio.
+            //       For now we just use 1.0 and fix it after creation, but before showing the window.
+            //       Unless we have a parent window, in which case we use its scale as our guess.
+            let mut scale = Scale::new(1.0, 1.0);
+            let (mut width, mut height) = (CW_USEDEFAULT, CW_USEDEFAULT);
+            let (mut pos_x, mut pos_y) = (CW_USEDEFAULT, CW_USEDEFAULT);
+            let mut parent_pos_dp = None; // When set, the pos is parent_pos_dp + self.position
             let mut dwStyle = WS_OVERLAPPEDWINDOW;
             let mut dwExStyle: DWORD = 0;
             let mut focusable = true;
@@ -1412,28 +1396,40 @@ impl WindowBuilder {
                     WindowLevel::Tooltip(parent_window_handle)
                     | WindowLevel::DropDown(parent_window_handle)
                     | WindowLevel::Modal(parent_window_handle) => {
+                        // Guess the scale will be the same as the parent's
+                        scale = parent_window_handle.get_scale().unwrap_or_default();
+                        parent_pos_dp = Some(parent_window_handle.get_position());
                         parent_hwnd = parent_window_handle.0.get_hwnd();
                         dwStyle = WS_POPUP;
                         dwExStyle = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
                         focusable = false;
-                        if let Some(point_in_window_coord) = self.position {
-                            let screen_point = parent_window_handle.get_position()
-                                + point_in_window_coord.to_vec2();
-                            let scaled_point = WindowBuilder::scale_sub_window_position(
-                                screen_point,
-                                parent_window_handle.get_scale(),
-                            );
-                            pos_x = scaled_point.x as i32;
-                            pos_y = scaled_point.y as i32;
-                        } else {
-                            warn!("No position provided for subwindow!");
-                        }
                     }
                 }
             } else {
                 // Default window level
                 window_level = WindowLevel::AppWindow;
             }
+
+            // Calculate the window position in pixels
+            if let Some(pos_dp) = self.position {
+                (pos_x, pos_y) = calculate_window_pos(parent_pos_dp, pos_dp, scale);
+            }
+
+            let mut area = ScaledArea::default();
+            // Calculate the window size in pixels
+            if let Some(size_dp) = self.size {
+                area = ScaledArea::from_dp(size_dp, scale);
+                let size_px = area.size_px();
+                (width, height) = (size_px.width as i32, size_px.height as i32);
+            }
+
+            let (hmenu, accels, has_menu) = match self.menu {
+                Some(menu) => {
+                    let accels = menu.accels();
+                    (menu.into_hmenu(), accels, true)
+                }
+                None => (0 as HMENU, None, false),
+            };
 
             let window = WindowState {
                 hwnd: Cell::new(0 as HWND),
@@ -1509,31 +1505,46 @@ impl WindowBuilder {
                 return Err(Error::NullHwnd);
             }
 
-            if let Some(size_dp) = self.size {
-                if let Ok(scale) = handle.get_scale() {
-                    let size_px = size_dp.to_px(scale);
-                    if SetWindowPos(
-                        hwnd,
-                        HWND_TOPMOST,
-                        0,
-                        0,
-                        size_px.width.round() as i32,
-                        size_px.height.round() as i32,
-                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
-                    ) == 0
+            // Now that the window has been created we finally have the correct scale,
+            // so we might need to update the window position & size.
+            if let Ok(new_scale) = handle.get_scale() {
+                if new_scale != scale {
+                    scale = new_scale;
+                    let mut flags =
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+                    let mut needs_any_change = false;
+
+                    // Calculate the window position in pixels
+                    if let Some(pos_dp) = self.position {
+                        (pos_x, pos_y) = calculate_window_pos(parent_pos_dp, pos_dp, scale);
+                        flags &= !SWP_NOMOVE;
+                        needs_any_change = true;
+                    }
+
+                    // Calculate the window size in pixels
+                    if let Some(size_dp) = self.size {
+                        area = ScaledArea::from_dp(size_dp, scale);
+                        let size_px = area.size_px();
+                        (width, height) = (size_px.width as i32, size_px.height as i32);
+                        flags &= !SWP_NOSIZE;
+                        needs_any_change = true;
+                    }
+
+                    if needs_any_change
+                        && SetWindowPos(hwnd, HWND_TOPMOST, pos_x, pos_y, width, height, flags) == 0
                     {
                         warn!(
-                            "failed to resize window: {}",
+                            "failed to update window size/pos: {}",
                             Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                         );
-                    };
+                    }
                 }
             }
 
             // Dark mode support
             // https://docs.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes
             const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
-            let value: BOOL = if should_use_light_theme() { 0 } else { 1 };
+            let value = should_use_light_theme() as BOOL;
             let value_ptr = &value as *const _ as *const c_void;
             DwmSetWindowAttribute(
                 hwnd,
@@ -1550,21 +1561,16 @@ impl WindowBuilder {
             Ok(handle)
         }
     }
+}
 
-    /// When creating a sub-window, we need to scale its position with respect to its parent.
-    /// If there is any error while scaling, log it as a warn and show sub-window in top left corner of screen/window.
-    fn scale_sub_window_position(
-        un_scaled_sub_window_position: Point,
-        parent_window_scale: Result<Scale, crate::Error>,
-    ) -> Point {
-        match parent_window_scale {
-            Ok(s) => un_scaled_sub_window_position.to_px(s),
-            Err(e) => {
-                warn!("Error with scale: {:?}", e);
-                Point::new(0., 0.)
-            }
-        }
-    }
+/// Returns a pair of integers representing the pixel values of the position.
+fn calculate_window_pos(parent_pos_dp: Option<Point>, pos_dp: Point, scale: Scale) -> (i32, i32) {
+    let pos_px = if let Some(parent_pos_dp) = parent_pos_dp {
+        (parent_pos_dp + pos_dp.to_vec2()).to_px(scale)
+    } else {
+        pos_dp.to_px(scale)
+    };
+    (pos_px.x.round() as i32, pos_px.y.round() as i32)
 }
 
 /// Attempt to read the registry and see if the system is set to a dark or
@@ -1958,7 +1964,7 @@ impl WindowHandle {
         }
     }
 
-    // Gets the position of the window in virtual screen coordinates
+    /// Gets the position of the window in virtual screen coordinates
     pub fn get_position(&self) -> Point {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -2012,12 +2018,12 @@ impl WindowHandle {
         Insets::ZERO
     }
 
-    // Sets the size of the window in DP
+    /// Sets the size of the window in display points
     pub fn set_size(&self, size: Size) {
         self.defer(DeferredOp::SetSize(size));
     }
 
-    // Gets the size of the window in pixels
+    /// Gets the size of the window in display points
     pub fn get_size(&self) -> Size {
         if let Some(w) = self.state.upgrade() {
             let hwnd = w.hwnd.get();
@@ -2036,7 +2042,7 @@ impl WindowHandle {
                 };
                 let width = rect.right - rect.left;
                 let height = rect.bottom - rect.top;
-                return Size::new(width as f64, height as f64);
+                return Size::new(width as f64, height as f64).to_dp(w.scale.get());
             }
         }
         Size::new(0.0, 0.0)
@@ -2046,12 +2052,12 @@ impl WindowHandle {
         self.defer(DeferredOp::SetResizable(resizable));
     }
 
-    // Sets the window state.
+    /// Sets the window state.
     pub fn set_window_state(&self, state: window::WindowState) {
         self.defer(DeferredOp::SetWindowState(state));
     }
 
-    // Gets the window state.
+    /// Gets the window state.
     pub fn get_window_state(&self) -> window::WindowState {
         // We can not store state internally because it could be modified externally.
         if let Some(w) = self.state.upgrade() {
@@ -2077,7 +2083,7 @@ impl WindowHandle {
         }
     }
 
-    // Allows windows to handle a custom titlebar like it was the default one.
+    /// Allows windows to handle a custom titlebar like it was the default one.
     pub fn handle_titlebar(&self, val: bool) {
         if let Some(w) = self.state.upgrade() {
             w.handle_titlebar.set(val);

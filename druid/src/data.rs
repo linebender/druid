@@ -207,6 +207,7 @@ impl Data for f64 {
     }
 }
 
+/// Checks pointer equality. The internal value is not checked.
 impl<T: ?Sized + 'static> Data for Arc<T> {
     fn same(&self, other: &Self) -> bool {
         Arc::ptr_eq(self, other)

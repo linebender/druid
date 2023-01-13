@@ -15,12 +15,12 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-syn = "1.0.39"
-quote = "1.0.7"
-proc-macro2 = "1.0.19"
+syn = "1.0.107"
+quote = "1.0.23"
+proc-macro2 = "1.0.49"
 
 [dev-dependencies]
 druid = { version = "0.7.0", path = "../druid" }
 trybuild = "1.0"
 
-float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
+float-cmp = { version = "0.9.0", features = ["std"], default-features = false }

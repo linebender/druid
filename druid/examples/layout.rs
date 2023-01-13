@@ -40,7 +40,7 @@ fn build_app() -> impl Widget<u32> {
             )
             // Spacing element that will fill all available space in
             // between label and a button. Notice that weight is non-zero.
-            // We could have achieved a similair result with expanding the
+            // We could have achieved a similar result with expanding the
             // width and setting the main-axis-allignment to SpaceBetween.
             .with_flex_spacer(1.0)
             .with_child(Button::new("Two").padding(20.))

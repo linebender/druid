@@ -278,6 +278,13 @@ pub struct StringCursor<'a> {
     position: usize,
 }
 
+impl<'a> StringCursor<'a> {
+    /// Create a new cursor.
+    pub fn new(text: &'a str) -> Self {
+        Self { text, position: 0 }
+    }
+}
+
 impl<'a> EditableTextCursor<&'a String> for StringCursor<'a> {
     fn set(&mut self, position: usize) {
         self.position = position;

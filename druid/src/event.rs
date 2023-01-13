@@ -14,12 +14,13 @@
 
 //! Events.
 
-use crate::kurbo::{Rect, Shape, Size, Vec2};
+use std::ops::{Add, Sub};
 
 use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
+use crate::kurbo::{Rect, Size};
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, WidgetId};
+use crate::{Command, Notification, Point, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -132,10 +133,20 @@ pub enum Event {
     /// will be 0. (This logic is presently per-window but might change to
     /// per-widget to make it more consistent). Otherwise it is in nanoseconds.
     ///
-    /// The `paint` method will be called shortly after this event is finished.
+    /// Receiving `AnimFrame` does not inherently mean a `paint` invocation will follow.
+    /// If you want something actually painted you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`].
+    ///
+    /// If you do that, then the `paint` method will be called shortly after this event is finished.
     /// As a result, you should try to avoid doing anything computationally
     /// intensive in response to an `AnimFrame` event: it might make Druid miss
     /// the monitor's refresh, causing lag or jerky animation.
+    ///
+    /// You can request an `AnimFrame` via [`request_anim_frame`].
+    ///
+    /// [`request_paint`]: crate::EventCtx::request_paint
+    /// [`request_paint_rect`]: crate::EventCtx::request_paint_rect
+    /// [`request_anim_frame`]: crate::EventCtx::request_anim_frame
     AnimFrame(u64),
     /// An event containing a [`Command`] to be handled by the widget.
     ///
@@ -161,7 +172,7 @@ pub enum Event {
     /// A [`Notification`] from one of this widget's descendants.
     ///
     /// While handling events, widgets can submit notifications to be
-    /// delivered to their ancestors immdiately after they return.
+    /// delivered to their ancestors immediately after they return.
     ///
     /// If you handle a [`Notification`], you should call [`EventCtx::set_handled`]
     /// to stop the notification from being delivered to further ancestors.
@@ -248,14 +259,7 @@ pub enum LifeCycle {
     /// itself will handle registering those children with the system; this is
     /// required for things like correct routing of events.
     ///
-    /// ## Participating in focus
-    ///
-    /// Widgets which wish to participate in automatic focus (using tab to change
-    /// focus) must handle this event and call [`LifeCycleCtx::register_for_focus`].
-    ///
-    /// [`LifeCycleCtx::register_child`]: struct.LifeCycleCtx.html#method.register_child
     /// [`WidgetPod`]: struct.WidgetPod.html
-    /// [`LifeCycleCtx::register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
     WidgetAdded,
     /// Called when the [`Size`] of the widget changes.
     ///
@@ -286,7 +290,7 @@ pub enum LifeCycle {
     /// This is called when the widget-tree changes and druid wants to rebuild the
     /// Focus-chain.
     ///
-    /// It is the only place from witch [`register_for_focus`] should be called.
+    /// It is the only place from which [`register_for_focus`] should be called.
     /// By doing so the widget can get focused by other widgets using [`focus_next`] or [`focus_prev`].
     ///
     /// [`register_for_focus`]: crate::LifeCycleCtx::register_for_focus
@@ -303,6 +307,13 @@ pub enum LifeCycle {
     ///
     /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
     FocusChanged(bool),
+    /// Called when the [`ViewContext`] of this widget changed.
+    ///
+    /// See [`view_context_changed`] on how and when to request this event.
+    ///
+    /// [`view_context_changed`]: crate::EventCtx::view_context_changed
+    /// [`ViewContext`]: ViewContext
+    ViewContextChanged(ViewContext),
     /// Internal druid lifecycle event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
@@ -331,8 +342,9 @@ pub enum InternalLifeCycle {
     },
     /// Used to route the `DisabledChanged` event to the required widgets.
     RouteDisabledChanged,
-    /// The parents widget origin in window coordinate space has changed.
-    ParentWindowOrigin,
+
+    /// Used to route the `ViewContextChanged` event to the required widgets.
+    RouteViewContextChanged(ViewContext),
     /// For testing: request the `WidgetState` of a specific widget.
     ///
     /// During testing, you may wish to verify that the state of a widget
@@ -361,54 +373,29 @@ pub enum InternalLifeCycle {
     DebugInspectState(StateCheckFn),
 }
 
-impl Event {
-    /// Transform the event for the contents of a scrolling container.
+/// Information about the widget's surroundings.
+///
+/// The global origin is also saved in the widget state.
+///
+/// When the `ViewContext` of a widget changes it receives a `ViewContextChanged` event.
+#[derive(Debug, Copy, Clone)]
+pub struct ViewContext {
+    /// The origin of this widget relative to the window.
     ///
-    /// the `force` flag is used to ensure an event is delivered even
-    /// if the cursor is out of the viewport, such as if the contents are active
-    /// or hot.
-    pub fn transform_scroll(&self, offset: Vec2, viewport: Rect, force: bool) -> Option<Event> {
-        match self {
-            Event::MouseDown(mouse_event) => {
-                if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::MouseDown(mouse_event))
-                } else {
-                    None
-                }
-            }
-            Event::MouseUp(mouse_event) => {
-                if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::MouseUp(mouse_event))
-                } else {
-                    None
-                }
-            }
-            Event::MouseMove(mouse_event) => {
-                if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::MouseMove(mouse_event))
-                } else {
-                    None
-                }
-            }
-            Event::Wheel(mouse_event) => {
-                if force || viewport.winding(mouse_event.pos) != 0 {
-                    let mut mouse_event = mouse_event.clone();
-                    mouse_event.pos += offset;
-                    Some(Event::Wheel(mouse_event))
-                } else {
-                    None
-                }
-            }
-            _ => Some(self.clone()),
-        }
-    }
+    /// This is written from the perspective of the Widget and not the Pod.
+    /// For the Pod this is its parent's window origin.
+    pub window_origin: Point,
 
+    /// The last position the cursor was at, relative to the widget.
+    pub last_mouse_position: Option<Point>,
+
+    /// The visible area, this widget is contained in, relative to the widget.
+    ///
+    /// The area may be larger than the widget's `paint_rect`.
+    pub clip: Rect,
+}
+
+impl Event {
     /// Whether this event should be sent to widgets which are currently not visible and not
     /// accessible.
     ///
@@ -418,7 +405,7 @@ impl Event {
     /// This distinction between scroll and tabs is due to one of the main purposes of
     /// this method: determining which widgets are allowed to receive focus. As a rule
     /// of thumb a widget counts as `hidden` if it makes no sense for it to receive focus
-    /// when the user presses thee 'tab' key.
+    /// when the user presses the 'tab' key.
     ///
     /// If a widget changes which children are hidden it must call [`children_changed`].
     ///
@@ -448,6 +435,16 @@ impl Event {
             | Event::Zoom(_) => false,
         }
     }
+
+    /// Returns true if the event involves a cursor.
+    ///
+    /// These events interact with the hot state and
+    pub fn is_pointer_event(&self) -> bool {
+        matches!(
+            self,
+            Event::MouseDown(_) | Event::MouseUp(_) | Event::MouseMove(_) | Event::Wheel(_)
+        )
+    }
 }
 
 impl LifeCycle {
@@ -466,7 +463,32 @@ impl LifeCycle {
             LifeCycle::Size(_)
             | LifeCycle::HotChanged(_)
             | LifeCycle::FocusChanged(_)
-            | LifeCycle::BuildFocusChain => false,
+            | LifeCycle::BuildFocusChain
+            | LifeCycle::ViewContextChanged { .. } => false,
+        }
+    }
+
+    /// Returns an event for a widget which maybe is overlapped by another widget.
+    ///
+    /// When `ignore` is set to `true` the widget will set its hot state to `false` even if the cursor
+    /// is inside its bounds.
+    pub fn ignore_hot(&self, ignore: bool) -> Self {
+        if ignore {
+            match self {
+                LifeCycle::ViewContextChanged(view_ctx) => {
+                    let mut view_ctx = view_ctx.to_owned();
+                    view_ctx.last_mouse_position = None;
+                    LifeCycle::ViewContextChanged(view_ctx)
+                }
+                LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx)) => {
+                    let mut view_ctx = view_ctx.to_owned();
+                    view_ctx.last_mouse_position = None;
+                    LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(view_ctx))
+                }
+                _ => self.to_owned(),
+            }
+        } else {
+            self.to_owned()
         }
     }
 }
@@ -485,10 +507,22 @@ impl InternalLifeCycle {
             InternalLifeCycle::RouteWidgetAdded
             | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
-            InternalLifeCycle::ParentWindowOrigin => false,
+            InternalLifeCycle::RouteViewContextChanged { .. } => false,
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
+        }
+    }
+}
+
+impl ViewContext {
+    /// Transforms the `ViewContext` into the coordinate space of its child.
+    pub(crate) fn for_child_widget(&self, child_origin: Point) -> Self {
+        let child_origin = child_origin.to_vec2();
+        ViewContext {
+            window_origin: self.window_origin.add(child_origin),
+            last_mouse_position: self.last_mouse_position.map(|pos| pos.sub(child_origin)),
+            clip: self.clip.sub(child_origin),
         }
     }
 }

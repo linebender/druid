@@ -293,7 +293,7 @@ impl WindowBuilder {
         window.set_decorated(self.show_titlebar);
         let mut transparent = false;
         if self.transparent {
-            if let Some(screen) = window.screen() {
+            if let Some(screen) = gtk::prelude::GtkWindowExt::screen(&window) {
                 let visual = screen.rgba_visual();
                 transparent = visual.is_some();
                 window.set_visual(visual.as_ref());
@@ -428,10 +428,9 @@ impl WindowBuilder {
         if let Some(min_size_dp) = self.min_size {
             let min_area = ScaledArea::from_dp(min_size_dp, scale);
             let min_size_px = min_area.size_px();
-            win_state.drawing_area.set_size_request(
-                min_size_px.width.round() as i32,
-                min_size_px.height.round() as i32,
-            );
+            win_state
+                .drawing_area
+                .set_size_request(min_size_px.width as i32, min_size_px.height as i32);
         }
 
         win_state
@@ -475,13 +474,13 @@ impl WindowBuilder {
                 // Create a new cairo surface if necessary (either because there is no surface, or
                 // because the size or scale changed).
                 let extents = widget.allocation();
-                let size_px = Size::new(extents.width as f64, extents.height as f64);
+                let size_px = Size::new(extents.width() as f64, extents.height() as f64);
                 let no_surface = state.surface.try_borrow().map(|x| x.is_none()).ok() == Some(true);
                 if no_surface || scale_changed || state.area.get().size_px() != size_px {
                     let area = ScaledArea::from_px(size_px, scale);
                     let size_dp = area.size_dp();
                     state.area.set(area);
-                    if let Err(e) = state.resize_surface(extents.width, extents.height) {
+                    if let Err(e) = state.resize_surface(extents.width(), extents.height()) {
                         error!("Failed to resize surface: {}", e);
                     }
                     state.with_handler(|h| h.size(size_dp));
@@ -526,7 +525,7 @@ impl WindowBuilder {
                        // TODO: how are we supposed to handle these errors? What can we do besides panic? Probably nothing right?
                         let alloc = widget.allocation();
                         context.set_source_surface(surface, 0.0, 0.0).unwrap();
-                        context.rectangle(0.0, 0.0, alloc.width as f64, alloc.height as f64);
+                        context.rectangle(0.0, 0.0, alloc.width() as f64, alloc.height() as f64);
                         context.fill().unwrap();
                     });
                 } else {
@@ -643,21 +642,9 @@ impl WindowBuilder {
         );
 
         win_state.drawing_area.connect_leave_notify_event(
-            clone!(handle => move |_widget, crossing| {
+            clone!(handle => move |_widget, _crossing| {
                 if let Some(state) = handle.state.upgrade() {
-                    let scale = state.scale.get();
-                    let crossing_state = crossing.state();
-                    let mouse_event = MouseEvent {
-                        pos: Point::from(crossing.position()).to_dp(scale),
-                        buttons: get_mouse_buttons_from_modifiers(crossing_state),
-                        mods: get_modifiers(crossing_state),
-                        count: 0,
-                        focus: false,
-                        button: MouseButton::None,
-                        wheel_delta: Vec2::ZERO
-                    };
-
-                    state.with_handler(|h| h.mouse_move(&mouse_event));
+                    state.with_handler(|h| h.mouse_leave());
                 }
 
                 Inhibit(true)
@@ -1025,24 +1012,24 @@ impl WindowHandle {
             let scale = state.scale.get();
             let (width_px, height_px) = state.window.size();
             let alloc_px = state.drawing_area.allocation();
-            let menu_height_px = height_px - alloc_px.height;
+            let menu_height_px = height_px - alloc_px.height();
 
             if let Some(window) = state.window.window() {
                 let frame = window.frame_extents();
                 let (pos_x, pos_y) = window.position();
                 Insets::new(
-                    (pos_x - frame.x) as f64,
-                    (pos_y - frame.y + menu_height_px) as f64,
-                    (frame.x + frame.width - (pos_x + width_px)) as f64,
-                    (frame.y + frame.height - (pos_y + height_px)) as f64,
+                    (pos_x - frame.x()) as f64,
+                    (pos_y - frame.y() + menu_height_px) as f64,
+                    (frame.x() + frame.width() - (pos_x + width_px)) as f64,
+                    (frame.y() + frame.height() - (pos_y + height_px)) as f64,
                 )
                 .to_dp(scale)
                 .nonnegative()
             } else {
                 let window = Size::new(width_px as f64, height_px as f64).to_dp(scale);
                 let alloc = Rect::from_origin_size(
-                    (alloc_px.x as f64, alloc_px.y as f64),
-                    (alloc_px.width as f64, alloc_px.height as f64),
+                    (alloc_px.x() as f64, alloc_px.y() as f64),
+                    (alloc_px.width() as f64, alloc_px.height() as f64),
                 )
                 .to_dp(scale);
                 window.to_rect() - alloc
@@ -1052,15 +1039,18 @@ impl WindowHandle {
         }
     }
 
+    /// Sets the size of the window in display points
     pub fn set_size(&self, size: Size) {
         if let Some(state) = self.state.upgrade() {
-            let px = size.to_px(state.scale.get());
+            let area = ScaledArea::from_dp(size, state.scale.get());
+            let size_px = area.size_px();
             state
                 .window
-                .resize(px.width.round() as i32, px.height.round() as i32)
+                .resize(size_px.width as i32, size_px.height as i32);
         }
     }
 
+    /// Gets the size of the window in display points
     pub fn get_size(&self) -> Size {
         if let Some(state) = self.state.upgrade() {
             let (x, y) = state.window.size();
@@ -1455,6 +1445,7 @@ const MODIFIER_MAP: &[(ModifierType, Modifiers)] = &[
     // Note: this is the usual value on X11, not sure how consistent it is.
     // Possibly we should use `Keymap::get_num_lock_state()` instead.
     (ModifierType::MOD2_MASK, Modifiers::NUM_LOCK),
+    (ModifierType::MOD4_MASK, Modifiers::META),
 ];
 
 fn get_modifiers(modifiers: ModifierType) -> Modifiers {

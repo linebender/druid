@@ -783,7 +783,7 @@ impl Window {
         let invalid = std::mem::replace(&mut *borrow_mut!(self.invalid)?, Region::EMPTY);
         {
             let surface = borrow!(self.cairo_surface)?;
-            let cairo_ctx = cairo::Context::new(&surface).unwrap();
+            let cairo_ctx = cairo::Context::new(&*surface).unwrap();
             let scale = self.scale.get();
             for rect in invalid.rects() {
                 let rect = rect.to_px(scale).round();
@@ -1805,7 +1805,7 @@ impl WindowHandle {
                     let conn = w.app.connection();
                     let setup = &conn.setup();
                     let screen = &setup.roots[w.app.screen_num()];
-                    match make_cursor(&**conn, setup.image_byte_order, screen.root, format, desc) {
+                    match make_cursor(conn, setup.image_byte_order, screen.root, format, desc) {
                         // TODO: We 'leak' the cursor - nothing ever calls render_free_cursor
                         Ok(cursor) => Some(cursor),
                         Err(err) => {

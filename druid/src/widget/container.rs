@@ -190,7 +190,7 @@ impl<T: Data> Widget<T> for Container<T> {
         let child_bc = bc.shrink((2.0 * border_width, 2.0 * border_width));
         let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(border_width, border_width);
-        self.child.set_origin(ctx, data, env, origin);
+        self.child.set_origin(ctx, origin);
 
         let my_size = Size::new(
             size.width + 2.0 * border_width,

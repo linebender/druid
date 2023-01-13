@@ -360,7 +360,7 @@ fn apply_movement(
 fn main() {
     let app = Application::new().unwrap();
     let mut builder = WindowBuilder::new(app.clone());
-    builder.set_handler(Box::new(AppState::default()));
+    builder.set_handler(Box::<AppState>::default());
     builder.set_title("Text editing example");
     let window = builder.build().unwrap();
     window.show();
