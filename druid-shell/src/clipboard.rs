@@ -161,6 +161,8 @@ impl Clipboard {
         self.0.get_format(format)
     }
 
+
+    /// Get a file name list from the system clipboard.
     #[cfg(windows)]
     pub fn get_files(&self) -> Option<Vec<String>>{
         self.0.get_files()
