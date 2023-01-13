@@ -8,7 +8,7 @@ repository = "https://github.com/linebender/druid"
 categories = ["gui"]
 readme = "README.md"
 keywords = ["gui", "ui", "toolkit"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.docs.rs]
 # The "svg" and "image" features have doc clashes that cause undefined output in docs.
