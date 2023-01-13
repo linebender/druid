@@ -135,4 +135,4 @@ unicode-segmentation = "1.10.0"
 
 [build-dependencies]
 bindgen = { version = "0.61.0", optional = true }
-pkg-config = { version = "0.3.0", optional = true }
+pkg-config = { version = "0.3.26", optional = true }
