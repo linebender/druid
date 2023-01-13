@@ -57,38 +57,37 @@ image-all = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "
 druid-shell = { version = "0.7.0", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.4.0", path = "../druid-derive" }
 
-tracing = { version = "0.1.22" }
-tracing-subscriber = { version = "0.3.2", features = ["fmt", "ansi"], default-features = false }
-fluent-bundle = "0.15.1"
+tracing = { version = "0.1.37" }
+tracing-subscriber = { version = "0.3.16", features = ["fmt", "ansi"], default-features = false }
+fluent-bundle = "0.15.2"
 fluent-langneg = "0.13.0"
 fluent-syntax = "0.11.0"
-unic-langid = "0.9.0"
-unicode-segmentation = "1.6.0"
+unic-langid = "0.9.1"
+unicode-segmentation = "1.10.0"
 xi-unicode = "0.3.0"
 fnv = "1.0.7"
-instant = { version = "0.1.6", features = ["wasm-bindgen"] }
+instant = { version = "0.1.12", features = ["wasm-bindgen"] }
 
 # Optional dependencies
-chrono = { version = "0.4.19", optional = true }
-im = { version = "15.0.0", optional = true }
+chrono = { version = "0.4.23", optional = true }
+im = { version = "15.1.0", optional = true }
 usvg = { version = "0.14.1", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-tracing-wasm = { version = "0.2.0" }
-console_error_panic_hook = { version = "0.1.6" }
+tracing-wasm = { version = "0.2.1" }
+console_error_panic_hook = { version = "0.1.7" }
 
 [dev-dependencies]
-float-cmp = { version = "0.8.0", features = ["std"], default-features = false }
-# tempfile 3.2.0 broke wasm; I assume it will be yanked (Jan 12, 2021)
-tempfile = "=3.1.0"
+float-cmp = { version = "0.9.0", features = ["std"], default-features = false }
+tempfile = "3.3.0"
 piet-common = { version = "0.6.0", features = ["png"] }
-pulldown-cmark = { version = "0.8", default-features = false }
-test-log = { version = "0.2.5", features = ["trace"], default-features = false }
+pulldown-cmark = { version = "0.8.0", default-features = false }
+test-log = { version = "0.2.11", features = ["trace"], default-features = false }
 # test-env-log needs it
-tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
-open = "1.6"
+open = "1.7.1"
 
 [[example]]
 name = "cursor"

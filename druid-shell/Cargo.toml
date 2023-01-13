@@ -64,14 +64,14 @@ serde = ["kurbo/serde"]
 # NOTE: When changing the piet or kurbo versions, ensure that
 #       the kurbo version included in piet is compatible with the kurbo version specified here.
 piet-common = "0.6.0"
-kurbo = "0.9"
+kurbo = "0.9.0"
 
-tracing = "0.1.22"
-once_cell = "1.14.0"
-time = "0.3.0"
+tracing = "0.1.37"
+once_cell = "1.17.0"
+time = "0.3.17"
 cfg-if = "1.0.0"
-instant = { version = "0.1.6", features = ["wasm-bindgen"] }
-anyhow = "1.0.32"
+instant = { version = "0.1.12", features = ["wasm-bindgen"] }
+anyhow = "1.0.68"
 keyboard-types = { version = "0.6.2", default_features = false }
 
 # Optional dependencies
@@ -91,48 +91,48 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
 
 [target.'cfg(target_os="macos")'.dependencies]
 block = "0.1.6"
-cocoa = "0.24.0"
+cocoa = "0.24.1"
 objc = "0.2.7"
-core-graphics = "0.22.0"
+core-graphics = "0.22.3"
 foreign-types = "0.3.2"
-bitflags = "1.2.1"
+bitflags = "1.3.2"
 
 [target.'cfg(any(target_os = "freebsd", target_os="linux", target_os="openbsd"))'.dependencies]
-ashpd = { version = "0.3.0", optional = true }
+ashpd = { version = "0.3.2", optional = true }
 # TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.16.3", default_features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.16.3", default_features = false, optional = true }
-futures = { version = "0.3.21", optional = true, features = ["executor"]}
+futures = { version = "0.3.25", optional = true, features = ["executor"]}
 gdk-sys = { version = "0.16.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
-gtk-rs = { version = "0.16.1", package = "gtk", optional = true }
+gtk-rs = { version = "0.16.2", package = "gtk", optional = true }
 glib-sys = { version = "0.16.3", optional = true }
 gtk-sys = { version = "0.16.0", optional = true }
-nix = { version = "0.24.0", optional = true }
-x11rb = { version = "0.10", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "xkb", "resource_manager", "cursor"], optional = true }
-wayland-client = { version = "0.29", optional = true }
-wayland-protocols = { version = "0.29", optional = true }
-wayland-cursor = { version = "0.29", optional = true }
-rand = { version = "0.8.0", optional = true }
-calloop = { version = "0.7.1", optional = true }
-log = { version = "0.4.14", optional = true }
-im = { version = "15.0.0", optional = true }
+nix = { version = "0.24.3", optional = true }
+x11rb = { version = "0.10.1", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "xkb", "resource_manager", "cursor"], optional = true }
+wayland-client = { version = "0.29.5", optional = true }
+wayland-protocols = { version = "0.29.5", optional = true }
+wayland-cursor = { version = "0.29.5", optional = true }
+rand = { version = "0.8.5", optional = true }
+calloop = { version = "0.7.2", optional = true }
+log = { version = "0.4.17", optional = true }
+im = { version = "15.1.0", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.67"
-js-sys = "0.3.44"
+wasm-bindgen = "0.2.83"
+js-sys = "0.3.60"
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.44"
+version = "0.3.60"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
 piet-common = { version = "0.6.0", features = ["png"] }
 static_assertions = "1.1.0"
-test-log = { version = "0.2.5", features = ["trace"], default-features = false }
-tracing-subscriber = { version = "0.3.2", features = ["env-filter"] }
-unicode-segmentation = "1.7.0"
+test-log = { version = "0.2.11", features = ["trace"], default-features = false }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+unicode-segmentation = "1.10.0"
 
 [build-dependencies]
-bindgen = { version = "0.61", optional = true }
-pkg-config = { version = "0.3", optional = true }
+bindgen = { version = "0.61.0", optional = true }
+pkg-config = { version = "0.3.26", optional = true }
