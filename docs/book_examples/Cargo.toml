@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 druid = { path = "../../druid", features = [ "im" ] }
-im = { version = "15.0.0" }
+im = { version = "15.1.0" }
