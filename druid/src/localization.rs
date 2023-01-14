@@ -34,6 +34,7 @@
 //! [`Env`]: struct.Env.html
 //! [`Data`]: trait.Data.html
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fs, io};
@@ -104,19 +105,19 @@ impl BundleStack {
         self.0.iter().flat_map(|b| b.get_message(id)).next()
     }
 
-    fn format_pattern(
-        &self,
+    fn format_pattern<'bundle>(
+        &'bundle self,
         id: &str,
-        pattern: &FluentPattern<&str>,
-        args: Option<&FluentArgs>,
+        pattern: &'bundle FluentPattern<&str>,
+        args: Option<&'bundle FluentArgs>,
         errors: &mut Vec<FluentError>,
-    ) -> String {
+    ) -> Cow<'bundle, str> {
         for bundle in self.0.iter() {
             if bundle.has_message(id) {
-                return bundle.format_pattern(pattern, args, errors).to_string();
+                return bundle.format_pattern(pattern, args, errors);
             }
         }
-        format!("localization failed for key '{}'", id)
+        Cow::Owned(format!("localization failed for key '{}'", id))
     }
 }
 
@@ -155,6 +156,12 @@ impl ResourceManager {
         let mut stack = Vec::new();
         for locale in &resolved_locales {
             let mut bundle = FluentBundle::new(resolved_locales.clone());
+
+            // fluent inserts bidi controls when interpolating, and they can
+            // cause rendering issues; for now we just don't use them.
+            // https://www.w3.org/International/questions/qa-bidi-unicode-controls#basedirection
+            bundle.set_use_isolating(false);
+
             for res_id in resource_ids {
                 let res = self.get_resource(res_id, &locale.to_string());
                 bundle.add_resource(res).unwrap();
@@ -249,7 +256,7 @@ impl L10nManager {
         &'args self,
         key: &str,
         args: impl Into<Option<&'args FluentArgs<'args>>>,
-    ) -> Option<ArcStr> {
+    ) -> Option<Cow<str>> {
         let args = args.into();
         let value = match self
             .current_bundle
@@ -267,22 +274,7 @@ impl L10nManager {
             warn!("localization error {:?}", err);
         }
 
-        // fluent inserts bidi controls when interpolating, and they can
-        // cause rendering issues; for now we just strip them.
-        // https://www.w3.org/International/questions/qa-bidi-unicode-controls#basedirection
-        const START_ISOLATE: char = '\u{2068}';
-        const END_ISOLATE: char = '\u{2069}';
-        if args.is_some() && result.chars().any(|c| c == START_ISOLATE) {
-            Some(
-                result
-                    .chars()
-                    .filter(|c| c != &START_ISOLATE && c != &END_ISOLATE)
-                    .collect::<String>()
-                    .into(),
-            )
-        } else {
-            Some(result.into())
-        }
+        Some(result)
     }
     //TODO: handle locale change
 }
@@ -361,9 +353,16 @@ impl<T> LocalizedString<T> {
 
             self.resolved_lang = Some(manager.current_locale.clone());
             let next = manager.localize(self.key, args.as_ref());
-            let result = next != self.resolved;
-            self.resolved = next;
-            result
+            {
+                let next = next.as_ref().map(|cow| cow.as_ref());
+                let prev = self.resolved.as_ref().map(|arc| arc.as_ref());
+                if next == prev {
+                    // still the same value, no need to update the field
+                    return false;
+                }
+            }
+            self.resolved = next.map(|cow| cow.into());
+            true
         } else {
             false
         }

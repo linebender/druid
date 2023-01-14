@@ -86,6 +86,13 @@ cargo run --example invalidation --features="im"
 ```
 A demonstration how to use debug invalidation regions in your own widgets, including some examples of builtin widgets.
 
+## L10n
+```
+cd druid/examples
+LANG=fr-FR cargo run --example l10n
+```
+Shows how to localize and translate text in druid. On Linux, set the LANG environment variable to either "fr-FR" or "en-US".
+
 ## Layout
 ```
 cargo run --example layout
