@@ -1,5 +1,5 @@
-use druid::widget::{CrossAxisAlignment, Flex, Label, Painter, Scroll, SizedBox, ZStack};
-use druid::{AppLauncher, Color, RenderContext, UnitPoint, Widget, WidgetExt, WindowDesc};
+use druid::widget::{CrossAxisAlignment, Flex, Label, Scroll, SizedBox, ZStack};
+use druid::{AppLauncher, Color, UnitPoint, Widget, WidgetExt, WindowDesc};
 
 fn main() {
     let window = WindowDesc::new(build_ui());

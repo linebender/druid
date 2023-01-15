@@ -1,8 +1,8 @@
 use crate::commands::SCROLL_TO_VIEW;
 use crate::widget::flex::{Orientation, Side};
 use crate::{
-    BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetExt, WidgetId, WidgetPod,
+    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetPod,
 };
 use druid::RenderContext;
 
@@ -95,7 +95,6 @@ impl ViewportHeaderConfig {
     ///
     /// Dont call call this with requests of the header widget.
     pub fn transform_content_scroll_to_view(&self, ctx: &mut EventCtx, rect: Rect) {
-        let axis = self.header_side.axis();
         // The length on the major axis with is overlapped by the header.
         let viewport_crop = self.viewport_crop();
 
