@@ -197,6 +197,9 @@ pub enum Axis {
     Vertical,
 }
 
+/// One of two sides of an Axis.
+///
+/// This value is useful combination with an axis to indicate a side of a Rectangle.
 #[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Orientation {
     Start,
@@ -204,6 +207,7 @@ pub enum Orientation {
 }
 
 impl Orientation {
+    /// brings two elements in visual order.
     pub fn order<T>(&self, reference: T, side: T) -> (T, T) {
         match self {
             Orientation::Start => (side, reference),
@@ -212,6 +216,7 @@ impl Orientation {
     }
 }
 
+/// Represents one of the sides of a Rectangle.
 #[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
     Top,
@@ -221,6 +226,17 @@ pub enum Side {
 }
 
 impl Side {
+    /// Creates a new Side from an Axis and an Orientation
+    pub fn pack(axis: Axis, orientation: Orientation) -> Self {
+        match (axis, orientation) {
+            (Axis::Horizontal, Orientation::Start) => Side::Left,
+            (Axis::Horizontal, Orientation::End) => Side::Right,
+            (Axis::Vertical, Orientation::Start) => Side::Top,
+            (Axis::Vertical, Orientation::End) => Side::Bottom,
+        }
+    }
+
+    /// The Axis of this Side
     pub fn axis(&self) -> Axis {
         match self {
             Side::Top | Side::Bottom => Axis::Vertical,
@@ -228,6 +244,7 @@ impl Side {
         }
     }
 
+    /// Orientation of this Side
     pub fn orientation(&self) -> Orientation {
         match self {
             Side::Top | Side::Left => Orientation::Start,
@@ -235,6 +252,7 @@ impl Side {
         }
     }
 
+    /// returns a Vec2 which points in the direction of this Side.
     pub fn direction(&self) -> Vec2 {
         match self {
             Side::Top => Vec2::new(0.0, -1.0),
@@ -244,6 +262,7 @@ impl Side {
         }
     }
 
+    /// returns the value of an `Inset` at this side.
     pub fn from_inset(&self, insets: Insets) -> f64 {
         match self {
             Side::Top => insets.y0,
@@ -253,6 +272,7 @@ impl Side {
         }
     }
 
+    /// creates an inset which has amount on this side and zero everywhere else.
     pub fn as_insets(&self, amount: f64) -> Insets {
         let mut insets = Insets::ZERO;
         match self {

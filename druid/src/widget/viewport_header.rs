@@ -6,7 +6,8 @@ use druid::RenderContext;
 /// A widget, containing two widgets with horizontal or vertical layout.
 ///
 /// When the `ViewportHeader` is moved out of the viewport, the `header` widget tries to stay inside
-/// the viewport by moving over the `content` if necessary.
+/// the viewport by moving over the `content` if necessary. It will always stay inside the
+/// `ViewportHeader`'s bounds.
 pub struct ViewportHeader<T> {
     header: WidgetPod<T, Box<dyn Widget<T>>>,
     content: WidgetPod<T, Box<dyn Widget<T>>>,
@@ -41,6 +42,10 @@ impl ViewportHeaderConfig {
         }
     }
 
+    pub fn minimum_visible(&self) -> f64 {
+        self.minimum_visible_content.min(self.header_side.axis().major(self.content_size))
+    }
+
     /// The the layout size of header and content together, when both are fully in view.
     pub fn size(&self) -> Size {
         self.content_size + Size::from(self.header_side.axis().pack(self.header_size, 0.0))
@@ -63,7 +68,7 @@ impl ViewportHeaderConfig {
 
         //Compute max movable distance
         let axis = self.header_side.axis();
-        let max = axis.major(self.content_size) - self.minimum_visible_content;
+        let max = axis.major(self.content_size) - self.minimum_visible();
 
         self.header_side.from_inset(insets).max(0.0).min(max)
     }
@@ -146,7 +151,8 @@ impl<T: Data> ViewportHeader<T> {
         }
     }
 
-    /// The amount of Pixels
+    /// The amount of Pixels on the main axis of the header, which is always visible of the content.
+    ///
     pub fn with_minimum_visible_content(mut self, minimum_visible_content: f64) -> Self {
         self.header_config
             .set_minimum_visible_content(minimum_visible_content);
