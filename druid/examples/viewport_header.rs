@@ -20,23 +20,22 @@
 
 use druid::lens::Unit;
 use druid::widget::prelude::*;
-use druid::widget::{BackgroundBrush, Button, ClipBox, Flex, Label, List, Padding, Side, Slider, Tabs, TextBox, ViewportHeader};
-use druid::{
-    AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii, Vec2,
-    WidgetExt, WidgetPod, WindowDesc,
-};
+use druid::widget::{BackgroundBrush, Button, ClipBox, Controller, Flex, Label, List, Padding, Side, Slider, Tabs, TextBox, ViewportHeader};
+use druid::{AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii, Selector, Vec2, WidgetExt, WidgetPod, WindowDesc};
 use im::Vector;
 use std::sync::Arc;
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
     list: Vector<Contact>,
+    count: usize,
 }
 
 #[derive(Clone, Data, Lens)]
 struct Contact {
     name: Arc<String>,
     info: Vector<Arc<String>>,
+    id: usize,
 }
 
 pub fn main() {
@@ -52,6 +51,7 @@ pub fn main() {
         .log_to_console()
         .launch(AppData {
             list: Vector::new(),
+            count: 0,
         })
         .expect("launch failed");
 }
@@ -77,14 +77,20 @@ fn build_widget() -> impl Widget<AppData> {
             .align_left()
             .padding(Insets::uniform_xy(25.0, 0.0))
             .background(Color::grey8(25))
-            .rounded(RoundedRectRadii::new(0.0, 0.0, 5.0, 5.0));
+            .rounded(RoundedRectRadii::new(0.0, 0.0, 10.0, 10.0));
+
+        let header = Flex::row()
+            .with_flex_child(Label::dynamic(|data: &Contact, _| format!("Contact \"{}\"", &data.name)).center(), 1.0)
+            .with_child(Button::new("X").on_click(|ctx, data: &mut Contact, _|{
+                ctx.submit_notification(REMOVE_ID.with(data.id))
+            }).padding(5.0))
+            .center()
+            .background(Color::grey8(15))
+            .rounded(RoundedRectRadii::new(10.0, 10.0, 0.0, 0.0));
 
         ViewportHeader::new(
             body,
-            Label::dynamic(|data: &Contact, _| format!("Contact \"{}\"", &data.name))
-                .center()
-                .background(Color::grey8(15))
-                .rounded(RoundedRectRadii::new(5.0, 5.0, 0.0, 0.0)),
+            header,
             Side::Top,
         )
         .clipped_content(true)
@@ -92,6 +98,7 @@ fn build_widget() -> impl Widget<AppData> {
         .padding(Insets::uniform_xy(0.0, 5.0))
     })
     .lens(AppData::list)
+    .controller(RemoveID)
     .scroll()
     .vertical();
 
@@ -100,10 +107,35 @@ fn build_widget() -> impl Widget<AppData> {
         .with_default_spacer()
         .with_child(
             Button::new("Add Contact").on_click(|_, data: &mut AppData, _| {
+                let name = if data.count == 0 {
+                    "New Contact".to_string()
+                } else {
+                    format!("New Contact #{}", data.count)
+                };
+                let id = data.count;
+                data.count += 1;
                 data.list.push_back(Contact {
-                    name: Arc::new("New Contact".to_string()),
+                    name: Arc::new(name),
                     info: Default::default(),
+                    id,
                 })
             }),
         )
+}
+
+const REMOVE_ID: Selector<usize> = Selector::new("org.druid.example.remove_id");
+
+struct RemoveID;
+
+impl<W: Widget<AppData>> Controller<AppData, W> for RemoveID {
+    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut AppData, env: &Env) {
+        if let Event::Notification(notification) = event {
+            if let Some(id) = notification.get(REMOVE_ID) {
+                ctx.set_handled();
+                data.list.retain(|c|c.id != *id);
+            }
+        } else {
+            child.event(ctx, event, data, env);
+        }
+    }
 }

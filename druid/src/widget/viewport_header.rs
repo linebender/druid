@@ -196,7 +196,6 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         match event {
             LifeCycle::ViewContextChanged(view_context) => {
-                println!("update ctx");
                 self.header_config.update_context(*view_context);
                 let (_, header_origin) = self.header_config.origins();
 
