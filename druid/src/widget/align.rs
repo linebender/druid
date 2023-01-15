@@ -14,11 +14,11 @@
 
 //! A widget that aligns its child (for example, centering it).
 
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 use tracing::{instrument, trace};
-use crate::contexts::ChangeCtx;
 
 /// A widget that aligns its child.
 pub struct Align<T> {

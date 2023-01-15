@@ -1,6 +1,9 @@
 use crate::commands::SCROLL_TO_VIEW;
 use crate::widget::flex::{Orientation, Side};
-use crate::{BoxConstraints, Data, Env, Event, EventCtx, InternalEvent, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetPod};
+use crate::{
+    BoxConstraints, Data, Env, Event, EventCtx, InternalEvent, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetPod,
+};
 use druid::RenderContext;
 
 /// A widget, containing two widgets with horizontal or vertical layout.
@@ -43,7 +46,8 @@ impl ViewportHeaderConfig {
     }
 
     pub fn minimum_visible(&self) -> f64 {
-        self.minimum_visible_content.min(self.header_side.axis().major(self.content_size))
+        self.minimum_visible_content
+            .min(self.header_side.axis().major(self.content_size))
     }
 
     /// The the layout size of header and content together, when both are fully in view.
@@ -186,7 +190,8 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
             if self.content.is_active() {
                 ctx.set_handled();
             } else {
-                self.content.event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
+                self.content
+                    .event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
                 return;
             }
         }
