@@ -18,15 +18,11 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
-use druid::lens::Unit;
 use druid::widget::prelude::*;
-use druid::widget::{
-    BackgroundBrush, Button, ClipBox, Controller, Flex, Label, List, Padding, Side, Slider, Tabs,
-    TextBox, ViewportHeader,
-};
+use druid::widget::{Button, Controller, Flex, Label, List, Side, TextBox, ViewportHeader};
 use druid::{
-    AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii,
-    Selector, Vec2, WidgetExt, WidgetPod, WindowDesc,
+    AppLauncher, Color, Data, Insets, Lens, LocalizedString, RoundedRectRadii, Selector, WidgetExt,
+    WindowDesc,
 };
 use im::Vector;
 use std::sync::Arc;

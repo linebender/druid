@@ -45,6 +45,8 @@ impl ViewportHeaderConfig {
         }
     }
 
+    /// The minimum visible content constrained by the the actual size of the content on that
+    /// axis.
     pub fn minimum_visible(&self) -> f64 {
         self.minimum_visible_content
             .min(self.header_side.axis().major(self.content_size))

@@ -91,7 +91,7 @@ impl<T> Align<T> {
     /// When the `Align` widget is fully visible, this option has no effect. When the align widget
     /// gets scrolled out of view, the wrapped widget will move to stay inside the visible area.
     /// The wrapped widget will always stay inside the bounds of the `Align` widget.
-    fn in_viewport(mut self) -> Self {
+    pub fn in_viewport(mut self) -> Self {
         self.in_viewport = true;
         self
     }
@@ -113,10 +113,10 @@ impl<T> Align<T> {
             // Essentially Rect::intersect but if the two rectangles dont intersect this
             // implementation chooses the point closed to viewpor inside extra_space to always give
             // the child a valid origin.
-            extra_space.x0 = extra_space.x0.max(viewport.x0).min(extra_space.x1);
-            extra_space.y0 = extra_space.y0.max(viewport.y0).min(extra_space.y1);
-            extra_space.x1 = extra_space.x1.min(viewport.x1).max(extra_space.x0);
-            extra_space.y1 = extra_space.y1.min(viewport.y1).max(extra_space.y0);
+            extra_space.x0 = extra_space.x0.clamp(viewport.x0, extra_space.x1);
+            extra_space.y0 = extra_space.y0.clamp(viewport.y0, extra_space.y1);
+            extra_space.x1 = extra_space.x1.clamp(extra_space.x0, viewport.x1);
+            extra_space.y1 = extra_space.y1.clamp(extra_space.y0, viewport.y1);
         }
 
         let origin = self.align.resolve(extra_space).expand();

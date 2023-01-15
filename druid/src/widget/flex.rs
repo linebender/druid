@@ -202,7 +202,9 @@ pub enum Axis {
 /// This value is useful combination with an axis to indicate a side of a Rectangle.
 #[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Orientation {
+    /// Start
     Start,
+    /// End
     End,
 }
 
@@ -219,9 +221,13 @@ impl Orientation {
 /// Represents one of the sides of a Rectangle.
 #[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
+    /// The top side of a rectangle (y0).
     Top,
+    /// The left side of a rectangle (x0).
     Left,
+    /// The right side of a rectangle (x1).
     Right,
+    /// The bottom side of a rectangle (y1).
     Bottom,
 }
 
