@@ -14,11 +14,11 @@
 
 //! A widget that aligns its child (for example, centering it).
 
-use crate::contexts::CommandCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
 use tracing::{instrument, trace};
+use crate::contexts::ChangeCtx;
 
 /// A widget that aligns its child.
 pub struct Align<T> {
@@ -96,7 +96,7 @@ impl<T> Align<T> {
         self
     }
 
-    fn align<'b, C: CommandCtx<'b>>(&mut self, ctx: &mut C, my_size: Size) {
+    fn align(&mut self, ctx: &mut impl ChangeCtx, my_size: Size) {
         let size = self.child.layout_rect().size();
 
         let extra_width = (my_size.width - size.width).max(0.);
@@ -110,9 +110,9 @@ impl<T> Align<T> {
             let viewport =
                 Rect::from_origin_size(self.viewport.origin(), self.viewport.size() - size);
 
-            // Essentially Rect::intersect but this implementation chooses the point closed to viewport
-            // inside extra_space to give the child a valid origin even if extra_space and viewport
-            // dont intersect.
+            // Essentially Rect::intersect but if the two rectangles dont intersect this
+            // implementation chooses the point closed to viewpor inside extra_space to always give
+            // the child a valid origin.
             extra_space.x0 = extra_space.x0.max(viewport.x0).min(extra_space.x1);
             extra_space.y0 = extra_space.y0.max(viewport.y0).min(extra_space.y1);
             extra_space.x1 = extra_space.x1.min(viewport.x1).max(extra_space.x0);
