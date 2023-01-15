@@ -20,10 +20,7 @@
 
 use druid::lens::Unit;
 use druid::widget::prelude::*;
-use druid::widget::{
-    BackgroundBrush, Button, ClipBox, Flex, Label, List, Side, Slider, Tabs, TextBox,
-    ViewportHeader,
-};
+use druid::widget::{BackgroundBrush, Button, ClipBox, Flex, Label, List, Padding, Side, Slider, Tabs, TextBox, ViewportHeader};
 use druid::{
     AppLauncher, Color, Data, Insets, Lens, LocalizedString, Point, Rect, RoundedRectRadii, Vec2,
     WidgetExt, WidgetPod, WindowDesc,
@@ -62,31 +59,31 @@ pub fn main() {
 fn build_widget() -> impl Widget<AppData> {
     let list = List::new(|| {
         let body = Flex::column()
-            .with_child(Label::new("Name:"))
             .with_default_spacer()
-            .with_child(TextBox::new().lens(Contact::name))
+            .with_child(Label::new("Name:").align_left())
+            .with_default_spacer()
+            .with_child(TextBox::new().lens(Contact::name).expand_width())
             .with_default_spacer()
             .with_default_spacer()
-            .with_child(Label::new("Info:"))
+            .with_child(Label::new("Info:").align_left())
             .with_default_spacer()
-            .with_child(List::new(|| TextBox::new().padding(Insets::from(5.0))).lens(Contact::info))
-            .with_default_spacer()
+            .with_child(List::new(|| TextBox::new().padding(Insets::new(15.0, 0.0, 0.0, 10.0)).expand_width()).lens(Contact::info))
             .with_child(
                 Button::new("Add Info").on_click(|_, data: &mut Contact, _| {
                     data.info.push_back(Arc::new(String::new()))
                 }),
             )
+            .with_default_spacer()
             .align_left()
-            .fix_width(150.0)
             .padding(Insets::uniform_xy(25.0, 0.0))
-            .background(Color::grey8(15))
+            .background(Color::grey8(25))
             .rounded(RoundedRectRadii::new(0.0, 0.0, 5.0, 5.0));
 
         ViewportHeader::new(
             body,
             Label::dynamic(|data: &Contact, _| format!("Contact \"{}\"", &data.name))
                 .center()
-                .background(Color::BLACK)
+                .background(Color::grey8(15))
                 .rounded(RoundedRectRadii::new(5.0, 5.0, 0.0, 0.0)),
             Side::Top,
         )
@@ -95,7 +92,8 @@ fn build_widget() -> impl Widget<AppData> {
         .padding(Insets::uniform_xy(0.0, 5.0))
     })
     .lens(AppData::list)
-    .scroll();
+    .scroll()
+    .vertical();
 
     Flex::column()
         .with_flex_child(list, 1.0)

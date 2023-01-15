@@ -1,9 +1,6 @@
 use crate::commands::SCROLL_TO_VIEW;
 use crate::widget::flex::{Orientation, Side};
-use crate::{
-    BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetPod,
-};
+use crate::{BoxConstraints, Data, Env, Event, EventCtx, InternalEvent, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point, Rect, Size, UpdateCtx, ViewContext, Widget, WidgetPod};
 use druid::RenderContext;
 
 /// A widget, containing two widgets with horizontal or vertical layout.
@@ -180,7 +177,12 @@ impl<T: Data> Widget<T> for ViewportHeader<T> {
 
         self.header.event(ctx, event, data, env);
         if self.header.is_hot() && event.is_pointer_event() {
-            ctx.set_handled();
+            if self.content.is_active() {
+                ctx.set_handled();
+            } else {
+                self.content.event(ctx, &Event::Internal(InternalEvent::MouseLeave), data, env);
+                return;
+            }
         }
         self.content.event(ctx, event, data, env);
     }
