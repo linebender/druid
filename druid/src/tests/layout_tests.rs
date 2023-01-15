@@ -14,7 +14,7 @@
 
 //! Tests related to layout.
 
-use float_cmp::approx_eq;
+use float_cmp::assert_approx_eq;
 use test_log::test;
 
 use super::*;
@@ -36,7 +36,7 @@ fn simple_layout() {
         harness.send_initial_events();
         harness.just_layout();
         let state = harness.get_state(id_1);
-        approx_eq!(
+        assert_approx_eq!(
             f64,
             state.layout_rect().x0,
             ((DEFAULT_SIZE.width - BOX_WIDTH) / 2.) - PADDING
