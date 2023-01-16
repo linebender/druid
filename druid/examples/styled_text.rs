@@ -81,7 +81,7 @@ fn ui_builder() -> impl Widget<AppData> {
         }
     });
 
-    // This is druid's default text style.
+    // This is Druid's default text style.
     // It's set by theme::LABEL_COLOR and theme::UI_FONT
     let label =
         Label::new(|data: &String, _env: &_| format!("Default: {data}")).lens(AppData::text);

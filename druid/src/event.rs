@@ -204,7 +204,7 @@ pub enum Event {
     /// should check the shared state, perform invalidation, and update `Data`
     /// as necessary.
     ImeStateChange,
-    /// Internal druid event.
+    /// Internal Druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
     ///
@@ -212,7 +212,7 @@ pub enum Event {
     Internal(InternalEvent),
 }
 
-/// Internal events used by druid inside [`WidgetPod`].
+/// Internal events used by Druid inside [`WidgetPod`].
 ///
 /// These events are translated into regular [`Event`]s
 /// and should not be used directly.
@@ -294,7 +294,7 @@ pub enum LifeCycle {
     /// See [`is_hot`](crate::EventCtx::is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
-    /// This is called when the widget-tree changes and druid wants to rebuild the
+    /// This is called when the widget-tree changes and Druid wants to rebuild the
     /// Focus-chain.
     ///
     /// It is the only place from which [`register_for_focus`] should be called.
@@ -320,7 +320,7 @@ pub enum LifeCycle {
     ///
     /// [`view_context_changed`]: crate::EventCtx::view_context_changed
     ViewContextChanged(ViewContext),
-    /// Internal druid lifecycle event.
+    /// Internal Druid lifecycle event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
     ///
@@ -328,7 +328,7 @@ pub enum LifeCycle {
     Internal(InternalLifeCycle),
 }
 
-/// Internal lifecycle events used by druid inside [`WidgetPod`].
+/// Internal lifecycle events used by Druid inside [`WidgetPod`].
 ///
 /// These events are translated into regular [`LifeCycle`] events
 /// and should not be used directly.

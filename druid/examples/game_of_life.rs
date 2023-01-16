@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This is an example of how you would implement the game of life with druid.
-//! This example doesn't showcase anything specific in druid.
+//! This is an example of how you would implement the game of life with Druid.
+//! This example doesn't showcase anything specific in Druid.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]

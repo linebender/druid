@@ -3,7 +3,7 @@ name = "druid-derive"
 version = "0.4.0"
 license = "Apache-2.0"
 authors = ["Druid authors"]
-description = "derive impls for druid, a Rust UI toolkit."
+description = "derive impls for Druid, a Rust UI toolkit."
 repository = "https://github.com/linebender/druid"
 edition = "2018"
 
