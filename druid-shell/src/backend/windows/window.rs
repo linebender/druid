@@ -650,7 +650,7 @@ impl MyWndProc {
                     };
 
                     if multi_selection {
-                        self.with_wnd_state(|s| s.handler.open_files(token,  infos));
+                        self.with_wnd_state(|s| s.handler.open_files(token, infos));
                     } else {
                         self.with_wnd_state(|s| s.handler.open_file(token, infos.first().cloned()));
                     }
