@@ -624,7 +624,7 @@ impl MyWndProc {
                             .ok()
                             .map(|s| FileInfo {
                                 // `get_file_dialog_path` guarantees that save dialogs
-                                // only return on path
+                                // only return one path
                                 path: s.first().unwrap().into(),
                                 format: None,
                             })
