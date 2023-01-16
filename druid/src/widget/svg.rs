@@ -14,12 +14,17 @@
 
 //! An SVG widget.
 
-use druid;
-use druid::RenderContext;
+use std::sync::Arc;
+
 use resvg;
+use usvg::Tree;
+
+use crate::piet::{ImageBuf, ImageFormat, InterpolationMode};
+use crate::widget::prelude::*;
+use crate::{Rect, ScaledArea};
 
 #[allow(dead_code)]
-pub fn new(data: impl Into<std::sync::Arc<usvg::Tree>>) -> Svg {
+pub fn new(data: impl Into<Arc<Tree>>) -> Svg {
     Svg::new(data.into())
 }
 
@@ -31,27 +36,28 @@ pub fn from_str(s: &str) -> Result<SvgData, <SvgData as std::str::FromStr>::Err>
 
 /// A widget that renders a SVG
 pub struct Svg {
-    tree: std::sync::Arc<usvg::Tree>,
-    default_size: druid::Size,
-    cached: Option<(druid::Size, druid::piet::ImageBuf)>,
+    tree: Arc<Tree>,
+    default_size: Size,
+    cached: Option<ImageBuf>,
 }
 
 impl Svg {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
-    pub fn new(tree: impl Into<std::sync::Arc<usvg::Tree>>) -> Self {
+    pub fn new(tree: impl Into<Arc<Tree>>) -> Self {
         let tree = tree.into();
         Svg {
-            default_size: druid::Size::new(tree.size.width(), tree.size.height()),
-            cached: None::<(druid::Size, druid::piet::ImageBuf)>,
+            default_size: Size::new(tree.size.width(), tree.size.height()),
+            cached: None,
             tree,
         }
     }
 
-    fn render(&self, size: druid::Size) -> Option<druid::piet::ImageBuf> {
-        let fit = usvg::FitTo::Size(size.width as u32, size.height as u32);
-        let mut pixmap = tiny_skia::Pixmap::new(size.width as u32, size.height as u32).unwrap();
+    fn render(&self, size_px: Size) -> Option<ImageBuf> {
+        let fit = usvg::FitTo::Size(size_px.width as u32, size_px.height as u32);
+        let mut pixmap =
+            tiny_skia::Pixmap::new(size_px.width as u32, size_px.height as u32).unwrap();
 
         if resvg::render(
             &self.tree,
@@ -65,85 +71,69 @@ impl Svg {
             return None;
         }
 
-        Some(druid::piet::ImageBuf::from_raw(
+        Some(ImageBuf::from_raw(
             pixmap.data(),
-            druid::piet::ImageFormat::RgbaPremul,
-            size.width as usize,
-            size.height as usize,
+            ImageFormat::RgbaPremul,
+            size_px.width as usize,
+            size_px.height as usize,
         ))
     }
 }
 
-impl<T: druid::Data> druid::Widget<T> for Svg {
-    fn event(
-        &mut self,
-        _ctx: &mut druid::EventCtx,
-        _event: &druid::Event,
-        _data: &mut T,
-        _env: &druid::Env,
-    ) {
-    }
+impl<T: Data> Widget<T> for Svg {
+    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    fn lifecycle(
-        &mut self,
-        _ctx: &mut druid::LifeCycleCtx,
-        _event: &druid::LifeCycle,
-        _data: &T,
-        _env: &druid::Env,
-    ) {
-    }
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
-    fn update(&mut self, _ctx: &mut druid::UpdateCtx, _old_data: &T, _data: &T, _env: &druid::Env) {
-    }
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
     fn layout(
         &mut self,
-        _layout_ctx: &mut druid::LayoutCtx,
-        bc: &druid::BoxConstraints,
+        _layout_ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
         _data: &T,
-        _env: &druid::Env,
-    ) -> druid::Size {
+        _env: &Env,
+    ) -> Size {
         // preferred size comes from the svg
         let size = self.default_size;
         bc.constrain_aspect_ratio(size.height / size.width, size.width)
     }
 
-    fn paint(&mut self, ctx: &mut druid::PaintCtx, _data: &T, _env: &druid::Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let size = ctx.size();
+        let area = ScaledArea::from_dp(size, ctx.scale());
+        let size_px = area.size_px();
 
-        let cached = self.cached.as_ref().filter(|(csize, _)| *csize == size);
-        let cached = match cached {
-            Some(current) => Some(current.clone()),
-            None => self.render(size).map(|i| (size, i)),
-        };
-        let cached = match cached {
-            Some(current) => current,
-            None => {
-                tracing::error!("unable to paint svg");
-                return;
-            }
-        };
+        let needs_render = self
+            .cached
+            .as_ref()
+            .filter(|image_buf| image_buf.size() == size_px)
+            .is_none();
 
-        let clip_rect = druid::Rect::ZERO.with_size(cached.0);
-        let img = cached.1.to_image(ctx.render_ctx);
+        if needs_render {
+            self.cached = self.render(size_px);
+        }
+
+        if self.cached.is_none() {
+            tracing::error!("unable to paint SVG due to no rendered image");
+            return;
+        }
+
+        let clip_rect = Rect::ZERO.with_size(size);
+        let img = self.cached.as_ref().unwrap().to_image(ctx.render_ctx);
         ctx.clip(clip_rect);
-        ctx.draw_image(
-            &img,
-            clip_rect,
-            druid::piet::InterpolationMode::NearestNeighbor,
-        );
-        self.cached = Some(cached);
+        ctx.draw_image(&img, clip_rect, InterpolationMode::NearestNeighbor);
     }
 }
 
 /// Stored parsed SVG tree.
-#[derive(Clone, druid::Data)]
+#[derive(Clone, Data)]
 pub struct SvgData {
-    tree: std::sync::Arc<usvg::Tree>,
+    tree: Arc<Tree>,
 }
 
 impl SvgData {
-    fn new(tree: std::sync::Arc<usvg::Tree>) -> Self {
+    fn new(tree: Arc<Tree>) -> Self {
         Self { tree }
     }
 
@@ -171,14 +161,14 @@ impl std::str::FromStr for SvgData {
             ..usvg::Options::default()
         };
 
-        match usvg::Tree::from_str(svg_str, &re_opt) {
-            Ok(tree) => Ok(SvgData::new(std::sync::Arc::new(tree))),
+        match Tree::from_str(svg_str, &re_opt) {
+            Ok(tree) => Ok(SvgData::new(Arc::new(tree))),
             Err(err) => Err(err.into()),
         }
     }
 }
 
-impl From<SvgData> for std::sync::Arc<usvg::Tree> {
+impl From<SvgData> for Arc<Tree> {
     fn from(d: SvgData) -> Self {
         d.tree
     }

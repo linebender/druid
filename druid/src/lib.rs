@@ -218,8 +218,8 @@ pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
     FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers, Monitor,
-    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
-    WindowHandle, WindowLevel, WindowState,
+    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, ScaledArea, Screen, SysMods,
+    TimerToken, WindowHandle, WindowLevel, WindowState,
 };
 
 #[cfg(feature = "raw-win-handle")]

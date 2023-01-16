@@ -33,8 +33,8 @@ use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
-    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
-    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, Scale, SingleUse, Size, Target,
+    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -343,6 +343,18 @@ impl_context_method!(
         /// Get an object which can create text layouts.
         pub fn text(&mut self) -> &mut PietText {
             &mut self.state.text
+        }
+
+        /// The current window's [`Scale`].
+        ///
+        /// The returned [`Scale`] is a copy and thus its information will be stale after
+        /// the platform changes the window's scale. This means you can only rely on it
+        /// until the next [`Event::WindowScale`] event happens.
+        ///
+        /// [`Scale`]: crate::Scale
+        /// [`Event::WindowScale`]: crate::Event::WindowScale
+        pub fn scale(&self) -> Scale {
+            self.state.window.get_scale().unwrap_or_default()
         }
     }
 );
