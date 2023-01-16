@@ -14,7 +14,7 @@
 
 //! Tests related to propagation of invalid rects.
 
-use float_cmp::approx_eq;
+use float_cmp::assert_approx_eq;
 use test_log::test;
 
 use super::*;
@@ -78,10 +78,10 @@ fn invalidate_scroll() {
             assert_eq!(ctx.region().rects().len(), 1);
             let rect = ctx.region().rects().first().unwrap();
 
-            approx_eq!(f64, rect.x0, 30.);
-            approx_eq!(f64, rect.y0, 40.);
-            approx_eq!(f64, rect.x1, 40.);
-            approx_eq!(f64, rect.y1, 50.);
+            assert_approx_eq!(f64, rect.x0, 30.);
+            assert_approx_eq!(f64, rect.y0, 40.);
+            assert_approx_eq!(f64, rect.x1, 40.);
+            assert_approx_eq!(f64, rect.y1, 50.);
         }
     }
 

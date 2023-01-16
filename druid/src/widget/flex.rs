@@ -1272,14 +1272,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_flex_params() {
-        use float_cmp::approx_eq;
+        use float_cmp::assert_approx_eq;
         let params = FlexParams::new(0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-1.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
     }
 }

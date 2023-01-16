@@ -168,6 +168,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Updated fluent-bundle to 0.15.1 and fluent syntax to 0.11.0 ([#1772] by [@r-ml])
 - Updated usvg to 0.14.1 ([#1802] by [@r-ml])
 - x11: Add logging to `Application::get_locale` ([#1876] by [@Maan2003])
+- Converted all calls of `approx_eq!` in tests to `assert_approx_eq!` ([#2331] by [@cbondurant])
 
 ### Outside News
 
@@ -576,6 +577,7 @@ Last release without a changelog :(
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
 [@benoitryder]: https://github.com/benoitryder
 [@sprocklem]: https://github.com/sprocklem
+[@cbondurant]: https://github.com/cbondurant
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -881,6 +883,7 @@ Last release without a changelog :(
 [#2320]: https://github.com/linebender/druid/pull/2320
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
+[#2331]: https://github.com/linebender/druid/pull/2331
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
