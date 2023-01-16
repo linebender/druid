@@ -622,23 +622,38 @@ impl MyWndProc {
                     let info = unsafe {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
                             .ok()
-                            .map(|os_str| FileInfo {
-                                path: os_str.into(),
+                            .map(|s| FileInfo {
+                                // `get_file_dialog_path` guarantees that save dialogs
+                                // only return one path
+                                path: s.first().unwrap().into(),
                                 format: None,
                             })
                     };
                     self.with_wnd_state(|s| s.handler.save_as(token, info));
                 }
                 DeferredOp::Open(options, token) => {
-                    let info = unsafe {
-                        get_file_dialog_path(hwnd, FileDialogType::Open, options)
-                            .ok()
-                            .map(|s| FileInfo {
-                                path: s.into(),
-                                format: None,
-                            })
+                    let multi_selection = options.multi_selection;
+                    let infos = unsafe {
+                        match get_file_dialog_path(hwnd, FileDialogType::Open, options) {
+                            Ok(infos) => infos
+                                .iter()
+                                .map(|path| FileInfo {
+                                    path: path.into(),
+                                    format: None,
+                                })
+                                .collect(),
+                            Err(err) => {
+                                tracing::error!("Error trying to open file: {}", err);
+                                vec![]
+                            }
+                        }
                     };
-                    self.with_wnd_state(|s| s.handler.open_file(token, info));
+
+                    if multi_selection {
+                        self.with_wnd_state(|s| s.handler.open_files(token, infos));
+                    } else {
+                        self.with_wnd_state(|s| s.handler.open_file(token, infos.first().cloned()));
+                    }
                 }
                 DeferredOp::ContextMenu(menu, pos) => {
                     let hmenu = menu.into_hmenu();
