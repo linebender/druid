@@ -76,7 +76,7 @@ pub(crate) unsafe fn get_file_dialog_path(
     hwnd_owner: HWND,
     ty: FileDialogType,
     options: FileDialogOptions,
-) -> Result<OsString, Error> {
+) -> Result<Vec<OsString>, Error> {
     let mut pfd: *mut IFileDialog = null_mut();
     let (class, id) = match ty {
         FileDialogType::Open => (&CLSID_FileOpenDialog, IFileOpenDialog::uuidof()),
@@ -165,13 +165,34 @@ pub(crate) unsafe fn get_file_dialog_path(
 
     // show the dialog
     as_result(file_dialog.Show(hwnd_owner))?;
-    let mut result_ptr: *mut IShellItem = null_mut();
-    as_result(file_dialog.GetResult(&mut result_ptr))?;
-    let shell_item = ComPtr::from_raw(result_ptr);
-    let mut display_name: LPWSTR = null_mut();
-    as_result(shell_item.GetDisplayName(SIGDN_FILESYSPATH, &mut display_name))?;
-    let filename = display_name.to_os_string();
-    CoTaskMemFree(display_name as LPVOID);
 
-    Ok(filename)
+    let mut filenames = vec![];
+    if let Ok(open_file_dialog) = file_dialog.cast::<IFileOpenDialog>() {
+        let mut results_ptr: *mut IShellItemArray = null_mut();
+        as_result(open_file_dialog.GetResults(&mut results_ptr))?;
+        let shell_items = ComPtr::from_raw(results_ptr);
+        let mut count = 0;
+        as_result(shell_items.GetCount(&mut count))?;
+        for i in 0..count {
+            let mut shell_item: *mut IShellItem = null_mut();
+            as_result(shell_items.GetItemAt(i as DWORD, &mut shell_item))?;
+            let shell_item = ComPtr::from_raw(shell_item);
+            let mut display_name: LPWSTR = null_mut();
+            as_result(shell_item.GetDisplayName(SIGDN_FILESYSPATH, &mut display_name))?;
+            let filename = display_name.to_os_string();
+            filenames.push(filename);
+            CoTaskMemFree(display_name as LPVOID);
+        }    
+    } else {
+        let mut result_ptr: *mut IShellItem = null_mut();
+        as_result(file_dialog.GetResult(&mut result_ptr))?;
+        let shell_item = ComPtr::from_raw(result_ptr);
+        let mut display_name: LPWSTR = null_mut();
+        as_result(shell_item.GetDisplayName(SIGDN_FILESYSPATH, &mut display_name))?;
+        let filename = display_name.to_os_string();
+        filenames.push(filename);
+        CoTaskMemFree(display_name as LPVOID);
+    }
+
+    Ok(filenames)
 }
