@@ -411,10 +411,7 @@ mod tests {
             assert_eq!(
                 bc.constrain_aspect_ratio(*aspect_ratio, *width),
                 *output,
-                "bc:{:?}, ar:{}, w:{}",
-                bc,
-                aspect_ratio,
-                width
+                "bc:{bc:?}, ar:{aspect_ratio}, w:{width}"
             );
         }
     }

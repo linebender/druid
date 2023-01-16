@@ -109,12 +109,12 @@ impl WinHandler for PerfTest {
     fn command(&mut self, id: u32) {
         match id {
             0x100 => self.handle.close(),
-            _ => println!("unexpected id {}", id),
+            _ => println!("unexpected id {id}"),
         }
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        println!("keydown: {:?}", event);
+        println!("keydown: {event:?}");
         false
     }
 

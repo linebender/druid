@@ -618,8 +618,7 @@ impl<T: Data> Flex<T> {
         } else {
             debug_assert!(
                 flex >= 0.0,
-                "flex value for space should be greater than equal to 0, received: {}",
-                flex
+                "flex value for space should be greater than equal to 0, received: {flex}"
             );
             tracing::warn!("Provided flex value was less than 0: {}", flex);
             0.0

@@ -71,7 +71,7 @@ fn build_example_3() -> impl Widget<TodoList> {
     Split::columns(
         Container::new(
             // Dynamic list of Widgets
-            List::new(|| Label::dynamic(|data, _| format!("List item: {}", data))),
+            List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
         )
         .border(Color::grey(0.6), 2.0),
         Container::new(

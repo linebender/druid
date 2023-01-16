@@ -50,7 +50,7 @@ fn build_widget() -> impl Widget<AppState> {
     let mut col = Flex::column();
     col.add_child(TextBox::new().lens(AppState::label).padding(3.0));
     for i in 0..30 {
-        col.add_child(Button::new(format!("Button {}", i)).padding(3.0));
+        col.add_child(Button::new(format!("Button {i}")).padding(3.0));
     }
     Split::columns(Scroll::new(col), CircleView.lens(AppState::circles)).debug_invalidation()
 }

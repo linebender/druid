@@ -51,7 +51,7 @@ fn build_example_7() -> impl Widget<TodoList> {
     // ANCHOR: example_7
     // Replace previous List with:
     LensWrap::new(
-        List::new(|| Label::dynamic(|data, _| format!("List item: {}", data))),
+        List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
         TodoList::items,
     )
     // ANCHOR_END: example_7
@@ -84,7 +84,7 @@ fn build_ui() -> impl Widget<TodoList> {
         Container::new(
             // Dynamic list of Widgets
             LensWrap::new(
-                List::new(|| Label::dynamic(|data, _| format!("List item: {}", data))),
+                List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
                 TodoList::items,
             ),
         )

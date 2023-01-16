@@ -66,46 +66,46 @@ impl WinHandler for HelloState {
                 ]);
                 self.handle.save_as(options);
             }
-            _ => println!("unexpected id {}", id),
+            _ => println!("unexpected id {id}"),
         }
     }
 
     fn open_file(&mut self, _token: FileDialogToken, file_info: Option<FileInfo>) {
-        println!("open file result: {:?}", file_info);
+        println!("open file result: {file_info:?}");
     }
 
     fn save_as(&mut self, _token: FileDialogToken, file: Option<FileInfo>) {
-        println!("save file result: {:?}", file);
+        println!("save file result: {file:?}");
     }
 
     fn key_down(&mut self, event: KeyEvent) -> bool {
-        println!("keydown: {:?}", event);
+        println!("keydown: {event:?}");
         false
     }
 
     fn key_up(&mut self, event: KeyEvent) {
-        println!("keyup: {:?}", event);
+        println!("keyup: {event:?}");
     }
 
     fn wheel(&mut self, event: &MouseEvent) {
-        println!("mouse_wheel {:?}", event);
+        println!("mouse_wheel {event:?}");
     }
 
     fn mouse_move(&mut self, event: &MouseEvent) {
         self.handle.set_cursor(&Cursor::Arrow);
-        println!("mouse_move {:?}", event);
+        println!("mouse_move {event:?}");
     }
 
     fn mouse_down(&mut self, event: &MouseEvent) {
-        println!("mouse_down {:?}", event);
+        println!("mouse_down {event:?}");
     }
 
     fn mouse_up(&mut self, event: &MouseEvent) {
-        println!("mouse_up {:?}", event);
+        println!("mouse_up {event:?}");
     }
 
     fn timer(&mut self, id: TimerToken) {
-        println!("timer fired: {:?}", id);
+        println!("timer fired: {id:?}");
     }
 
     fn size(&mut self, size: Size) {

@@ -70,14 +70,14 @@ fn make_ui() -> impl Widget<OurData> {
     // This means that only the corresponding controller gets the command, and increments their counter.
     Flex::column()
         .with_child(
-            Label::dynamic(|data, _| format!("One: {}", data))
+            Label::dynamic(|data, _| format!("One: {data}"))
                 .controller(LabelControler)
                 .with_id(ID_ONE)
                 .lens(OurData::counter_one)
                 .padding(2.0),
         )
         .with_child(
-            Label::dynamic(|data, _| format!("Two: {}", data))
+            Label::dynamic(|data, _| format!("Two: {data}"))
                 .controller(LabelControler)
                 .with_id(id_two)
                 .lens(OurData::counter_two)
