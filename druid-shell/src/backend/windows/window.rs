@@ -623,7 +623,7 @@ impl MyWndProc {
                         get_file_dialog_path(hwnd, FileDialogType::Save, options)
                             .ok()
                             .map(|s| FileInfo {
-                                // TODO: check if `get_file_dialog_path` guarantees that save dialogs
+                                // `get_file_dialog_path` guarantees that save dialogs
                                 // only return on path
                                 path: s.first().unwrap().into(),
                                 format: None,

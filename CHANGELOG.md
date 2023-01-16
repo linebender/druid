@@ -139,6 +139,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: window focus events ([#1938] by [@Maan2003]
 - Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
 - GTK: Hot state now properly resets when the mouse leaves the window via an occluded part. ([#2324] by [@xStrom])
+- Windows: generate `commands::OPEN_FILES` when using multiselect in file open dialog. ([#2331] by [@ppykalo])
 
 ### Visual
 
@@ -576,6 +577,7 @@ Last release without a changelog :(
 [@ThomasMcandrew]: https:github.com/ThomasMcandrew
 [@benoitryder]: https://github.com/benoitryder
 [@sprocklem]: https://github.com/sprocklem
+[@ppykalo]: https://github.com/ppykalo
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
