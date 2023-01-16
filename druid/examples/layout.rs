@@ -58,10 +58,7 @@ fn build_app() -> impl Widget<u32> {
         // occupy more space.
         let weight = if i == 2 { 3.0 } else { 1.0 };
         // call `expand_height` to force the buttons to use all their provided flex
-        col.add_flex_child(
-            Button::new(format!("Button #{}", i)).expand_height(),
-            weight,
-        );
+        col.add_flex_child(Button::new(format!("Button #{i}")).expand_height(), weight);
     }
 
     // aspect ratio box

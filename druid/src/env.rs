@@ -463,18 +463,18 @@ impl Value {
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Value::Point(p) => write!(f, "Point {:?}", p),
-            Value::Size(s) => write!(f, "Size {:?}", s),
-            Value::Rect(r) => write!(f, "Rect {:?}", r),
-            Value::Insets(i) => write!(f, "Insets {:?}", i),
-            Value::Color(c) => write!(f, "Color {:?}", c),
-            Value::Float(x) => write!(f, "Float {}", x),
-            Value::Bool(b) => write!(f, "Bool {}", b),
-            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
-            Value::String(s) => write!(f, "String {:?}", s),
-            Value::Font(font) => write!(f, "Font {:?}", font),
-            Value::RoundedRectRadii(radius) => write!(f, "RoundedRectRadii {:?}", radius),
-            Value::Other(other) => write!(f, "{:?}", other),
+            Value::Point(p) => write!(f, "Point {p:?}"),
+            Value::Size(s) => write!(f, "Size {s:?}"),
+            Value::Rect(r) => write!(f, "Rect {r:?}"),
+            Value::Insets(i) => write!(f, "Insets {i:?}"),
+            Value::Color(c) => write!(f, "Color {c:?}"),
+            Value::Float(x) => write!(f, "Float {x}"),
+            Value::Bool(b) => write!(f, "Bool {b}"),
+            Value::UnsignedInt(x) => write!(f, "UnsignedInt {x}"),
+            Value::String(s) => write!(f, "String {s:?}"),
+            Value::Font(font) => write!(f, "Font {font:?}"),
+            Value::RoundedRectRadii(radius) => write!(f, "RoundedRectRadii {radius:?}"),
+            Value::Other(other) => write!(f, "{other:?}"),
         }
     }
 }

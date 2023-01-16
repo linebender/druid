@@ -159,7 +159,7 @@ impl HotKey {
             KbKey::F19 => "\u{F716}",
             KbKey::F20 => "\u{F717}",
             _ => {
-                eprintln!("no key equivalent for {:?}", self);
+                eprintln!("no key equivalent for {self:?}");
                 ""
             }
         }

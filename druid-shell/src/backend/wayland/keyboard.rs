@@ -367,7 +367,7 @@ impl Manager {
     }
 
     // TODO turn struct into a calloop event source.
-    pub(super) fn events<'a>(&self, handle: &'a calloop::LoopHandle<std::sync::Arc<Data>>) {
+    pub(super) fn events(&self, handle: &calloop::LoopHandle<std::sync::Arc<Data>>) {
         let rx = self.inner.apprx.borrow_mut().take().unwrap();
         handle
             .insert_source(rx, {

@@ -195,7 +195,7 @@ impl<T: Data> Harness<'_, T> {
     pub fn get_state(&mut self, widget: WidgetId) -> WidgetState {
         match self.try_get_state(widget) {
             Some(thing) => thing,
-            None => panic!("get_state failed for widget {:?}", widget),
+            None => panic!("get_state failed for widget {widget:?}"),
         }
     }
 
@@ -219,7 +219,7 @@ impl<T: Data> Harness<'_, T> {
     pub fn get_debug_state(&mut self, widget_id: WidgetId) -> DebugState {
         match self.try_get_debug_state(widget_id) {
             Some(thing) => thing,
-            None => panic!("get_debug_state failed for widget {:?}", widget_id),
+            None => panic!("get_debug_state failed for widget {widget_id:?}"),
         }
     }
 
