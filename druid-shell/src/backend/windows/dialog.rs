@@ -177,7 +177,7 @@ pub(crate) unsafe fn get_file_dialog_path(
             let mut result_ptr: *mut IShellItem = null_mut();
             as_result(shell_items.GetItemAt(i as DWORD, &mut result_ptr))?;
             result_ptr_vec.push(result_ptr);
-        }    
+        }
     } else {
         let mut result_ptr: *mut IShellItem = null_mut();
         as_result(file_dialog.GetResult(&mut result_ptr))?;
