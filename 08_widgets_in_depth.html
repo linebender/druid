@@ -200,7 +200,7 @@ as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
         let (r, g, b, _) = color.as_rgba8();
-        format!(&quot;#{:X}{:X}{:X}&quot;, r, g, b)
+        format!(&quot;#{r:X}{g:X}{b:X}&quot;)
     })
     .background(make_color_swatch())
 }

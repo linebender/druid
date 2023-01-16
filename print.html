@@ -295,7 +295,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     Split::columns(
         Container::new(
             // Dynamic list of Widgets
-            List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {}&quot;, data))),
+            List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
         )
         .border(Color::grey(0.6), 2.0),
         Container::new(
@@ -387,7 +387,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 
     // Replace previous List with:
     LensWrap::new(
-        List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {}&quot;, data))),
+        List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
         TodoList::items,
     )
 
@@ -441,7 +441,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
         Container::new(
             // Dynamic list of Widgets
             LensWrap::new(
-                List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {}&quot;, data))),
+                List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
                 TodoList::items,
             ),
         )
@@ -1091,7 +1091,7 @@ as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
         let (r, g, b, _) = color.as_rgba8();
-        format!(&quot;#{:X}{:X}{:X}&quot;, r, g, b)
+        format!(&quot;#{r:X}{g:X}{b:X}&quot;)
     })
     .background(make_color_swatch())
 }
