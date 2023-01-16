@@ -43,36 +43,24 @@ impl Svg {
     pub fn new(tree: impl Into<std::sync::Arc<usvg::Tree>>) -> Self {
         let tree = tree.into();
         Svg {
-            default_size: Svg::size(&tree),
+            default_size: druid::Size::new(tree.size.width(), tree.size.height()),
             cached: None::<(druid::Size, druid::piet::ImageBuf)>,
             tree,
         }
-    }
-
-    /// Get the size of the svg. This is the size that the svg requests to be drawn. If it is
-    /// different from the viewbox size, then scaling will be required.
-    fn size(tree: &std::sync::Arc<usvg::Tree>) -> druid::Size {
-        let root = tree.root();
-        let rect = match *root.borrow() {
-            usvg::NodeKind::Svg(svg) => {
-                let s = svg.size;
-                druid::Size::new(s.width(), s.height())
-            }
-            _ => {
-                tracing::error!(
-                    "this SVG has no size. It is expected that usvg always adds a size"
-                );
-                druid::Size::ZERO
-            }
-        };
-        rect
     }
 
     fn render(&self, size: druid::Size) -> Option<druid::piet::ImageBuf> {
         let fit = usvg::FitTo::Size(size.width as u32, size.height as u32);
         let mut pixmap = tiny_skia::Pixmap::new(size.width as u32, size.height as u32).unwrap();
 
-        if resvg::render(&self.tree, fit, pixmap.as_mut()).is_none() {
+        if resvg::render(
+            &self.tree,
+            fit,
+            tiny_skia::Transform::identity(),
+            pixmap.as_mut(),
+        )
+        .is_none()
+        {
             tracing::error!("unable to render svg");
             return None;
         }
@@ -183,7 +171,7 @@ impl std::str::FromStr for SvgData {
             ..usvg::Options::default()
         };
 
-        match usvg::Tree::from_str(svg_str, &re_opt.to_ref()) {
+        match usvg::Tree::from_str(svg_str, &re_opt) {
             Ok(tree) => Ok(SvgData::new(std::sync::Arc::new(tree))),
             Err(err) => Err(err.into()),
         }
