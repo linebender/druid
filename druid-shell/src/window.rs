@@ -413,6 +413,7 @@ impl WindowHandle {
     /// The returned [`Scale`](crate::Scale) is a copy and thus its information will be stale after
     /// the platform DPI changes. This means you should not stash it and rely on it later; it is
     /// only guaranteed to be valid for the current pass of the runloop.
+    // TODO: Can we get rid of the Result/Error for ergonomics?
     pub fn get_scale(&self) -> Result<Scale, Error> {
         self.0.get_scale().map_err(Into::into)
     }

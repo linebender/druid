@@ -20,7 +20,7 @@ use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::kurbo::{Rect, Size};
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, Point, WidgetId};
+use crate::{Command, Notification, Point, Scale, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -75,6 +75,12 @@ pub enum Event {
     /// This event means the window *will* go away; it is safe to dispose of resources and
     /// do any other cleanup.
     WindowDisconnected,
+    /// Called when the window's [`Scale`] changes.
+    ///
+    /// This information can be used to switch between different resolution image assets.
+    ///
+    /// [`Scale`]: crate::Scale
+    WindowScale(Scale),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -418,6 +424,7 @@ impl Event {
             Event::WindowConnected
             | Event::WindowCloseRequested
             | Event::WindowDisconnected
+            | Event::WindowScale(_)
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)

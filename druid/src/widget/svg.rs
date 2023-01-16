@@ -21,7 +21,7 @@ use usvg::Tree;
 
 use crate::piet::{ImageBuf, ImageFormat, InterpolationMode};
 use crate::widget::prelude::*;
-use crate::Rect;
+use crate::{Rect, ScaledArea};
 
 #[allow(dead_code)]
 pub fn new(data: impl Into<Arc<Tree>>) -> Svg {
@@ -101,9 +101,7 @@ impl<T: Data> Widget<T> for Svg {
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
         let size = ctx.size();
-
-        let scale = druid::shell::Scale::new(1.75, 1.75); // TODO: Get actual scale
-        let area = druid::shell::ScaledArea::from_dp(size, scale);
+        let area = ScaledArea::from_dp(size, ctx.scale());
         let size_px = area.size_px();
 
         let needs_render = self
