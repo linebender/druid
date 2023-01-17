@@ -67,7 +67,7 @@ use tracing::{instrument, trace};
 /// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
 /// ```
 ///
-/// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
+/// [scaling a bitmap image]: crate::Scale#pixels-and-display-points
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
 pub struct Image {
     image_data: ImageBuf,

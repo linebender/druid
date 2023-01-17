@@ -103,8 +103,7 @@ use piet::ImageBuf;
 /// that is where no variant has fields), the implementation that is generated
 /// checks for equality. Therefore, such types must also implement `PartialEq`.
 ///
-/// [`Data::same`]: trait.Data.html#tymethod.same
-/// [`im` crate]: https://docs.rs/im
+/// [`im` crate]: https://crates.io/crates/im
 pub trait Data: Clone + 'static {
     //// ANCHOR: same_fn
     /// Determine whether two values are the same.

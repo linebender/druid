@@ -96,9 +96,9 @@ pub struct EventCtx<'a, 'b> {
 /// specific lifecycle events; for instance [`register_child`]
 /// should only be called while handling [`LifeCycle::WidgetAdded`].
 ///
-/// [`lifecycle`]: trait.Widget.html#tymethod.lifecycle
+/// [`lifecycle`]: Widget::lifecycle
 /// [`register_child`]: #method.register_child
-/// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+/// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
 pub struct LifeCycleCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
@@ -165,8 +165,6 @@ pub struct State<'a> {
 ///
 /// Methods that deal with commands and timers.
 /// Available to all contexts but [`PaintCtx`].
-///
-/// [`PaintCtx`](PaintCtx)
 pub trait ChangeCtx {
     /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
     ///
@@ -374,7 +372,7 @@ impl_context_method!(
         /// Generally it will be the same as the size returned by the child widget's
         /// [`layout`] method.
         ///
-        /// [`layout`]: trait.Widget.html#tymethod.layout
+        /// [`layout`]: Widget::layout
         pub fn size(&self) -> Size {
             self.widget_state.size()
         }
@@ -404,16 +402,18 @@ impl_context_method!(
 
         /// Query the "hot" state of the widget.
         ///
-        /// See [`WidgetPod::is_hot`](struct.WidgetPod.html#method.is_hot) for
-        /// additional information.
+        /// See [`WidgetPod::is_hot`] for additional information.
+        ///
+        /// [`WidgetPod::is_hot`]: crate::WidgetPod::is_hot
         pub fn is_hot(&self) -> bool {
             self.widget_state.is_hot
         }
 
         /// Query the "active" state of the widget.
         ///
-        /// See [`WidgetPod::is_active`](struct.WidgetPod.html#method.is_active) for
-        /// additional information.
+        /// See [`WidgetPod::is_active`] for additional information.
+        ///
+        /// [`WidgetPod::is_active`]: crate::WidgetPod::is_active
         pub fn is_active(&self) -> bool {
             self.widget_state.is_active
         }
@@ -433,9 +433,9 @@ impl_context_method!(
         /// Only one widget at a time is focused. However due to the way events are routed,
         /// all ancestors of that widget will also receive keyboard events.
         ///
-        /// [`request_focus`]: struct.EventCtx.html#method.request_focus
-        /// [`register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
-        /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
+        /// [`request_focus`]: EventCtx::request_focus
+        /// [`register_for_focus`]: LifeCycleCtx::register_for_focus
+        /// [`LifeCycle::FocusChanged`]: crate::LifeCycle::FocusChanged
         /// [`has_focus`]: #method.has_focus
         pub fn is_focused(&self) -> bool {
             self.state.focus_widget == Some(self.widget_id())
@@ -536,9 +536,9 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// Request a [`paint`] pass. This is equivalent to calling
     /// [`request_paint_rect`] for the widget's [`paint_rect`].
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: Widget::paint
     /// [`request_paint_rect`]: #method.request_paint_rect
-    /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
+    /// [`paint_rect`]: crate::WidgetPod::paint_rect
     pub fn request_paint(&mut self) {
         trace!("request_paint");
         self.widget_state.invalid.set_rect(
@@ -549,7 +549,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// Request a [`paint`] pass for redrawing a rectangle, which is given
     /// relative to our layout rectangle.
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: Widget::paint
     pub fn request_paint_rect(&mut self, rect: Rect) {
         trace!("request_paint_rect {}", rect);
         self.widget_state.invalid.add_rect(rect);
@@ -564,7 +564,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// (such as if it would like to change the layout of children in
     /// response to some event) it must call this method.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: Widget::layout
     pub fn request_layout(&mut self) {
         trace!("request_layout");
         self.widget_state.needs_layout = true;
@@ -608,7 +608,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// Calling this method during [`LifeCycle::DisabledChanged`] has no effect.
     ///
-    /// [`LifeCycle::DisabledChanged`]: struct.LifeCycle.html#variant.DisabledChanged
+    /// [`LifeCycle::DisabledChanged`]: crate::LifeCycle::DisabledChanged
     /// [`is_disabled`]: EventCtx::is_disabled
     pub fn set_disabled(&mut self, disabled: bool) {
         // widget_state.children_disabled_changed is not set because we want to be able to delete
@@ -638,7 +638,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// 'U' must be the type of the nearest surrounding [`WidgetPod`]. The 'data' argument should be
     /// the current value of data  for that widget.
     ///
-    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`WidgetPod`]: crate::WidgetPod
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
     // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
@@ -691,8 +691,7 @@ impl_context_method!(
         ///
         /// [`Target::Auto`] commands will be sent to the window containing the widget.
         ///
-        /// [`Command`]: struct.Command.html
-        /// [`update`]: trait.Widget.html#tymethod.update
+        /// [`update`]: Widget::update
         pub fn submit_command(&mut self, cmd: impl Into<Command>) {
             trace!("submit_command");
             self.state.submit_command(cmd.into())
@@ -700,8 +699,6 @@ impl_context_method!(
 
         /// Returns an [`ExtEventSink`] that can be moved between threads,
         /// and can be used to submit commands back to the application.
-        ///
-        /// [`ExtEventSink`]: struct.ExtEventSink.html
         pub fn get_external_handle(&self) -> ExtEventSink {
             trace!("get_external_handle");
             self.state.ext_handle.clone()
@@ -775,7 +772,7 @@ impl EventCtx<'_, '_> {
     /// Create a new window.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         trace!("new_window");
         if self.state.root_app_data_type == TypeId::of::<T>() {
@@ -792,7 +789,7 @@ impl EventCtx<'_, '_> {
     /// Show the context menu in the window containing the current widget.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
         trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
@@ -947,7 +944,7 @@ impl UpdateCtx<'_, '_> {
     /// This should only be needed in advanced cases;
     /// see [`EventCtx::request_update`] for more information.
     ///
-    /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
+    /// [`EventCtx::request_update`]: EventCtx::request_update
     pub fn has_requested_update(&mut self) -> bool {
         self.widget_state.request_update
     }
@@ -955,8 +952,7 @@ impl UpdateCtx<'_, '_> {
     /// Returns `true` if the current [`Env`] has changed since the previous
     /// [`update`] call.
     ///
-    /// [`Env`]: struct.Env.html
-    /// [`update`]: trait.Widget.html#tymethod.update
+    /// [`update`]: Widget::update
     pub fn env_changed(&self) -> bool {
         self.prev_env.is_some()
     }
@@ -967,10 +963,9 @@ impl UpdateCtx<'_, '_> {
     /// The argument can be anything that is resolveable from the [`Env`],
     /// such as a [`Key`] or a [`KeyOrValue`].
     ///
-    /// [`update`]: trait.Widget.html#tymethod.update
-    /// [`Env`]: struct.Env.html
-    /// [`Key`]: struct.Key.html
-    /// [`KeyOrValue`]: enum.KeyOrValue.html
+    /// [`update`]: Widget::update
+    /// [`Key`]: crate::Key
+    /// [`KeyOrValue`]: crate::KeyOrValue
     pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
         match self.prev_env.as_ref() {
             Some(prev) => key.changed(prev, self.env),
@@ -1016,8 +1011,8 @@ impl LifeCycleCtx<'_, '_> {
     ///
     /// See [`EventCtx::is_focused`] for more information about focus.
     ///
-    /// [`LifeCycle::BuildFocusChain`]: enum.Lifecycle.html#variant.BuildFocusChain
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
+    /// [`LifeCycle::BuildFocusChain`]: crate::LifeCycle::BuildFocusChain
+    /// [`EventCtx::is_focused`]: EventCtx::is_focused
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
         self.widget_state.focus_chain.push(self.widget_id());
@@ -1062,8 +1057,7 @@ impl<'a, 'b> LayoutCtx<'a, 'b> {
     ///
     /// For more information, see [`WidgetPod::paint_insets`].
     ///
-    /// [`Insets`]: struct.Insets.html
-    /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
+    /// [`WidgetPod::paint_insets`]: crate::WidgetPod::paint_insets
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
         let insets = insets.into();
         trace!("set_paint_insets {:?}", insets);

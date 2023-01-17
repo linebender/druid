@@ -22,8 +22,6 @@ use crate::{
 };
 
 /// A context passed in to [`AppDelegate`] functions.
-///
-/// [`AppDelegate`]: trait.AppDelegate.html
 pub struct DelegateCtx<'a> {
     pub(crate) command_queue: &'a mut CommandQueue,
     pub(crate) ext_event_host: &'a ExtEventHost,
@@ -35,12 +33,11 @@ impl<'a> DelegateCtx<'a> {
     ///
     /// Commands are run in the order they are submitted; all commands
     /// submitted during the handling of an event are executed before
-    /// the [`update()`] method is called.
+    /// the [`update`] method is called.
     ///
     /// [`Target::Auto`] commands will be sent to every window (`Target::Global`).
     ///
-    /// [`Command`]: struct.Command.html
-    /// [`update()`]: trait.Widget.html#tymethod.update
+    /// [`update`]: crate::Widget::update
     pub fn submit_command(&mut self, command: impl Into<Command>) {
         self.command_queue
             .push_back(command.into().default_to(Target::Global))
@@ -48,8 +45,6 @@ impl<'a> DelegateCtx<'a> {
 
     /// Returns an [`ExtEventSink`] that can be moved between threads,
     /// and can be used to submit commands back to the application.
-    ///
-    /// [`ExtEventSink`]: struct.ExtEventSink.html
     pub fn get_external_handle(&self) -> ExtEventSink {
         self.ext_event_host.make_sink()
     }
@@ -57,7 +52,7 @@ impl<'a> DelegateCtx<'a> {
     /// Create a new window.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         if self.app_data_type == TypeId::of::<T>() {
             self.submit_command(
@@ -86,9 +81,9 @@ pub trait AppDelegate<T: Data> {
     ///
     /// The return value of this function will be passed down the tree. This can
     /// be the event that was passed in, a different event, or no event. In all cases,
-    /// the [`update()`] method will be called as usual.
+    /// the [`update`] method will be called as usual.
     ///
-    /// [`update()`]: trait.Widget.html#tymethod.update
+    /// [`update`]: crate::Widget::update
     fn event(
         &mut self,
         ctx: &mut DelegateCtx,
@@ -111,9 +106,7 @@ pub trait AppDelegate<T: Data> {
     /// To do anything fancier than this, you can submit arbitrary commands
     /// via [`DelegateCtx::submit_command`].
     ///
-    /// [`Target`]: enum.Target.html
-    /// [`Command`]: struct.Command.html
-    /// [`DelegateCtx::submit_command`]: struct.DelegateCtx.html#method.submit_command
+    /// [`DelegateCtx::submit_command`]: DelegateCtx::submit_command
     fn command(
         &mut self,
         ctx: &mut DelegateCtx,

@@ -42,7 +42,6 @@ pub(crate) type SelectorSymbol = &'static str;
 /// [`Command`]: struct.Command.html
 /// [`Command::get`]: struct.Command.html#method.get
 /// [`get_unchecked`]: struct.Command.html#method.get_unchecked
-/// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
 pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 
@@ -71,9 +70,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
-/// [`EventCtx::new_window`]: struct.EventCtx.html#method.new_window
-/// [`SingleUse`]: struct.SingleUse.html
-/// [`Selector`]: struct.Selector.html
+/// [`EventCtx::new_window`]: crate::EventCtx::new_window
 #[derive(Debug, Clone)]
 pub struct Command {
     symbol: SelectorSymbol,
@@ -131,13 +128,9 @@ pub struct Notification {
 /// // subsequent calls will return `None`
 /// assert!(payload.take().is_none());
 /// ```
-///
-/// [`Command`]: struct.Command.html
 pub struct SingleUse<T>(Mutex<Option<T>>);
 
 /// The target of a [`Command`].
-///
-/// [`Command`]: struct.Command.html
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
     /// The target is the top-level application.
@@ -171,8 +164,6 @@ pub enum Target {
 /// Commands with special meaning, defined by druid.
 ///
 /// See [`Command`] for more info.
-///
-/// [`Command`]: ../struct.Command.html
 pub mod sys {
     use std::any::Any;
 
@@ -227,7 +218,7 @@ pub mod sys {
     /// Display a context (right-click) menu. The payload must be the [`ContextMenu`]
     /// object to be displayed.
     ///
-    /// [`ContextMenu`]: ../struct.ContextMenu.html
+    /// [`ContextMenu`]: crate::menu::ContextMenu
     pub(crate) const SHOW_CONTEXT_MENU: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.show-context-menu");
 

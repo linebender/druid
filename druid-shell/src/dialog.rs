@@ -126,20 +126,11 @@ pub enum FileDialogType {
 /// and then clicks on an existing file `/Users/Joe/old.txt` in another directory then the returned
 /// path will actually be `/Users/Joe/foo/old.rtf` if the default type's first extension is `rtf`.
 ///
-/// ## Have a really good save dialog default type
-///
-/// There is no way for the user to choose which extension they want to save a file as via the UI.
-/// They have no way of knowing which extensions are even supported and must manually type it out.
-///
-/// *Hopefully it's a temporary problem and we can find a way to show the file formats in the UI.
-/// This is being tracked in [druid#998].*
-///
 /// [clickable]: #selecting-files-for-overwriting-in-the-save-dialog-is-cumbersome
 /// [packages]: #packages
 /// [`select_directories`]: #method.select_directories
 /// [`allowed_types`]: #method.allowed_types
 /// [`packages_as_directories`]: #method.packages_as_directories
-/// [druid#998]: https://github.com/xi-editor/druid/issues/998
 #[derive(Debug, Clone, Default)]
 pub struct FileDialogOptions {
     pub(crate) show_hidden: bool,

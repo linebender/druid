@@ -94,7 +94,7 @@ impl<T: Data> Harness<'_, T> {
     /// For lifetime reasons™, we cannot just make a harness. It's complicated.
     /// I tried my best.
     ///
-    /// This function is a subset of [create_with_render](struct.Harness.html#create_with_render)
+    /// This function is a subset of [create_with_render](Harness::create_with_render)
     pub fn create_simple(
         data: T,
         root: impl Widget<T> + 'static,

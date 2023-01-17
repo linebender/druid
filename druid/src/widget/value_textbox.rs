@@ -88,9 +88,8 @@ impl TextBox<String> {
     ///
     /// For simple value formatting, you can use the [`ParseFormatter`].
     ///
-    /// [`ValueTextBox`]: ValueTextBox
-    /// [`Formatter`]: crate::text::format::Formatter
-    /// [`ParseFormatter`]: crate::text::format::ParseFormatter
+    /// [`Formatter`]: crate::text::Formatter
+    /// [`ParseFormatter`]: crate::text::ParseFormatter
     pub fn with_formatter<T: Data>(
         self,
         formatter: impl Formatter<T> + 'static,
@@ -102,8 +101,8 @@ impl TextBox<String> {
 impl<T: Data> ValueTextBox<T> {
     /// Create a new `ValueTextBox` from a normal [`TextBox`] and a [`Formatter`].
     ///
-    /// [`TextBox`]: crate::widget::TextBox
-    /// [`Formatter`]: crate::text::format::Formatter
+    /// [`TextBox`]: super::TextBox
+    /// [`Formatter`]: crate::text::Formatter
     pub fn new(mut child: TextBox<String>, formatter: impl Formatter<T> + 'static) -> Self {
         child.text_mut().borrow_mut().send_notification_on_return = true;
         child.text_mut().borrow_mut().send_notification_on_cancel = true;

@@ -39,11 +39,10 @@ use crate::{Env, FontDescriptor, KeyOrValue, PaintCtx, RenderContext, UpdateCtx}
 /// to call [`rebuild_if_needed`] again, generally by scheduling another [`layout`]
 /// pass.
 ///
-/// [`layout`]: trait.Widget.html#tymethod.layout
-/// [`update`]: trait.Widget.html#tymethod.update
+/// [`layout`]: crate::Widget::layout
+/// [`update`]: crate::Widget::update
 /// [`needs_rebuild_after_update`]: #method.needs_rebuild_after_update
 /// [`rebuild_if_needed`]: #method.rebuild_if_needed
-/// [`Env`]: struct.Env.html
 #[derive(Clone)]
 pub struct TextLayout<T> {
     text: Option<T>,
@@ -77,7 +76,7 @@ impl<T> TextLayout<T> {
     ///
     /// You must set the text ([`set_text`]) before using this object.
     ///
-    /// [`set_text`]: #method.set_text
+    /// [`set_text`]: TextLayout::set_text
     pub fn new() -> Self {
         TextLayout {
             text: None,
@@ -106,9 +105,7 @@ impl<T> TextLayout<T> {
     /// The argument is a [`FontDescriptor`] or a [`Key<FontDescriptor>`] that
     /// can be resolved from the [`Env`].
     ///
-    /// [`FontDescriptor`]: struct.FontDescriptor.html
-    /// [`Env`]: struct.Env.html
-    /// [`Key<FontDescriptor>`]: struct.Key.html
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         let font = font.into();
         if font != self.font {
@@ -122,8 +119,7 @@ impl<T> TextLayout<T> {
     ///
     /// This overrides the size in the [`FontDescriptor`] provided to [`set_font`].
     ///
-    /// [`set_font`]: #method.set_font.html
-    /// [`FontDescriptor`]: struct.FontDescriptor.html
+    /// [`set_font`]: TextLayout::set_font
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         let size = size.into();
         if Some(&size) != self.text_size_override.as_ref() {
@@ -146,8 +142,6 @@ impl<T> TextLayout<T> {
     }
 
     /// Set the [`TextAlignment`] for this layout.
-    ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
         if self.alignment != alignment {
             self.alignment = alignment;
@@ -195,15 +189,13 @@ impl<T: TextStorage> TextLayout<T> {
     }
 
     /// Returns the [`TextStorage`] backing this layout, if it exists.
-    ///
-    /// [`TextStorage`]: trait.TextStorage.html
     pub fn text(&self) -> Option<&T> {
         self.text.as_ref()
     }
 
     /// Returns the inner Piet [`TextLayout`] type.
     ///
-    /// [`TextLayout`]: ./piet/trait.TextLayout.html
+    /// [`TextLayout`]: crate::piet::TextLayout
     pub fn layout(&self) -> Option<&PietTextLayout> {
         self.layout.as_ref()
     }
@@ -212,7 +204,7 @@ impl<T: TextStorage> TextLayout<T> {
     ///
     /// This is not meaningful until [`rebuild_if_needed`] has been called.
     ///
-    /// [`rebuild_if_needed`]: #method.rebuild_if_needed
+    /// [`rebuild_if_needed`]: TextLayout::rebuild_if_needed
     pub fn size(&self) -> Size {
         self.layout
             .as_ref()
@@ -224,8 +216,7 @@ impl<T: TextStorage> TextLayout<T> {
     ///
     /// This is not meaningful until [`rebuild_if_needed`] has been called.
     ///
-    /// [`rebuild_if_needed`]: #method.rebuild_if_needed
-    /// [`LayoutMetrics`]: struct.LayoutMetrics.html
+    /// [`rebuild_if_needed`]: TextLayout::rebuild_if_needed
     pub fn layout_metrics(&self) -> LayoutMetrics {
         debug_assert!(
             self.layout.is_some(),
@@ -334,11 +325,13 @@ impl<T: TextStorage> TextLayout<T> {
         text.links().get(*i)
     }
 
-    /// Called during the containing widgets `update` method; this text object
+    /// Called during the containing widget's [`update`] method; this text object
     /// will check to see if any used environment items have changed,
     /// and invalidate itself as needed.
     ///
     /// Returns `true` if the text item needs to be rebuilt.
+    ///
+    /// [`update`]: crate::Widget::update
     pub fn needs_rebuild_after_update(&mut self, ctx: &mut UpdateCtx) -> bool {
         if ctx.env_changed() && self.layout.is_some() {
             let rebuild = ctx.env_key_changed(&self.font)
@@ -371,7 +364,7 @@ impl<T: TextStorage> TextLayout<T> {
     /// A simple way to ensure this is correct is to always call this method
     /// as part of your widget's [`layout`] method.
     ///
-    /// [`layout`]: trait.Widget.html#method.layout
+    /// [`layout`]: crate::Widget::layout
     pub fn rebuild_if_needed(&mut self, factory: &mut PietText, env: &Env) {
         if let Some(text) = &self.text {
             if self.layout.is_none() {

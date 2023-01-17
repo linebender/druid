@@ -140,8 +140,8 @@
 //! [`Lens`]: trait.Lens.html
 //! [`widget`]: ./widget/index.html
 //! [`Event`]: enum.Event.html
-//! [`druid-shell`]: https://docs.rs/druid-shell
-//! [`piet`]: https://docs.rs/piet
+//! [`druid-shell`]: druid_shell
+//! [`piet`]: piet
 //! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.7.0/druid/examples
 //! [druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
