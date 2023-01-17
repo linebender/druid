@@ -164,6 +164,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added examples in `TextBox` ([#2284] by [@ThomasMcandrew])
 - Removed outdated section in docs for `LifeCycle::WidgetAdded` ([#2320] by [@sprocklem])
 - Updated `Event::AnimFrame` docs with info about when `paint` happens. ([#2323] by [@xStrom])
+- Implemented standardized Druid naming convention. ([#2337] by [@xStrom])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -893,6 +894,7 @@ Last release without a changelog :(
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2337]: https://github.com/linebender/druid/pull/2337
 [#2338]: https://github.com/linebender/druid/pull/2338
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
