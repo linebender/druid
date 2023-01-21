@@ -76,7 +76,7 @@ impl ViewportHeaderConfig {
         let axis = self.header_side.axis();
         let max = axis.major(self.content_size) - self.minimum_visible();
 
-        self.header_side.from_inset(insets).max(0.0).min(max)
+        self.header_side.from_inset(insets).clamp(0.0, max)
     }
 
     /// The amount of pixels the viewport of the content gets cropped by the header.
