@@ -20,7 +20,10 @@
 
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label};
-use druid::{AppDelegate, AppLauncher, Command, Data, DelegateCtx, Handled, Lens, Menu, MenuItem, Selector, Target, WidgetExt, WindowDesc};
+use druid::{
+    AppDelegate, AppLauncher, Command, Data, DelegateCtx, Handled, Lens, Menu, MenuItem, Selector,
+    Target, WidgetExt, WindowDesc,
+};
 
 const COMMAND: Selector = Selector::new("custom_Selector");
 
@@ -31,13 +34,11 @@ struct AppState {
 }
 
 pub fn main() {
-
-
     // describe the main window
     let main_window = WindowDesc::new(build_root_widget())
         .title("Hello World!")
         .window_size((400.0, 400.0))
-        .menu(|_, _, _|build_menu());
+        .menu(|_, _, _| build_menu());
 
     // create the initial app state
     let initial_state: AppState = AppState {
@@ -55,75 +56,86 @@ pub fn main() {
 
 fn build_root_widget() -> impl Widget<AppState> {
     Flex::column()
-        .with_child(Label::new(|data: &AppState, _: &_|format!("Current value: {}", data.value)))
+        .with_child(Label::new(|data: &AppState, _: &_| {
+            format!("Current value: {}", data.value)
+        }))
         .with_default_spacer()
-        .with_child(Label::new(|data: &AppState, _: &_|format!("IS selected: {}", data.option)))
+        .with_child(Label::new(|data: &AppState, _: &_| {
+            format!("IS selected: {}", data.option)
+        }))
         .center()
 }
 
 fn build_menu() -> Menu<AppState> {
     let menu = Menu::new("Druid Menu")
-        .entry(
-            MenuItem::new("Send Command")
-                .command(COMMAND)
-        )
+        .entry(MenuItem::new("Send Command").command(COMMAND))
         .separator()
         .entry(
             MenuItem::new("Change value")
-                .on_activate(|_, data: &mut AppState, _|data.value = (data.value + 1) % 4)
+                .on_activate(|_, data: &mut AppState, _| data.value = (data.value + 1) % 4),
         )
         .entry(
             MenuItem::new("1 Selected")
                 .radio_item(1, Some(0))
-                .lens(AppState::value)
+                .lens(AppState::value),
         )
         .entry(
             MenuItem::new("2 Selected")
                 .radio_item(2, Some(0))
-                .lens(AppState::value)
+                .lens(AppState::value),
         )
         .entry(
             // Implementing the radio item from hand
             MenuItem::new("3 Selected")
-                .on_activate(|_, data: &mut AppState, _|if data.value == 3 {data.value = 0} else {data.value = 3})
-                .selected_if(|data: &AppState, _|data.value == 3)
+                .on_activate(|_, data: &mut AppState, _| {
+                    if data.value == 3 {
+                        data.value = 0
+                    } else {
+                        data.value = 3
+                    }
+                })
+                .selected_if(|data: &AppState, _| data.value == 3),
         )
         .separator()
         .entry(
             MenuItem::new("CheckBox")
                 .toggle_data()
-                .lens(AppState::option)
+                .lens(AppState::option),
         )
         .entry(
             // Implementing the CheckBox from hand
             MenuItem::new("Manual CheckBox")
-                .on_activate(|_, data: &mut AppState, _|data.option = !data.option)
-                .selected_if(|data: &AppState, _|data.option)
+                .on_activate(|_, data: &mut AppState, _| data.option = !data.option)
+                .selected_if(|data: &AppState, _| data.option),
         )
         .entry(
             MenuItem::new("Disabled")
-                .on_activate(|_, _, _|panic!("disabled Menu Item was activated!"))
-                .enabled(false)
-
+                .on_activate(|_, _, _| panic!("disabled Menu Item was activated!"))
+                .enabled(false),
         )
         .entry(
             MenuItem::new("Disabled Selectable")
-                .on_activate(|_, _, _|panic!("disabled Menu Item was activated!"))
+                .on_activate(|_, _, _| panic!("disabled Menu Item was activated!"))
                 .selected(false)
-                .enabled(false)
+                .enabled(false),
         )
         //we dont add new menu items based on data!
-        .rebuild_on(|_, _, _|false);
+        .rebuild_on(|_, _, _| false);
 
-    Menu::empty()
-        .entry(menu)
-
+    Menu::empty().entry(menu)
 }
 
 struct Delegate;
 
 impl AppDelegate<AppState> for Delegate {
-    fn command(&mut self, _: &mut DelegateCtx, _: Target, cmd: &Command, _: &mut AppState, _: &Env) -> Handled {
+    fn command(
+        &mut self,
+        _: &mut DelegateCtx,
+        _: Target,
+        cmd: &Command,
+        _: &mut AppState,
+        _: &Env,
+    ) -> Handled {
         if cmd.is(COMMAND) {
             println!("Clicked \"Send Command\"!");
             Handled::Yes
