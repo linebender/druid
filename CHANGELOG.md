@@ -3,175 +3,284 @@
 The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
 You can find its changes [documented below](#070---2021-01-01).
 
-## Unreleased
+## [Unreleased]
 
 ### Highlights
 
 - International text input support (IME) on macOS.
-- Rich text and complex script support on Linux.
+- Rich text and complex script support on Linux thanks to new Piet.
 
 ### Added
 
-- Strikethrough rich text attribute ([#1953] by [@jenra-uwu])
-- System fonts loaded so that SVG images render text ([#1850] by [@DrGabble])
-- Add `scroll()` method in WidgetExt ([#1600] by [@totsteps])
-- `write!` for `RichTextBuilder` ([#1596] by [@Maan2003])
-- Sub windows: Allow opening windows that share state with arbitrary parts of the widget hierarchy ([#1254] by [@rjwittams])
-- WindowCloseRequested/WindowDisconnected event when a window is closing ([#1254] by [@rjwittams])
-- Add `on_added()` method in `WidgetExt` ([#1485] by [@arthmis])
-- RichTextBuilder ([#1520] by [@Maan2003])
-- `get_external_handle` on `DelegateCtx` ([#1526] by [@Maan2003])
-- `AppLauncher::localization_resources` to use custom l10n resources. ([#1528] by [@edwin0cheng])
-- Shell: get_content_insets and mac implementation ([#1532] by [@rjwittams])
-- Contexts: to_window and to_screen (useful for relatively positioning sub windows) ([#1532] by [@rjwittams])
-- WindowSizePolicy: allow windows to be sized by their content ([#1532] by [@rjwittams])
-- Implemented `Data` for more datatypes from `std` ([#1534] by [@derekdreery])
-- Shell: windows implementation from content_insets ([#1592] by [@HoNile])
-- Support individual corner radii for kurbo::RoundedRect ([#1561] by [@SecondFlight])
-- Shell: IME API and macOS IME implementation ([#1619] by [@lord])
-- Scroll::content_must_fill and a few other new Scroll methods ([#1635] by [@cmyr])
-- New `TextBox` widget with IME integration ([#1636] by [@cmyr])
-- `Notification`s can be submitted while handling other `Notification`s ([#1640] by [@cmyr])
-- Added ListIter implementations for OrdMap ([#1641] by [@Lejero])
-- Add `AspectRatioBox` widget ([#1645] by [@arthmis])
-- `Padding` can now use `Key<Insets>` ([#1662] by [@cmyr])
-- `LifeCycle::DisabledChanged`, `InternalLifeCycle::RouteDisabledChanged` and the `set_disabled()` and `is_disabled()`
-  context-methods to implement disabled ([#1632] by [@xarvic])
-- `LifeCycle::BuildFocusChain` to update the focus-chain ([#1632] by [@xarvic])
-- `DisabledIf` widget wrapper to disable based on the state of Data and Env ([#1702] by [@xarvic])
-- GTK: added support for `content_insets` ([#1722] by [@jneem])
-- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types ([#1743] by [@r-ml])
-- Text input handles Delete key ([#1746] by [@bjorn])
-- `lens` macro can access nested fields ([#1764] by [@Maan2003])
-- X11 backend now supports custom cursors ([#1801] by [@psychon])
-- X11: Add support for transparent windows ([#1803] by [@psychon])
-- X11: Added support for `get_monitors` ([#1804] by [@psychon])
-- x11: Remove some unnecessary casts ([#1851] by [@psychon])
-- `has_focus` method on `WidgetPod` ([#1825] by [@ForLoveOfCats])
-- x11: Add support for getting and setting clipboard contents ([#1805], [#1851], and [#1866] by [@psychon])
-- Linux extension: primary_clipboard ([#1843] by [@Maan2003])
-- x11: Implement primary_clipboard ([#1867] by [@psychon])
-- x11: Set WM_CLASS property ([#1868] by [@psychon])
-- Expose `RawWindowHandle` for `WindowHandle` under the `raw-win-handle` feature ([#1828] by [@djeedai])
-- `Slider` widget now warns if max < min and swaps the values ([#1882] by [@Maan2003])
-- Widget/Slider: Add stepping functionality ([#1875] by [@raymanfx])
-- Add `#[data(eq)]` shorthand attribute for Data derive macro ([#1884] by [@Maan2003])
-- X11: detect keyboard layout ([#1779] by [@Maan2003])
-- WindowDesc::with_config ([#1929] by [@Maan2003])
-- `scroll_to_view` and `scroll_area_to_view` methods on `UpdateCtx`, `LifecycleCtx` and `EventCtx` ([#1976] by [@xarvic])
-- `Notification::route` ([#1978] by [@xarvic])
-- Build on OpenBSD ([#1993] by [@klemensn])
-- Scope: expose scoped state using state() and state_mut() ([#2082] by [@rjwittams]
-- Tabs: allow getting and setting the tab index of a Tabs widget ([#2082] by [@rjwittams]
-- `RangeSlider` and `Annotated` ([#1979] by [@xarvic])
-- Add `Checkbox::from_label` constructor ([#2111] by [@maurerdietmar])
-- fix content_insets for gtk backend ([#2117] by [@maurerdietmar])
-- `ClipBox::managed`, `Notification::warn_if_ununsed` and `Notification::warn_if_ununsed_set` ([#2141] by [@xarvic])
-- `ClipBox` and `Tabs` handle SCROLL_TO_VIEW ([#2141] by [@xarvic])
-- `EventCtx::submit_notification_without_warning` ([#2141] by [@xarvic])
-- `WidgetPod::requested_layout` ([#2145] by [@xarvic])
-- Make `Parse` work better with floats and similar types ([#2148] by [@superfell])
-- Added `compute_max_intrinsic` method to the `Widget` trait, which determines the maximum useful dimension of the widget ([#2172] by [@sjoshid])
-- Windows: Dark mode support for the title bar ([#2196] by [@dristic])
-- `ZStack` widget ([#2235] by [@xarvic])
-- `Lifecycle::ViewStateChanged`, `InternalLifecycle::RouteViewStateChanged`, `ChangeCtx`, and `RequestCtx` ([#2149] by [@xarvic])
+- Wayland backend with the `wayland` feature. ([#2079], [#2114], [#2127], [#2254] by [@james-lawrence], [@derekdreery], [@Maan2003], [@PolyMeilex])
+- IME support and the macOS implementation. ([#1619] by [@lord])
+- `TextBox` was rewritten with IME integration. ([#1636] by [@cmyr])
+- Transparent window support via the `WindowDesc::transparent` method. ([#1583], [#1617] by [@Ciantic] for Windows, [@rjwittams] for macOS, [@JAicewizard] for GTK, and [#1803] by [@psychon] for X11)
+- Strikethrough support in `RichText`. ([#1953] by [@jenra-uwu])
+- `WidgetExt::scroll` method for easily encapsulating a widget in a `Scroll` container. ([#1600] by [@totsteps])
+- Sub windows - allow opening windows that share state with arbitrary parts of the widget hierarchy. ([#1254] by [@rjwittams])
+- `WindowCloseRequested` and `WindowDisconnected` events for when a window is closing. ([#1254] by [@rjwittams])
+- `WidgetExt::on_added` method. ([#1485] by [@arthmis])
+- `DelegateCtx::get_external_handle` method. ([#1526] by [@Maan2003])
+- `AppLauncher::localization_resources` for using custom localization resources. ([#1528] by [@edwin0cheng])
+- `WindowHandle::content_insets`. ([#1532] by [@rjwittams] for macOS; [#1592] by [@HoNile] for Windows; [#1722], [#2117] by [@jneem], [@maurerdietmar] for GTK)
+- `window_origin`, `to_window`, and `to_screen` methods to `EventCtx`, `LifeCycleCtx`, `UpdateCtx`, and `PaintCtx`. ([#1532] by [@rjwittams])
+- `WindowSizePolicy` for allowing windows to be sized by their content. ([#1532] by [@rjwittams], [#1604] by [@HoNile])
+- `Data` implementations for more types from `std`. ([#1534] by [@derekdreery])
+- `Data` implementations for `Key` and `KeyOrValue`. ([#1571] by [@rjwittams])
+- `Data` implementation for `ImageBuf`. ([#1512] by [@arthmis])
+- `content_must_fill`, `set_content_must_fill`, `set_enabled_scrollbars`, `set_vertical_scroll_enabled`, `set_horizontal_scroll_enabled` methods to `Scroll`. ([#1635] by [@cmyr])
+- `content_must_fill`, `set_content_must_fill` methods to `ClipBox`. ([#1630] by [@cmyr])
+- `Notification` can now be sent while handling another `Notification`. ([#1640] by [@cmyr])
+- `ListIter` implementation for `OrdMap`. ([#1641] by [@Lejero])
+- `AspectRatioBox` widget that preserves the aspect ratio given to it. ([#1645] by [@arthmis])
+- `set_disabled` method to `EventCtx`, `LifeCycleCtx`, and `UpdateCtx` to disable a widget. ([#1632] by [@xarvic])
+- `is_disabled` method to `EventCtx`, `LifeCycleCtx`, `UpdateCtx` and `PaintCtx` to check if a widget is disabled. ([#1632] by [@xarvic])
+- `LifeCycle::DisabledChanged` and `InternalLifeCycle::RouteDisabledChanged` events for widget disabled state changes. ([#1632] by [@xarvic])
+- `LifeCycle::BuildFocusChain` to update the focus-chain. ([#1632] by [@xarvic])
+- `DisabledIf` widget wrapper to disable the inner widget based on `Data` and `Env`. ([#1702] by [@xarvic])
+- `chrono` feature with `Data` support for [chrono](https://docs.rs/chrono/) types. ([#1743] by [@r-ml])
+- Ctrl+C, Ctrl+X, Ctrl+V key handling for `TextBox`. ([#1660] by [@cmyr])
+- Delete key handling for `TextBox`. ([#1746] by [@bjorn])
+- Ctrl+Left, Ctrl+Right, Ctrl+Backspace, Ctrl+Delete, Home, End, PageUp, PageDown key handling for `TextBox`. ([#1786] by [@CryZe])
+- Ctrl+A key handling for `TextBox`. ([#1931], [#2031] by [@Maan2003])
+- `lens` macro support for accessing nested fields. ([#1764] by [@Maan2003])
+- `WidgetPod::has_focus` method to check if the widget or any descendent is focused. ([#1825] by [@ForLoveOfCats])
+- [`raw-window-handle`](https://docs.rs/raw-window-handle) support via the `raw-win-handle` feature for Windows, macOS, and X11. ([#1586], [#1828] by [@djeedai]; [#1667] by [@i509VCB]; [#2238] by [@Azorlogh])
+- `Slider::with_step` method for stepping functionality. ([#1875] by [@raymanfx])
+- Data derive macro attribute `#[data(eq)]`, which is equivalent to `#[data(same_fn = "PartialEq::eq")]`. ([#1884] by [@Maan2003])
+- `WindowDesc::with_config` method to set the `WindowConfig` of the window. ([#1929] by [@Maan2003])
+- `scroll_to_view` and `scroll_area_to_view` methods to `EventCtx`, `LifeCycleCtx` and `UpdateCtx`. ([#1976] by [@xarvic])
+- `Notification::route` method to identify the last widget that the notification passed through. ([#1978] by [@xarvic])
+- `state` and `state_mut` methods to `Scope` to get references to the inner state.  ([#2082] by [@rjwittams]
+- `lens` and `lens_mut` methods to `LensWrap` to get references to the inner lens. ([#1744] by [@SecondFlight])
+- `with_tab_index`, `set_tab_index`, and `tab_index` methods to `Tabs` to control the index. ([#2082] by [@rjwittams]
+- `RangeSlider` and `Annotated` widgets, which are both variations on `Slider`. ([#1979] by [@xarvic])
+- `ListIter` implementations for `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)`. ([#1639] by [@raymanfx])
+- `Checkbox::from_label` constructor. ([#2111] by [@maurerdietmar])
+- `Notification::warn_if_unused` and `Notification::warn_if_unused_set` for whether there should be a warning when no widget handles the notification. ([#2141] by [@xarvic])
+- `ClipBox::unmanaged` constructor for when you are using `ClipBox` in the widget tree directly. ([#2141] by [@xarvic])
+- Scroll-to-view support for `ClipBox` and `Tabs`. ([#2141] by [@xarvic])
+- `EventCtx::submit_notification_without_warning` method. ([#2141] by [@xarvic])
+- `WidgetPod::layout_requested` method to determine whether the widget or any of its children have requested layout. ([#2145] by [@xarvic])
+- `Widget::compute_max_intrinsic` method which determines the maximum useful dimension of the widget. ([#2172] by [@sjoshid])
+- Windows: Dark mode detection and titlebar theming. ([#2196], [#2204] by [@dristic])
+- `ZStack` which is a container that stacks its children on top of each other. ([#2235], [#2291] by [@xarvic])
+- `LifeCycle::ViewContextChanged` and `InternalLifeCycle::RouteViewContextChanged` events for when a widget's surroundings change. ([#2149] by [@xarvic])
+- `ChangeCtx` and `RequestCtx` traits for code generic over contexts. ([#2149] by [@xarvic])
 - `Event::WindowScale` to notify widgets of the window's scale changes. ([#2335] by [@xStrom])
-- `Ctx::scale` method to all contexts for widgets to easily access the window's scale. ([#2335] by [@xStrom])
-- Add a public constructor to `StringCursor` ([#2319] by [@benoitryder])
-- Windows: Use custom application icon, if present ([#2274] by [@tay64])
+- `scale` method to all contexts for widgets to easily access the window's scale. ([#2335] by [@xStrom])
+- `StringCursor::new` constructor. ([#2319] by [@benoitryder])
+- Windows: Use custom application icon if the resource is present. ([#2274] by [@tay64])
+- X11: `set_size`, `get_size`, `set_min_size`, `resizable`, `get_position`, `set_position`, `set_level`, and `set_window_state` implementations. ([#1785] by [@Maan2003])
+- GTK: Multiple file selection support in the file dialogs. ([#2081] by [@Psykopear])
+- `MouseButtons::count` method to get the number of pressed buttons. ([#1500] by [@jjl])
+- `WidgetWrapper` widget for widgets that wrap a single child to expose that child for access and mutation. ([#1511] by [@rjwittams])
+- `WindowDesc::set_level` method. ([#1515] by [@Schaback])
+- `RichTextBuilder` for creating `RichText` objects. ([#1520], [#1596] by [@Maan2003])
+- `Container::clear_background` and `Container::clear_border` methods. ([#1558] by [@sjoshid])
+- `CrossAxisAlignment::Fill` to the `Flex` widget for filling the entire available cross space. ([#1551] by [@tirix])
+- `Maybe` widget for switching between two possible children, for `Data` that is `Option<T>`. ([#1540] by [@derekdreery])
+- `Lens` implementation for `Lens` tuples of length 2-8. ([#1654] by [@Maan2003])
+- Type parameters to generated lenses of generic structs, allowing for easier lens usage. ([#1591] by [@rjwittams])
+- `Cursor::Pointer` cursor icon. ([#1612] by [@Maan2003])
+- `Link` text attribute for links in `RichText`. ([#1627] by [@Maan2003], [#1656] by [@cmyr])
+- `theme::SCROLLBAR_MIN_SIZE` for specifying the minimum length for any scrollbar. ([#1661] by [@Cupnfish])
+- `theme::SELECTED_TEXT_INACTIVE_BACKGROUND_COLOR` for styling text selection in widgets that aren't focused. ([#1659] by [@cmyr])
+- Derived lens items now get auto-generated documentation. ([#1696] by [@lidin])
+- `should_propagate_to_hidden` method on `Event` and `LifeCycle` enums. ([#1724] by [@xarvic])
+- `Value::Other` for using custom types in `Env`. ([#1910] by [@Maan2003])
+- `Value::RoundedRectRadii` for specifying the radius of each corner separately. ([#2039] by [@ngugcx])
+- `Env::empty` constructor for creating a set of overrides. ([#1837] by [@cmyr])
+- `Env::try_set_raw` method to try to set a resolved `Value` for the specified `Key`. ([#1517] by [@cmyr])
+- `Key::raw` method for getting the key's raw string value, useful for debugging. ([#1527] by [@cmyr])
+- `DebugState` to fetch and process the state of the widget tree for debugging purposes. ([#1890] by [@PoignardAzur])
+- `ExtEventSink::add_idle_callback` method as an alternative to commands for mutating app data from a another thread. ([#1955] by [@Maan2003])
+- Support for more niche keys like F13 - F24, and various media keys. ([#2044] by [@CryZe])
+- Linux: `ApplicationExt::primary_clipboard` method for getting a handle to the primary system clipboard. ([#1843], [#1873] by [@Maan2003])
+- GTK: Implemented `WindowHandle::handle_titlebar`. ([#2230] by [@Steve-xmh])
+- GTK: Support for selected menu items. ([#2251] by [@longmathemagician])
+- X11: Support for clipboard. ([#1805], [#1851], [#1866] by [@psychon])
+- X11: Implemented `ApplicationExt::primary_clipboard`. ([#1867] by [@psychon])
+- X11: Now setting `WM_CLASS` property. ([#1868] by [@psychon])
+- X11: Support for DPI scaling. ([#1751] by [@Maan2003])
+- X11: Support for changing cursors. ([#1755] by [@Maan2003])
+- X11: Support for custom cursors. ([#1801] by [@psychon])
+- X11: Support for window focus events. ([#1938] by [@Maan2003]
+- X11: Support for file dialogs. ([#2153] by [@jneem])
+- X11: Implemented keyboard layout detection. ([#1779] by [@Maan2003])
+- X11: Implemented `Screen::get_monitors`. ([#1804] by [@psychon])
+- X11: Implemented `Application::get_locale`. ([#1756] by [@Maan2003])
+- Web: Implemented `Application::get_locale`. ([#1791] by [@Maan2003])
+- Windows: Implemented `Application::get_locale`. ([#1874] by [@dfrg])
+- macOS: Implemented save dialog file format selection. ([#1847] by [@terhechte])
+- macOS: Implemented `WindowHandle::get_scale`. ([#2297] by [@dfrg])
+- OpenBSD: Support for building. ([#1993] by [@klemensn])
+- FreeBSD: Support for building. ([#2249] by [@nunotexbsd])
 
 ### Changed
 
-- ~~Warn on unhandled Commands ([#1533] by [@Maan2003])~~ (Reverted in #1813)
-- `WindowDesc::new` takes the root widget directly instead of a closure ([#1559] by [@lassipulkkinen])
-- Switch to trace-based logging ([#1562] by [@PoignardAzur])
-- Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it ([#1584] by [@JAicewizard])
-- Padding is generic over child widget, impls WidgetWrapper ([#1634] by [@cmyr])
-- Menu support was rewritten with support for `Data` ([#1625] by [@jneem])
-- Update to piet v0.4.0 (rich text on linux!) ([#1677] by [@cmyr])
-- `register_for_focus()` should from now on be called from `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded` ([#1632] by [@xarvic])
-- Flex values that are less than 0.0 will default to 0.0 and warn in release. It will panic in debug mode. ([#1691] by [@arthmis])
-- Lens implemented for tuples of Lenses of length 2-8, Tuple2 removed ([#1654] by [@Maan2003])
-- Window size and positioning code is now in display points ([#1713] by [@jneem])
-- Update look and feel of controls when disabled ([#1717] by [@xarvic])
-- Change the signature of `add_idle_callback` ([#1787] by [@jneem])
-- Move macOS only function to Mac extension trait ([#1863] by [@Maan2003])
-- x11: Only query atoms once instead of per window ([#1865] by [@psychon])
-- remove prefix from platform extension traits ([#1873] by [@Maan2003])
-- Remove `set_level` on windows ([#1919] by [@JAicewizard])
-- Add parent windows to non-main windows. (Coordinate space is now from their origin) ([#1919] by [@JAicewizard])
-- `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)` ([#1967] by [@xarvic])
-- Closures passed to `Label::new` can now return any type that implements `Into<ArcStr>` ([#2064] by [@jplatte])
+- `WindowDesc::new` now takes the root widget directly instead of a function. ([#1559] by [@lassipulkkinen])
+- `register_for_focus` must now be called in response to `LifeCycle::BuildFocusChain` instead of `LifeCycle::WidgetAdded`. ([#1632] by [@xarvic])
+- Spacers in `Flex` are now implemented by calculating the space in `Flex` instead of creating a widget for it. ([#1584] by [@JAicewizard])
+- Menu support was rewritten with support for `Data`. ([#1625] by [@jneem])
+- `Flex` values less than zero will clamp to zero and warn in release mode and panic in debug mode. ([#1691] by [@arthmis])
+- Window size and positioning code is now in display points. ([#1713] by [@jneem]; [#2297] by [@raphlinus])
+- `add_idle_callback` now takes `&mut dyn WinHandler` instead of `&dyn Any`. ([#1787] by [@jneem])
+- macOS: `Application::hide`, `Application::hide_others`, `Application::set_menu` methods moved to `ApplicationExt`. ([#1863] by [@Maan2003])
+- `WindowLevel` variants `Tooltip`, `DropDown`, and `Modal` now require the parent window's `WindowHandle`. ([#1919] by [@JAicewizard])
+- Optimized `ListIter` implementations for `Arc<Vec<T>>`, `(S, Arc<Vec<T>>)`, `Arc<VecDequeue<T>>` and `(S, Arc<VecDequeue<T>>)`. ([#1967] by [@xarvic])
+- `Label::new` now accepts functions that return any type that implements `Into<ArcStr>`. ([#2064] by [@jplatte])
 - `AppDelegate::window_added` now receives the new window's `WindowHandle`. ([#2119] by [@zedseven])
-- Dont warn about unhandled `Notification`s which have `known_target` set to false ([#2141] by [@xarvic])
-- `ClipBox`, `Flex`, `List` and `Split` only call layout on children which need it ([#2145] by [@xarvic])
-- `SizedBox` now supports using `Key<f64>` for specifying  size ([#2151] by [@GoldsteinE])
-- `RadioGroup` widgets are now constructed with new `row()`, `column()`, and `for_axis()` methods ([#2157] by [@twitchyliquid64])
-- Replace `info_span!` with `trace_span!` ([#2203] by [@NickLarsenNZ])
-- `WidgetPod::event` propagates handled mouse events to active children ([#2235] by [@xarvic])
-- changing hot state is now done in `Lifecycle::ChangeViewState` instead of `layout` ([#2149] by [@xarvic])
+- `ClipBox::new` constructor was renamed to `ClipBox::managed`. ([#2141] by [@xarvic])
+- `ClipBox`, `Flex`, `List` and `Split` only call `layout` on their children when they need it. ([#2145] by [@xarvic])
+- `SizedBox::width` and `SizedBox::height` methods now take `impl Into<KeyOrValue<f64>>` instead of just `f64`. ([#2151] by [@GoldsteinE])
+- `RadioGroup::new` constructor was replaced by `RadioGroup::row`, `RadioGroup::column`, and `RadioGroup::for_axis`. ([#2157] by [@twitchyliquid64])
+- `WidgetPod::event` now propagates handled mouse events to active children. ([#2235] by [@xarvic])
 - `WidgetPod::set_origin` no longer takes `data` and `env` as parameters. ([#2149] by [@xarvic])
+- `Padding` is now generic over its child, implements the new `WidgetWrapper` trait. ([#1634] by [@cmyr])
+- `Padding::new` now takes `impl Into<KeyOrValue<Insets>>` instead of just `impl Into<Insets>`. ([#1662] by [@cmyr])
+- `Svg` widget was changed from a simple custom implementation to `resvg` + `tiny-skia` to increase compatibility. ([#2106] by [@james-lawrence], [#2335] by [@xStrom])
+- Renamed `druid_shell::platform` module to `druid_shell::backend`. ([#1857] by [@Maan2003])
+- `Slider` widget now warns if `max` < `min` and swaps the values. ([#1882] by [@Maan2003])
+- X11: Query atoms only once instead of per window. ([#1865] by [@psychon])
+- Web: Repeated `request_anim_frame` calls are now ignored until the next `request_animation_frame` callback is executed. ([#1790] by [@Maan2003])
+- `TextBox::with_placeholder` and `TextBox::set_placeholder` methods now take `impl Into<LabelText<T>>` instead of `impl Into<String>`. ([#1908] by [@Swatinem])
+- `PROGRESS_BAR_RADIUS`, `BUTTON_BORDER_RADIUS`, `TEXTBOX_BORDER_RADIUS`, and `SCROLLBAR_RADIUS` in `theme` now use `RoundedRectRadii` instead of `f64`. ([#2039] by [@ngugcx])
+- `Container::rounded` and `Container::set_rounded` methods now take `impl Into<KeyOrValue<RoundedRectRadii>>` instead of `impl Into<KeyOrValue<f64>>`. ([#2091] by [@jneem])
+- `Application` can now be restarted. ([#1700] by [@djeedai])
+- `EventCtx::focus_next`, `EventCtx::focus_prev` and `EventCtx::resign_focus` can now also be called by an ancestor of a focused widget. ([#1651] by [@cmyr])
 
 ### Deprecated
 
+- `AppLauncher::use_simple_logger` in favor of `AppLauncher::log_to_console`. ([#1578], [#1621] by [@PoignardAzur])
+- `theme::LABEL_COLOR` in favor of `theme::TEXT_COLOR`. ([#1717] by [@xarvic])
+- `theme::SELECTION_COLOR` in favor of `theme::SELECTED_TEXT_BACKGROUND_COLOR`. ([#1659] by [@cmyr])
+- `ArcStr`, `FontDescriptor`, `FontFamily`, `FontStyle`, `FontWeight`, `TextAlignment`, `TextLayout` in the `druid` module in favor of `druid::text` module. ([#1689] by [@cmyr])
+- `Cursor::OpenHand` because it is not available on Windows. ([#1612] by [@Maan2003])
+- `command::HIDE_APPLICATION` and `command::HIDE_OTHERS` on platforms other than macOS. ([#1863] by [@Maan2003])
+- `menu::MenuDesc<T>` in favor of `menu::Menu<T>` and its methods `append_entry` and `append_separator` in favor of `entry` and `separator`. ([#1625] by [@jneem])
+
 ### Removed
 
-- Remove Default impl for `FlexParams` ([#1885] by [@Maan2003])
+- `WindowHandle::set_level` method. ([#1919] by [@JAicewizard])
+- `Default` implementation for `FlexParams`. ([#1885] by [@Maan2003])
+- `Default` implementation for `Env` and `theme::init` function. ([#1837] by [@cmyr])
 
 ### Fixed
 
-- Centre checkmark in checkbox ([#2036] by [@agentsim])
-- `Notification`s will not be delivered to the widget that sends them ([#1640] by [@cmyr])
-- `TextBox` can handle standard keyboard shortcuts without needing menus ([#1660] by [@cmyr])
-- GTK Shell: Prevent mangling of newline characters in clipboard ([#1695] by [@ForLoveOfCats])
-- GTK: Replaced call to `std::str::from_utf8_unchecked` with `from_utf8` ([#1820] by [@psychon])
-- Use correct fill rule when rendering SVG paths ([#1606] by [@SecondFlight])
-- Correctly capture and use stroke properties when rendering SVG paths ([#1647] by [@SecondFlight])
-- focus-chain now only includes non hidden (`should_propagate_to_hidden()` on `Event` and `Lifecylce`) widgets ([#1724] by [@xarvic])
-- Fixed layout of scrollbar with very small viewports ([#1715] by [@andrewhickman])
-- Fixed `WindowLevel::Tooltip` on Windows platform ([#1737] by [@djeedai])
-- X11 backend now supports scaling([#1751] by [@Maan2003])
-- X11 backend now supports changing cursors ([#1755] by [@Maan2003])
-- X11 backend now uses the platform locale ([#1756] by [@Maan2003])
-- `Either` and `Tab` widgets were still propagating events to hidden widgets ([#1860] by [@lisael])
-- RichText: Invalidate layout on Env change ([#1907] by [@Maan2003])
-- GTK: fix using gdk before initialising it ([#1946] by [@JAicewizard])
-- `ListIter` implementations for `Vector<T>` and `(S, Vector<T>)` ([#1967] by [@xarvic])
-- Do not panic in Application::try_global if Application is not created ([#1996] by [@Maan2003])
-- X11: window focus events ([#1938] by [@Maan2003]
-- Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
-- GTK: Removed line of code that prevented window miximalization. ([#2118] by [@Pavel-N])
+- `Notification` no longer received by the widget that sent it. ([#1640] by [@cmyr])
+- `TextBox` text clipping. ([#1775] by [@CryZe])
+- `TextBox` caret clipping is now more consistent with text clipping. ([#1712] by [@andrewhickman])
+- `TextBox` caret not being pixel aligned. ([#1794] by [@CryZe])
+- `TextBox` selection alignment offset. ([#1769] by [@CryZe])
+- `TextBox` placeholder text alignment. ([#1856] by [@cmyr])
+- Single line `TextBox` now resets its scroll position on focus loss. ([#1663] by [@cmyr])
+- Double- or triple-clicking on text to select a word/paragraph and then dragging to select even more. ([#1665], [#1666] by [@cmyr])
+- Selecting the last word in text. ([#1893] by [@Maan2003])
+- `Split` no longer causes cursor flicker when the mouse moves fast. ([#1726] by [@djeedai])
+- GTK: No longer mangling newline characters in clipboard. ([#1695] by [@ForLoveOfCats])
+- GTK: Replaced call to `std::str::from_utf8_unchecked` with `from_utf8`. ([#1820] by [@psychon])
+- Focus-chain no longer contains hidden widgets. ([#1724] by [@xarvic])
+- Scrollbar layout with very small viewports. ([#1715] by [@andrewhickman])
+- Windows: `WindowLevel::Tooltip` no longer steals focus, has a taskbar icon, or an incorrect size. ([#1737] by [@djeedai])
+- `Either` and `Tab` widgets no longer propagate events to hidden children. ([#1860] by [@lisael])
+- `Painter` now requests paint when the `BackgroundBrush` changes. ([#1881] by [@Maan2003])
+- `RichText` now invalidates its layout when `Env` changes. ([#1907] by [@Maan2003])
+- GTK: `Screen::get_monitors` no longer panics due to GDK not being initialized. ([#1946] by [@JAicewizard])
+- `ListIter` implementations for `im::Vector<T>` and `(S, im::Vector<T>)`. ([#1967] by [@xarvic])
+- Keep baseline offset in `Align`, `Container`, `Flex`, and `Padding`. ([#2078] by [@maurerdietmar])
+- `Data` implementation for `kurbo::RoundedRect`. ([#1618] by [@JAicewizard])
+- `Parse` now properly handles floats. ([#2148] by [@superfell])
+- X11: `Screen::get_monitors` no longer panics due to `Application` not being initialized. ([#1996] by [@Maan2003])
+- `serde` feature now properly propagates to the embedded `kurbo` crate. ([#1871] by [@Kethku])
+- `Env` changes now properly invalidate stale `Container`, `Flex`, and `List`. ([#1894] by [@Maan2003])
+- `Scroll` now behaves properly inside of `Flex`. ([#1506] by [@tirix])
+- Hot state now works properly inside `Scroll`. ([#2149] by [@xarvic])
+- `Image` now preserves the aspect ratio of a clipped region. ([#2195] by [@barsae])
+- GTK: Window maximizing works now. ([#2118] by [@Pavel-N])
 - GTK: Hot state now properly resets when the mouse leaves the window via an occluded part. ([#2324] by [@xStrom])
+- GTK: Meta key modifier now works. ([#2293] by [@lzhoucs])
+- Windows: Ctrl+Backspace now properly deletes the left word in text. ([#1574] by [@Ciantic])
+- Panic due to using incorrect flex params in `Tabs`. ([#1740] by [@Maan2003])
+- Numerical imprecision in `ClipBox` layout. ([#1776] by [@jneem])
+- Web: Key down events are now handled correctly. ([#1792] by [@Maan2003])
+- GTK: Avoid undefined behaviour when requesting animation frames. ([#1832] by [@JAicewizard])
+- GTK: Shift+Tab not recognized as a Tab press. ([#1597] by [@cmyr])
+- macOS: Menus are now properly initialized. ([#1846] by [@terhechte])
+- macOS: Creating a window with `WindowState::Maximized` now has correct layout. ([#1692] by [@JarrettBillingsley])
+- macOS: Mouse leave events are now working properly on macOS 13. ([#2282] by [@liias])
+- Windows: Alt+Tab now works properly when using Narrator. ([#2026] by [@mwcampbell])
+- Windows: Windows without titlebars can now be minimized. ([#2038] by [@ngugcx])
+- Windows: Panic on startup when no window size is specified. ([#1575] by [@Perlmint])
+- Windows: Now accounting for scale when setting the initial window position. ([#2296] by [@xStrom])
 
 ### Visual
 
+- Widgets have a new look and feel when disabled. ([#1717] by [@xarvic])
+- `Tabs` widget's close button is now painted with strokes instead of a rendered font. ([#1510] by [@rjwittams])
+- `Checkbox` widget's checkmark is now properly centered. ([#2036] by [@agentsim])
+- The Druid project itself has a new logo. ([#1550] by [@neurotok], [#1916] by [@PoignardAzur])
+
 ### Docs
 
-- Fixed docs of derived Lens ([#1523] by [@Maan2003])
-- Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
-- Added missing documentation on derived lens items ([#1696] by [@lidin])
-- Fix example code in `Get started with Druid` chapter of book ([#1698] by [@ccqpein])
-- Fix link in documentation of widget::Image ([#1730] by [@RichardPoole42])
-- Added more detailed explanation of `Target::Auto` ([#1761] by [@arthmis])
-- Updated source code, tests and docs to use `Selector::with` instead of `Command::new` ([#1761] by [@arthmis])
-- Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus` ([#1861] by [@xarvic])
-- Update docs of `RawLabel`: does not require `ArcStr`([#1886] by [@Maan2003])
-- Fix `Controller` links for `Click` ([#2158] by [@yrns])
-- Delete inaccurate line for `KeyEvent` ([#2247] by [@amtep])
-- Added examples in `TextBox` ([#2284] by [@ThomasMcandrew])
-- Removed outdated section in docs for `LifeCycle::WidgetAdded` ([#2320] by [@sprocklem])
+- Rewrote multiple chapters of the Druid book. ([#2301] by [@PoignardAzur])
+- Fixed docs of derived `Lens`. ([#1523] by [@Maan2003])
+- Fixed docs describing the `ViewSwitcher` widget functionality. ([#1693] by [@arthmis])
+- Fixed example code in the *Get started with Druid* chapter of the book. ([#1698] by [@ccqpein])
+- Fixed broken links in `Image` documentation. ([#1730] by [@RichardPoole42])
+- Fixed broken links in `Controller` documentation. ([#2158] by [@yrns])
+- Added more detailed explanation of `Target::Auto`. ([#1761] by [@arthmis])
+- Updated docs of `should_propagate_to_hidden`, `children_changed` and `register_for_focus`. ([#1861] by [@xarvic])
+- Fixed docs of `RawLabel`. ([#1886] by [@Maan2003])
+- Added code examples to `TextBox` documentation. ([#2284] by [@ThomasMcandrew])
+- Removed outdated section in `LifeCycle::WidgetAdded` documentation. ([#2320] by [@sprocklem])
+- Removed outdated line in `KeyEvent` documentation. ([#2247] by [@amtep])
 - Updated `Event::AnimFrame` docs with info about when `paint` happens. ([#2323] by [@xStrom])
+- Added a link to the [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) to `README.md`. ([#1754] by [@xarvic])
+- Rewrote the lens chapter of the Druid book. ([#1444] by [@derekdreery])
+- Updated `CONTRIBUTING.md` to use `cargo-edit` 0.11. ([#2330] by [@xStrom])
 
 ### Examples
-- Add readme ([#1423] by [@JAicewizard])
+
+- Added `markdown_preview` to demonstrate rich text. ([#1513] by [@cmyr])
+- Added `transparency` to demonstrate transparent windows. ([#1583] by [@Ciantic])
+- Added `slider` to demonstrate `Slider` and `RangeSlider`. ([#1979] by [@xarvic])
+- Added `z_stack` to demonstrate `ZStack`. ([#2235] by [@xarvic])
+- Added `FillStrat` and `InterpolationMode` usage to the `image` example. ([#1447] by [@JAicewizard])
+- Cleaned up `game_of_life`. ([#1443] by [@JAicewizard])
+- Added a readme describing all the examples. ([#1423] by [@JAicewizard], [#1992] by [@winksaville])
+- `open_save` now correctly shows the open dialog when pressing the open button. ([#1914] by [@minimal-state])
+- `value_formatting` now correctly handles currency validation errors. ([#1842] by [@cmyr])
+- Windows: No longer opening the console when launching the examples. ([#1897] by [@PoignardAzur])
 
 ### Maintenance
 
-- Updated to x11rb 0.8.0. ([#1519] by [@psychon])
-- Updated fluent-bundle to 0.15.1 and fluent syntax to 0.11.0 ([#1772] by [@r-ml])
-- Updated usvg to 0.14.1 ([#1802] by [@r-ml])
-- x11: Add logging to `Application::get_locale` ([#1876] by [@Maan2003])
-- Converted all calls of `approx_eq!` in tests to `assert_approx_eq!` ([#2331] by [@cbondurant])
+- Updated `x11rb` to 0.8. ([#1519] by [@psychon])
+- Updated `x11rb` to 0.10. ([#2231] by [@psychon])
+- Updated `fluent-bundle` to 0.15 and `fluent-syntax` to 0.11. ([#1772] by [@r-ml])
+- Updated `tracing-wasm` to 0.2. ([#1793] by [@Maan2003])
+- Updated `tracing-subscriber` to 0.3. ([#2048] by [@jplatte])
+- Updated `usvg` to 0.14. ([#1802] by [@r-ml])
+- Updated `usvg` to 0.28. ([#2106] by [@james-lawrence])
+- Updated `cairo-rs`, `cairo-sys-rs`, `gdk-sys`, `gtk-rs`, `glib-sys`, `gtk-sys` to 0.14. ([#1845] by [@JAicewizard])
+- Updated `piet-common` to 0.4 (rich text on linux!), `kurbo` to 0.8. ([#1677] by [@cmyr])
+- Updated `piet-common` to 0.5. ([#1845] by [@JAicewizard], [#2040] by [@cmyr])
+- Updated `piet-common` to 0.6, `kurbo` to 0.9. ([#2290] by [@jneem])
+- Updated `cairo-rs`, `cairo-sys-rs`, `gdk-sys`, `gtk-rs`, `glib-sys`, `gtk-sys` to 0.16. ([#2290] by [@jneem])
+- Updated `time` to 0.3. ([#1969] by [@PoignardAzur])
+- Updated `keyboard-types` to 0.6. ([#2044] by [@CryZe])
+- Updated `nix` to 0.24. ([#2218] by [@Maan2003])
+- Updated `bindgen` to 0.61. ([#2276] by [@jplatte])
+- Updated `float-cmp` to 0.9. ([#2329] by [@xStrom])
+- Replaced `lazy_static` with `once_cell`. ([#2263] by [@jplatte])
+- Converted all calls of `approx_eq!` in tests to `assert_approx_eq!`. ([#2331] by [@cbondurant])
+- Unified window size rounding strategy. ([#2297] by [@xStrom])
+- Unified `Selection` and `Movement` into `druid-shell`. ([#1653], [#1655] by [@cmyr])
+- Updated source code, tests, and docs to use `Selector::with` instead of `Command::new`. ([#1761] by [@arthmis])
+- Switched to trace-based logging, added some tracing and logging. ([#1578], [#1621] by [@PoignardAzur]; [#2203] by [@NickLarsenNZ])
+- Updated Rust edition to 2021 in all Druid crates except `druid-derive`. ([#2327] by [@xStrom])
+- X11: Added logging to `Application::get_locale`. ([#1876] by [@Maan2003])
 
 ### Outside News
 
@@ -259,13 +368,17 @@ values and their textual representations. ([#1377])
 - The `Cursor` API has changed to a stateful one. ([#1433] by [@jneem])
 - Part of the `SAVE_FILE` command is now `SAVE_FILE_AS`. ([#1463] by [@jneem])
 - `Image` and `ImageData` are now exported by default. ([#1011] by [@covercash2])
+- `ViewSwitcher` uses `Data` type constraint instead of `PartialEq`. ([#1112] by [@justinmoon])
 - Windows: Reduced flashing when windows are created on high-DPI displays. ([#1272] by [@rhzk])
 - Windows: Improved DPI handling. Druid should now redraw correctly when DPI changes. ([#1037] by [@rhzk])
 - Windows: A new window is created with the OS default size unless otherwise specified. ([#1037] by [@rhzk])
 
 ### Deprecated
 
-- `Parse` widget was replaced by the `Formatter` trait. ([#1377] by [@cmyr])
+- `KeyCode` in favor of `KbKey` and `KeyModifiers` in favor of `Modifiers`. ([#1049] by [@raphlinus])
+- `Parse` widget in favor of the `Formatter` trait and `WidgetExt::parse` method in favor of `TextBox::with_formatter`. ([#1377] by [@cmyr])
+- `Region::to_rect` method in favor of `Region::bounding_box`. ([#1338] by [@cmyr])
+- `theme::init` function in favor of `Env::default` method. ([#1237] by [@totsteps])
 
 ### Removed
 
@@ -383,7 +496,6 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - `FileDialogOptions` methods `default_name`, `name_label`, `title`, `button_text`, `packages_as_directories`, `force_starting_directory`. ([#960] by [@xStrom])
 - `Button::dynamic` constructor. ([#963] by [@totsteps])
 - `Spinner` widget to represent loading states. ([#1003] by [@futurepaul])
-- Link to the widget_nursery in README ([#1754] by [@xarvic])
 
 ### Changed
 
@@ -406,7 +518,6 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 - The `WindowHandle::get_dpi` method got replaced by `WindowHandle::get_scale`. ([#904] by [@xStrom])
 - The `WinHandler::size` method now gets a `Size` in display points. ([#904] by [@xStrom])
 - Standardized the type returned by the contexts' `text` methods. ([#996] by [@cmyr])
-- `ViewSwitcher` uses `Data` type constraint instead of `PartialEq`. ([#1112] by [@justinmoon])
 
 ### Removed
 
@@ -556,7 +667,6 @@ Last release without a changelog :(
 [@r-ml]: https://github.com/r-ml
 [@djeedai]: https://github.com/djeedai
 [@bjorn]: https://github.com/bjorn
-[@DrGabble]: https://github.com/DrGabble
 [@lisael]: https://github.com/lisael
 [@jenra-uwu]: https://github.com/jenra-uwu
 [@klemensn]: https://github.com/klemensn
@@ -581,6 +691,33 @@ Last release without a changelog :(
 [@danieldulaney]: https://github.com/danieldulaney
 [@Majora320]: https://github.com/Majora320
 [@StarfightLP]: https://github.com/StarfightLP
+[@james-lawrence]: https://github.com/james-lawrence
+[@Psykopear]: https://github.com/Psykopear
+[@jjl]: https://github.com/jjl
+[@Schaback]: https://github.com/Schaback
+[@tirix]: https://github.com/tirix
+[@Ciantic]: https://github.com/Ciantic
+[@Azorlogh]: https://github.com/Azorlogh
+[@i509VCB]: https://github.com/i509VCB
+[@Cupnfish]: https://github.com/Cupnfish
+[@CryZe]: https://github.com/CryZe
+[@dfrg]: https://github.com/dfrg
+[@terhechte]: https://github.com/terhechte
+[@minimal-state]: https://github.com/minimal-state
+[@Swatinem]: https://github.com/Swatinem
+[@mwcampbell]: https://github.com/mwcampbell
+[@ngugcx]: https://github.com/ngugcx
+[@Kethku]: https://github.com/Kethku
+[@neurotok]: https://github.com/neurotok
+[@winksaville]: https://github.com/winksaville
+[@JarrettBillingsley]: https://github.com/JarrettBillingsley
+[@Perlmint]: https://github.com/Perlmint
+[@Steve-xmh]: https://github.com/Steve-xmh
+[@nunotexbsd]: https://github.com/nunotexbsd
+[@PolyMeilex]: https://github.com/PolyMeilex
+[@longmathemagician]: https://github.com/longmathemagician
+[@liias]: https://github.com/liias
+[@lzhoucs]: https://github.com/lzhoucs
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -739,12 +876,14 @@ Last release without a changelog :(
 [#1231]: https://github.com/linebender/druid/pull/1231
 [#1232]: https://github.com/linebender/druid/pull/1232
 [#1235]: https://github.com/linebender/druid/pull/1235
+[#1237]: https://github.com/linebender/druid/pull/1237
 [#1238]: https://github.com/linebender/druid/pull/1238
 [#1241]: https://github.com/linebender/druid/pull/1241
 [#1245]: https://github.com/linebender/druid/pull/1245
 [#1248]: https://github.com/linebender/druid/pull/1248
 [#1251]: https://github.com/linebender/druid/pull/1251
 [#1252]: https://github.com/linebender/druid/pull/1252
+[#1254]: https://github.com/linebender/druid/pull/1254
 [#1255]: https://github.com/linebender/druid/pull/1255
 [#1272]: https://github.com/linebender/druid/pull/1272
 [#1276]: https://github.com/linebender/druid/pull/1276
@@ -761,6 +900,7 @@ Last release without a changelog :(
 [#1324]: https://github.com/linebender/druid/pull/1324
 [#1326]: https://github.com/linebender/druid/pull/1326
 [#1328]: https://github.com/linebender/druid/pull/1328
+[#1338]: https://github.com/linebender/druid/pull/1338
 [#1340]: https://github.com/linebender/druid/pull/1340
 [#1346]: https://github.com/linebender/druid/pull/1346
 [#1351]: https://github.com/linebender/druid/pull/1351
@@ -774,55 +914,96 @@ Last release without a changelog :(
 [#1423]: https://github.com/linebender/druid/pull/1423
 [#1433]: https://github.com/linebender/druid/pull/1433
 [#1438]: https://github.com/linebender/druid/pull/1438
+[#1443]: https://github.com/linebender/druid/pull/1443
+[#1444]: https://github.com/linebender/druid/pull/1444
+[#1447]: https://github.com/linebender/druid/pull/1447
 [#1448]: https://github.com/linebender/druid/pull/1448
 [#1452]: https://github.com/linebender/druid/pull/1452
 [#1463]: https://github.com/linebender/druid/pull/1463
 [#1485]: https://github.com/linebender/druid/pull/1485
+[#1500]: https://github.com/linebender/druid/pull/1500
+[#1506]: https://github.com/linebender/druid/pull/1506
+[#1510]: https://github.com/linebender/druid/pull/1510
+[#1511]: https://github.com/linebender/druid/pull/1511
+[#1512]: https://github.com/linebender/druid/pull/1512
+[#1513]: https://github.com/linebender/druid/pull/1513
+[#1515]: https://github.com/linebender/druid/pull/1515
+[#1517]: https://github.com/linebender/druid/pull/1517
 [#1519]: https://github.com/linebender/druid/pull/1519
 [#1520]: https://github.com/linebender/druid/pull/1520
 [#1523]: https://github.com/linebender/druid/pull/1523
 [#1526]: https://github.com/linebender/druid/pull/1526
+[#1527]: https://github.com/linebender/druid/pull/1527
 [#1528]: https://github.com/linebender/druid/pull/1528
 [#1532]: https://github.com/linebender/druid/pull/1532
-[#1533]: https://github.com/linebender/druid/pull/1533
 [#1534]: https://github.com/linebender/druid/pull/1534
-[#1254]: https://github.com/linebender/druid/pull/1254
+[#1540]: https://github.com/linebender/druid/pull/1540
+[#1550]: https://github.com/linebender/druid/pull/1550
+[#1551]: https://github.com/linebender/druid/pull/1551
+[#1558]: https://github.com/linebender/druid/pull/1558
 [#1559]: https://github.com/linebender/druid/pull/1559
-[#1561]: https://github.com/linebender/druid/pull/1561
-[#1562]: https://github.com/linebender/druid/pull/1562
+[#1571]: https://github.com/linebender/druid/pull/1571
+[#1574]: https://github.com/linebender/druid/pull/1574
+[#1575]: https://github.com/linebender/druid/pull/1575
+[#1578]: https://github.com/linebender/druid/pull/1578
+[#1583]: https://github.com/linebender/druid/pull/1583
 [#1584]: https://github.com/linebender/druid/pull/1584
+[#1591]: https://github.com/linebender/druid/pull/1591
 [#1592]: https://github.com/linebender/druid/pull/1592
 [#1596]: https://github.com/linebender/druid/pull/1596
+[#1597]: https://github.com/linebender/druid/pull/1597
 [#1600]: https://github.com/linebender/druid/pull/1600
-[#1606]: https://github.com/linebender/druid/pull/1606
+[#1604]: https://github.com/linebender/druid/pull/1604
+[#1612]: https://github.com/linebender/druid/pull/1612
+[#1617]: https://github.com/linebender/druid/pull/1617
+[#1618]: https://github.com/linebender/druid/pull/1618
 [#1619]: https://github.com/linebender/druid/pull/1619
+[#1621]: https://github.com/linebender/druid/pull/1621
 [#1625]: https://github.com/linebender/druid/pull/1625
+[#1627]: https://github.com/linebender/druid/pull/1627
+[#1630]: https://github.com/linebender/druid/pull/1630
 [#1632]: https://github.com/linebender/druid/pull/1632
 [#1634]: https://github.com/linebender/druid/pull/1634
 [#1635]: https://github.com/linebender/druid/pull/1635
 [#1636]: https://github.com/linebender/druid/pull/1636
+[#1639]: https://github.com/linebender/druid/pull/1639
 [#1640]: https://github.com/linebender/druid/pull/1640
 [#1641]: https://github.com/linebender/druid/pull/1641
 [#1645]: https://github.com/linebender/druid/pull/1645
-[#1647]: https://github.com/linebender/druid/pull/1647
+[#1651]: https://github.com/linebender/druid/pull/1651
+[#1653]: https://github.com/linebender/druid/pull/1653
 [#1654]: https://github.com/linebender/druid/pull/1654
+[#1655]: https://github.com/linebender/druid/pull/1655
+[#1656]: https://github.com/linebender/druid/pull/1656
+[#1659]: https://github.com/linebender/druid/pull/1659
 [#1660]: https://github.com/linebender/druid/pull/1660
+[#1661]: https://github.com/linebender/druid/pull/1661
 [#1662]: https://github.com/linebender/druid/pull/1662
+[#1663]: https://github.com/linebender/druid/pull/1663
+[#1665]: https://github.com/linebender/druid/pull/1665
+[#1666]: https://github.com/linebender/druid/pull/1666
+[#1667]: https://github.com/linebender/druid/pull/1667
 [#1677]: https://github.com/linebender/druid/pull/1677
 [#1691]: https://github.com/linebender/druid/pull/1691
+[#1692]: https://github.com/linebender/druid/pull/1692
 [#1693]: https://github.com/linebender/druid/pull/1693
 [#1695]: https://github.com/linebender/druid/pull/1695
 [#1696]: https://github.com/linebender/druid/pull/1696
 [#1698]: https://github.com/linebender/druid/pull/1698
+[#1700]: https://github.com/linebender/druid/pull/1700
 [#1702]: https://github.com/linebender/druid/pull/1702
+[#1712]: https://github.com/linebender/druid/pull/1712
 [#1713]: https://github.com/linebender/druid/pull/1713
 [#1715]: https://github.com/linebender/druid/pull/1715
 [#1717]: https://github.com/linebender/druid/pull/1717
 [#1722]: https://github.com/linebender/druid/pull/1722
 [#1724]: https://github.com/linebender/druid/pull/1724
+[#1726]: https://github.com/linebender/druid/pull/1726
 [#1730]: https://github.com/linebender/druid/pull/1730
 [#1737]: https://github.com/linebender/druid/pull/1737
+[#1740]: https://github.com/linebender/druid/pull/1740
 [#1743]: https://github.com/linebender/druid/pull/1743
+[#1744]: https://github.com/linebender/druid/pull/1744
 [#1746]: https://github.com/linebender/druid/pull/1746
 [#1751]: https://github.com/linebender/druid/pull/1751
 [#1754]: https://github.com/linebender/druid/pull/1754
@@ -830,9 +1011,19 @@ Last release without a changelog :(
 [#1756]: https://github.com/linebender/druid/pull/1756
 [#1761]: https://github.com/linebender/druid/pull/1761
 [#1764]: https://github.com/linebender/druid/pull/1764
+[#1769]: https://github.com/linebender/druid/pull/1769
 [#1772]: https://github.com/linebender/druid/pull/1772
+[#1775]: https://github.com/linebender/druid/pull/1775
+[#1776]: https://github.com/linebender/druid/pull/1776
 [#1779]: https://github.com/linebender/druid/pull/1779
+[#1785]: https://github.com/linebender/druid/pull/1785
+[#1786]: https://github.com/linebender/druid/pull/1786
 [#1787]: https://github.com/linebender/druid/pull/1787
+[#1790]: https://github.com/linebender/druid/pull/1790
+[#1791]: https://github.com/linebender/druid/pull/1791
+[#1792]: https://github.com/linebender/druid/pull/1792
+[#1793]: https://github.com/linebender/druid/pull/1793
+[#1794]: https://github.com/linebender/druid/pull/1794
 [#1801]: https://github.com/linebender/druid/pull/1801
 [#1802]: https://github.com/linebender/druid/pull/1802
 [#1803]: https://github.com/linebender/druid/pull/1803
@@ -841,9 +1032,16 @@ Last release without a changelog :(
 [#1820]: https://github.com/linebender/druid/pull/1820
 [#1825]: https://github.com/linebender/druid/pull/1825
 [#1828]: https://github.com/linebender/druid/pull/1828
+[#1832]: https://github.com/linebender/druid/pull/1832
+[#1837]: https://github.com/linebender/druid/pull/1837
+[#1842]: https://github.com/linebender/druid/pull/1842
 [#1843]: https://github.com/linebender/druid/pull/1843
-[#1850]: https://github.com/linebender/druid/pull/1850
+[#1845]: https://github.com/linebender/druid/pull/1845
+[#1846]: https://github.com/linebender/druid/pull/1846
+[#1847]: https://github.com/linebender/druid/pull/1847
 [#1851]: https://github.com/linebender/druid/pull/1851
+[#1856]: https://github.com/linebender/druid/pull/1856
+[#1857]: https://github.com/linebender/druid/pull/1857
 [#1860]: https://github.com/linebender/druid/pull/1860
 [#1861]: https://github.com/linebender/druid/pull/1861
 [#1863]: https://github.com/linebender/druid/pull/1863
@@ -851,51 +1049,99 @@ Last release without a changelog :(
 [#1866]: https://github.com/linebender/druid/pull/1866
 [#1867]: https://github.com/linebender/druid/pull/1867
 [#1868]: https://github.com/linebender/druid/pull/1868
+[#1871]: https://github.com/linebender/druid/pull/1871
 [#1873]: https://github.com/linebender/druid/pull/1873
 [#1875]: https://github.com/linebender/druid/pull/1875
 [#1876]: https://github.com/linebender/druid/pull/1876
+[#1881]: https://github.com/linebender/druid/pull/1881
 [#1882]: https://github.com/linebender/druid/pull/1882
 [#1884]: https://github.com/linebender/druid/pull/1884
 [#1885]: https://github.com/linebender/druid/pull/1885
 [#1886]: https://github.com/linebender/druid/pull/1886
+[#1890]: https://github.com/linebender/druid/pull/1890
+[#1893]: https://github.com/linebender/druid/pull/1893
+[#1894]: https://github.com/linebender/druid/pull/1894
+[#1897]: https://github.com/linebender/druid/pull/1897
 [#1907]: https://github.com/linebender/druid/pull/1907
+[#1908]: https://github.com/linebender/druid/pull/1908
+[#1910]: https://github.com/linebender/druid/pull/1910
+[#1914]: https://github.com/linebender/druid/pull/1914
+[#1916]: https://github.com/linebender/druid/pull/1916
 [#1919]: https://github.com/linebender/druid/pull/1919
 [#1929]: https://github.com/linebender/druid/pull/1929
+[#1931]: https://github.com/linebender/druid/pull/1931
 [#1938]: https://github.com/linebender/druid/pull/1938
 [#1946]: https://github.com/linebender/druid/pull/1946
 [#1953]: https://github.com/linebender/druid/pull/1953
+[#1955]: https://github.com/linebender/druid/pull/1955
 [#1967]: https://github.com/linebender/druid/pull/1967
+[#1969]: https://github.com/linebender/druid/pull/1969
 [#1976]: https://github.com/linebender/druid/pull/1976
 [#1978]: https://github.com/linebender/druid/pull/1978
 [#1979]: https://github.com/linebender/druid/pull/1979
+[#1992]: https://github.com/linebender/druid/pull/1992
 [#1993]: https://github.com/linebender/druid/pull/1993
 [#1996]: https://github.com/linebender/druid/pull/1996
+[#2026]: https://github.com/linebender/druid/pull/2026
+[#2031]: https://github.com/linebender/druid/pull/2031
 [#2036]: https://github.com/linebender/druid/pull/2036
+[#2038]: https://github.com/linebender/druid/pull/2038
+[#2039]: https://github.com/linebender/druid/pull/2039
+[#2040]: https://github.com/linebender/druid/pull/2040
+[#2044]: https://github.com/linebender/druid/pull/2044
+[#2048]: https://github.com/linebender/druid/pull/2048
 [#2064]: https://github.com/linebender/druid/pull/2064
+[#2078]: https://github.com/linebender/druid/pull/2078
+[#2079]: https://github.com/linebender/druid/pull/2079
 [#2082]: https://github.com/linebender/druid/pull/2082
+[#2091]: https://github.com/linebender/druid/pull/2091
+[#2106]: https://github.com/linebender/druid/pull/2106
 [#2111]: https://github.com/linebender/druid/pull/2111
+[#2114]: https://github.com/linebender/druid/pull/2114
 [#2117]: https://github.com/linebender/druid/pull/2117
 [#2118]: https://github.com/linebender/druid/pull/2118
 [#2119]: https://github.com/linebender/druid/pull/2119
+[#2127]: https://github.com/linebender/druid/pull/2127
 [#2141]: https://github.com/linebender/druid/pull/2141
 [#2145]: https://github.com/linebender/druid/pull/2145
 [#2148]: https://github.com/linebender/druid/pull/2148
 [#2149]: https://github.com/linebender/druid/pull/2149
 [#2151]: https://github.com/linebender/druid/pull/2151
+[#2153]: https://github.com/linebender/druid/pull/2153
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
 [#2195]: https://github.com/linebender/druid/pull/2195
 [#2196]: https://github.com/linebender/druid/pull/2196
 [#2203]: https://github.com/linebender/druid/pull/2203
+[#2204]: https://github.com/linebender/druid/pull/2204
+[#2218]: https://github.com/linebender/druid/pull/2218
+[#2230]: https://github.com/linebender/druid/pull/2230
+[#2231]: https://github.com/linebender/druid/pull/2231
 [#2235]: https://github.com/linebender/druid/pull/2235
+[#2238]: https://github.com/linebender/druid/pull/2238
 [#2247]: https://github.com/linebender/druid/pull/2247
+[#2249]: https://github.com/linebender/druid/pull/2249
+[#2251]: https://github.com/linebender/druid/pull/2251
+[#2254]: https://github.com/linebender/druid/pull/2254
+[#2263]: https://github.com/linebender/druid/pull/2263
 [#2274]: https://github.com/linebender/druid/pull/2274
+[#2276]: https://github.com/linebender/druid/pull/2276
+[#2282]: https://github.com/linebender/druid/pull/2282
 [#2284]: https://github.com/linebender/druid/pull/2284
+[#2290]: https://github.com/linebender/druid/pull/2290
+[#2291]: https://github.com/linebender/druid/pull/2291
+[#2293]: https://github.com/linebender/druid/pull/2293
+[#2296]: https://github.com/linebender/druid/pull/2296
+[#2297]: https://github.com/linebender/druid/pull/2297
+[#2301]: https://github.com/linebender/druid/pull/2301
 [#2319]: https://github.com/linebender/druid/pull/2319
 [#2320]: https://github.com/linebender/druid/pull/2320
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
+[#2327]: https://github.com/linebender/druid/pull/2327
+[#2329]: https://github.com/linebender/druid/pull/2329
+[#2330]: https://github.com/linebender/druid/pull/2330
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
 
