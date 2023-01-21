@@ -257,7 +257,10 @@ pub enum Cursor {
     Pointer,
     Crosshair,
 
-    #[deprecated(note = "this will be removed in future because it is not available on windows")]
+    #[deprecated(
+        since = "0.8.0",
+        note = "This will be removed because it is not available on Windows."
+    )]
     OpenHand,
     NotAllowed,
     ResizeLeftRight,

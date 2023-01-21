@@ -15,9 +15,11 @@
 //! Convenience methods for widgets.
 
 use super::invalidation::DebugInvalidation;
+#[allow(deprecated)]
+use super::Parse;
 use super::{
     Added, Align, BackgroundBrush, Click, Container, Controller, ControllerHost, EnvScope,
-    IdentityWrapper, LensWrap, Padding, Parse, SizedBox, WidgetId,
+    IdentityWrapper, LensWrap, Padding, SizedBox, WidgetId,
 };
 use crate::widget::{DisabledIf, Scroll};
 use crate::{
@@ -242,6 +244,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
 
     /// Parse a `Widget<String>`'s contents
     #[deprecated(since = "0.7.0", note = "Use TextBox::with_formatter instead")]
+    #[allow(deprecated)]
     fn parse(self) -> Parse<Self>
     where
         Self: Widget<String>,

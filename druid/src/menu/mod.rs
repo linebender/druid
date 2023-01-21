@@ -522,7 +522,7 @@ impl<T: Data> Menu<T> {
     }
 
     #[doc(hidden)]
-    #[deprecated(since = "0.8.0", note = "use entry instead")]
+    #[deprecated(since = "0.8.0", note = "use separator instead")]
     pub fn append_separator(self) -> Self {
         self.separator()
     }
