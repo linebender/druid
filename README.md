@@ -71,7 +71,6 @@ fn ui_builder() -> impl Widget<u32> {
     Flex::column().with_child(label).with_child(button)
 }
 ```
-This example works with the `master` branch. Here's an example for 0.8.0: https://docs.rs/druid/0.8.0/druid/#examples
 
 Check out the [the examples folder] for a more comprehensive demonstration of
 Druid's existing functionality and widgets. Check [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) for more widgets.
