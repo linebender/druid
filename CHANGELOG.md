@@ -1,9 +1,33 @@
 # Changelog
 
-The latest published Druid release is [0.7.0](#070---2021-01-01) which was released on 2021-01-01.
-You can find its changes [documented below](#070---2021-01-01).
+The latest published Druid release is [0.8.0](#080---2023-01-23) which was released on 2023-01-23.
+You can find its changes [documented below](#080---2023-01-23).
 
 ## [Unreleased]
+
+### Highlights
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Visual
+
+### Docs
+
+### Examples
+
+### Maintenance
+
+### Outside News
+
+## [0.8.0] - 2023-01-23
 
 ### Highlights
 
@@ -283,8 +307,6 @@ Later support was widened in [#2254] by [@PolyMeilex].
 - Switched to trace-based logging, added some tracing and logging. ([#1578], [#1621] by [@PoignardAzur]; [#2203] by [@NickLarsenNZ])
 - Converted all calls of `approx_eq!` in tests to `assert_approx_eq!`. ([#2331] by [@cbondurant])
 - X11: Added logging to `Application::get_locale`. ([#1876] by [@Maan2003])
-
-### Outside News
 
 ## [0.7.0] - 2021-01-01
 
