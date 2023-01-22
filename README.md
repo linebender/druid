@@ -308,7 +308,7 @@ This is particularly useful when working with types defined in another crate.
 ## Authors
 
 The main authors are Raph Levien and Colin Rofls, with much support from an
-active and friendly community.
+active and friendly community. See the AUTHORS file for more.
 
 [Runebender]: https://github.com/linebender/runebender
 [the examples folder]: /druid/examples
