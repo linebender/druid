@@ -159,7 +159,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 
 ### Deprecated
 
-- `AppLauncher::use_simple_logger` in favor of `AppLauncher::log_to_console`. ([#1578], [#1621] by [@PoignardAzur])
+- `AppLauncher::use_simple_logger` in favor of `AppLauncher::log_to_console` and `AppLauncher::start_console_logging`. ([#1578], [#1621] by [@PoignardAzur]; [#2102] by [@ratmice])
 - `theme::LABEL_COLOR` in favor of `theme::TEXT_COLOR`. ([#1717] by [@xarvic])
 - `theme::SELECTION_COLOR` in favor of `theme::SELECTED_TEXT_BACKGROUND_COLOR`. ([#1659] by [@cmyr])
 - `ArcStr`, `FontDescriptor`, `FontFamily`, `FontStyle`, `FontWeight`, `TextAlignment`, `TextLayout` in the `druid` module in favor of `druid::text` module. ([#1689] by [@cmyr])
@@ -719,6 +719,7 @@ Last release without a changelog :(
 [@longmathemagician]: https://github.com/longmathemagician
 [@liias]: https://github.com/liias
 [@lzhoucs]: https://github.com/lzhoucs
+[@ratmice]: https://github.com/ratmice
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1096,6 +1097,7 @@ Last release without a changelog :(
 [#2079]: https://github.com/linebender/druid/pull/2079
 [#2082]: https://github.com/linebender/druid/pull/2082
 [#2091]: https://github.com/linebender/druid/pull/2091
+[#2102]: https://github.com/linebender/druid/pull/2102
 [#2106]: https://github.com/linebender/druid/pull/2106
 [#2111]: https://github.com/linebender/druid/pull/2111
 [#2114]: https://github.com/linebender/druid/pull/2114
