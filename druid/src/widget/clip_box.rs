@@ -323,12 +323,12 @@ impl<T, W> ClipBox<T, W> {
 impl<T, W: Widget<T>> ClipBox<T, W> {
     /// Creates a new `ClipBox` wrapping `child`.
     ///
-    /// This method should only be used when creating your own widget, which uses ClipBox
+    /// This method should only be used when creating your own widget, which uses `ClipBox`
     /// internally.
     ///
     /// `ClipBox` will forward [`SCROLL_TO_VIEW`] notifications to its parent unchanged.
-    /// In this case the parent has to handle said notification itself. By default the ClipBox will
-    /// filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
+    /// In this case the parent has to handle said notification itself. By default the `ClipBox`
+    /// will filter out [`SCROLL_TO_VIEW`] notifications which refer to areas not visible.
     ///
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
     pub fn managed(child: W) -> Self {
@@ -346,7 +346,7 @@ impl<T, W: Widget<T>> ClipBox<T, W> {
 
     /// Creates a new unmanaged `ClipBox` wrapping `child`.
     ///
-    /// This method should be used when you are using ClipBox in the widget-hierachie directly.
+    /// This method should be used when you are using `ClipBox` in the widget tree directly.
     pub fn unmanaged(child: W) -> Self {
         ClipBox {
             child: WidgetPod::new(child),
