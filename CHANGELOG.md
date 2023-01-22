@@ -170,6 +170,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 ### Removed
 
 - `WindowHandle::set_level` method. ([#1919] by [@JAicewizard])
+- `WidgetPod::set_layout_rect` because it was deprecated and no longer doing what it claimed. ([#2340] by [@xStrom])
 - `Default` implementation for `FlexParams`. ([#1885] by [@Maan2003])
 - `Default` implementation for `Env` and `theme::init` function. ([#1837] by [@cmyr])
 
@@ -1147,6 +1148,7 @@ Last release without a changelog :(
 [#2330]: https://github.com/linebender/druid/pull/2330
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2340]: https://github.com/linebender/druid/pull/2340
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.0...master
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0
