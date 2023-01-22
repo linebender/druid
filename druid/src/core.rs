@@ -277,21 +277,9 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
         self.state.id
     }
 
-    /// This widget or any of its children has requested layout
+    /// This widget or any of its children have requested layout.
     pub fn layout_requested(&self) -> bool {
         self.state.needs_layout
-    }
-
-    /// Set the layout [`Rect`].
-    ///
-    /// This is soft-deprecated; you should use [`set_origin`] instead for new code.
-    ///
-    /// [`set_origin`]: WidgetPod::set_origin
-    pub fn set_layout_rect(&mut self, ctx: &mut LayoutCtx, layout_rect: Rect) {
-        if layout_rect.size() != self.state.size {
-            warn!("set_layout_rect passed different size than returned by layout method");
-        }
-        self.set_origin(ctx, layout_rect.origin());
     }
 
     /// Set the origin of this widget, in the parent's coordinate space.

@@ -88,6 +88,7 @@ pub use list::{List, ListIter};
 pub use maybe::Maybe;
 pub use padding::Padding;
 pub use painter::{BackgroundBrush, Painter};
+#[allow(deprecated)]
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};

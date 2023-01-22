@@ -177,7 +177,7 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
+    #[deprecated(since = "0.8.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
         self.log_to_console()
     }

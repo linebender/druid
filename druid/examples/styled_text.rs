@@ -17,8 +17,10 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
+#[allow(deprecated)]
+use druid::widget::Parse;
 use druid::widget::{
-    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Scroll,
+    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Scroll,
     Stepper, TextBox,
 };
 use druid::{
@@ -126,6 +128,8 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_wraparound(false)
         .lens(AppData::size);
 
+    // TODO: Replace Parse usage with TextBox::with_formatter
+    #[allow(deprecated)]
     let stepper_textbox = LensWrap::new(
         Parse::new(TextBox::new()),
         AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(24.0)),

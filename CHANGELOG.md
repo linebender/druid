@@ -118,6 +118,7 @@ You can find its changes [documented below](#070---2021-01-01).
 ### Removed
 
 - Remove Default impl for `FlexParams` ([#1885] by [@Maan2003])
+- `WidgetPod::set_layout_rect` because it was deprecated and no longer doing what it claimed. ([#2340] by [@xStrom])
 
 ### Fixed
 
@@ -890,6 +891,7 @@ Last release without a changelog :(
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2340]: https://github.com/linebender/druid/pull/2340
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
