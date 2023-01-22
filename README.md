@@ -169,7 +169,7 @@ couple of [non-`druid` examples].
 
 Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D graphics
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
-`piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
+`piet-web`, and `piet-svg` are currently available.
 In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
 Linux/OpenBSD/FreeBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
