@@ -15,7 +15,7 @@
 //! Simple data-oriented GUI.
 //!
 //! Druid lets you build simple interactive graphical applications that
-//! can be deployed on Windows, macOS, Linux, OpenBSD and the web.
+//! can be deployed on Windows, macOS, Linux, OpenBSD, FreeBSD and the web.
 //!
 //! Druid is built on top of [`druid-shell`], which implements all of the
 //! lower-level, platform-specific code, providing a common abstraction
@@ -99,8 +99,8 @@
 //!          which is made available via the [`im` module].
 //! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
 //! * `image` - Bitmap image support using the [`image` crate].
-//! * `x11` - Work-in-progress X11 for Linux and OpenBSD backend instead of GTK.
-//! * `wayland` - Work-in progress Wayland backend, very experimental.
+//! * `x11` - Work-in-progress X11 backend instead of GTK.
+//! * `wayland` - Work-in-progress Wayland backend, very experimental.
 //! * `serde` - Serde support for some internal types (most Kurbo primitives).
 //!
 //! Image format features:

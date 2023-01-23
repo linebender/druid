@@ -169,9 +169,9 @@ couple of [non-`druid` examples].
 
 Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D graphics
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
-`piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
+`piet-web`, and `piet-svg` are currently available.
 In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
-Linux and OpenBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
+Linux/OpenBSD/FreeBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
 use druid::kurbo::{BezPath, Point, Rect};
@@ -308,7 +308,7 @@ This is particularly useful when working with types defined in another crate.
 ## Authors
 
 The main authors are Raph Levien and Colin Rofls, with much support from an
-active and friendly community.
+active and friendly community. See the AUTHORS file for more.
 
 [Runebender]: https://github.com/linebender/runebender
 [the examples folder]: /druid/examples

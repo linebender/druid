@@ -754,8 +754,6 @@ impl EventCtx<'_, '_> {
     /// "unhandled notification" warning.
     ///
     /// [`submit_notification`]: crate::EventCtx::submit_notification
-    //TODO: decide if we should use a known_target flag on submit_notification instead,
-    // which would be a breaking change.
     pub fn submit_notification_without_warning(&mut self, note: impl Into<Command>) {
         trace!("submit_notification");
         let note = note

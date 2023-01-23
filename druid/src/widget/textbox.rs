@@ -34,7 +34,7 @@ use crate::{
 use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
-const MAC_OR_LINUX_OR_OBSD: bool = cfg!(any(
+const MAC_OR_LINUX_OR_BSD: bool = cfg!(any(
     target_os = "freebsd",
     target_os = "macos",
     target_os = "linux",
@@ -673,7 +673,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 ctx.scroll_to_view();
             }
             LifeCycle::FocusChanged(false) => {
-                if self.text().can_write() && MAC_OR_LINUX_OR_OBSD && !self.multiline {
+                if self.text().can_write() && MAC_OR_LINUX_OR_BSD && !self.multiline {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);
