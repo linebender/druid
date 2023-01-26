@@ -509,9 +509,18 @@ impl ScrollComponent {
     ///
     /// Make sure to call on every lifecycle event
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {
-        if let LifeCycle::Size(_) = event {
-            // Show the scrollbars any time our size changes
-            self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+        match event {
+            LifeCycle::Size(_) => {
+                // Show the scrollbars any time our size changes
+                self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+            }
+            LifeCycle::HotChanged(false) => {
+                if self.hovered.is_hovered() {
+                    self.hovered = BarHoveredState::None;
+                    self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+                }
+            }
+            _ => (),
         }
     }
 }

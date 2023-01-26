@@ -95,9 +95,11 @@ pub enum Event {
     /// Called when the mouse is moved.
     ///
     /// The `MouseMove` event is propagated to the active widget, if
-    /// there is one, otherwise to hot widgets (see `HotChanged`).
+    /// there is one, otherwise to hot widgets (see [`HotChanged`]).
     /// If a widget loses its hot status due to `MouseMove` then that specific
-    /// `MouseMove` event is also still sent to that widget.
+    /// `MouseMove` event is also still sent to that widget. However a widget
+    /// can lose its hot status even without a `MouseMove` event, so make
+    /// sure to also handle [`HotChanged`] if you care about the hot status.
     ///
     /// The `MouseMove` event is also the primary mechanism for widgets
     /// to set a cursor, for example to an I-bar inside a text widget. A
@@ -105,6 +107,7 @@ pub enum Event {
     /// [`set_cursor`] in the MouseMove handler, as `MouseMove` is only
     /// propagated to active or hot widgets.
     ///
+    /// [`HotChanged`]: LifeCycle::HotChanged
     /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
     MouseMove(MouseEvent),
     /// Called when the mouse wheel or trackpad is scrolled.
@@ -242,8 +245,8 @@ pub enum InternalEvent {
 ///
 /// Similarly the [`LifeCycle::Size`] method occurs during [`layout`], and
 /// [`LifeCycle::HotChanged`] can occur both during [`event`] (if the mouse
-/// moves over a widget) or during [`layout`], if a widget is resized and
-/// that moves it under the mouse.
+/// moves over a widget) or in response to [`LifeCycle::ViewContextChanged`],
+/// if a widget is moved away from under the mouse.
 ///
 /// [`event`]: crate::Widget::event
 /// [`update`]: crate::Widget::update

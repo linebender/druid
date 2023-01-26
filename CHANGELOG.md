@@ -143,6 +143,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - X11: window focus events ([#1938] by [@Maan2003]
 - Preserve the aspect ratio of a clipped region in an Image ([#2195] by [@barsae])
 - GTK: Hot state now properly resets when the mouse leaves the window via an occluded part. ([#2324] by [@xStrom])
+- Scrollbars no longer remain permanently visible when the mouse leaves the window. ([#2343] by [@xStrom])
 
 ### Visual
 
@@ -892,6 +893,7 @@ Last release without a changelog :(
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
 [#2340]: https://github.com/linebender/druid/pull/2340
+[#2343]: https://github.com/linebender/druid/pull/2343
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.7.0...master
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
