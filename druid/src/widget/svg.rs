@@ -23,17 +23,6 @@ use crate::piet::{ImageBuf, ImageFormat, InterpolationMode};
 use crate::widget::prelude::*;
 use crate::{Rect, ScaledArea};
 
-#[allow(dead_code)]
-pub fn new(data: impl Into<Arc<Tree>>) -> Svg {
-    Svg::new(data.into())
-}
-
-#[allow(dead_code)]
-pub fn from_str(s: &str) -> Result<SvgData, <SvgData as std::str::FromStr>::Err> {
-    use std::str::FromStr;
-    SvgData::from_str(s)
-}
-
 /// A widget that renders a SVG
 pub struct Svg {
     tree: Arc<Tree>,
@@ -54,6 +43,7 @@ impl Svg {
         }
     }
 
+    /// Rasterize the SVG into the specified size in pixels.
     fn render(&self, size_px: Size) -> Option<ImageBuf> {
         let fit = usvg::FitTo::Size(size_px.width as u32, size_px.height as u32);
         let mut pixmap =
@@ -133,6 +123,7 @@ pub struct SvgData {
 }
 
 impl SvgData {
+    /// Create a new SVG
     fn new(tree: Arc<Tree>) -> Self {
         Self { tree }
     }

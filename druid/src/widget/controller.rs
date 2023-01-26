@@ -40,7 +40,7 @@ use crate::widget::{Axis, WidgetWrapper};
 ///
 /// # Examples
 ///
-/// ## A [`TextBox`] that takes focus on launch:
+/// A [`TextBox`] that takes focus on launch:
 ///
 /// ```
 /// # use druid::widget::{Controller, TextBox};
@@ -57,21 +57,15 @@ use crate::widget::{Axis, WidgetWrapper};
 /// }
 /// ```
 ///
-/// [`Widget`]: ../trait.Widget.html
-/// [`TextBox`]: struct.TextBox.html
-/// [`ControllerHost`]: struct.ControllerHost.html
-/// [`WidgetExt::controller`]: ../trait.WidgetExt.html#tymethod.controller
+/// [`TextBox`]: super::TextBox
+/// [`WidgetExt::controller`]: super::WidgetExt::controller
 pub trait Controller<T, W: Widget<T>> {
     /// Analogous to [`Widget::event`].
-    ///
-    /// [`Widget::event`]: ../trait.Widget.html#tymethod.event
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         child.event(ctx, event, data, env)
     }
 
     /// Analogous to [`Widget::lifecycle`].
-    ///
-    /// [`Widget::lifecycle`]: ../trait.Widget.html#tymethod.lifecycle
     fn lifecycle(
         &mut self,
         child: &mut W,
@@ -84,17 +78,12 @@ pub trait Controller<T, W: Widget<T>> {
     }
 
     /// Analogous to [`Widget::update`].
-    ///
-    /// [`Widget::update`]: ../trait.Widget.html#tymethod.update
     fn update(&mut self, child: &mut W, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         child.update(ctx, old_data, data, env)
     }
 }
 
 /// A [`Widget`] that manages a child and a [`Controller`].
-///
-/// [`Widget`]: ../trait.Widget.html
-/// [`Controller`]: trait.Controller.html
 pub struct ControllerHost<W, C> {
     widget: W,
     controller: C,

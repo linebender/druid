@@ -113,26 +113,29 @@ pub use widget_ext::WidgetExt;
 pub use widget_wrapper::WidgetWrapper;
 pub use z_stack::ZStack;
 
-/// The types required to implement a `Widget`.
+/// The types required to implement a [`Widget`].
 ///
 /// # Structs
-/// [`BoxConstraints`](../../struct.BoxConstraints.html)\
-/// [`Env`](../../struct.Env.html)\
-/// [`EventCtx`](../../struct.EventCtx.html)\
-/// [`LayoutCtx`](../../struct.LayoutCtx.html)\
-/// [`LifeCycleCtx`](../../struct.LifeCycleCtx.html)\
-/// [`PaintCtx`](../../struct.PaintCtx.html)\
-/// [`Size`](../../struct.Size.html)\
-/// [`UpdateCtx`](../../struct.UpdateCtx.html)\
-/// [`WidgetId`](../../struct.WidgetId.html)\
+/// [`BoxConstraints`](crate::BoxConstraints)\
+/// [`Env`](crate::Env)\
+/// [`EventCtx`](crate::EventCtx)\
+/// [`LayoutCtx`](crate::LayoutCtx)\
+/// [`LifeCycleCtx`](crate::LifeCycleCtx)\
+/// [`PaintCtx`](crate::PaintCtx)\
+/// [`Size`](crate::Size)\
+/// [`UpdateCtx`](crate::UpdateCtx)\
+/// [`WidgetId`](crate::WidgetId)\
 ///
 /// # Enums
-/// [`Event`](../../enum.Event.html)\
-/// [`LifeCycle`](../../enum.LifeCycle.html)\
+/// [`Event`](crate::Event)\
+/// [`LifeCycle`](crate::LifeCycle)\
 ///
 /// # Traits
-/// [`RenderContext`](../../trait.RenderContext.html)\
-/// [`Widget`](../../trait.Widget.html)
+/// [`Data`](crate::Data)\
+/// [`RenderContext`](crate::RenderContext)\
+/// [`Widget`]
+///
+/// [`Widget`]: crate::Widget
 // NOTE: \ at the end works as a line break, but skip on last line!
 pub mod prelude {
     #[doc(hidden)]

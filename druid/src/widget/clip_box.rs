@@ -144,12 +144,10 @@ impl Viewport {
 
     /// The default handling of the [`SCROLL_TO_VIEW`] notification for a scrolling container.
     ///
-    /// The [`SCROLL_TO_VIEW`] notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
-    /// are called.
+    /// The [`SCROLL_TO_VIEW`] notification is sent when [`EventCtx::scroll_to_view`]
+    /// or [`EventCtx::scroll_area_to_view`] are called.
     ///
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
-    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
-    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
     pub fn default_scroll_to_view_handling(
         &mut self,
         ctx: &mut EventCtx,
@@ -182,12 +180,10 @@ impl Viewport {
 
     /// This method handles SCROLL_TO_VIEW by clipping the view_rect to the content rect.
     ///
-    /// The [`SCROLL_TO_VIEW`] notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
-    /// are called.
+    /// The [`SCROLL_TO_VIEW`] notification is sent when [`EventCtx::scroll_to_view`]
+    /// or [`EventCtx::scroll_area_to_view`] are called.
     ///
     /// [`SCROLL_TO_VIEW`]: crate::commands::SCROLL_TO_VIEW
-    /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
-    /// [`scroll_area_to_view`]: crate::EventCtx::scroll_area_to_view()
     pub fn fixed_scroll_to_view_handling(
         &self,
         ctx: &mut EventCtx,
@@ -242,7 +238,7 @@ impl<T, W> ClipBox<T, W> {
     ///
     /// The default is `false`. See [`constrain_vertical`] for more details.
     ///
-    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
+    /// [`constrain_vertical`]: ClipBox::constrain_vertical
     pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
         self.constrain_horizontal = constrain;
         self
@@ -281,7 +277,7 @@ impl<T, W> ClipBox<T, W> {
     /// Returns the size of the rectangular viewport into the child widget.
     /// To get the position of the viewport, see [`viewport_origin`].
     ///
-    /// [`viewport_origin`]: struct.ClipBox.html#method.viewport_origin
+    /// [`viewport_origin`]: ClipBox::viewport_origin
     pub fn viewport_size(&self) -> Size {
         self.port.view_size
     }
@@ -295,7 +291,7 @@ impl<T, W> ClipBox<T, W> {
     ///
     /// See [`constrain_vertical`] for more details.
     ///
-    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
+    /// [`constrain_vertical`]: ClipBox::constrain_vertical
     pub fn set_constrain_horizontal(&mut self, constrain: bool) {
         self.constrain_horizontal = constrain;
     }
@@ -304,7 +300,7 @@ impl<T, W> ClipBox<T, W> {
     ///
     /// See [`constrain_vertical`] for more details.
     ///
-    /// [`constrain_vertical`]: struct.ClipBox.html#constrain_vertical
+    /// [`constrain_vertical`]: ClipBox::constrain_vertical
     pub fn set_constrain_vertical(&mut self, constrain: bool) {
         self.constrain_vertical = constrain;
     }

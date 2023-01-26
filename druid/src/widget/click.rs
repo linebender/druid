@@ -13,8 +13,6 @@
 // limitations under the License.
 
 //! A clickable [`Controller`] widget.
-//!
-//! [`Controller`]: trait.Controller.html
 
 use crate::widget::Controller;
 use crate::{Data, Env, Event, EventCtx, LifeCycle, LifeCycleCtx, MouseButton, Widget};
@@ -31,12 +29,10 @@ use tracing::{instrument, trace};
 /// mouse down, which can be useful for painting based on `ctx.is_active()`
 /// and `ctx.is_hot()`.
 ///
-/// [`Controller`]: trait.Controller.html
-/// [`ControllerHost`]: struct.ControllerHost.html
-/// [`on_click`]: ../trait.WidgetExt.html#method.on_click
-/// [`WidgetExt`]: ../trait.WidgetExt.html
-/// [`Button`]: struct.Button.html
-/// [`LifeCycle::HotChanged`]: ../enum.LifeCycle.html#variant.HotChanged
+/// [`ControllerHost`]: super::ControllerHost
+/// [`on_click`]: super::WidgetExt::on_click
+/// [`WidgetExt`]: super::WidgetExt
+/// [`Button`]: super::Button
 pub struct Click<T> {
     /// A closure that will be invoked when the child widget is clicked.
     action: Box<dyn Fn(&mut EventCtx, &mut T, &Env)>,

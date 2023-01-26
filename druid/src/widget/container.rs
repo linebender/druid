@@ -53,11 +53,8 @@ impl<T: Data> Container<T> {
     /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
-    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../enum.Color.html
-    /// [`Key<Color>`]: ../struct.Key.html
-    /// [`Env`]: ../struct.Env.html
-    /// [`Painter`]: struct.Painter.html
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
     pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
         self.set_background(brush);
         self
@@ -69,11 +66,8 @@ impl<T: Data> Container<T> {
     /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
-    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../enum.Color.html
-    /// [`Key<Color>`]: ../struct.Key.html
-    /// [`Env`]: ../struct.Env.html
-    /// [`Painter`]: struct.Painter.html
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
     pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
         self.background = Some(brush.into());
     }
@@ -88,7 +82,7 @@ impl<T: Data> Container<T> {
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
     ///
-    /// [`Key`]: struct.Key.html
+    /// [`Key`]: crate::Key
     pub fn border(
         mut self,
         color: impl Into<KeyOrValue<Color>>,
@@ -103,7 +97,7 @@ impl<T: Data> Container<T> {
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
     ///
-    /// [`Key`]: struct.Key.html
+    /// [`Key`]: crate::Key
     pub fn set_border(
         &mut self,
         color: impl Into<KeyOrValue<Color>>,

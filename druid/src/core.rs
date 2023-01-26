@@ -46,7 +46,7 @@ pub(crate) type CommandQueue = VecDeque<Command>;
 /// needs to propagate, and to provide the previous data so that a
 /// widget can process a diff between the old value and the new.
 ///
-/// [`update`]: trait.Widget.html#tymethod.update
+/// [`update`]: Widget::update
 pub struct WidgetPod<T, W> {
     state: WidgetState,
     old_data: Option<T>,
@@ -69,8 +69,7 @@ pub struct WidgetPod<T, W> {
 /// that, widgets will generally not interact with it directly,
 /// but it is an important part of the [`WidgetPod`] struct.
 ///
-/// [`paint`]: trait.Widget.html#tymethod.paint
-/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`paint`]: Widget::paint
 #[derive(Clone)]
 pub struct WidgetState {
     pub(crate) id: WidgetId,
@@ -83,7 +82,7 @@ pub struct WidgetState {
     /// The origin of the parent in the window coordinate space.
     ///
     /// Note that this value can be stale after `set_origin` was called
-    /// but before `LifeCycle::ViewContextChanged` has fully propagated.
+    /// but before [`LifeCycle::ViewContextChanged`] has fully propagated.
     pub(crate) parent_window_origin: Point,
     /// A flag used to track and debug missing calls to set_origin.
     is_expecting_set_origin_call: bool,
@@ -216,7 +215,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
 
     /// Returns `true` if the widget has received [`LifeCycle::WidgetAdded`].
     ///
-    /// [`LifeCycle::WidgetAdded`]: ./enum.LifeCycle.html#variant.WidgetAdded
+    /// [`LifeCycle::WidgetAdded`]: LifeCycle::WidgetAdded
     pub fn is_initialized(&self) -> bool {
         self.old_data.is_some()
     }
@@ -240,14 +239,14 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// When a widget is active, it gets mouse events even when the mouse
     /// is dragged away.
     ///
-    /// [`set_active`]: struct.EventCtx.html#method.set_active
+    /// [`set_active`]: EventCtx::set_active
     pub fn is_active(&self) -> bool {
         self.state.is_active
     }
 
     /// Returns `true` if any descendant is [`active`].
     ///
-    /// [`active`]: struct.WidgetPod.html#method.is_active
+    /// [`active`]: WidgetPod::is_active
     pub fn has_active(&self) -> bool {
         self.state.has_active
     }
@@ -267,7 +266,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// Note: a widget can be hot while another is [`active`] (for example, when
     /// clicking a button and dragging the cursor to another widget).
     ///
-    /// [`active`]: struct.WidgetPod.html#method.is_active
+    /// [`active`]: WidgetPod::is_active
     pub fn is_hot(&self) -> bool {
         self.state.is_hot
     }
@@ -298,12 +297,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// in an inconsistent state of the widget tree.
     ///
     /// The child will receive the [`LifeCycle::Size`] event informing them of the final [`Size`].
-    ///
-    /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
-    /// [`Rect`]: struct.Rect.html
-    /// [`Size`]: struct.Size.html
-    /// [`LifeCycle::Size`]: enum.LifeCycle.html#variant.Size
-    /// [`LifeCycle::ViewContextChanged`]: enum.LifeCycle.html#variant.ViewContextChanged
     pub fn set_origin(&mut self, ctx: &mut impl ChangeCtx, origin: Point) {
         self.state.is_expecting_set_origin_call = false;
 
@@ -320,9 +313,7 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// This will be a [`Rect`] with a [`Size`] determined by the child's [`layout`]
     /// method, and the origin that was set by [`set_origin`].
     ///
-    /// [`Rect`]: struct.Rect.html
-    /// [`Size`]: struct.Size.html
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: Widget::layout
     /// [`set_origin`]: WidgetPod::set_origin
     pub fn layout_rect(&self) -> Rect {
         self.state.layout_rect()
@@ -335,7 +326,6 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// in the general case it is the same as the [`layout_rect`].
     ///
     /// [`layout_rect`]: #method.layout_rect
-    /// [`Rect`]: struct.Rect.html
     /// [`paint_insets`]: #method.paint_insets
     pub fn paint_rect(&self) -> Rect {
         self.state.paint_rect()
@@ -352,23 +342,21 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     /// A widget can set its insets by calling [`set_paint_insets`] during its
     /// [`layout`] method.
     ///
-    /// [`Insets`]: struct.Insets.html
-    /// [`set_paint_insets`]: struct.LayoutCtx.html#method.set_paint_insets
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`set_paint_insets`]: LayoutCtx::set_paint_insets
+    /// [`layout`]: Widget::layout
     pub fn paint_insets(&self) -> Insets {
         self.state.paint_insets
     }
 
-    /// Given a parents layout size, determine the appropriate paint `Insets`
+    /// Given a parents layout size, determine the appropriate paint [`Insets`]
     /// for the parent.
     ///
     /// This is a convenience method to be used from the [`layout`] method
-    /// of a `Widget` that manages a child; it allows the parent to correctly
+    /// of a [`Widget`] that manages a child; it allows the parent to correctly
     /// propagate a child's desired paint rect, if it extends beyond the bounds
     /// of the parent's layout rect.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    /// [`Insets`]: struct.Insets.html
+    /// [`layout`]: Widget::layout
     pub fn compute_parent_paint_insets(&self, parent_size: Size) -> Insets {
         let parent_bounds = Rect::ZERO.with_size(parent_size);
         let union_pant_rect = self.paint_rect().union(parent_bounds);
@@ -381,11 +369,11 @@ impl<T, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Determines if the provided `mouse_pos` is inside the widget's `layout_rect`
-    /// and if so updates the hot state and sends `LifeCycle::HotChanged`.
+    /// and if so updates the hot state and sends [`LifeCycle::HotChanged`].
     ///
     /// Returns `true` if the hot state changed.
     ///
-    /// The WidgetPod should merge up its state when `true` is returned.
+    /// The `WidgetPod` should merge up its state when `true` is returned.
     fn set_hot_state(
         &mut self,
         state: &mut ContextState,
@@ -434,8 +422,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Note that this method does not apply the offset of the layout rect.
     /// If that is desired, use [`paint`] instead.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
-    /// [`Widget::paint`]: trait.Widget.html#tymethod.paint
+    /// [`layout`]: Widget::layout
     /// [`paint`]: #method.paint
     pub fn paint_raw(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         // we need to do this before we borrow from self
@@ -552,7 +539,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`layout`]
     /// method.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: Widget::layout
     pub fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
@@ -617,7 +604,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// flow logic resides, particularly whether to continue propagating
     /// the event.
     ///
-    /// [`event`]: trait.Widget.html#tymethod.event
+    /// [`event`]: Widget::event
     pub fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         if !self.is_initialized() {
             debug_panic!(
@@ -903,8 +890,6 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     }
 
     /// Propagate a [`LifeCycle`] event.
-    ///
-    /// [`LifeCycle`]: enum.LifeCycle.html
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
         // in the case of an internal routing event, if we are at our target
         // we may send an extra event after the actual event
@@ -1153,7 +1138,7 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     /// Generally called by container widgets as part of their [`update`]
     /// method.
     ///
-    /// [`update`]: trait.Widget.html#tymethod.update
+    /// [`update`]: Widget::update
     pub fn update(&mut self, ctx: &mut UpdateCtx, data: &T, env: &Env) {
         if !self.state.request_update {
             match (self.old_data.as_ref(), self.env.as_ref()) {

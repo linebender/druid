@@ -26,7 +26,7 @@ use druid::{theme, Color, Data, KeyOrValue, Point, Vec2};
 /// To customize the spinner's size, you can place it inside a [`SizedBox`]
 /// that has a fixed width and height.
 ///
-/// [`SizedBox`]: struct.SizedBox.html
+/// [`SizedBox`]: super::SizedBox
 pub struct Spinner {
     t: f64,
     color: KeyOrValue<Color>,
@@ -40,9 +40,9 @@ impl Spinner {
 
     /// Builder-style method for setting the spinner's color.
     ///
-    /// The argument can be either a `Color` or a [`Key<Color>`].
+    /// The argument can be either a [`Color`] or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`Key<Color>`]: crate::Key
     pub fn with_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.color = color.into();
         self
@@ -50,9 +50,9 @@ impl Spinner {
 
     /// Set the spinner's color.
     ///
-    /// The argument can be either a `Color` or a [`Key<Color>`].
+    /// The argument can be either a [`Color`] or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`Key<Color>`]: crate::Key
     pub fn set_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         self.color = color.into();
     }

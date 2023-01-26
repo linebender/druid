@@ -128,16 +128,13 @@ use tracing::{instrument, trace};
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
-/// [`layout`]: ../trait.Widget.html#tymethod.layout
-/// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
-/// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
-/// [`must_fill_main_axis`]: struct.Flex.html#method.must_fill_main_axis
-/// [`FlexParams`]: struct.FlexParams.html
-/// [`WidgetExt`]: ../trait.WidgetExt.html
-/// [`expand_height`]: ../trait.WidgetExt.html#method.expand_height
-/// [`expand_width`]: ../trait.WidgetExt.html#method.expand_width
-/// [`TextBox`]: struct.TextBox.html
-/// [`SizedBox`]: struct.SizedBox.html
+/// [`layout`]: Widget::layout
+/// [`must_fill_main_axis`]: Flex::must_fill_main_axis
+/// [`WidgetExt`]: super::WidgetExt
+/// [`expand_height`]: super::WidgetExt::expand_height
+/// [`expand_width`]: super::WidgetExt::expand_width
+/// [`TextBox`]: super::TextBox
+/// [`SizedBox`]: super::SizedBox
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,

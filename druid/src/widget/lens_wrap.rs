@@ -13,10 +13,6 @@
 // limitations under the License.
 
 //! A [`Widget`] that uses a [`Lens`] to change the [`Data`] of its child.
-//!
-//! [`Widget`]: ../trait.Widget.html
-//! [`Lens`]: ../trait.Lens.html
-//! [`Data`]: ../trait.Data.html
 
 use std::marker::PhantomData;
 
@@ -45,8 +41,6 @@ use tracing::{instrument, trace};
 ///
 /// This wrapper takes a [`Lens`] as an argument, which is a specification
 /// of a struct field, or some other way of narrowing the scope.
-///
-/// [`Lens`]: trait.Lens.html
 pub struct LensWrap<T, U, L, W> {
     child: W,
     lens: L,

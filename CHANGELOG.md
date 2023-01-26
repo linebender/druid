@@ -149,6 +149,7 @@ You can find its changes [documented below](#070---2021-01-01).
 
 ### Docs
 
+- Fixed all the broken links that originated from Druid crates. ([#2338] by [@xStrom])
 - Fixed docs of derived Lens ([#1523] by [@Maan2003])
 - Fixed docs describing `ViewSwitcher` widget functionality ([#1693] by [@arthmis])
 - Added missing documentation on derived lens items ([#1696] by [@lidin])
@@ -892,6 +893,7 @@ Last release without a changelog :(
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2338]: https://github.com/linebender/druid/pull/2338
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
 

@@ -30,9 +30,7 @@
 //!
 //! [Fluent]: https://projectfluent.org
 //! [fluent-rs]: https://github.com/projectfluent/fluent-rs
-//! [`LocalizedString`]: struct.LocalizedString.html
-//! [`Env`]: struct.Env.html
-//! [`Data`]: trait.Data.html
+//! [`Data`]: crate::Data
 
 use std::collections::HashMap;
 use std::sync::Arc;
