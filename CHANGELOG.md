@@ -1,7 +1,7 @@
 # Changelog
 
-The latest published Druid release is [0.8.0](#080---2023-01-27) which was released on 2023-01-27.
-You can find its changes [documented below](#080---2023-01-27).
+The latest published Druid release is [0.8.1](#081---2023-01-27) which was released on 2023-01-27.
+You can find its changes [documented below](#081---2023-01-27).
 
 ## [Unreleased]
 
@@ -26,6 +26,12 @@ You can find its changes [documented below](#080---2023-01-27).
 ### Maintenance
 
 ### Outside News
+
+## [0.8.1] - 2023-01-27
+
+### Docs
+
+- Fixed `README.md` selection for crates.io. ([#2347] by [@xStrom])
 
 ## [0.8.0] - 2023-01-27
 
@@ -1178,8 +1184,10 @@ Last release without a changelog :(
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
 [#2345]: https://github.com/linebender/druid/pull/2345
+[#2347]: https://github.com/linebender/druid/pull/2347
 
-[Unreleased]: https://github.com/linebender/druid/compare/v0.8.0...master
+[Unreleased]: https://github.com/linebender/druid/compare/v0.8.1...master
+[0.8.1]: https://github.com/linebender/druid/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/linebender/druid/compare/v0.5.0...v0.6.0
