@@ -1,12 +1,12 @@
 [package]
 name = "druid"
-version = "0.8.0"
+version = "0.8.1"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Data-oriented Rust UI design toolkit."
 repository = "https://github.com/linebender/druid"
 categories = ["gui"]
-readme = "README.md"
+readme = "../README.md"
 keywords = ["gui", "ui", "toolkit"]
 edition = "2021"
 
