@@ -71,7 +71,7 @@ instant = { version = "0.1.12", features = ["wasm-bindgen"] }
 # Optional dependencies
 chrono = { version = "0.4.23", optional = true }
 im = { version = "15.1.0", optional = true }
-resvg = { version = "0.25.0", optional = true }
+resvg = { version = "0.25.0", optional = true } # When updating, make sure it doesn't pin a specific `png` crate, see druid#2345
 usvg =  { version = "0.25.0", optional = true }
 tiny-skia = { version = "0.8.2", optional = true }
 
