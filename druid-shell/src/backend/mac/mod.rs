@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! macOS druid-shell backend.
+//! macOS `druid-shell` backend.
 
 #![allow(clippy::let_unit_value)]
 

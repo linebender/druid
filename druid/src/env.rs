@@ -339,7 +339,7 @@ impl Env {
     /// Returns a reference to the [`L10nManager`], which handles localization
     /// resources.
     ///
-    /// This always exists on the base `Env` configured by druid.
+    /// This always exists on the base `Env` configured by Druid.
     pub(crate) fn localization_manager(&self) -> Option<&L10nManager> {
         self.0.l10n.as_deref()
     }

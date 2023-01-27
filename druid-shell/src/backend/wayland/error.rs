@@ -27,7 +27,7 @@ pub enum Error {
         version: u32,
         inner: Arc<wl::GlobalError>,
     },
-    /// An unexpected error occurred. It's not handled by druid-shell/wayland, so you should
+    /// An unexpected error occurred. It's not handled by `druid-shell`/wayland, so you should
     /// terminate the app.
     Fatal(Arc<dyn StdError + 'static>),
     String(ErrorString),

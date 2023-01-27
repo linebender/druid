@@ -83,7 +83,7 @@ pub struct WindowDesc<T> {
 }
 
 /// The parts of a window, pending construction, that are dependent on top level app state
-/// or are not part of the druid shells windowing abstraction.
+/// or are not part of the `druid-shell`'s windowing abstraction.
 /// This includes the boxed root widget, as well as other window properties such as the title.
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,

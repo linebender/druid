@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The fundamental druid types.
+//! The fundamental Druid types.
 
 use crate::kurbo::Size;
 use crate::widget::Axis;
 
 /// Constraints for layout.
 ///
-/// The layout strategy for druid is strongly inspired by Flutter,
+/// The layout strategy for Druid is strongly inspired by Flutter,
 /// and this struct is similar to the [Flutter BoxConstraints] class.
 ///
 /// At the moment, it represents simply a minimum and maximum size.

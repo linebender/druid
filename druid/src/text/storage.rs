@@ -78,7 +78,7 @@ impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
 
 /// A reference counted string slice.
 ///
-/// This is a data-friendly way to represent strings in druid. Unlike `String`
+/// This is a data-friendly way to represent strings in Druid. Unlike `String`
 /// it cannot be mutated, but unlike `String` it can be cheaply cloned.
 pub type ArcStr = Arc<str>;
 

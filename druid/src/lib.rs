@@ -35,7 +35,7 @@
 //! As your application grows, you can use [`Lens`]es to expose only certain
 //! subsets of your data model to certain subsets of your widget tree.
 //!
-//! For more information you should read the [druid book].
+//! For more information you should read the [Druid book].
 //!
 //! # Examples
 //!
@@ -143,7 +143,7 @@
 //! [`druid-shell`]: druid_shell
 //! [`piet`]: piet
 //! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.7.0/druid/examples
-//! [druid book]: https://linebender.org/druid/
+//! [Druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
 //! [`im` module]: im/index.html
 //! [`usvg` crate]: https://crates.io/crates/usvg

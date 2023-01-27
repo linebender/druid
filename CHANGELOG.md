@@ -164,6 +164,7 @@ You can find its changes [documented below](#070---2021-01-01).
 - Added examples in `TextBox` ([#2284] by [@ThomasMcandrew])
 - Removed outdated section in docs for `LifeCycle::WidgetAdded` ([#2320] by [@sprocklem])
 - Updated `Event::AnimFrame` docs with info about when `paint` happens. ([#2323] by [@xStrom])
+- Implemented standardized Druid naming convention. ([#2337] by [@xStrom])
 
 ### Examples
 - Add readme ([#1423] by [@JAicewizard])
@@ -344,16 +345,16 @@ values and their textual representations. ([#1377])
 
 #### X11 backend for druid-shell.
 
-[@crsaracco] got us started and implemented basic support to run druid on bare-metal X11 in [#599].
+[@crsaracco] got us started and implemented basic support to run Druid on bare-metal X11 in [#599].
 Additional features got fleshed out in [#894] and [#900] by [@xStrom]
 and in [#920], [#961], and [#982] by [@jneem].
 
-While still incomplete this lays the foundation for running druid on Linux without relying on GTK.
+While still incomplete this lays the foundation for running Druid on Linux without relying on GTK.
 
 #### Web backend for druid-shell.
 
 [@elrnv] continued the work of [@tedsta] and implemented a mostly complete web backend
-via WebAssembly (Wasm) in [#759] and enabled all druid examples to
+via WebAssembly (Wasm) in [#759] and enabled all Druid examples to
 [run in the browser](https://elrnv.github.io/druid-wasm-examples/).
 
 While some features like the clipboard, menus or file dialogs are not yet available,
@@ -364,8 +365,8 @@ all fundamental features are there.
 [@cmyr] continued the work of [@jrmuizel] and implemented Core Graphics support for Piet in
 [piet#176](https://github.com/linebender/piet/pull/176).
 
-Those changes made it into druid via [#905].
-This means that druid no longer requires cairo on macOS and uses Core Graphics instead.
+Those changes made it into Druid via [#905].
+This means that Druid no longer requires cairo on macOS and uses Core Graphics instead.
 
 ### Added
 
@@ -494,7 +495,7 @@ This means that druid no longer requires cairo on macOS and uses Core Graphics i
 
 ### Outside News
 
-- There are new projects using druid:
+- There are new projects using Druid:
   - [Kondo](https://github.com/tbillington/kondo) Save disk space by cleaning unneeded files from software projects.
   - [jack-mixer](https://github.com/derekdreery/jack-mixer) A jack client that provides mixing, levels and a 3-band eq.
   - [kiro-synth](https://github.com/chris-zen/kiro-synth) An in progress modular sound synthesizer.
@@ -893,6 +894,7 @@ Last release without a changelog :(
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2337]: https://github.com/linebender/druid/pull/2337
 [#2338]: https://github.com/linebender/druid/pull/2338
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343

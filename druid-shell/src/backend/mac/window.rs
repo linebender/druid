@@ -899,7 +899,7 @@ fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size)
         let current_frame: NSRect = msg_send![window, frame];
         let mut new_frame = current_frame;
 
-        // maintain druid origin (as mac origin is bottom left)
+        // maintain Druid origin (as mac origin is bottom left)
         new_frame.origin.y -= size.height - current_frame.size.height;
         new_frame.size.width = size.width;
         new_frame.size.height = size.height;

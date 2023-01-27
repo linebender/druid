@@ -71,13 +71,13 @@ use piet::ImageBuf;
 /// ## Collection types
 ///
 /// `Data` is not implemented for `std` collection types, because comparing them
-/// can be expensive. To use collection types with druid, there are two easy options:
-/// either wrap the collection in an `Arc`, or build druid with the `im` feature,
+/// can be expensive. To use collection types with Druid, there are two easy options:
+/// either wrap the collection in an `Arc`, or build `druid` with the `im` feature,
 /// which adds `Data` implementations to the collections from the [`im` crate],
-/// a set of immutable data structures that fit nicely with druid.
+/// a set of immutable data structures that fit nicely with Druid.
 ///
 /// If the `im` feature is used, the `im` crate is reexported from the root
-/// of the druid crate.
+/// of the `druid` crate.
 ///
 /// ### Example:
 ///

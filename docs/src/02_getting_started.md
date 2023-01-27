@@ -31,7 +31,7 @@ On OpenBSD, Druid requires gtk+3;  install from packages:
 
 ## Starting a project
 
-Create a new cargo binary crate, and add druid as a dependency:
+Create a new cargo binary crate, and add `druid` as a dependency:
 
 ```sh
 > cargo new my-druid-app

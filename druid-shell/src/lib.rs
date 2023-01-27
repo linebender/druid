@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platform abstraction for druid toolkit.
+//! Platform abstraction for Druid toolkit.
 //!
 //! `druid-shell` is an abstraction around a given platform UI & application
 //! framework. It provides common types, which then defer to a platform-defined

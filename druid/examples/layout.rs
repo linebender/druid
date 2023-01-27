@@ -71,7 +71,7 @@ fn build_app() -> impl Widget<u32> {
         .background(Color::WHITE);
     col.add_flex_child(aspect_ratio_box.center(), 1.0);
 
-    // This method asks druid to draw colored rectangles around our widgets,
+    // This method asks Druid to draw colored rectangles around our widgets,
     // so we can visually inspect their layout rectangles.
     col.debug_paint_layout()
 }
