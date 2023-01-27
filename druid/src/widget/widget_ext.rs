@@ -115,9 +115,9 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         Container::new(self).background(brush)
     }
 
-    /// Wrap this widget in a [`Container`] with the provided `foreground`.
+    /// Wrap this widget in a [`Container`] with the provided foreground `brush`.
     ///
-    /// See [`Container::background`] for more information.
+    /// See [`Container::foreground`] for more information.
     fn foreground(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
         Container::new(self).foreground(brush)
     }
