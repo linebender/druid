@@ -195,6 +195,11 @@ impl<T: Data> Widget<T> for Container<T> {
                 brush.update(ctx, old_data, data, env);
             });
         }
+        if let Some(brush) = self.foreground.as_mut() {
+            trace_span!("update foreground").in_scope(|| {
+                brush.update(ctx, old_data, data, env);
+            });
+        }
         if let Some(border) = &self.border {
             if ctx.env_key_changed(&border.width) {
                 ctx.request_layout();
@@ -207,11 +212,6 @@ impl<T: Data> Widget<T> for Container<T> {
             ctx.request_paint();
         }
         self.child.update(ctx, data, env);
-            if let Some(brush) = self.foreground.as_mut() {
-            trace_span!("update foreground").in_scope(|| {
-                brush.update(ctx, old_data, data, env);
-            });
-        }
     }
 
     #[instrument(name = "Container", level = "trace", skip(self, ctx, bc, data, env))]
