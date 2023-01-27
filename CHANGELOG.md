@@ -212,6 +212,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 - `Split` no longer causes cursor flicker when the mouse moves fast. ([#1726] by [@djeedai])
 - Focus-chain no longer contains hidden widgets. ([#1724] by [@xarvic])
 - Scrollbar layout with very small viewports. ([#1715] by [@andrewhickman])
+- Scrollbars no longer remain permanently visible when the mouse leaves the window. ([#2343] by [@xStrom])
 - Hot state now works properly inside `Scroll`. ([#2149] by [@xarvic])
 - `Scroll` now behaves properly inside of `Flex`. ([#1506] by [@tirix])
 - `Either` and `Tab` widgets no longer propagate events to hidden children. ([#1860] by [@lisael])
@@ -1173,6 +1174,7 @@ Last release without a changelog :(
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
 [#2340]: https://github.com/linebender/druid/pull/2340
+[#2343]: https://github.com/linebender/druid/pull/2343
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.0...master
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0
