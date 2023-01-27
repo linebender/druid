@@ -295,7 +295,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 - Updated `fluent-bundle` to 0.15 and `fluent-syntax` to 0.11. ([#1772] by [@r-ml])
 - Updated `tracing-wasm` to 0.2. ([#1793] by [@Maan2003])
 - Updated `tracing-subscriber` to 0.3. ([#2048] by [@jplatte])
-- Updated `usvg` to 0.28. ([#1802] by [@r-ml], [#2106] by [@james-lawrence])
+- Updated `usvg` to 0.25. ([#1802] by [@r-ml], [#2106] by [@james-lawrence], [#2345] by [@xStrom])
 - Updated `time` to 0.3. ([#1969] by [@PoignardAzur])
 - Updated `keyboard-types` to 0.6. ([#2044] by [@CryZe])
 - Updated `nix` to 0.24. ([#2218] by [@Maan2003])
@@ -1177,6 +1177,7 @@ Last release without a changelog :(
 [#2338]: https://github.com/linebender/druid/pull/2338
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
+[#2345]: https://github.com/linebender/druid/pull/2345
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.0...master
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0
