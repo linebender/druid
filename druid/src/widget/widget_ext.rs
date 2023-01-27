@@ -323,7 +323,7 @@ mod tests {
             .foreground(Color::WHITE);
         assert!(widget.background_is_some());
         assert!(widget.border_is_some());
-        assert!(!widget.foreground_is_some());
+        assert!(widget.foreground_is_some());
     }
 
     #[test]
