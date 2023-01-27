@@ -152,7 +152,7 @@ impl std::str::FromStr for SvgData {
             ..usvg::Options::default()
         };
 
-        match Tree::from_str(svg_str, &re_opt) {
+        match Tree::from_str(svg_str, &re_opt.to_ref()) {
             Ok(tree) => Ok(SvgData::new(Arc::new(tree))),
             Err(err) => Err(err.into()),
         }
