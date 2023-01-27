@@ -207,7 +207,7 @@ your UI.</li>
 <pre><code class="language-sh">&gt; pkg_add gtk+3
 </code></pre>
 <h2><a class="header" href="#starting-a-project" id="starting-a-project">Starting a project</a></h2>
-<p>Create a new cargo binary crate, and add druid as a dependency:</p>
+<p>Create a new cargo binary crate, and add <code>druid</code> as a dependency:</p>
 <pre><code class="language-sh">&gt; cargo new my-druid-app
       Created binary (application) `my-druid-app` package
 &gt; cd my-druid-app
@@ -826,7 +826,7 @@ impl Lens&lt;Container2, Name&gt; for NameLens {
 <span class="boring">}
 </span></code></pre></pre>
 <p>As you'll see, we've introduced <code>Rc</code>: the reference-counted pointer. You will see this and its multithreaded cousin <code>Arc</code> used pervasively in the examples. Now, the only time we actually have to copy memory is when <code>Rc::make_mut</code> is called in the <code>f</code> in <code>with_mut</code>. This means that in the case where nothing changes, all we will be doing is incrementing and decrementing reference counts. Moreover, we give the compiler the opportunity to inline <code>f</code> and <code>with</code>/<code>with_mut</code>, making this abstraction potentially zero-cost (disclaimer: I haven't actually studied the produced assembly to validate this claim).</p>
-<p>The trade-off is that we introduce more complexity into the <code>Name</code> type: to make changes to the data we have to use <code>Rc::make_mut</code> to get mutable access to the <code>String</code>. (The code in the lens will ensure that the newer copy of the <code>Rc</code>d data is saved to the outer type.) This means the writing fast druid code requires knowledge of the Rust pointer types (<code>Rc</code>/<code>Arc</code>, and also potentially <code>RefCell</code>/<code>Mutex</code>).</p>
+<p>The trade-off is that we introduce more complexity into the <code>Name</code> type: to make changes to the data we have to use <code>Rc::make_mut</code> to get mutable access to the <code>String</code>. (The code in the lens will ensure that the newer copy of the <code>Rc</code>d data is saved to the outer type.) This means the writing fast Druid code requires knowledge of the Rust pointer types (<code>Rc</code>/<code>Arc</code>, and also potentially <code>RefCell</code>/<code>Mutex</code>).</p>
 <p>We can actually do even better than this. Suppose that we are working on a vector of data rather than a string. We can import the <code>im</code> crate to get collections that use <em>structural sharing</em>, meaning that even when the vector is mutated, we only <em>Clone</em> what we need to. Because <code>im</code> is so useful, it is included in <code>druid</code> (behind the <code>im</code> feature).</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -1041,18 +1041,18 @@ the large image assets would be scaled down to the size that makes sense for the
 <h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
 <p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
 Druid has expressive vector drawing capabilities that you should use whenever possible.
-Vector drawing is also used by the widgets that come included with druid.
+Vector drawing is also used by the widgets that come included with Druid.
 Handling different pixel densities is done at the <code>druid-shell</code> level already.
 In fact pixels mostly don't even enter the conversation at the <code>druid</code> level.
 The <code>druid</code> coordinate system is instead measured in <strong>display points</strong> (<strong>dp</strong>),
 e.g. you might say a widget has a width of <strong>100dp</strong>.
 <em>Display points</em> are conceptually similar to Microsoft's <em>device-independent pixels</em>,
 Google's <em>density-independent pixels</em>, Apple's <em>points</em>, and CSS's <em>pixel units</em>.</p>
-<p>You <strong>describe the UI using display points and then druid will automatically
+<p>You <strong>describe the UI using display points and then Druid will automatically
 translate that into pixels</strong> based on the pixel density of the platform.
 Remember there might be multiple displays connected with different pixel densities,
 and your application might have multiple windows - with each window on a different display.
-It will all just work, because druid will adjust the actual pixel dimensions
+It will all just work, because Druid will adjust the actual pixel dimensions
 based on the display that the window is currently located on.</p>
 <h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
 <p>The <code>Widget</code> trait is the heart of Druid, and in any serious application you

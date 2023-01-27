@@ -204,18 +204,18 @@ the large image assets would be scaled down to the size that makes sense for the
 <h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
 <p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
 Druid has expressive vector drawing capabilities that you should use whenever possible.
-Vector drawing is also used by the widgets that come included with druid.
+Vector drawing is also used by the widgets that come included with Druid.
 Handling different pixel densities is done at the <code>druid-shell</code> level already.
 In fact pixels mostly don't even enter the conversation at the <code>druid</code> level.
 The <code>druid</code> coordinate system is instead measured in <strong>display points</strong> (<strong>dp</strong>),
 e.g. you might say a widget has a width of <strong>100dp</strong>.
 <em>Display points</em> are conceptually similar to Microsoft's <em>device-independent pixels</em>,
 Google's <em>density-independent pixels</em>, Apple's <em>points</em>, and CSS's <em>pixel units</em>.</p>
-<p>You <strong>describe the UI using display points and then druid will automatically
+<p>You <strong>describe the UI using display points and then Druid will automatically
 translate that into pixels</strong> based on the pixel density of the platform.
 Remember there might be multiple displays connected with different pixel densities,
 and your application might have multiple windows - with each window on a different display.
-It will all just work, because druid will adjust the actual pixel dimensions
+It will all just work, because Druid will adjust the actual pixel dimensions
 based on the display that the window is currently located on.</p>
 
                     </main>
