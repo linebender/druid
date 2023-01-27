@@ -568,7 +568,7 @@ impl<T: Data> Flex<T> {
                 flex: params.flex,
             }
         } else {
-            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.1/druid/widget/struct.Flex.html");
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.2/druid/widget/struct.Flex.html");
             Child::Fixed {
                 widget: WidgetPod::new(Box::new(child)),
                 alignment: None,

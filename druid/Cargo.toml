@@ -1,12 +1,12 @@
 [package]
 name = "druid"
-version = "0.8.1"
+version = "0.8.2"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Data-oriented Rust UI design toolkit."
 repository = "https://github.com/linebender/druid"
 categories = ["gui"]
-readme = "../README.md"
+readme = "README.md"
 keywords = ["gui", "ui", "toolkit"]
 edition = "2021"
 
@@ -18,7 +18,10 @@ edition = "2021"
 features = ["im"]
 rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
+# TODO: Enable this again after figuring out how the flags have changed.
+#       Also be sure to add nightly compiler docs building to CI
+#       to catch any changes to the flags early.
+#cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 
 [features]
 default = ["gtk"]

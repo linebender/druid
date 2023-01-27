@@ -1,7 +1,7 @@
 # Changelog
 
-The latest published Druid release is [0.8.1](#081---2023-01-27) which was released on 2023-01-27.
-You can find its changes [documented below](#081---2023-01-27).
+The latest published Druid release is [0.8.2](#082---2023-01-27) which was released on 2023-01-27.
+You can find its changes [documented below](#082---2023-01-27).
 
 ## [Unreleased]
 
@@ -26,6 +26,12 @@ You can find its changes [documented below](#081---2023-01-27).
 ### Maintenance
 
 ### Outside News
+
+## [0.8.2] - 2023-01-27
+
+### Docs
+
+- Fixed docs.rs failing to build any docs. ([#2348] by [@xStrom])
 
 ## [0.8.1] - 2023-01-27
 
@@ -1185,8 +1191,10 @@ Last release without a changelog :(
 [#2343]: https://github.com/linebender/druid/pull/2343
 [#2345]: https://github.com/linebender/druid/pull/2345
 [#2347]: https://github.com/linebender/druid/pull/2347
+[#2348]: https://github.com/linebender/druid/pull/2348
 
-[Unreleased]: https://github.com/linebender/druid/compare/v0.8.1...master
+[Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
+[0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/linebender/druid/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/linebender/druid/compare/v0.6.0...v0.7.0
