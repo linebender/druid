@@ -266,10 +266,9 @@ Later support was widened in [#2254] by [@PolyMeilex].
 - Updated `Event::AnimFrame` docs with info about when `paint` happens. ([#2323] by [@xStrom])
 - Updated `CONTRIBUTING.md` to use `cargo-edit` 0.11. ([#2330] by [@xStrom])
 - Fixed docs of derived `Lens`. ([#1523] by [@Maan2003])
-- Fixed docs describing the `ViewSwitcher` widget functionality. ([#1693] by [@arthmis])
-- Fixed broken links in `Image` docs. ([#1730] by [@RichardPoole42])
-- Fixed broken links in `Controller` docs. ([#2158] by [@yrns])
 - Fixed docs of `RawLabel`. ([#1886] by [@Maan2003])
+- Fixed docs describing the `ViewSwitcher` widget functionality. ([#1693] by [@arthmis])
+- Fixed all the broken links that originated from Druid crates. ([#2338] by [@xStrom], [#1730] by [@RichardPoole42], [#2158] by [@yrns])
 - Removed outdated section in `LifeCycle::WidgetAdded` docs. ([#2320] by [@sprocklem])
 - Removed outdated line in `KeyEvent` docs. ([#2247] by [@amtep])
 
@@ -1173,6 +1172,7 @@ Last release without a changelog :(
 [#2330]: https://github.com/linebender/druid/pull/2330
 [#2331]: https://github.com/linebender/druid/pull/2331
 [#2335]: https://github.com/linebender/druid/pull/2335
+[#2338]: https://github.com/linebender/druid/pull/2338
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
 
