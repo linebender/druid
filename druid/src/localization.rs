@@ -30,9 +30,7 @@
 //!
 //! [Fluent]: https://projectfluent.org
 //! [fluent-rs]: https://github.com/projectfluent/fluent-rs
-//! [`LocalizedString`]: struct.LocalizedString.html
-//! [`Env`]: struct.Env.html
-//! [`Data`]: trait.Data.html
+//! [`Data`]: crate::Data
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -116,7 +114,7 @@ impl BundleStack {
                 return bundle.format_pattern(pattern, args, errors).to_string();
             }
         }
-        format!("localization failed for key '{}'", id)
+        format!("localization failed for key '{id}'")
     }
 }
 
@@ -344,7 +342,7 @@ impl<T> LocalizedString<T> {
     /// environment and data.
     ///
     /// Returns `true` if the current value of the string has changed.
-    pub fn resolve<'a>(&'a mut self, data: &T, env: &Env) -> bool {
+    pub fn resolve(&mut self, data: &T, env: &Env) -> bool {
         //TODO: this recomputes the string if either the language has changed,
         //or *anytime* we have arguments. Ideally we would be using a lens
         //to only recompute when our actual data has changed.
@@ -388,7 +386,7 @@ impl<'a, T: std::fmt::Display> std::fmt::Display for PrintLocales<'a, T> {
                 write!(f, ", ")?;
             }
             prev = true;
-            write!(f, "{}", l)?;
+            write!(f, "{l}")?;
         }
         write!(f, "]")
     }

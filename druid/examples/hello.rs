@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This is a very small example of how to setup a druid application.
+//! This is a very small example of how to setup a Druid application.
 //! It does the almost bare minimum while still being useful.
 
 // On Windows platform, don't show a console when opening the app.

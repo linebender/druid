@@ -75,15 +75,19 @@ impl<T> Split<T> {
     }
 
     /// Create a new split panel, with the horizontal axis split in two by a vertical bar.
-    /// The children are laid out left and right.
-    pub fn columns(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
-        Self::new(Axis::Horizontal, child1, child2)
+    pub fn columns(
+        left_child: impl Widget<T> + 'static,
+        right_child: impl Widget<T> + 'static,
+    ) -> Self {
+        Self::new(Axis::Horizontal, left_child, right_child)
     }
 
     /// Create a new split panel, with the vertical axis split in two by a horizontal bar.
-    /// The children are laid out up and down.
-    pub fn rows(child1: impl Widget<T> + 'static, child2: impl Widget<T> + 'static) -> Self {
-        Self::new(Axis::Vertical, child1, child2)
+    pub fn rows(
+        upper_child: impl Widget<T> + 'static,
+        lower_child: impl Widget<T> + 'static,
+    ) -> Self {
+        Self::new(Axis::Vertical, upper_child, lower_child)
     }
 
     /// Builder-style method to set the split point as a fraction of the split axis.

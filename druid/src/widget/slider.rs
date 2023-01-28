@@ -143,7 +143,7 @@ impl Slider {
         self
     }
 
-    /// Builder-style method to the the axis on which the slider moves.
+    /// Builder-style method to the axis on which the slider moves.
     ///
     /// The default is `Horizontal`.
     pub fn axis(mut self, axis: Axis) -> Self {
@@ -278,7 +278,7 @@ impl RangeSlider {
         self
     }
 
-    /// Builder-style method to the the axis on which the slider moves.
+    /// Builder-style method to set the axis on which the slider moves.
     ///
     /// The default is `Horizontal`.
     pub fn axis(mut self, axis: Axis) -> Self {
@@ -424,7 +424,7 @@ impl Widget<(f64, f64)> for RangeSlider {
     fn debug_state(&self, data: &(f64, f64)) -> DebugState {
         DebugState {
             display_name: self.short_type_name().to_string(),
-            main_value: format!("{:?}", data),
+            main_value: format!("{data:?}"),
             ..Default::default()
         }
     }
@@ -468,7 +468,7 @@ impl<T, W: Widget<T>> Annotated<T, W> {
         let mut walk = self.mapping.min;
         while walk < self.mapping.max + f64::EPSILON * 10.0 {
             let layout = text
-                .new_text_layout(format!("{}", walk))
+                .new_text_layout(format!("{walk}"))
                 .text_color(text_color)
                 .build()
                 .unwrap();

@@ -79,13 +79,13 @@
 //!         .entry(MenuItem::new(LocalizedString::new("macos-menu-services")))
 //!         .entry(
 //!             MenuItem::new(LocalizedString::new("macos-menu-hide-app"))
-//!                 // druid handles the HIDE_APPLICATION command automatically
+//!                 // Druid handles the HIDE_APPLICATION command automatically
 //!                 .command(commands::HIDE_APPLICATION)
 //!                 .hotkey(SysMods::Cmd, "h"),
 //!         )
 //!         .entry(
 //!             MenuItem::new(LocalizedString::new("macos-menu-hide-others"))
-//!                 // druid handles the HIDE_OTHERS command automatically
+//!                 // Druid handles the HIDE_OTHERS command automatically
 //!                 .command(commands::HIDE_OTHERS)
 //!                 .hotkey(SysMods::AltCmd, "h"),
 //!         )
@@ -98,7 +98,7 @@
 //!         .separator()
 //!         .entry(
 //!             MenuItem::new(LocalizedString::new("macos-menu-quit-app"))
-//!                 // druid handles the QUIT_APP command automatically
+//!                 // Druid handles the QUIT_APP command automatically
 //!                 .command(commands::QUIT_APP)
 //!                 .hotkey(SysMods::Cmd, "q"),
 //!         )
@@ -522,7 +522,7 @@ impl<T: Data> Menu<T> {
     }
 
     #[doc(hidden)]
-    #[deprecated(since = "0.8.0", note = "use entry instead")]
+    #[deprecated(since = "0.8.0", note = "use separator instead")]
     pub fn append_separator(self) -> Self {
         self.separator()
     }
@@ -827,7 +827,7 @@ struct MenuItemState {
 
 /// Uniquely identifies a menu item.
 ///
-/// On the druid-shell side, the id is represented as a u32.
+/// On the `druid-shell` side, the id is represented as a u32.
 /// We reserve '0' as a placeholder value; on the Rust side
 /// we represent this as an `Option<NonZerou32>`, which better
 /// represents the semantics of our program.

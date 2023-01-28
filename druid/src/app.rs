@@ -68,6 +68,11 @@ pub struct WindowConfig {
 }
 
 /// A description of a window to be instantiated.
+///
+/// This struct has builder methods to specify some window properties. Each of
+/// these methods usually corresponds to a platform API call when constructing the
+/// function. Except for `title()`, they have no default values and the APIS
+/// won't be called if the method is not used.
 pub struct WindowDesc<T> {
     pub(crate) pending: PendingWindow<T>,
     pub(crate) config: WindowConfig,
@@ -79,7 +84,7 @@ pub struct WindowDesc<T> {
 }
 
 /// The parts of a window, pending construction, that are dependent on top level app state
-/// or are not part of the druid shells windowing abstraction.
+/// or are not part of the `druid-shell`'s windowing abstraction.
 /// This includes the boxed root widget, as well as other window properties such as the title.
 pub struct PendingWindow<T> {
     pub(crate) root: Box<dyn Widget<T>>,
@@ -109,9 +114,6 @@ impl<T: Data> PendingWindow<T> {
     /// Set the title for this window. This is a [`LabelText`]; it can be either
     /// a `String`, a [`LocalizedString`], or a closure that computes a string;
     /// it will be kept up to date as the application's state changes.
-    ///
-    /// [`LabelText`]: widget/enum.LocalizedString.html
-    /// [`LocalizedString`]: struct.LocalizedString.html
     pub fn title(mut self, title: impl Into<LabelText<T>>) -> Self {
         self.title = title.into();
         self
@@ -159,8 +161,6 @@ impl<T: Data> AppLauncher<T> {
     }
 
     /// Set the [`AppDelegate`].
-    ///
-    /// [`AppDelegate`]: trait.AppDelegate.html
     pub fn delegate(mut self, delegate: impl AppDelegate<T> + 'static) -> Self {
         self.delegate = Some(Box::new(delegate));
         self
@@ -173,7 +173,7 @@ impl<T: Data> AppLauncher<T> {
     /// # Panics
     ///
     /// Panics if the logger fails to initialize.
-    #[deprecated(since = "0.7.0", note = "Use log_to_console instead")]
+    #[deprecated(since = "0.8.0", note = "Use log_to_console instead")]
     pub fn use_simple_logger(self) -> Self {
         self.log_to_console()
     }
@@ -186,9 +186,17 @@ impl<T: Data> AppLauncher<T> {
     ///
     /// # Panics
     ///
-    /// Panics if the subscriber fails to initialize, for example if a `tracing`/`tracing_wasm`
-    /// global logger was already set.
-    pub fn log_to_console(self) -> Self {
+    /// Panics if `enable` is `true` and the subscriber fails to initialize,
+    /// for example if a `tracing`/`tracing_wasm` global logger was already set.
+    ///
+    /// Never panics when `enable` is `false`, or have any other side effect.
+    ///
+    /// Passing in false is useful if you want to enable a global logger as feature
+    /// but log to console otherwise.
+    pub fn start_console_logging(self, enable: bool) -> Self {
+        if !enable {
+            return self;
+        }
         #[cfg(not(target_arch = "wasm32"))]
         {
             use tracing_subscriber::prelude::*;
@@ -215,6 +223,10 @@ impl<T: Data> AppLauncher<T> {
         self
     }
 
+    /// Calls `start_console_logging` with `true`.
+    pub fn log_to_console(self) -> Self {
+        self.start_console_logging(true)
+    }
     /// Use custom localization resource
     ///
     /// `resources` is a list of file names that contain strings. `base_dir`
@@ -230,8 +242,6 @@ impl<T: Data> AppLauncher<T> {
 
     /// Returns an [`ExtEventSink`] that can be moved between threads,
     /// and can be used to submit commands back to the application.
-    ///
-    /// [`ExtEventSink`]: struct.ExtEventSink.html
     pub fn get_external_handle(&self) -> ExtEventSink {
         self.ext_event_host.make_sink()
     }
@@ -318,8 +328,8 @@ impl WindowConfig {
     /// This should be considered a request to the platform to set the size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
     ///
-    /// [`Size`]: struct.Size.html
-    /// [display points]: struct.Scale.html
+    /// [`Size`]: Size
+    /// [display points]: crate::Scale
     pub fn window_size(mut self, size: impl Into<Size>) -> Self {
         self.size = Some(size.into());
         self
@@ -335,7 +345,7 @@ impl WindowConfig {
     /// To set the window's initial drawing area size use [`window_size`].
     ///
     /// [`window_size`]: #method.window_size
-    /// [display points]: struct.Scale.html
+    /// [display points]: crate::Scale
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
         self.min_size = Some(size.into());
         self
@@ -356,15 +366,13 @@ impl WindowConfig {
     /// Sets the window position in virtual screen coordinates.
     /// [`position`] Position in pixels.
     ///
-    /// [`position`]: struct.Point.html
+    /// [`position`]: Point
     pub fn set_position(mut self, position: Point) -> Self {
         self.position = Some(position);
         self
     }
 
     /// Sets the [`WindowLevel`] of the window
-    ///
-    /// [`WindowLevel`]: enum.WindowLevel.html
     pub fn set_level(mut self, level: WindowLevel) -> Self {
         self.level = Some(level);
         self
@@ -379,8 +387,6 @@ impl WindowConfig {
     }
 
     /// Sets the [`WindowState`] of the window.
-    ///
-    /// [`WindowState`]: enum.WindowState.html
     pub fn set_window_state(mut self, state: WindowState) -> Self {
         self.state = Some(state);
         self
@@ -466,8 +472,6 @@ impl WindowConfig {
 
 impl<T: Data> WindowDesc<T> {
     /// Create a new `WindowDesc`, taking the root [`Widget`] for this window.
-    ///
-    /// [`Widget`]: trait.Widget.html
     pub fn new<W>(root: W) -> WindowDesc<T>
     where
         W: Widget<T> + 'static,
@@ -483,8 +487,7 @@ impl<T: Data> WindowDesc<T> {
     /// a `String`, a [`LocalizedString`], or a closure that computes a string;
     /// it will be kept up to date as the application's state changes.
     ///
-    /// [`LabelText`]: widget/enum.LocalizedString.html
-    /// [`LocalizedString`]: struct.LocalizedString.html
+    /// If this method isn't called, the default title will be `LocalizedString::new("app-name")`.
     pub fn title(mut self, title: impl Into<LabelText<T>>) -> Self {
         self.pending = self.pending.title(title);
         self
@@ -532,8 +535,7 @@ impl<T: Data> WindowDesc<T> {
     /// This should be considered a request to the platform to set the size of the window.
     /// The platform might increase the size a tiny bit due to DPI.
     ///
-    /// [`Size`]: struct.Size.html
-    /// [display points]: struct.Scale.html
+    /// [display points]: crate::Scale
     pub fn window_size(mut self, size: impl Into<Size>) -> Self {
         self.config.size = Some(size.into());
         self
@@ -549,7 +551,7 @@ impl<T: Data> WindowDesc<T> {
     /// To set the window's initial drawing area size use [`window_size`].
     ///
     /// [`window_size`]: #method.window_size
-    /// [display points]: struct.Scale.html
+    /// [display points]: crate::Scale
     pub fn with_min_size(mut self, size: impl Into<Size>) -> Self {
         self.config = self.config.with_min_size(size);
         self
@@ -587,7 +589,7 @@ impl<T: Data> WindowDesc<T> {
 
     /// Sets the [`WindowLevel`] of the window
     ///
-    /// [`WindowLevel`]: enum.WindowLevel.html
+    /// [`WindowLevel`]: WindowLevel
     pub fn set_level(mut self, level: WindowLevel) -> Self {
         self.config = self.config.set_level(level);
         self

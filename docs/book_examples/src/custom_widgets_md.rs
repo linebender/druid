@@ -29,7 +29,7 @@ fn sized_swatch() -> impl Widget<Color> {
 fn background_label() -> impl Widget<Color> {
     Label::dynamic(|color: &Color, _| {
         let (r, g, b, _) = color.as_rgba8();
-        format!("#{:X}{:X}{:X}", r, g, b)
+        format!("#{r:X}{g:X}{b:X}")
     })
     .background(make_color_swatch())
 }

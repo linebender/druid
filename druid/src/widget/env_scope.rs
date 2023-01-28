@@ -49,7 +49,7 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
     /// # }
     /// ```
     ///
-    /// [`WidgetExt::env_scope`]: ../trait.WidgetExt.html#method.env_scope
+    /// [`WidgetExt::env_scope`]: super::WidgetExt::env_scope
     pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),

@@ -17,7 +17,7 @@ pub use crate::backend::clipboard as backend;
 
 /// A handle to the system clipboard.
 ///
-/// To get access to the global clipboard, call [`Application::clipboard()`].
+/// To get access to the global clipboard, call [`Application::clipboard`].
 ///
 ///
 /// # Working with text
@@ -118,13 +118,9 @@ pub use crate::backend::clipboard as backend;
 /// # fn do_something_with_data(_: &str, _: Vec<u8>) {}
 /// ```
 ///
-/// [`Application::clipboard()`]: struct.Application.html#method.clipboard
-/// [`Clipboard::put_string`]: struct.Clipboard.html#method.put_string
-/// [`Clipboard::get_string`]: struct.Clipboard.html#method.get_string
-/// [`FormatId`]: type.FormatId.html
+/// [`Application::clipboard`]: crate::Application::clipboard
 /// [`Universal Type Identifier`]: https://escapetech.eu/manuals/qdrop/uti.html
 /// [MIME types]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
-/// [`ClipboardFormat`]: struct.ClipboardFormat.html
 #[derive(Debug, Clone)]
 pub struct Clipboard(pub(crate) backend::Clipboard);
 

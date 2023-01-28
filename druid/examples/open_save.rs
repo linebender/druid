@@ -84,7 +84,7 @@ impl AppDelegate<String> for Delegate {
     ) -> Handled {
         if let Some(file_info) = cmd.get(commands::SAVE_FILE_AS) {
             if let Err(e) = std::fs::write(file_info.path(), &data[..]) {
-                println!("Error writing file: {}", e);
+                println!("Error writing file: {e}");
             }
             return Handled::Yes;
         }
@@ -95,7 +95,7 @@ impl AppDelegate<String> for Delegate {
                     *data = first_line.to_owned();
                 }
                 Err(e) => {
-                    println!("Error opening file: {}", e);
+                    println!("Error opening file: {e}");
                 }
             }
             return Handled::Yes;

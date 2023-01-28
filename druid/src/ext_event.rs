@@ -43,7 +43,7 @@ pub(crate) struct ExtEventHost {
     queue: Arc<Mutex<VecDeque<ExtCommand>>>,
     /// This doesn't exist when the app starts and it can go away if a window closes, so we keep a
     /// reference here and can update it when needed. Note that this reference is shared with all
-    /// `ExtEventSink`s, so that we can update them too.
+    /// [`ExtEventSink`]s, so that we can update them too.
     handle: Arc<Mutex<Option<IdleHandle>>>,
     /// The window that the handle belongs to, so we can keep track of when
     /// we need to get a new handle.
@@ -95,11 +95,6 @@ impl ExtEventSink {
     /// The `payload` must implement `Any + Send`.
     ///
     /// If the [`Target::Auto`] is equivalent to [`Target::Global`].
-    ///
-    /// [`Command`]: struct.Command.html
-    /// [`Selector`]: struct.Selector.html
-    /// [`Target::Auto`]: enum.Target.html#variant.Auto
-    /// [`Target::Global`]: enum.Target.html#variant.Global
     pub fn submit_command<T: Any + Send>(
         &self,
         selector: Selector<T>,

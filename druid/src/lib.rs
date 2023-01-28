@@ -15,7 +15,7 @@
 //! Simple data-oriented GUI.
 //!
 //! Druid lets you build simple interactive graphical applications that
-//! can be deployed on Windows, macOS, Linux, OpenBSD and the web.
+//! can be deployed on Windows, macOS, Linux, OpenBSD, FreeBSD and the web.
 //!
 //! Druid is built on top of [`druid-shell`], which implements all of the
 //! lower-level, platform-specific code, providing a common abstraction
@@ -33,9 +33,9 @@
 //! their state and redraw.
 //!
 //! As your application grows, you can use [`Lens`]es to expose only certain
-//! subsets of your data model to certains subsets of your widget tree.
+//! subsets of your data model to certain subsets of your widget tree.
 //!
-//! For more information you should read the [druid book].
+//! For more information you should read the [Druid book].
 //!
 //! # Examples
 //!
@@ -93,16 +93,39 @@
 //!
 //! # Optional Features
 //!
+//! Utility features:
+//!
 //! * `im` - Efficient immutable data structures using the [`im` crate],
 //!          which is made available via the [`im` module].
 //! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
 //! * `image` - Bitmap image support using the [`image` crate].
-//! * `x11` - Work-in-progress X11 for Linux and OpenBSD backend instead of GTK.
+//! * `x11` - Work-in-progress X11 backend instead of GTK.
+//! * `wayland` - Work-in-progress Wayland backend, very experimental.
+//! * `serde` - Serde support for some internal types (most Kurbo primitives).
+//!
+//! Image format features:
+//!
+//! - png
+//! - jpeg
+//! - jpeg_rayon
+//! - gif
+//! - bmp
+//! - ico
+//! - tiff
+//! - webp
+//! - pnm
+//! - dds
+//! - tga
+//! - farbfeld
+//! - dxt
+//! - hdr
+//!
+//! You can enable all these formats with `image-all`.
 //!
 //! Features can be added with `cargo`. For example, in your `Cargo.toml`:
 //! ```no_compile
 //! [dependencies.druid]
-//! version = "0.7.0"
+//! version = "0.8.2"
 //! features = ["im", "svg", "image"]
 //! ```
 //!
@@ -117,10 +140,10 @@
 //! [`Lens`]: trait.Lens.html
 //! [`widget`]: ./widget/index.html
 //! [`Event`]: enum.Event.html
-//! [`druid-shell`]: https://docs.rs/druid-shell
-//! [`piet`]: https://docs.rs/piet
-//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.7.0/druid/examples
-//! [druid book]: https://linebender.org/druid/
+//! [`druid-shell`]: druid_shell
+//! [`piet`]: piet
+//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.8.2/druid/examples
+//! [Druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
 //! [`im` module]: im/index.html
 //! [`usvg` crate]: https://crates.io/crates/usvg
@@ -195,8 +218,8 @@ pub use shell::keyboard_types;
 pub use shell::{
     Application, Clipboard, ClipboardFormat, Code, Cursor, CursorDesc, Error as PlatformError,
     FileInfo, FileSpec, FormatId, HotKey, KbKey, KeyEvent, Location, Modifiers, Monitor,
-    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, Screen, SysMods, TimerToken,
-    WindowHandle, WindowLevel, WindowState,
+    MouseButton, MouseButtons, RawMods, Region, Scalable, Scale, ScaledArea, Screen, SysMods,
+    TimerToken, WindowHandle, WindowLevel, WindowState,
 };
 
 #[cfg(feature = "raw-win-handle")]

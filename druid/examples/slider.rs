@@ -55,7 +55,7 @@ pub fn main() {
 fn build_root_widget() -> impl Widget<AppState> {
     let range = Flex::row()
         .with_child(Label::dynamic(|value: &(f64, f64), _| {
-            format!("Value Range: {:?}", value)
+            format!("Value Range: {value:?}")
         }))
         .with_default_spacer()
         .with_child(

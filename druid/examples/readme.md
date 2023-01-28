@@ -52,7 +52,7 @@ two possible widgets.
 ```
 cargo run --example hello
 ```
-This shows some of the basics of druid. If you need a start of how to build an application with a text-box and some labels this is where to start.
+This shows some of the basics of Druid. If you need a start of how to build an application with a text-box and some labels this is where to start.
 
 ## Hello_web
 For more info and prerequistes see [druid/examples/hello_web/README.md](druid/examples/hello_web/README.md).
@@ -62,7 +62,7 @@ wasm-pack build --out-dir pkg --out-name hello_web
 ```
 [View at http://localhost:8000](http://localhost:8000).
 
-This is an example of how to get almost any druid application can be used on the web. This is just the hello_world example but should work for all of them.
+This is an example of how to get almost any Druid application can be used on the web. This is just the hello_world example but should work for all of them.
 
 ## Web
 For more info and prerequistes see [druid/examples/web/README.md](druid/examples/web/README.md).
@@ -78,7 +78,7 @@ Simple web app.
 ```
 cargo run --example identity
 ```
-In druid identity is used to send specific widgets commands. Instead of a command going to all the widgets, you can send them to just the one you need. This example has some colorwells and some buttons that interact with them. All of them are identical, except the identity, which makes it possible for the buttons to only affect a single colorwell.
+In Druid identity is used to send specific widgets commands. Instead of a command going to all the widgets, you can send them to just the one you need. This example has some colorwells and some buttons that interact with them. All of them are identical, except the identity, which makes it possible for the buttons to only affect a single colorwell.
 
 ## Input Region
 ```
@@ -97,13 +97,13 @@ A demonstration how to use debug invalidation regions in your own widgets, inclu
 ```
 cargo run --example layout
 ```
-An example of how basic widget composition works in druid. There are no custom widgets just compositions of builtin ones.
+An example of how basic widget composition works in Druid. There are no custom widgets just compositions of builtin ones.
 
 ## Lens
 ```
 cargo run --example lens
 ```
-Lenses are a core part of druid, they allow you to zoom into a part of the app state.
+Lenses are a core part of Druid, they allow you to zoom into a part of the app state.
 
 ## List
 ```
@@ -135,22 +135,6 @@ cargo run --example panels
 ```
 Very similar to [layout](#Layout) but it splits the screen into 2 segments
 
-## Value Formatting
-
-To run this example, make sure you are in `druid/examples/value_formatting`
-And then run `cargo run`
-
-Druid doesn't have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
-This example shows you how to parse, and validate text input. 
-
-## Split
-```
-cargo run --example split_demo
-```
-
-The split widget allows you to put multiple widgets next, or on top of each other.
-This also allows the user to resize them.
-
 ## Scroll
 ```
 cargo run --example scroll
@@ -161,7 +145,15 @@ Scrolling is a great way to show more content then can be displayed on the scree
 ```
 cargo run --example split_demo
 ```
-An example of how to split a widget in 2 in various ways. This also includes having the user drag the border!! 
+
+The split widget allows you to put multiple widgets next, or on top of each other.
+This also allows the user to resize them.
+
+## Slider
+This shows the settings of Slider and RangeSlider, to let the user pick a value in a range.
+```
+cargo run --example slider
+```
 
 ## Sub Window
 Not working, no sub-window seen?
@@ -181,13 +173,13 @@ This shows you how to display an SVG as a widget.
 ```
 cargo run --example switches
 ```
-Switches are useful in many ways, this example shows how to use the druid built-in ones. This includes on/off and up/down for incrementing numeric values.
+Switches are useful in many ways, this example shows how to use the Druid built-in ones. This includes on/off and up/down for incrementing numeric values.
 
 ## Tabs
 ```
 cargo run --example tabs --features="im"
 ```
-Tabs allow you to separate different portions of the UI. This example shows you how to use them in druid. similar to [view switcher](#View Switcher) but with with a different purpose.
+Tabs allow you to separate different portions of the UI. This example shows you how to use them in Druid. similar to [view switcher](#View Switcher) but with with a different purpose.
 
 ## Text
 ```
@@ -213,11 +205,20 @@ cargo run --example transparency
 ```
 This shows you how to make the window transparent, so the rest of the desktop shows behind it.
 
+## Value Formatting
+
+To run this example, make sure you are in `druid/examples/value_formatting`
+And then run `cargo run`
+
+Druid doesn't have numeric specific texboxes, instead you have to parse the input as if it were a numeric value.
+This example shows you how to parse, and validate text input. 
+
 ## View Switcher
 ```
 cargo run --example view_switcher
 ```
 Very similar to [tabs](#Tabs) but this allows you to have more control over it. This allows you to switch out widgets on the fly.
+
 
 # Showcases
 
@@ -261,7 +262,7 @@ cargo run --example image --features "image png"
 
 Image shows off all the knobs you can turn on images. You can play with them with real time results, which you to figure out what settings are best for you.
 
-Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in druid, you will still see this because that's how the image actually looks.
+Please note that the image is exported with some kind of interpolation. So even when you turn interpolation off/NearestNeighbor in Druid, you will still see this because that's how the image actually looks.
 
 ## Scroll Colors
 ```
@@ -275,7 +276,7 @@ This is a showcase is scrolling through an image gradient square. The square is 
 cargo run --example styled_text
 ```
 
-In druid you can change all kinds of styling aspects of text as not all text should look
+In Druid you can change all kinds of styling aspects of text as not all text should look
 the same. This showcases some of those things such as, color, size, and monospace.
 
 ## Widget Gallery

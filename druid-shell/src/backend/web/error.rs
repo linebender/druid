@@ -34,7 +34,7 @@ impl std::fmt::Display for Error {
             Error::NoDocument => write!(f, "No global document found"),
             Error::Js(err) => write!(f, "JavaScript error: {:?}", err.as_string()),
             Error::JsCast => write!(f, "JavaScript cast error"),
-            Error::NoElementById(err) => write!(f, "get_element_by_id error: {}", err),
+            Error::NoElementById(err) => write!(f, "get_element_by_id error: {err}"),
             Error::NoContext => write!(f, "Failed to get a draw context"),
             Error::Unimplemented => write!(f, "Requested an unimplemented feature"),
         }

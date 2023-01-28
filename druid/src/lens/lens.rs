@@ -390,9 +390,9 @@ where
     }
 }
 
-/// `Lens` for invoking `Deref` and `DerefMut` on a type
+/// `Lens` for invoking `Deref` and `DerefMut` on a type.
 ///
-/// See also `LensExt::deref`.
+/// See also [`LensExt::deref`].
 #[derive(Debug, Copy, Clone)]
 pub struct Deref;
 
@@ -410,11 +410,8 @@ where
 
 /// [`Lens`] for invoking `AsRef` and `AsMut` on a type.
 ///
-/// [`LensExt::ref`] offers an easy way to apply this,
+/// [`LensExt::as_ref`] offers an easy way to apply this,
 /// as well as more information and examples.
-///
-/// [`Lens`]: ../trait.Lens.html
-/// [`LensExt::ref`]: ../trait.LensExt.html#method.as_ref
 #[derive(Debug, Copy, Clone)]
 pub struct Ref;
 

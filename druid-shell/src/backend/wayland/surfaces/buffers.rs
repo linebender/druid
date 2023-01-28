@@ -489,7 +489,7 @@ impl Mmap {
         len: usize,
         private: bool,
     ) -> Result<Self, nix::Error> {
-        assert!(offset + len <= size, "{0} + {1} <= {2}", offset, len, size,);
+        assert!(offset + len <= size, "{offset} + {len} <= {size}");
         let map_flags = if private {
             MapFlags::MAP_PRIVATE
         } else {

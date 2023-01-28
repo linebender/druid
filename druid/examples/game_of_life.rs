@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This is an example of how you would implement the game of life with druid.
-//! This example doesn't showcase anything specific in druid.
+//! This is an example of how you would implement the game of life with Druid.
+//! This example doesn't showcase anything specific in Druid.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
@@ -34,7 +34,7 @@ const POOL_SIZE: usize = GRID_SIZE * GRID_SIZE;
 const BACKGROUND: Color = Color::grey8(23);
 static COLOURS: ColorScheme = &[
     Color::rgb8(0xEB, 0xF1, 0xF7), //Color::rgb(235, 241, 247)
-    Color::rgb8(0xA3, 0xFC, 0xF7), //Color::rgb(162,252,247)
+    Color::rgb8(0xA2, 0xFC, 0xF7), //Color::rgb(162,252,247)
     Color::rgb8(0xA2, 0xE3, 0xD8), //Color::rgb(162,227,216)
     Color::rgb8(0xF2, 0xE6, 0xF1), //Color::rgb(242,230,241)
     Color::rgb8(0xE0, 0xAF, 0xAF), //Color::rgb(224,175,175)
