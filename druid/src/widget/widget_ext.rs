@@ -309,9 +309,9 @@ mod tests {
         // this should be Container<Align<Container<Slider>>>
         let widget = Slider::new()
             .background(Color::BLACK)
-            .foreground(Color::WHITE);
+            .foreground(Color::WHITE)
             .align_left()
-            .border(Color::BLACK, 1.0)
+            .border(Color::BLACK, 1.0);
         assert!(widget.border_is_some());
         assert!(!widget.background_is_some());
         assert!(!widget.foreground_is_some());
