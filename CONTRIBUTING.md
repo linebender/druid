@@ -183,8 +183,7 @@ Make sure your configuration has it enabled. The following command must not retu
 git config core.symlinks
 ```
 
-If you're on Windows and the above command returns `false` then you need to enable the setting
-and re-clone the Druid repository.
+If the above command returns `false` then you need to enable this setting and reset your clone.
 
 ##### Enabling git supprot for symbolic links on Windows
 
@@ -214,7 +213,15 @@ do by executing the following command as Administrator:
 git config --system core.symlinks true
 ```
 
-Now you should be all set. Just need to re-clone the Druid repository.
+Then you must also change the configuration of your local clone of the Druid repository,
+by executing the following commands in the repo directory:
+
+```sh
+git config --local core.symlinks true
+git reset --hard
+```
+
+Now you should be all set.
 
 #### Publishing the crates
 
