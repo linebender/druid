@@ -1,4 +1,4 @@
-// Copyright 2019 The Druid Authors.
+// Copyright 2023 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -199,6 +199,7 @@ fn main() {
     let main_window = WindowDesc::new(InputRegionExampleWidget::new())
         .title("Input Region Demo")
         .window_size((750.0, 500.0))
+        .with_min_size((650.0, 450.0))
         // Disable the titlebar since it breaks the desired effect on mac.
         // It can be turned on with the button, but not on mac.
         // A lot of apps that will use the interaction features will turn this off

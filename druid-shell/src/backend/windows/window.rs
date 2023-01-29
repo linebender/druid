@@ -729,12 +729,32 @@ impl MyWndProc {
                                 let (x_offset, y_offset, client_width) =
                                     self.get_client_area_specs(hwnd);
                                 let win32_region: HRGN = CreateRectRgn(0, 0, 0, 0);
+                                if win32_region.is_null() {
+                                    warn!(
+                                        "Error creating RectRgn in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
 
                                 // Add header if there is a frame
                                 if self.has_titlebar() {
                                     let region_tmp = win32_region;
                                     let header_rect = CreateRectRgn(0, 0, client_width, y_offset);
-                                    CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
+                                    if header_rect.is_null() {
+                                        warn!(
+                                            "Error creating RectRgn in SetRegion deferred op for titlebar: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
+                                    } else {
+                                        let result = CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
+                                        DeleteObject(header_rect as _);
+                                        if result == ERROR {
+                                            warn!(
+                                                "Error combining regions in SetRegion deferred op for titlebar: {}",
+                                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                            );
+                                        }
+                                    }
                                 }
 
                                 let scale = self.scale();
@@ -746,6 +766,13 @@ impl MyWndProc {
                                         (rect.x1 * scale.x()).ceil() as i32 + x_offset,
                                         (rect.y1 * scale.y()).ceil() as i32 + y_offset,
                                     );
+                                    if region_part.is_null() {
+                                        warn!(
+                                            "Error creating RectRgn for section of region in SetRegion deferred op: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
+                                        continue; // Try the next. Don't try to combine a null region.
+                                    }
                                     let region_tmp = win32_region;
                                     let result = CombineRgn(
                                         win32_region,
@@ -753,16 +780,36 @@ impl MyWndProc {
                                         region_tmp,
                                         RGN_OR, /* area from both */
                                     );
+                                    // Delete the region part, as it is now incorporated into the combined region.
+                                    // Deleting the temp region deletes the combined region.
+                                    DeleteObject(region_part as _);
                                     if result == ERROR {
-                                        warn!("Error combining regions in SetRegion deferred op");
+                                        warn!(
+                                            "Error combining regions in SetRegion deferred op: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
                                     }
                                 }
 
-                                SetWindowRgn(hwnd, win32_region, 1);
+                                let result = SetWindowRgn(hwnd, win32_region, 1);
+                                if result == ERROR {
+                                    DeleteObject(win32_region as _); // Must delete it if and only if it fails.
+                                    warn!(
+                                        "Error calling SetWindowRgn in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
                             }
                             None => {
                                 // Set it to have no region
-                                SetWindowRgn(hwnd, null_mut(), 1);
+                                let result = SetWindowRgn(hwnd, null_mut(), 1);
+                                if result == ERROR {
+                                    // No region to delete since we're just passing in a null region.
+                                    warn!(
+                                        "Error calling SetWindowRgn to null in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
                             }
                         }
                     }
@@ -786,7 +833,7 @@ impl MyWndProc {
                 right: 0,
                 bottom: 0,
             };
-            if GetWindowRect(hwnd, &mut window_rect) == 0 {
+            if GetWindowRect(hwnd, &mut window_rect) == ERROR {
                 warn!(
                     "failed to get window rect: {}",
                     Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
@@ -806,7 +853,12 @@ impl MyWndProc {
             }
             // Convert client rect to screen coords to match the window rect
             let mut client_screen_offset_point = POINT { x: 0, y: 0 };
-            ClientToScreen(hwnd, &mut client_screen_offset_point);
+            if ClientToScreen(hwnd, &mut client_screen_offset_point) == ERROR {
+                warn!(
+                    "Error calling ClientToScreen in get_client_area-specs: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            };
             let top_offset = client_screen_offset_point.y - window_rect.top;
 
             let left_offset = client_screen_offset_point.x - window_rect.left;
