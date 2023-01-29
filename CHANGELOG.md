@@ -17,6 +17,8 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Fixed
 
+- AddTab now pub to library users. ([#2351] by [@cbondurant])
+
 ### Visual
 
 ### Docs
@@ -1192,6 +1194,7 @@ Last release without a changelog :(
 [#2345]: https://github.com/linebender/druid/pull/2345
 [#2347]: https://github.com/linebender/druid/pull/2347
 [#2348]: https://github.com/linebender/druid/pull/2348
+[#2351]: https://github.com/linebender/druid/pull/2351
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
