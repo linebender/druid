@@ -746,7 +746,12 @@ impl MyWndProc {
                                             Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
                                         );
                                     } else {
-                                        let result = CombineRgn(win32_region, header_rect, region_tmp, RGN_OR);
+                                        let result = CombineRgn(
+                                            win32_region,
+                                            header_rect,
+                                            region_tmp,
+                                            RGN_OR,
+                                        );
                                         DeleteObject(header_rect as _);
                                         if result == ERROR {
                                             warn!(
