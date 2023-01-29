@@ -1316,7 +1316,7 @@ impl WindowHandle {
     }
 
     pub fn set_input_region(&self, _region: Option<Region>) {
-        // Explicit setting of input region necessary for mac, due to it automatically
+        // Explicit setting of input region unnecessary for mac, due to it automatically
         // doing this for transparent regions.
         // However, changing the region normally changes the shape, so this
         // can result in the need to invalidate the shadow.
