@@ -1316,8 +1316,14 @@ impl WindowHandle {
     }
 
     pub fn set_input_region(&self, _region: Option<Region>) {
-        // Not necessary for mac, due to it automatically doing
-        // this for transparent regions.
+        // Explicit setting of input region necessary for mac, due to it automatically
+        // doing this for transparent regions.
+        // However, changing the region normally changes the shape, so this
+        // can result in the need to invalidate the shadow.
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            window.invalidateShadow();
+        }
     }
 
     pub fn set_always_on_top(&self, always_on_top: bool) {
