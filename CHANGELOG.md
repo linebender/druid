@@ -18,6 +18,8 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Fixed
 
+- `AddTab` is now properly exported from the `widget` module. ([#2351] by [@cbondurant])
+
 ### Visual
 
 ### Docs
@@ -1197,6 +1199,7 @@ Last release without a changelog :(
 [#2347]: https://github.com/linebender/druid/pull/2347
 [#2348]: https://github.com/linebender/druid/pull/2348
 [#2328]: https://github.com/linebender/druid/pull/2328
+[#2351]: https://github.com/linebender/druid/pull/2351
 [#2352]: https://github.com/linebender/druid/pull/2352
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
