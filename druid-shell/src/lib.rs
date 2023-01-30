@@ -45,8 +45,7 @@
 extern crate gtk_rs as gtk;
 
 #[cfg(feature = "image")]
-pub use image;
-
+pub use piet::image_crate as image;
 pub use piet::kurbo;
 pub use piet_common as piet;
 
