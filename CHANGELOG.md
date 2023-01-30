@@ -17,7 +17,7 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Fixed
 
-- AddTab now pub to library users. ([#2351] by [@cbondurant])
+- `AddTab` is now properly exported from the `widget` module. ([#2351] by [@cbondurant])
 
 ### Visual
 
@@ -26,6 +26,8 @@ You can find its changes [documented below](#082---2023-01-27).
 ### Examples
 
 ### Maintenance
+
+- Synchronized `kurbo` and `image` imports with `piet-common`. ([#2352] by [@xStrom])
 
 ### Outside News
 
@@ -1195,6 +1197,7 @@ Last release without a changelog :(
 [#2347]: https://github.com/linebender/druid/pull/2347
 [#2348]: https://github.com/linebender/druid/pull/2348
 [#2351]: https://github.com/linebender/druid/pull/2351
+[#2352]: https://github.com/linebender/druid/pull/2352
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2

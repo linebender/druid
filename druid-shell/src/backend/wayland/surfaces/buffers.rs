@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use kurbo::{Rect, Size};
+use crate::kurbo::{Rect, Size};
 use nix::{
     errno::Errno,
     fcntl::OFlag,
