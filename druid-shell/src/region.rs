@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use kurbo::{BezPath, Rect, Shape, Vec2};
+use crate::kurbo::{BezPath, Rect, Shape, Vec2};
 
 /// A union of rectangles, useful for describing an area that needs to be repainted.
 #[derive(Clone, Debug)]
