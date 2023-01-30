@@ -85,7 +85,7 @@ console_error_panic_hook = { version = "0.1.7" }
 [dev-dependencies]
 float-cmp = { version = "0.9.0", features = ["std"], default-features = false }
 tempfile = "3.3.0"
-piet-common = { version = "0.6.1", features = ["png"] }
+piet-common = { version = "0.6.2", features = ["png"] }
 pulldown-cmark = { version = "0.8.0", default-features = false }
 test-log = { version = "0.2.11", features = ["trace"], default-features = false }
 # test-env-log needs it
