@@ -422,7 +422,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
       # On Linux also attempt docs for Wayland.
@@ -430,7 +430,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
