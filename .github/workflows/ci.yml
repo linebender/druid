@@ -364,7 +364,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --doc --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --doc --features=svg,image,im,raw-win-handle
 
 
   check-docs:
@@ -376,16 +376,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install libgtk-dev
+      - name: install linux dependencies
         run: |
           sudo apt update
-          sudo apt install libgtk-3-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo apt install libgtk-3-dev libwayland-dev libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install stable toolchain
+      - name: install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           profile: minimal
           override: true
 
@@ -397,13 +397,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im --no-deps --document-private-items
+          args: --manifest-path=druid/Cargo.toml --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid-derive
         uses: actions-rs/cargo@v1
@@ -422,7 +422,15 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11 --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items
+        if: contains(matrix.os, 'ubuntu')
+
+      # On Linux also attempt docs for Wayland.
+      - name: cargo doc druid-shell (Wayland)
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
