@@ -8,6 +8,7 @@ You can find its changes [documented below](#082---2023-01-27).
 ### Highlights
 
 ### Added
+
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
 
 ### Changed
@@ -1196,11 +1197,11 @@ Last release without a changelog :(
 [#2340]: https://github.com/linebender/druid/pull/2340
 [#2343]: https://github.com/linebender/druid/pull/2343
 [#2345]: https://github.com/linebender/druid/pull/2345
+[#2346]: https://github.com/linebender/druid/pull/2346
 [#2347]: https://github.com/linebender/druid/pull/2347
 [#2348]: https://github.com/linebender/druid/pull/2348
 [#2351]: https://github.com/linebender/druid/pull/2351
 [#2352]: https://github.com/linebender/druid/pull/2352
-[#2346]: https://github.com/linebender/druid/pull/2346
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
