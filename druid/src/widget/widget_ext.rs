@@ -108,7 +108,7 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).expand_height()
     }
 
-    /// Wrap this widget in a [`Container`] with the provided `background`.
+    /// Wrap this widget in a [`Container`] with the provided background `brush`.
     ///
     /// See [`Container::background`] for more information.
     fn background(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
