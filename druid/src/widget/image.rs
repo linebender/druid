@@ -260,7 +260,7 @@ mod tests {
     use crate::piet::ImageFormat;
     use test_log::test;
 
-    /// Painting an empty image shouldn't crash druid.
+    /// Painting an empty image shouldn't crash Druid.
     #[test]
     fn empty_paint() {
         use crate::{tests::harness::Harness, WidgetId};

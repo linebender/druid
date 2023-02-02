@@ -36,7 +36,7 @@ pub(crate) type SelectorSymbol = &'static str;
 /// The type parameter `T` specifies the command's payload type.
 /// See [`Command`] for more information.
 ///
-/// Certain `Selector`s are defined by druid, and have special meaning
+/// Certain `Selector`s are defined by Druid, and have special meaning
 /// to the framework; these are listed in the [`druid::commands`] module.
 ///
 /// [`Command`]: struct.Command.html
@@ -161,7 +161,7 @@ pub enum Target {
     Auto,
 }
 
-/// Commands with special meaning, defined by druid.
+/// Commands with special meaning, defined by Druid.
 ///
 /// See [`Command`] for more info.
 pub mod sys {
@@ -173,7 +173,7 @@ pub mod sys {
         FileDialogOptions, FileInfo, Rect, SingleUse, WidgetId, WindowConfig,
     };
 
-    /// Quit the running application. This command is handled by the druid library.
+    /// Quit the running application. This command is handled by the Druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 
     /// Hide the application. (mac only)
@@ -549,9 +549,9 @@ impl Notification {
         self.source
     }
 
-    /// Builder-style method to set warn_if_unused.
+    /// Builder-style method to set `warn_if_unused`.
     ///
-    /// The default is true.
+    /// The default is `true`.
     pub fn warn_if_unused(mut self, warn_if_unused: bool) -> Self {
         self.warn_if_unused = warn_if_unused;
         self

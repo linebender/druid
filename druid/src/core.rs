@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The fundamental druid types.
+//! The fundamental Druid types.
 
 use std::collections::VecDeque;
 use tracing::{trace, trace_span, warn};
@@ -38,7 +38,7 @@ pub(crate) type CommandQueue = VecDeque<Command>;
 /// but rather contain a `WidgetPod`, which has additional state needed
 /// for layout and for the widget to participate in event flow.
 ///
-/// `WidgetPod` will translate internal druid events to regular events,
+/// `WidgetPod` will translate internal Druid events to regular events,
 /// synthesize additional events of interest, and stop propagation when it makes sense.
 ///
 /// This struct also contains the previous data for a widget, which is

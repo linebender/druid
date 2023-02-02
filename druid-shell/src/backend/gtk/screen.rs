@@ -14,9 +14,9 @@
 
 //! GTK Monitors and Screen information.
 
+use crate::kurbo::{Point, Rect, Size};
 use crate::screen::Monitor;
 use gtk::gdk::{Display, DisplayManager, Rectangle};
-use kurbo::{Point, Rect, Size};
 
 fn translate_gdk_rectangle(r: Rectangle) -> Rect {
     Rect::from_origin_size(

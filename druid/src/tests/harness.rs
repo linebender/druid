@@ -33,7 +33,7 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// You create a `Harness` with some widget and its initial data; then you
 /// can send events to that widget and verify that expected conditions are met.
 ///
-/// Harness tries to act like the normal druid environment; for instance, it will
+/// Harness tries to act like the normal Druid environment; for instance, it will
 /// attempt to dispatch any `Command`s that are sent during event handling, and
 /// it will call `update` automatically after an event.
 ///
@@ -42,7 +42,7 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// `children_changed` flags on the window after an update.
 ///
 /// In addition, layout and paint **are not called automatically**. This is
-/// because paint is triggered by druid-shell, and there is no druid-shell here;
+/// because paint is triggered by `druid-shell`, and there is no `druid-shell` here;
 ///
 /// if you want those functions run you will need to call them yourself.
 ///

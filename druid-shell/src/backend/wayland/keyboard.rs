@@ -135,7 +135,7 @@ impl Keyboard {
         event.mods = self.xkb_mods.get();
 
         if let Err(cause) = keystroke.queue.send(event) {
-            tracing::error!("failed to send druid key event: {:?}", cause);
+            tracing::error!("failed to send Druid key event: {:?}", cause);
         }
     }
 

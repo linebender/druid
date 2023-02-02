@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! X11 implementation of druid-shell.
+//! X11 implementation of `druid-shell`.
 
 // TODO(x11/render_improvements): screen is currently flashing when resizing in perftest.
 //     Might be related to the "sleep scheduler" in XWindow::render()?

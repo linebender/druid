@@ -26,7 +26,7 @@ use tracing::{instrument, trace};
 /// A wrapper for its widget subtree to have access to a part
 /// of its parent's data.
 ///
-/// Every widget in druid is instantiated with access to data of some
+/// Every widget in Druid is instantiated with access to data of some
 /// type; the root widget has access to the entire application data.
 /// Often, a part of the widget hierarchy is only concerned with a part
 /// of that data. The `LensWrap` widget is a way to "focus" the data

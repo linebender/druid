@@ -371,7 +371,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                 self.old_buffer = self.buffer.clone();
             } else {
                 // textbox is not well equipped to deal with the fact that, in
-                // druid, data can change anywhere in the tree. If we are actively
+                // Druid, data can change anywhere in the tree. If we are actively
                 // editing, and new data arrives, we ignore the new data and keep
                 // editing; the alternative would be to cancel editing, which
                 // could also make sense.

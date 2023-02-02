@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The implementation of the WinHandler trait (druid-shell integration).
+//! The implementation of the `WinHandler` trait (`druid-shell` integration).
 
 use std::any::{Any, TypeId};
 use std::cell::RefCell;
@@ -45,7 +45,7 @@ pub(crate) const RUN_COMMANDS_TOKEN: IdleToken = IdleToken::new(1);
 /// A token we are called back with if an external event was submitted.
 pub(crate) const EXT_EVENT_IDLE_TOKEN: IdleToken = IdleToken::new(2);
 
-/// The struct implements the druid-shell `WinHandler` trait.
+/// The struct implements the `druid-shell` `WinHandler` trait.
 ///
 /// One `DruidHandler` exists per window.
 ///
@@ -60,7 +60,7 @@ pub struct DruidHandler<T> {
 
 /// The top level event handler.
 ///
-/// This corresponds to the `AppHandler` trait in druid-shell, which is only
+/// This corresponds to the `AppHandler` trait in `druid-shell`, which is only
 /// used to handle events that are not associated with a window.
 ///
 /// Currently, this means only menu items on macOS when no window is open.
@@ -74,7 +74,7 @@ pub(crate) struct AppState<T> {
     inner: Rc<RefCell<InnerAppState<T>>>,
 }
 
-/// The information for forwarding druid-shell's file dialog reply to the right place.
+/// The information for forwarding `druid-shell`'s file dialog reply to the right place.
 struct DialogInfo {
     /// The window to send the command to.
     id: WindowId,
@@ -641,7 +641,7 @@ impl<T: Data> AppState<T> {
         }
     }
 
-    /// Handle a 'command' message from druid-shell. These map to an item
+    /// Handle a 'command' message from `druid-shell`. These map to an item
     /// in an application, window, or context (right-click) menu.
     ///
     /// If the menu is  associated with a window (the general case) then

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example shows a how a single-line text field might be implemented for druid-shell.
+//! This example shows a how a single-line text field might be implemented for `druid-shell`.
 //! Beyond the omission of multiple lines and text wrapping, it also is missing many motions
 //! (like "move to previous word") and bidirectional text support.
 

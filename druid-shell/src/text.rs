@@ -54,7 +54,7 @@
 //! 3. The user presses a key on the keyboard. The platform first calls
 //!    `WinHandler::key_down`. If this method returns `true`, the application
 //!    has indicated the keypress was captured, and we skip the remaining steps.
-//! 4. If `key_down` returned `false`, druid-shell forwards the key event to the
+//! 4. If `key_down` returned `false`, `druid-shell` forwards the key event to the
 //!    platform's text input system
 //! 5. The platform, in response to either this key event or some other user
 //!    action, determines it's time for some text input. It calls
@@ -97,7 +97,7 @@
 //! ## Supported Platforms
 //!
 //! Currently, `druid-shell` text input is fully implemented on macOS. Our goal
-//! is to have full support for all druid-shell targets, but for now,
+//! is to have full support for all `druid-shell` targets, but for now,
 //! `InputHandler` calls are simulated from keypresses on other platforms, which
 //! doesn't allow for IME input, dead keys, etc.
 
