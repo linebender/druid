@@ -108,11 +108,18 @@ pub trait WidgetExt<T: Data>: Widget<T> + Sized + 'static {
         SizedBox::new(self).expand_height()
     }
 
-    /// Wrap this widget in a [`Container`] with the provided `background`.
+    /// Wrap this widget in a [`Container`] with the provided background `brush`.
     ///
     /// See [`Container::background`] for more information.
     fn background(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
         Container::new(self).background(brush)
+    }
+
+    /// Wrap this widget in a [`Container`] with the provided foreground `brush`.
+    ///
+    /// See [`Container::foreground`] for more information.
+    fn foreground(self, brush: impl Into<BackgroundBrush<T>>) -> Container<T> {
+        Container::new(self).foreground(brush)
     }
 
     /// Wrap this widget in a [`Container`] with the given border.
@@ -302,17 +309,21 @@ mod tests {
         // this should be Container<Align<Container<Slider>>>
         let widget = Slider::new()
             .background(Color::BLACK)
+            .foreground(Color::WHITE)
             .align_left()
             .border(Color::BLACK, 1.0);
         assert!(widget.border_is_some());
         assert!(!widget.background_is_some());
+        assert!(!widget.foreground_is_some());
 
         // this should be Container<Slider>
         let widget = Slider::new()
             .background(Color::BLACK)
-            .border(Color::BLACK, 1.0);
+            .border(Color::BLACK, 1.0)
+            .foreground(Color::WHITE);
         assert!(widget.background_is_some());
         assert!(widget.border_is_some());
+        assert!(widget.foreground_is_some());
     }
 
     #[test]
