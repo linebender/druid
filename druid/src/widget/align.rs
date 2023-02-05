@@ -14,6 +14,7 @@
 
 //! A widget that aligns its child (for example, centering it).
 
+use crate::contexts::ChangeCtx;
 use crate::debug_state::DebugState;
 use crate::widget::prelude::*;
 use crate::{Data, Rect, Size, UnitPoint, WidgetPod};
@@ -25,6 +26,8 @@ pub struct Align<T> {
     child: WidgetPod<T, Box<dyn Widget<T>>>,
     width_factor: Option<f64>,
     height_factor: Option<f64>,
+    in_viewport: bool,
+    viewport: Rect,
 }
 
 impl<T> Align<T> {
@@ -39,6 +42,8 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: None,
             height_factor: None,
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
         }
     }
 
@@ -64,6 +69,8 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: None,
             height_factor: Some(1.0),
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
         }
     }
 
@@ -74,7 +81,46 @@ impl<T> Align<T> {
             child: WidgetPod::new(child).boxed(),
             width_factor: Some(1.0),
             height_factor: None,
+            in_viewport: false,
+            viewport: Rect::new(0.0, 0.0, f64::INFINITY, f64::INFINITY),
         }
+    }
+
+    /// The `Align` widget should only consider the visible space for alignment.
+    ///
+    /// When the `Align` widget is fully visible, this option has no effect. When the align widget
+    /// gets scrolled out of view, the wrapped widget will move to stay inside the visible area.
+    /// The wrapped widget will always stay inside the bounds of the `Align` widget.
+    pub fn in_viewport(mut self) -> Self {
+        self.in_viewport = true;
+        self
+    }
+
+    fn align(&mut self, ctx: &mut impl ChangeCtx, my_size: Size) {
+        let size = self.child.layout_rect().size();
+
+        let extra_width = (my_size.width - size.width).max(0.);
+        let extra_height = (my_size.height - size.height).max(0.);
+
+        // The part of our layout_rect the origin of the child is allowed to be in
+        let mut extra_space = Rect::new(0., 0., extra_width, extra_height);
+
+        if self.in_viewport {
+            // The part of the viewport the origin of the child is allowed to be in
+            let viewport =
+                Rect::from_origin_size(self.viewport.origin(), self.viewport.size() - size);
+
+            // Essentially Rect::intersect but if the two rectangles dont intersect this
+            // implementation chooses the point closed to viewpor inside extra_space to always give
+            // the child a valid origin.
+            extra_space.x0 = extra_space.x0.clamp(viewport.x0, extra_space.x1);
+            extra_space.y0 = extra_space.y0.clamp(viewport.y0, extra_space.y1);
+            extra_space.x1 = extra_space.x1.clamp(extra_space.x0, viewport.x1);
+            extra_space.y1 = extra_space.y1.clamp(extra_space.y0, viewport.y1);
+        }
+
+        let origin = self.align.resolve(extra_space).expand();
+        self.child.set_origin(ctx, origin);
     }
 }
 
@@ -86,6 +132,14 @@ impl<T: Data> Widget<T> for Align<T> {
 
     #[instrument(name = "Align", level = "trace", skip(self, ctx, event, data, env))]
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        // THis needs to happen before passing the event to the child.
+        if let LifeCycle::ViewContextChanged(view_ctx) = event {
+            self.viewport = view_ctx.clip;
+            if self.in_viewport {
+                self.align(ctx, ctx.size());
+            }
+        }
+
         self.child.lifecycle(ctx, event, data, env)
     }
 
@@ -118,27 +172,24 @@ impl<T: Data> Widget<T> for Align<T> {
             my_size.height = size.height * height;
         }
 
-        my_size = bc.constrain(my_size);
-        let extra_width = (my_size.width - size.width).max(0.);
-        let extra_height = (my_size.height - size.height).max(0.);
-        let origin = self
-            .align
-            .resolve(Rect::new(0., 0., extra_width, extra_height))
-            .expand();
-        self.child.set_origin(ctx, origin);
+        let my_size = bc.constrain(my_size);
+        self.align(ctx, my_size);
 
         let my_insets = self.child.compute_parent_paint_insets(my_size);
         ctx.set_paint_insets(my_insets);
+
         if self.height_factor.is_some() {
             let baseline_offset = self.child.baseline_offset();
             if baseline_offset > 0f64 {
-                ctx.set_baseline_offset(baseline_offset + extra_height / 2.0);
+                ctx.set_baseline_offset(
+                    my_size.height - self.child.layout_rect().y1 + baseline_offset,
+                );
             }
         }
 
         trace!(
             "Computed layout: origin={}, size={}, insets={:?}",
-            origin,
+            self.child.layout_rect().origin(),
             my_size,
             my_insets
         );

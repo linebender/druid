@@ -19,7 +19,7 @@ use std::ops::Add;
 use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
-use crate::{Data, KeyOrValue, Point, Rect, WidgetPod};
+use crate::{Data, Insets, KeyOrValue, Point, Rect, WidgetPod};
 use tracing::{instrument, trace};
 
 /// A container with either horizontal or vertical layout.
@@ -192,6 +192,108 @@ pub enum Axis {
     Horizontal,
     /// The y axis
     Vertical,
+}
+
+/// One of two sides of an Axis.
+///
+/// This value is useful combination with an axis to indicate a side of a Rectangle.
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Orientation {
+    /// Start
+    Start,
+    /// End
+    End,
+}
+
+impl Orientation {
+    /// brings two elements in visual order.
+    pub fn order<T>(&self, reference: T, side: T) -> (T, T) {
+        match self {
+            Orientation::Start => (side, reference),
+            Orientation::End => (reference, side),
+        }
+    }
+}
+
+/// Represents one of the sides of a Rectangle.
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    /// The top side of a rectangle (y0).
+    Top,
+    /// The left side of a rectangle (x0).
+    Left,
+    /// The right side of a rectangle (x1).
+    Right,
+    /// The bottom side of a rectangle (y1).
+    Bottom,
+}
+
+impl Side {
+    /// Creates a new Side from an Axis and an Orientation
+    pub fn pack(axis: Axis, orientation: Orientation) -> Self {
+        match (axis, orientation) {
+            (Axis::Horizontal, Orientation::Start) => Side::Left,
+            (Axis::Horizontal, Orientation::End) => Side::Right,
+            (Axis::Vertical, Orientation::Start) => Side::Top,
+            (Axis::Vertical, Orientation::End) => Side::Bottom,
+        }
+    }
+
+    /// The Axis of this Side
+    pub fn axis(&self) -> Axis {
+        match self {
+            Side::Top | Side::Bottom => Axis::Vertical,
+            Side::Left | Side::Right => Axis::Horizontal,
+        }
+    }
+
+    /// Orientation of this Side
+    pub fn orientation(&self) -> Orientation {
+        match self {
+            Side::Top | Side::Left => Orientation::Start,
+            Side::Bottom | Side::Right => Orientation::End,
+        }
+    }
+
+    /// returns a Vec2 which points in the direction of this Side.
+    pub fn direction(&self) -> Vec2 {
+        match self {
+            Side::Top => Vec2::new(0.0, -1.0),
+            Side::Bottom => Vec2::new(0.0, 1.0),
+            Side::Left => Vec2::new(-1.0, 0.0),
+            Side::Right => Vec2::new(1.0, 0.0),
+        }
+    }
+
+    /// returns the value of an `Inset` at this side.
+    pub fn from_inset(&self, insets: Insets) -> f64 {
+        match self {
+            Side::Top => insets.y0,
+            Side::Left => insets.x0,
+            Side::Right => insets.x1,
+            Side::Bottom => insets.y1,
+        }
+    }
+
+    /// creates an inset which has amount on this side and zero everywhere else.
+    pub fn as_insets(&self, amount: f64) -> Insets {
+        let mut insets = Insets::ZERO;
+        match self {
+            Side::Top => {
+                insets.y0 = amount;
+            }
+            Side::Left => {
+                insets.x0 = amount;
+            }
+            Side::Right => {
+                insets.x1 = amount;
+            }
+            Side::Bottom => {
+                insets.y1 = amount;
+            }
+        }
+        insets
+    }
 }
 
 impl Axis {
