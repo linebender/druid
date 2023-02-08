@@ -135,13 +135,7 @@
 //! the console to be shown, use `#![windows_subsystem = "windows"]` at the beginning of your
 //! crate.
 //!
-//! [`Widget`]: trait.Widget.html
-//! [`Data`]: trait.Data.html
-//! [`Lens`]: trait.Lens.html
-//! [`widget`]: ./widget/index.html
-//! [`Event`]: enum.Event.html
 //! [`druid-shell`]: druid_shell
-//! [`piet`]: piet
 //! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.8.2/druid/examples
 //! [Druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
@@ -231,13 +225,15 @@ pub use app_delegate::{AppDelegate, DelegateCtx};
 pub use box_constraints::BoxConstraints;
 pub use command::{sys as commands, Command, Notification, Selector, SingleUse, Target};
 pub use contexts::{EventCtx, LayoutCtx, LifeCycleCtx, PaintCtx, UpdateCtx};
-pub use data::Data;
+pub use data::*; // Wildcard because rustdoc has trouble inlining docs of two things called Data
 pub use dialog::FileDialogOptions;
+#[doc(inline)]
 pub use env::{Env, Key, KeyOrValue, Value, ValueType, ValueTypeError};
 pub use event::{Event, InternalEvent, InternalLifeCycle, LifeCycle, ViewContext};
 pub use ext_event::{ExtEventError, ExtEventSink};
 pub use lens::{Lens, LensExt};
 pub use localization::LocalizedString;
+#[doc(inline)]
 pub use menu::{sys as platform_menus, Menu, MenuItem};
 pub use mouse::MouseEvent;
 pub use util::Handled;
@@ -248,8 +244,10 @@ pub use window::{Window, WindowId};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use event::{DebugStateCell, StateCell, StateCheckFn};
 
+#[doc(hidden)]
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
 pub use piet::{FontFamily, FontStyle, FontWeight, TextAlignment};
+#[doc(hidden)]
 #[deprecated(since = "0.8.0", note = "import from druid::text module instead")]
 pub use text::{ArcStr, FontDescriptor, TextLayout};
 
@@ -261,9 +259,11 @@ pub use text::{ArcStr, FontDescriptor, TextLayout};
 /// alias is provided to make that transition easy, but in any case make
 /// an explicit choice whether to use meaning or physical location and
 /// use the appropriate type.
+#[doc(hidden)]
 #[deprecated(since = "0.7.0", note = "Use KbKey instead")]
 pub type KeyCode = KbKey;
 
+#[doc(hidden)]
 #[deprecated(since = "0.7.0", note = "Use Modifiers instead")]
 /// See [`Modifiers`](struct.Modifiers.html).
 pub type KeyModifiers = Modifiers;

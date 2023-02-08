@@ -255,6 +255,7 @@ pub enum Cursor {
     Pointer,
     Crosshair,
 
+    #[doc(hidden)]
     #[deprecated(
         since = "0.8.0",
         note = "This will be removed because it is not available on Windows."

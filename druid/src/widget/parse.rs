@@ -26,6 +26,7 @@ use crate::widget::prelude::*;
 use crate::Data;
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
+#[doc(hidden)]
 #[deprecated(since = "0.7.0", note = "Use the Formatter trait instead")]
 pub struct Parse<T> {
     widget: T,

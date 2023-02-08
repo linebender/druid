@@ -59,6 +59,7 @@ impl Region {
         }
     }
 
+    #[doc(hidden)]
     #[deprecated(since = "0.7.0", note = "Use bounding_box() instead")]
     // this existed on the previous Region type, and I've bumped into it
     // a couple times while updating
