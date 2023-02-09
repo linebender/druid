@@ -106,41 +106,19 @@ pub use tabs::{AddTab, TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTrans
 pub use textbox::TextBox;
 pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
-#[doc(hidden)]
 pub use widget::{Widget, WidgetId};
-#[doc(hidden)]
 pub use widget_ext::WidgetExt;
 pub use widget_wrapper::WidgetWrapper;
 pub use z_stack::ZStack;
 
 /// The types required to implement a [`Widget`].
-///
-/// # Structs
-/// [`BoxConstraints`](crate::BoxConstraints)\
-/// [`Env`](crate::Env)\
-/// [`EventCtx`](crate::EventCtx)\
-/// [`LayoutCtx`](crate::LayoutCtx)\
-/// [`LifeCycleCtx`](crate::LifeCycleCtx)\
-/// [`PaintCtx`](crate::PaintCtx)\
-/// [`Size`](crate::Size)\
-/// [`UpdateCtx`](crate::UpdateCtx)\
-/// [`WidgetId`](crate::WidgetId)\
-///
-/// # Enums
-/// [`Event`](crate::Event)\
-/// [`LifeCycle`](crate::LifeCycle)\
-///
-/// # Traits
-/// [`Data`](crate::Data)\
-/// [`RenderContext`](crate::RenderContext)\
-/// [`Widget`]
-///
-/// [`Widget`]: crate::Widget
-// NOTE: \ at the end works as a line break, but skip on last line!
 pub mod prelude {
-    #[doc(hidden)]
+    // Wildcard because rustdoc has trouble inlining docs of two things called Data
+    pub use crate::data::*;
+
+    #[doc(inline)]
     pub use crate::{
-        BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+        BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
         RenderContext, Size, UpdateCtx, Widget, WidgetId,
     };
 }
