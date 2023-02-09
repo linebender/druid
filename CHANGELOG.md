@@ -25,6 +25,8 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Docs
 
+- Added info about git symlinks to `CONTRIBUTING.md`. ([#2349] by [@xStrom])
+
 ### Examples
 
 ### Maintenance
@@ -1200,6 +1202,7 @@ Last release without a changelog :(
 [#2346]: https://github.com/linebender/druid/pull/2346
 [#2347]: https://github.com/linebender/druid/pull/2347
 [#2348]: https://github.com/linebender/druid/pull/2348
+[#2349]: https://github.com/linebender/druid/pull/2349
 [#2351]: https://github.com/linebender/druid/pull/2351
 [#2352]: https://github.com/linebender/druid/pull/2352
 

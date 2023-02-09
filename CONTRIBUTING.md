@@ -173,15 +173,69 @@ We need to update the screenshots. This involves:
 Once all the docs, cargo files and screenshots have been updated, we need to
 publish the crate to crates.io.
 
+#### Ensure your git setup supports symbolic links
+
+Druid makes use of symbolic links but not every git configuration has symlink support enabled,
+[most commonly on Windows](https://github.com/git-for-windows/git/wiki/Symbolic-Links).
+Make sure your configuration has it enabled. The following command must not return `false`.
+
+```sh
+git config core.symlinks
+```
+
+If the above command returns `false` then you need to enable this setting and reset your clone.
+
+##### Enabling git supprot for symbolic links on Windows
+
+First you need to make sure your user account has the `SeCreateSymbolicLinkPrivilege` privilege.
+Easiest test for this is to open `cmd.exe` and run the following:
+
+```sh
+echo "Hello" > original.txt
+mklink link.txt original.txt
+type link.txt
+```
+
+If the `mklink` command didn't complain about privileges and the final `type` command prints out
+*Hello* then you have the privilege. If there is a failure, then you need to enable the privilege.
+
+There are [many ways to enable this privilege](https://github.com/git-for-windows/git/wiki/Symbolic-Links#allowing-non-administrators-to-create-symbolic-links),
+but we'll cover two here. First option is to just enable *developer mode* from the settings app.
+This is a bit heavyweight and changes a lot of settings but it will work. Another more precise
+option is to run `gpedit.msc` as Administrator, navigate to *Computer Configuration >
+Windows Settings > Security Settings > Local Policies > User Rights Assignment* and add your
+account name to the *Create symbolic links* policy. Then you will need to log out and back in.
+
+Once you have the system privilege you must change your git system configuration, which you can
+do by executing the following command as Administrator:
+
+```sh
+git config --system core.symlinks true
+```
+
+Then you must also change the configuration of your local clone of the Druid repository,
+by executing the following commands in the repo directory:
+
+```sh
+git config --local core.symlinks true
+git reset --hard
+```
+
+Now you should be all set.
+
+#### Publishing the crates
+
+We need to publish the crates in a specific order, because the `druid` crate depends on the two
+other crates. We use `--no-verify` for `druid-derive` to deal with a cyclic dependency on the
+`druid` version which we haven't published yet.
+
 ```sh
 cargo publish --manifest-path="druid-derive/Cargo.toml" --no-verify
 cargo publish --manifest-path="druid-shell/Cargo.toml"
 cargo publish --manifest-path="druid/Cargo.toml"
 ```
 
-We need to run the commands in this order, because the druid crate depends on the two other crates. We use `--no-verify` for `druid-derive`, because the crate has a cyclic dependency on `druid` that might cause problem, since we haven't published the latest version of `druid` yet.
-
-<!--- TODO: check that the above is actually true. I'm not sure we really need `--no-verify` --->
+#### Tagging the release
 
 Once we've published our crate, we create a new git tag:
 
