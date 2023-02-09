@@ -25,6 +25,7 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Docs
 
+- Fixed `rustdoc` example scraping configuration. ([#2353] by [@xStrom])
 - Added info about git symlinks to `CONTRIBUTING.md`. ([#2349] by [@xStrom])
 
 ### Examples
@@ -1205,6 +1206,7 @@ Last release without a changelog :(
 [#2349]: https://github.com/linebender/druid/pull/2349
 [#2351]: https://github.com/linebender/druid/pull/2351
 [#2352]: https://github.com/linebender/druid/pull/2352
+[#2353]: https://github.com/linebender/druid/pull/2353
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2

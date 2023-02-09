@@ -11,17 +11,11 @@ keywords = ["gui", "ui", "toolkit"]
 edition = "2021"
 
 [package.metadata.docs.rs]
-# The "svg" and "image" features have doc clashes that cause undefined output in docs.
-# See https://github.com/rust-lang/cargo/issues/6313 for more information.
-# Once cargo doc becomes smart enough to handle multiple versions of the same crate,
-# the "svg" and "image" features should be enabled for the docs.rs output.
-features = ["im"]
+features = ["raw-win-handle", "im", "svg", "image"]
 rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
-# TODO: Enable this again after figuring out how the flags have changed.
-#       Also be sure to add nightly compiler docs building to CI
-#       to catch any changes to the flags early.
-#cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
+# rustdoc-scrape-examples tracking issue https://github.com/rust-lang/rust/issues/88791
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 
 [features]
 default = ["gtk"]
@@ -93,6 +87,12 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
 open = "1.7.1"
+
+[[example]]
+name = "hello"
+# This actually enables scraping for all examples, not just `hello`.
+# However it is possible to add another [[example]] entry to disable it for a specific example.
+doc-scrape-examples = true
 
 [[example]]
 name = "cursor"
