@@ -131,7 +131,7 @@ impl ClickCounter {
         self.max_distance.set(distance)
     }
 
-    /// Return the click count for a click occuring now, at the provided position.
+    /// Return the click count for a click occurring now, at the provided position.
     pub fn count_for_click(&self, click_pos: Point) -> u8 {
         let click_time = Instant::now();
         let last_time = self.last_click.replace(click_time);

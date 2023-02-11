@@ -365,7 +365,7 @@ impl ClipboardState {
         if Some(event.owner) == window {
             // We lost ownership of the selection, clean up
             if let Some(mut contents) = self.contents.take() {
-                contents.destroy(&*self.connection)?;
+                contents.destroy(&self.connection)?;
             }
         }
         Ok(())
@@ -453,7 +453,7 @@ impl ClipboardState {
             property: event.property,
             time: event.time,
         };
-        conn.send_event(false, event.requestor, EventMask::NO_EVENT, &event)?;
+        conn.send_event(false, event.requestor, EventMask::NO_EVENT, event)?;
 
         Ok(())
     }
@@ -473,7 +473,7 @@ impl ClipboardState {
             .iter_mut()
             .find(|transfer| matches(transfer, event))
         {
-            let done = transfer.continue_incremental(&*self.connection)?;
+            let done = transfer.continue_incremental(&self.connection)?;
             if done {
                 debug!("INCR transfer finished");
                 // Remove the transfer
@@ -630,7 +630,7 @@ impl Drop for WindowContainer<'_> {
 
 fn maximum_property_length(connection: &XCBConnection) -> usize {
     let change_property_header_size = 24;
-    // Apply an arbitraty limit to the property size to not stress the server too much
+    // Apply an arbitrary limit to the property size to not stress the server too much
     let max_request_length = connection
         .maximum_request_bytes()
         .min(usize::from(u16::MAX));
@@ -650,7 +650,7 @@ fn reject_transfer(
         property: x11rb::NONE,
         time: event.time,
     };
-    conn.send_event(false, event.requestor, EventMask::NO_EVENT, &event)?;
+    conn.send_event(false, event.requestor, EventMask::NO_EVENT, event)?;
     Ok(())
 }
 
@@ -689,17 +689,8 @@ fn wait_for_event_with_deadline(
         // Wait for the socket to be readable via poll() and try again
         match poll(&mut poll_fds, poll_timeout) {
             Ok(_) => {}
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
-            Err(e) => return Err(nix_error_to_io(e).into()),
+            Err(nix::errno::Errno::EINTR) => {}
+            Err(e) => return Err(std::io::Error::from(e).into()),
         }
-    }
-}
-
-fn nix_error_to_io(e: nix::Error) -> std::io::Error {
-    use std::io::{Error, ErrorKind};
-    match e {
-        nix::Error::Sys(errno) => errno.into(),
-        nix::Error::InvalidPath | nix::Error::InvalidUtf8 => Error::new(ErrorKind::InvalidInput, e),
-        nix::Error::UnsupportedOperation => std::io::Error::new(ErrorKind::Other, e),
     }
 }

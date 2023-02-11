@@ -27,7 +27,7 @@ pub enum Error {
         version: u32,
         inner: Arc<wl::GlobalError>,
     },
-    /// An unexpected error occurred. It's not handled by druid-shell/wayland, so you should
+    /// An unexpected error occurred. It's not handled by `druid-shell`/wayland, so you should
     /// terminate the app.
     Fatal(Arc<dyn StdError + 'static>),
     String(ErrorString),
@@ -62,16 +62,15 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Self::Connect(e) => write!(f, "could not connect to the wayland server: {:?}", e),
+            Self::Connect(e) => write!(f, "could not connect to the wayland server: {e:?}"),
             Self::Global { name, version, .. } => write!(
                 f,
-                "a required wayland global ({}@{}) was unavailable",
-                name, version
+                "a required wayland global ({name}@{version}) was unavailable"
             ),
-            Self::Fatal(e) => write!(f, "an unhandled error occurred: {:?}", e),
-            Self::Err(e) => write!(f, "an unhandled error occurred: {:?}", e),
+            Self::Fatal(e) => write!(f, "an unhandled error occurred: {e:?}"),
+            Self::Err(e) => write!(f, "an unhandled error occurred: {e:?}"),
             Self::String(e) => e.fmt(f),
-            Self::InvalidParent(id) => write!(f, "invalid parent window for popup: {:?}", id),
+            Self::InvalidParent(id) => write!(f, "invalid parent window for popup: {id:?}"),
         }
     }
 }

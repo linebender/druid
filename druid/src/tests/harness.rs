@@ -33,7 +33,7 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// You create a `Harness` with some widget and its initial data; then you
 /// can send events to that widget and verify that expected conditions are met.
 ///
-/// Harness tries to act like the normal druid environment; for instance, it will
+/// Harness tries to act like the normal Druid environment; for instance, it will
 /// attempt to dispatch any `Command`s that are sent during event handling, and
 /// it will call `update` automatically after an event.
 ///
@@ -42,7 +42,7 @@ pub(crate) const DEFAULT_SIZE: Size = Size::new(400., 400.);
 /// `children_changed` flags on the window after an update.
 ///
 /// In addition, layout and paint **are not called automatically**. This is
-/// because paint is triggered by druid-shell, and there is no druid-shell here;
+/// because paint is triggered by `druid-shell`, and there is no `druid-shell` here;
 ///
 /// if you want those functions run you will need to call them yourself.
 ///
@@ -94,7 +94,7 @@ impl<T: Data> Harness<'_, T> {
     /// For lifetime reasons™, we cannot just make a harness. It's complicated.
     /// I tried my best.
     ///
-    /// This function is a subset of [create_with_render](struct.Harness.html#create_with_render)
+    /// This function is a subset of [create_with_render](Harness::create_with_render)
     pub fn create_simple(
         data: T,
         root: impl Widget<T> + 'static,
@@ -117,7 +117,7 @@ impl<T: Data> Harness<'_, T> {
     ///
     /// The create functions are used to test a widget. The function takes a `root` widget
     /// and a data structure and uses them to create a `Harness`. The Harness can then be interacted
-    /// with via the `harness_closure` callback. The the final render of
+    /// with via the `harness_closure` callback. The final render of
     /// the widget can be inspected with the `render_context_closure` callback.
     ///
     /// # Arguments
@@ -195,7 +195,7 @@ impl<T: Data> Harness<'_, T> {
     pub fn get_state(&mut self, widget: WidgetId) -> WidgetState {
         match self.try_get_state(widget) {
             Some(thing) => thing,
-            None => panic!("get_state failed for widget {:?}", widget),
+            None => panic!("get_state failed for widget {widget:?}"),
         }
     }
 
@@ -219,7 +219,7 @@ impl<T: Data> Harness<'_, T> {
     pub fn get_debug_state(&mut self, widget_id: WidgetId) -> DebugState {
         match self.try_get_debug_state(widget_id) {
             Some(thing) => thing,
-            None => panic!("get_debug_state failed for widget {:?}", widget_id),
+            None => panic!("get_debug_state failed for widget {widget_id:?}"),
         }
     }
 

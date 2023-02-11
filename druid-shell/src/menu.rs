@@ -54,7 +54,7 @@ impl Menu {
     /// Add an item to this menu.
     ///
     /// The `id` should uniquely identify this item. If the user selects this
-    /// item, the responsible [`WindowHandler`]'s [`command()`] method will
+    /// item, the responsible [`WinHandler`]'s [`command`] method will
     /// be called with this `id`. If the `enabled` argument is false, the menu
     /// item will be grayed out; the hotkey will also be disabled.
     /// If the `selected` argument is `true`, the menu will have a checkmark
@@ -63,21 +63,20 @@ impl Menu {
     /// with the system.
     ///
     ///
-    /// [`WindowHandler`]: trait.WindowHandler.html
-    /// [`command()`]: trait.WindowHandler.html#tymethod.command
-    /// [`HotKey`]: struct.HotKey.html
+    /// [`WinHandler`]: crate::WinHandler
+    /// [`command`]: crate::WinHandler::command
     pub fn add_item(
         &mut self,
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
-        self.0.add_item(id, text, key, enabled, selected)
+        self.0.add_item(id, text, key, selected, enabled)
     }
 
-    /// Add a seperator to the menu.
+    /// Add a separator to the menu.
     pub fn add_separator(&mut self) {
         self.0.add_separator()
     }

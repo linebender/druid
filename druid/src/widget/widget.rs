@@ -17,6 +17,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::prelude::*;
 use crate::debug_state::DebugState;
+use crate::widget::Axis;
 
 /// A unique identifier for a single [`Widget`].
 ///
@@ -36,17 +37,14 @@ use crate::debug_state::DebugState;
 /// You can give a widget an _explicit_ id by wrapping it in an [`IdentityWrapper`]
 /// widget, or by using the [`WidgetExt::with_id`] convenience method.
 ///
-/// If you set a `WidgetId` directly, you are resposible for ensuring that it
+/// If you set a `WidgetId` directly, you are responsible for ensuring that it
 /// is unique in time. That is: only one widget can exist with a given id at a
 /// given time.
 ///
-/// [`Widget`]: trait.Widget.html
-/// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
-/// [`Target`]: enum.Target.html
-/// [`WidgetPod`]: struct.WidgetPod.html
-/// [`LifeCycleCtx::widget_id`]: struct.LifeCycleCtx.html#method.widget_id
-/// [`WidgetExt::with_id`]: trait.WidgetExt.html#method.with_id
-/// [`IdentityWrapper`]: widget/struct.IdentityWrapper.html
+/// [`Target`]: crate::Target
+/// [`WidgetPod`]: crate::WidgetPod
+/// [`WidgetExt::with_id`]: super::WidgetExt::with_id
+/// [`IdentityWrapper`]: super::IdentityWrapper
 // this is NonZeroU64 because we regularly store Option<WidgetId>
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct WidgetId(NonZeroU64);
@@ -85,11 +83,9 @@ pub struct WidgetId(NonZeroU64);
 /// `WidgetPod` method on all their children. The `WidgetPod` applies
 /// logic to determine whether to recurse, as needed.
 ///
-/// [`event`]: #tymethod.event
-/// [`update`]: #tymethod.update
-/// [`Data`]: trait.Data.html
-/// [`Env`]: struct.Env.html
-/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`event`]: Widget::event
+/// [`update`]: Widget::update
+/// [`WidgetPod`]: crate::WidgetPod
 pub trait Widget<T> {
     /// Handle an event.
     ///
@@ -98,9 +94,7 @@ pub trait Widget<T> {
     /// requesting things from the [`EventCtx`], mutating the data, or submitting
     /// a [`Command`].
     ///
-    /// [`Event`]: enum.Event.html
-    /// [`EventCtx`]: struct.EventCtx.html
-    /// [`Command`]: struct.Command.html
+    /// [`Command`]: crate::Command
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env);
 
     /// Handle a life cycle notification.
@@ -114,9 +108,7 @@ pub trait Widget<T> {
     /// if a widget needs to mutate data, it can submit a [`Command`] that will
     /// be executed at the next opportunity.
     ///
-    /// [`LifeCycle`]: enum.LifeCycle.html
-    /// [`LifeCycleCtx`]: struct.LifeCycleCtx.html
-    /// [`Command`]: struct.Command.html
+    /// [`Command`]: crate::Command
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env);
 
     /// Update the widget's appearance in response to a change in the app's
@@ -137,15 +129,12 @@ pub trait Widget<T> {
     /// with any keys that are used in your widget, to see if they have changed;
     /// you can then request layout or paint as needed.
     ///
-    /// [`Data`]: trait.Data.html
-    /// [`Env`]: struct.Env.html
-    /// [`UpdateCtx`]: struct.UpdateCtx.html
-    /// [`env_changed`]: struct.UpdateCtx.html#method.env_changed
-    /// [`env_key_changed`]: struct.UpdateCtx.html#method.env_changed
-    /// [`request_paint`]: struct.UpdateCtx.html#method.request_paint
-    /// [`request_layout`]: struct.UpdateCtx.html#method.request_layout
-    /// [`layout`]: #tymethod.layout
-    /// [`paint`]: #tymethod.paint
+    /// [`env_changed`]: UpdateCtx::env_changed
+    /// [`env_key_changed`]: UpdateCtx::env_key_changed
+    /// [`request_paint`]: UpdateCtx::request_paint
+    /// [`request_layout`]: UpdateCtx::request_layout
+    /// [`layout`]: Widget::layout
+    /// [`paint`]: Widget::paint
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env);
 
     /// Compute layout.
@@ -166,8 +155,8 @@ pub trait Widget<T> {
     ///
     /// The layout strategy is strongly inspired by Flutter.
     ///
-    /// [`WidgetPod::layout`]: struct.WidgetPod.html#method.layout
-    /// [`set_origin`]: struct.WidgetPod.html#method.set_origin
+    /// [`WidgetPod::layout`]: crate::WidgetPod::layout
+    /// [`set_origin`]: crate::WidgetPod::set_origin
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size;
 
     /// Paint the widget appearance.
@@ -180,9 +169,6 @@ pub trait Widget<T> {
     /// children, or annotations (for example, scrollbars) by painting
     /// afterwards. In addition, they can apply masks and transforms on
     /// the render context, which is especially useful for scrolling.
-    ///
-    /// [`PaintCtx`]: struct.PaintCtx.html
-    /// [`RenderContext`]: trait.RenderContext.html
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env);
 
     #[doc(hidden)]
@@ -220,6 +206,38 @@ pub trait Widget<T> {
         DebugState {
             display_name: self.short_type_name().to_string(),
             ..Default::default()
+        }
+    }
+
+    /// Computes max intrinsic/preferred dimension of a widget on the provided axis.
+    ///
+    /// Max intrinsic/preferred dimension is the dimension the widget could take, provided infinite
+    /// constraint on that axis.
+    ///
+    /// If axis == Axis::Horizontal, widget is being asked to calculate max intrinsic width.
+    /// If axis == Axis::Vertical, widget is being asked to calculate max intrinsic height.
+    ///
+    /// Box constraints must be honored in intrinsics computation.
+    ///
+    /// AspectRatioBox is an example where constraints are honored. If height is finite, max intrinsic
+    /// width is *height * ratio*.
+    /// Only when height is infinite, child's max intrinsic width is calculated.
+    ///
+    /// Intrinsic is a *could-be* value. It's the value a widget *could* have given infinite constraints.
+    /// This does not mean the value returned by layout() would be the same.
+    ///
+    /// This method **must** return a finite value.
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match axis {
+            Axis::Horizontal => self.layout(ctx, bc, data, env).width,
+            Axis::Vertical => self.layout(ctx, bc, data, env).height,
         }
     }
 }
@@ -290,5 +308,17 @@ impl<T> Widget<T> for Box<dyn Widget<T>> {
 
     fn debug_state(&self, data: &T) -> DebugState {
         self.deref().debug_state(data)
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.deref_mut()
+            .compute_max_intrinsic(axis, ctx, bc, data, env)
     }
 }

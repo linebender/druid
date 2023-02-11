@@ -16,9 +16,9 @@
 
 use gtk::gdk::ModifierType;
 use gtk::{
-    AccelGroup, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
-    SeparatorMenuItemBuilder,
+    AccelGroup, CheckMenuItem, Menu as GtkMenu, MenuBar as GtkMenuBar, MenuItem as GtkMenuItem,
 };
+use gtk_rs::SeparatorMenuItem;
 
 use gtk::prelude::{GtkMenuExt, GtkMenuItemExt, MenuShellExt, WidgetExt};
 
@@ -39,6 +39,7 @@ enum MenuItem {
         name: String,
         id: u32,
         key: Option<HotKey>,
+        selected: Option<bool>,
         enabled: bool,
     },
     SubMenu(String, Menu),
@@ -65,14 +66,14 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        _selected: bool,
     ) {
-        // TODO: implement selected items
         self.items.push(MenuItem::Entry {
             name: strip_access_key(text),
             id,
             key: key.cloned(),
+            selected,
             enabled,
         });
     }
@@ -93,23 +94,19 @@ impl Menu {
                     name,
                     id,
                     key,
+                    selected,
                     enabled,
                 } => {
-                    let item = GtkMenuItem::with_label(&name);
-                    item.set_sensitive(enabled);
-
-                    if let Some(k) = key {
-                        register_accelerator(&item, accel_group, k);
-                    }
-
-                    let handle = handle.clone();
-                    item.connect_activate(move |_| {
-                        if let Some(state) = handle.state.upgrade() {
-                            state.handler.borrow_mut().command(id);
+                    if let Some(state) = selected {
+                        let item = CheckMenuItem::with_label(&name);
+                        if state {
+                            item.activate();
                         }
-                    });
-
-                    menu.append(&item);
+                        add_menu_entry(menu, handle, accel_group, &item, id, key, enabled);
+                    } else {
+                        let entry = GtkMenuItem::with_label(&name);
+                        add_menu_entry(menu, handle, accel_group, &entry, id, key, enabled);
+                    }
                 }
                 MenuItem::SubMenu(name, submenu) => {
                     let item = GtkMenuItem::with_label(&name);
@@ -117,7 +114,7 @@ impl Menu {
 
                     menu.append(&item);
                 }
-                MenuItem::Separator => menu.append(&SeparatorMenuItemBuilder::new().build()),
+                MenuItem::Separator => menu.append(&SeparatorMenuItem::new()),
             }
         }
     }
@@ -144,7 +141,39 @@ impl Menu {
     }
 }
 
-fn register_accelerator(item: &GtkMenuItem, accel_group: &AccelGroup, menu_key: HotKey) {
+fn add_menu_entry<
+    M: gtk::prelude::IsA<gtk::MenuShell>,
+    I: gtk::prelude::IsA<gtk::MenuItem> + gtk::prelude::IsA<gtk::Widget>,
+>(
+    menu: &mut M,
+    handle: &WindowHandle,
+    accel_group: &AccelGroup,
+    item: &I,
+    id: u32,
+    key: Option<HotKey>,
+    enabled: bool,
+) {
+    item.set_sensitive(enabled);
+
+    if let Some(k) = key {
+        register_accelerator(item, accel_group, k);
+    }
+
+    let handle = handle.clone();
+    item.connect_activate(move |_| {
+        if let Some(state) = handle.state.upgrade() {
+            state.handler.borrow_mut().command(id);
+        }
+    });
+
+    menu.append(item);
+}
+
+fn register_accelerator<M: GtkMenuItemExt + WidgetExt>(
+    item: &M,
+    accel_group: &AccelGroup,
+    menu_key: HotKey,
+) {
     let gdk_keyval = match &menu_key.key {
         KbKey::Character(text) => text.chars().next().unwrap() as u32,
         k => {

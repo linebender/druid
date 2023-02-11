@@ -1,4 +1,18 @@
-use kurbo::{Rect, Size};
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use crate::kurbo::{Rect, Size};
 use nix::{
     errno::Errno,
     fcntl::OFlag,
@@ -135,7 +149,7 @@ impl<const N: usize> Buffers<N> {
 
         window.paint(
             self.size.get(),
-            &mut *buf_data,
+            &mut buf_data,
             self.recreate_buffers.replace(false),
         );
     }
@@ -369,7 +383,7 @@ impl Shm {
                     self.size = new_size;
                     return Ok(());
                 }
-                Err(e) if matches!(e.as_errno(), Some(Errno::EINTR)) => {
+                Err(Errno::EINTR) => {
                     // continue (try again)
                 }
                 Err(e) => {
@@ -475,7 +489,7 @@ impl Mmap {
         len: usize,
         private: bool,
     ) -> Result<Self, nix::Error> {
-        assert!(offset + len <= size, "{0} + {1} <= {2}", offset, len, size,);
+        assert!(offset + len <= size, "{offset} + {len} <= {size}");
         let map_flags = if private {
             MapFlags::MAP_PRIVATE
         } else {
@@ -526,7 +540,7 @@ impl Drop for Mmap {
         }
     }
 }
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RawSize {
     pub width: i32,
     pub height: i32,
@@ -624,6 +638,7 @@ impl RawRect {
 impl From<Rect> for RawRect {
     fn from(r: Rect) -> Self {
         let max = i32::MAX as f64;
+        let r = r.expand();
         assert!(r.x0.abs() < max && r.y0.abs() < max && r.x1.abs() < max && r.y1.abs() < max);
         RawRect {
             x0: r.x0 as i32,

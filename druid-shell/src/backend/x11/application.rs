@@ -30,7 +30,9 @@ use x11rb::protocol::xproto::{
     self, ConnectionExt, CreateWindowAux, EventMask, Timestamp, Visualtype, WindowClass,
 };
 use x11rb::protocol::Event;
-use x11rb::resource_manager::Database as ResourceDb;
+use x11rb::resource_manager::{
+    new_from_default as new_resource_db_from_default, Database as ResourceDb,
+};
 use x11rb::xcb_ffi::XCBConnection;
 
 use crate::application::AppHandler;
@@ -210,7 +212,7 @@ impl Application {
         //
         // https://github.com/linebender/druid/pull/1025#discussion_r442777892
         let (conn, screen_num) = XCBConnection::connect(None)?;
-        let rdb = Rc::new(ResourceDb::new_from_default(&conn)?);
+        let rdb = Rc::new(new_resource_db_from_default(&conn)?);
         let xkb_context = xkb::Context::new();
         xkb_context.set_log_level(tracing::Level::DEBUG);
         use x11rb::protocol::xkb::ConnectionExt;
@@ -310,7 +312,7 @@ impl Application {
             .ok_or_else(|| anyhow!("Invalid screen num: {}", screen_num))?;
         let root_visual_type = util::get_visual_from_screen(screen)
             .ok_or_else(|| anyhow!("Couldn't get visual from screen"))?;
-        let argb_visual_type = util::get_argb_visual_type(&*connection, screen)?;
+        let argb_visual_type = util::get_argb_visual_type(&connection, screen)?;
 
         let timestamp = Rc::new(Cell::new(x11rb::CURRENT_TIME));
         let pending_events = Default::default();
@@ -504,7 +506,7 @@ impl Application {
 
     #[inline]
     pub(crate) fn atoms(&self) -> &AppAtoms {
-        &*self.atoms
+        &self.atoms
     }
 
     /// Returns `Ok(true)` if we want to exit the main loop.
@@ -684,9 +686,9 @@ impl Application {
             }
             Event::Error(e) => {
                 // TODO: if an error is caused by the present extension, disable it and fall back
-                // to copying pixels. This is blocked on
-                // https://github.com/psychon/x11rb/issues/503
-                return Err(x11rb::errors::ReplyError::from(*e).into());
+                // to copying pixels. This was blocked on
+                // https://github.com/psychon/x11rb/issues/503 but no longer is
+                return Err(x11rb::errors::ReplyError::from(e.clone()).into());
             }
             _ => {}
         }
@@ -846,10 +848,10 @@ fn drain_idle_pipe(idle_read: RawFd) -> Result<(), Error> {
     let mut read_buf = [0u8; 16];
     loop {
         match nix::unistd::read(idle_read, &mut read_buf[..]) {
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {}
+            Err(nix::errno::Errno::EINTR) => {}
             // According to write(2), this is the outcome of reading an empty, O_NONBLOCK
             // pipe.
-            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+            Err(nix::errno::Errno::EAGAIN) => {
                 break;
             }
             Err(e) => {
@@ -944,7 +946,7 @@ fn poll_with_timeout(
                 }
             }
 
-            Err(nix::Error::Sys(nix::errno::Errno::EINTR)) => {
+            Err(nix::errno::Errno::EINTR) => {
                 now = Instant::now();
             }
             Err(e) => return Err(e.into()),

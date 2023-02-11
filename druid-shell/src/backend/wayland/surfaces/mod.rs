@@ -1,6 +1,19 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use wayland_client::protocol::wl_shm::WlShm;
 use wayland_client::{self as wlc, protocol::wl_surface::WlSurface};
-use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
@@ -29,8 +42,7 @@ pub trait Compositor {
     fn get_xdg_surface(&self, surface: &wlc::Main<WlSurface>)
         -> wlc::Main<xdg_surface::XdgSurface>;
     fn get_xdg_positioner(&self) -> wlc::Main<xdg_positioner::XdgPositioner>;
-    fn zxdg_decoration_manager_v1(&self) -> wlc::Main<ZxdgDecorationManagerV1>;
-    fn zwlr_layershell_v1(&self) -> wlc::Main<ZwlrLayerShellV1>;
+    fn zwlr_layershell_v1(&self) -> Option<wlc::Main<ZwlrLayerShellV1>>;
 }
 
 pub trait Decor {
@@ -131,45 +143,39 @@ impl Compositor for CompositorHandle {
 
     fn create_surface(&self) -> wlc::Main<WlSurface> {
         match self.inner.upgrade() {
-            None => panic!("unable to acquire underyling compositor to create a surface"),
+            None => panic!("unable to acquire underlying compositor to create a surface"),
             Some(c) => c.create_surface(),
         }
     }
 
     fn shared_mem(&self) -> wlc::Main<WlShm> {
         match self.inner.upgrade() {
-            None => panic!("unable to acquire underyling compositor to acquire shared memory"),
+            None => panic!("unable to acquire underlying compositor to acquire shared memory"),
             Some(c) => c.shared_mem(),
         }
     }
 
     fn get_xdg_positioner(&self) -> wlc::Main<xdg_positioner::XdgPositioner> {
         match self.inner.upgrade() {
-            None => panic!("unable to acquire underyling compositor to create an xdg positioner"),
+            None => panic!("unable to acquire underlying compositor to create an xdg positioner"),
             Some(c) => c.get_xdg_positioner(),
         }
     }
 
     fn get_xdg_surface(&self, s: &wlc::Main<WlSurface>) -> wlc::Main<xdg_surface::XdgSurface> {
         match self.inner.upgrade() {
-            None => panic!("unable to acquire underyling compositor to create an xdg surface"),
+            None => panic!("unable to acquire underlying compositor to create an xdg surface"),
             Some(c) => c.get_xdg_surface(s),
         }
     }
 
-    fn zxdg_decoration_manager_v1(&self) -> wlc::Main<ZxdgDecorationManagerV1> {
+    fn zwlr_layershell_v1(&self) -> Option<wlc::Main<ZwlrLayerShellV1>> {
         match self.inner.upgrade() {
             None => {
-                panic!("unable to acquire underyling compositor to acquire the decoration manager")
-            }
-            Some(c) => c.zxdg_decoration_manager_v1(),
-        }
-    }
-
-    fn zwlr_layershell_v1(&self) -> wlc::Main<ZwlrLayerShellV1> {
-        match self.inner.upgrade() {
-            None => {
-                panic!("unable to acquire underyling compositor to acquire the layershell manager")
+                tracing::warn!(
+                    "unable to acquire underyling compositor to acquire the layershell manager"
+                );
+                None
             }
             Some(c) => c.zwlr_layershell_v1(),
         }

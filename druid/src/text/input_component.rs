@@ -337,7 +337,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                         TextAction::InsertBacktab => {
                             ctx.submit_notification(TextComponent::BACKTAB)
                         }
-                        _ => tracing::warn!("unexepcted external action '{:?}'", action),
+                        _ => tracing::warn!("unexpected external action '{:?}'", action),
                     };
                 }
                 let text = self.borrow_mut().take_external_text_change();
@@ -372,9 +372,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextComponent<T> {
                 self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
             }
             //FIXME: this should happen in the parent too?
-            LifeCycle::Internal(crate::InternalLifeCycle::ParentWindowOrigin)
-                if self.can_write() =>
-            {
+            LifeCycle::ViewContextChanged(_) if self.can_write() => {
                 if self.can_write() {
                     let prev_origin = self.borrow().origin;
                     let new_origin = ctx.window_origin();

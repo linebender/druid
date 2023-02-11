@@ -83,17 +83,11 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
     // Define lens types for each field
     let defs = fields.iter().filter(|f| !f.attrs.ignore).map(|f| {
         let field_name = &f.ident.unwrap_named();
-        let struct_docs = format!(
-            "Lens for the field `{field}` on [`{ty}`](super::{ty}).",
-            field = field_name,
-            ty = ty,
-        );
+        let struct_docs = format!("Lens for the field `{field_name}` on [`{ty}`](super::{ty}).");
 
         let fn_docs = format!(
-            "Creates a new lens for the field `{field}` on [`{ty}`](super::{ty}). \
-            Use [`{ty}::{field}`](super::{ty}::{field}) instead.",
-            field = field_name,
-            ty = ty,
+            "Creates a new lens for the field `{field_name}` on [`{ty}`](super::{ty}). \
+            Use [`{ty}::{field_name}`](super::{ty}::{field_name}) instead."
         );
 
         quote! {
@@ -125,7 +119,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         let mut candidate: String = name.into();
         let mut count = 1usize;
         while used_params.contains(&candidate) {
-            candidate = format!("{}_{}", name, count);
+            candidate = format!("{name}_{count}");
             count += 1;
         }
         Ident::new(&candidate, Span::call_site())
@@ -162,7 +156,7 @@ fn derive_struct(input: &syn::DeriveInput) -> Result<proc_macro2::TokenStream, s
         }
     });
 
-    let mod_docs = format!("Derived lenses for [`{}`].", ty);
+    let mod_docs = format!("Derived lenses for [`{ty}`].");
 
     let expanded = quote! {
         #[doc = #mod_docs]

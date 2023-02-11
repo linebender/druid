@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Example of switches
+
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
+#[allow(deprecated)]
+use druid::widget::Parse;
 use druid::widget::{
-    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Padding, Parse, Stepper, Switch, TextBox,
+    Checkbox, Flex, Label, LensWrap, MainAxisAlignment, Padding, Stepper, Switch, TextBox,
     WidgetExt,
 };
 use druid::{AppLauncher, Data, Lens, LensExt, LocalizedString, Widget, WindowDesc};
@@ -47,6 +51,8 @@ fn build_widget() -> impl Widget<DemoState> {
     );
 
     let mut textbox_row = Flex::row();
+    // TODO: Replace Parse usage with TextBox::with_formatter
+    #[allow(deprecated)]
     let textbox = LensWrap::new(
         Parse::new(TextBox::new()),
         DemoState::stepper_value.map(|x| Some(*x), |x, y| *x = y.unwrap_or(0.0)),

@@ -1,7 +1,7 @@
 # Druid web hello world
 
-This is a minimal example of building a single druid application for the web.
-To build all the druid examples for the web, check out the `web` example directory.
+This is a minimal example of building a single Druid application for the web.
+To build all the Druid examples for the web, check out the `web` example directory.
 
 ## Building
 

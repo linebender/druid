@@ -1,3 +1,17 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #![allow(clippy::single_match)]
 use super::error;
 use std::collections::BTreeMap;
@@ -134,9 +148,10 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
         .map_err(error::Error::fatal)?;
 
+    // 3 is the max version supported by wayland-rs 0.29.5
     let xdg_base = registry
-        .instantiate_exact::<xdg_wm_base::XdgWmBase>(2)
-        .map_err(|e| error::Error::global("xdg_wm_base", 2, e))?;
+        .instantiate_range::<xdg_wm_base::XdgWmBase>(1, 3)
+        .map_err(|e| error::Error::global("xdg_wm_base", 1, e))?;
 
     // We do this to make sure wayland knows we're still responsive.
     //
@@ -145,7 +160,7 @@ pub(super) fn new(dispatcher: Dispatcher) -> Result<Environment, error::Error> {
     // computation, network, ... This is good practice for all back-ends: it will improve
     // responsiveness.
     xdg_base.quick_assign(|xdg_base, event, ctx| {
-        tracing::info!(
+        tracing::debug!(
             "global xdg_base events {:?} {:?} {:?}",
             xdg_base,
             event,

@@ -38,10 +38,13 @@ pub struct FileInfo {
 
 /// Type of file dialog.
 #[cfg(not(any(
-    all(feature = "x11", any(target_os = "linux", target_os = "openbsd")),
+    all(
+        feature = "x11",
+        any(target_os = "freebsd", target_os = "linux", target_os = "openbsd")
+    ),
     feature = "wayland"
 )))]
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileDialogType {
     /// File open dialog.
     Open,
@@ -123,20 +126,11 @@ pub enum FileDialogType {
 /// and then clicks on an existing file `/Users/Joe/old.txt` in another directory then the returned
 /// path will actually be `/Users/Joe/foo/old.rtf` if the default type's first extension is `rtf`.
 ///
-/// ## Have a really good save dialog default type
-///
-/// There is no way for the user to choose which extension they want to save a file as via the UI.
-/// They have no way of knowing which extensions are even supported and must manually type it out.
-///
-/// *Hopefully it's a temporary problem and we can find a way to show the file formats in the UI.
-/// This is being tracked in [druid#998].*
-///
 /// [clickable]: #selecting-files-for-overwriting-in-the-save-dialog-is-cumbersome
 /// [packages]: #packages
 /// [`select_directories`]: #method.select_directories
 /// [`allowed_types`]: #method.allowed_types
 /// [`packages_as_directories`]: #method.packages_as_directories
-/// [druid#998]: https://github.com/xi-editor/druid/issues/998
 #[derive(Debug, Clone, Default)]
 pub struct FileDialogOptions {
     pub(crate) show_hidden: bool,
@@ -152,7 +146,7 @@ pub struct FileDialogOptions {
     pub(crate) starting_directory: Option<PathBuf>,
 }
 
-/// A description of a filetype, for specifiying allowed types in a file dialog.
+/// A description of a filetype, for specifying allowed types in a file dialog.
 ///
 /// # Windows
 ///
@@ -164,7 +158,7 @@ pub struct FileDialogOptions {
 ///
 /// [`COMDLG_FILTERSPEC`]: https://docs.microsoft.com/en-ca/windows/win32/api/shtypes/ns-shtypes-comdlg_filterspec
 /// [packages]: struct.FileDialogOptions.html#packages
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FileSpec {
     /// A human readable name, describing this filetype.
     ///

@@ -36,13 +36,12 @@ pub(crate) type SelectorSymbol = &'static str;
 /// The type parameter `T` specifies the command's payload type.
 /// See [`Command`] for more information.
 ///
-/// Certain `Selector`s are defined by druid, and have special meaning
+/// Certain `Selector`s are defined by Druid, and have special meaning
 /// to the framework; these are listed in the [`druid::commands`] module.
 ///
 /// [`Command`]: struct.Command.html
 /// [`Command::get`]: struct.Command.html#method.get
 /// [`get_unchecked`]: struct.Command.html#method.get_unchecked
-/// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
 pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 
@@ -71,9 +70,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
-/// [`EventCtx::new_window`]: struct.EventCtx.html#method.new_window
-/// [`SingleUse`]: struct.SingleUse.html
-/// [`Selector`]: struct.Selector.html
+/// [`EventCtx::new_window`]: crate::EventCtx::new_window
 #[derive(Debug, Clone)]
 pub struct Command {
     symbol: SelectorSymbol,
@@ -131,14 +128,10 @@ pub struct Notification {
 /// // subsequent calls will return `None`
 /// assert!(payload.take().is_none());
 /// ```
-///
-/// [`Command`]: struct.Command.html
 pub struct SingleUse<T>(Mutex<Option<T>>);
 
 /// The target of a [`Command`].
-///
-/// [`Command`]: struct.Command.html
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
     /// The target is the top-level application.
     ///
@@ -168,11 +161,9 @@ pub enum Target {
     Auto,
 }
 
-/// Commands with special meaning, defined by druid.
+/// Commands with special meaning, defined by Druid.
 ///
 /// See [`Command`] for more info.
-///
-/// [`Command`]: ../struct.Command.html
 pub mod sys {
     use std::any::Any;
 
@@ -182,7 +173,7 @@ pub mod sys {
         FileDialogOptions, FileInfo, Rect, SingleUse, WidgetId, WindowConfig,
     };
 
-    /// Quit the running application. This command is handled by the druid library.
+    /// Quit the running application. This command is handled by the Druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 
     /// Hide the application. (mac only)
@@ -227,7 +218,7 @@ pub mod sys {
     /// Display a context (right-click) menu. The payload must be the [`ContextMenu`]
     /// object to be displayed.
     ///
-    /// [`ContextMenu`]: ../struct.ContextMenu.html
+    /// [`ContextMenu`]: crate::menu::ContextMenu
     pub(crate) const SHOW_CONTEXT_MENU: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.show-context-menu");
 
@@ -247,7 +238,7 @@ pub mod sys {
     /// Show the application preferences.
     pub const SHOW_PREFERENCES: Selector = Selector::new("druid-builtin.menu-show-preferences");
 
-    /// Show the application about window.
+    /// Show the application's "about" window.
     pub const SHOW_ABOUT: Selector = Selector::new("druid-builtin.menu-show-about");
 
     /// Show all applications.
@@ -271,7 +262,7 @@ pub mod sys {
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILE: Selector<FileInfo> = Selector::new("druid-builtin.open-file-path");
 
-    /// Open a path, must be handled by the application.
+    /// Open a set of paths, must be handled by the application.
     ///
     /// [`FileInfo`]: ../struct.FileInfo.html
     pub const OPEN_FILES: Selector<Vec<FileInfo>> = Selector::new("druid-builtin.open-files-path");
@@ -335,18 +326,18 @@ pub mod sys {
     pub(crate) const INVALIDATE_IME: Selector<ImeInvalidation> =
         Selector::new("druid-builtin.invalidate-ime");
 
-    /// Informs this widget, that a child wants a specific region to be shown. The payload is the
+    /// Informs this widget that a child wants a specific region to be shown. The payload is the
     /// requested region in global coordinates.
     ///
-    /// This notification is send when [`scroll_to_view`] or [`scroll_area_to_view`]
-    /// are called.
+    /// This notification is sent when [`scroll_to_view`] or [`scroll_area_to_view`]
+    /// is called.
     ///
-    /// Widgets which hide their children, should always call `ctx.set_handled()` in response to
+    /// Widgets which hide their children should always call `ctx.set_handled()` when receiving this to
     /// avoid unintended behaviour from widgets further down the tree.
     /// If possible the widget should move its children to bring the area into view and then submit
     /// a new `SCROLL_TO_VIEW` notification with the same region relative to the new child position.
     ///
-    /// When building a new widget using ClipBox take a look at [`ClipBox::managed`] and
+    /// When building a new widget using ClipBox, take a look at [`ClipBox::managed`] and
     /// [`Viewport::default_scroll_to_view_handling`].
     ///
     /// [`scroll_to_view`]: crate::EventCtx::scroll_to_view()
@@ -355,7 +346,7 @@ pub mod sys {
     /// [`Viewport::default_scroll_to_view_handling`]: crate::widget::Viewport::default_scroll_to_view_handling()
     pub const SCROLL_TO_VIEW: Selector<Rect> = Selector::new("druid-builtin.scroll-to");
 
-    /// A change that has occured to text state, and needs to be
+    /// A change that has occurred to text state, and needs to be
     /// communicated to the platform.
     pub(crate) struct ImeInvalidation {
         pub widget: WidgetId,
@@ -558,9 +549,9 @@ impl Notification {
         self.source
     }
 
-    /// Builder-style method to set warn_if_unused.
+    /// Builder-style method to set `warn_if_unused`.
     ///
-    /// The default is true.
+    /// The default is `true`.
     pub fn warn_if_unused(mut self, warn_if_unused: bool) -> Self {
         self.warn_if_unused = warn_if_unused;
         self

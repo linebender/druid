@@ -52,7 +52,7 @@ pub enum PostalCodeValidationError {
     IncorrectFormat,
 }
 
-/// A formatter that sets the selection to the first occurance of the word 'cat'
+/// A formatter that sets the selection to the first occurrence of the word 'cat'
 /// in an input string, if it is found.
 pub struct CatSelectingFormatter;
 
@@ -127,7 +127,7 @@ impl Formatter<f64> for NaiveCurrencyFormatter {
         let decimal_pos = input
             .bytes()
             .rposition(|b| b as char == self.decimal_separator);
-        let (major, minor) = input.split_at(decimal_pos.unwrap_or_else(|| input.len()));
+        let (major, minor) = input.split_at(decimal_pos.unwrap_or(input.len()));
         let canonical: String = major
             .chars()
             .filter(|c| *c != self.thousands_separator)

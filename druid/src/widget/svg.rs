@@ -14,70 +14,69 @@
 
 //! An SVG widget.
 
-use std::{collections::HashMap, error::Error, rc::Rc, str::FromStr, sync::Arc};
-use tracing::{instrument, trace};
+use std::sync::Arc;
 
-use crate::{
-    kurbo::BezPath,
-    piet::{self, GradientStop, LineCap, LineJoin, LinearGradient, RadialGradient, StrokeStyle},
-    widget::common::FillStrat,
-    widget::prelude::*,
-    Affine, Color, Data, Rect, UnitPoint,
-};
+use resvg;
+use usvg::Tree;
+
+use crate::piet::{ImageBuf, ImageFormat, InterpolationMode};
+use crate::widget::prelude::*;
+use crate::{Rect, ScaledArea};
 
 /// A widget that renders a SVG
 pub struct Svg {
-    svg_data: SvgData,
-    fill: FillStrat,
+    tree: Arc<Tree>,
+    default_size: Size,
+    cached: Option<ImageBuf>,
 }
 
 impl Svg {
     /// Create an SVG-drawing widget from SvgData.
     ///
     /// The SVG will scale to fit its box constraints.
-    pub fn new(svg_data: SvgData) -> Self {
+    pub fn new(tree: impl Into<Arc<Tree>>) -> Self {
+        let tree = tree.into();
         Svg {
-            svg_data,
-            fill: FillStrat::default(),
+            default_size: Size::new(tree.size.width(), tree.size.height()),
+            cached: None,
+            tree,
         }
     }
 
-    /// Builder-style method for specifying the fill strategy.
-    pub fn fill_mode(mut self, mode: FillStrat) -> Self {
-        self.fill = mode;
-        self
-    }
+    /// Rasterize the SVG into the specified size in pixels.
+    fn render(&self, size_px: Size) -> Option<ImageBuf> {
+        let fit = usvg::FitTo::Size(size_px.width as u32, size_px.height as u32);
+        let mut pixmap =
+            tiny_skia::Pixmap::new(size_px.width as u32, size_px.height as u32).unwrap();
 
-    /// Modify the widget's `FillStrat`.
-    pub fn set_fill_mode(&mut self, newfil: FillStrat) {
-        self.fill = newfil;
-    }
+        if resvg::render(
+            &self.tree,
+            fit,
+            tiny_skia::Transform::identity(),
+            pixmap.as_mut(),
+        )
+        .is_none()
+        {
+            tracing::error!("unable to render svg");
+            return None;
+        }
 
-    /// Set the svg data.
-    pub fn set_svg_data(&mut self, svg_data: SvgData) {
-        self.svg_data = svg_data;
+        Some(ImageBuf::from_raw(
+            pixmap.data(),
+            ImageFormat::RgbaPremul,
+            size_px.width as usize,
+            size_px.height as usize,
+        ))
     }
 }
 
 impl<T: Data> Widget<T> for Svg {
-    #[instrument(name = "Svg", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {}
 
-    #[instrument(name = "Svg", level = "trace", skip(self, _ctx, _event, _data, _env))]
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {}
 
-    #[instrument(
-        name = "Svg",
-        level = "trace",
-        skip(self, _ctx, _old_data, _data, _env)
-    )]
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {}
 
-    #[instrument(
-        name = "Svg",
-        level = "trace",
-        skip(self, _layout_ctx, bc, _data, _env)
-    )]
     fn layout(
         &mut self,
         _layout_ctx: &mut LayoutCtx,
@@ -85,484 +84,89 @@ impl<T: Data> Widget<T> for Svg {
         _data: &T,
         _env: &Env,
     ) -> Size {
-        bc.debug_check("SVG");
         // preferred size comes from the svg
-        let size = self.svg_data.size();
-        let constrained_size = bc.constrain_aspect_ratio(size.height / size.width, size.width);
-        trace!("Computed size: {}", constrained_size);
-        constrained_size
+        let size = self.default_size;
+        bc.constrain_aspect_ratio(size.height / size.width, size.width)
     }
 
-    #[instrument(name = "Svg", level = "trace", skip(self, ctx, _data, _env))]
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
-        let offset_matrix = self.fill.affine_to_fill(ctx.size(), self.svg_data.size());
+        let size = ctx.size();
+        let area = ScaledArea::from_dp(size, ctx.scale());
+        let size_px = area.size_px();
 
-        let clip_rect = Rect::ZERO.with_size(ctx.size());
+        let needs_render = self
+            .cached
+            .as_ref()
+            .filter(|image_buf| image_buf.size() == size_px)
+            .is_none();
 
-        // The SvgData's to_piet function does not clip to the svg's size
-        // CairoRenderContext is very like druids but with some extra goodies like clip
+        if needs_render {
+            self.cached = self.render(size_px);
+        }
+
+        if self.cached.is_none() {
+            tracing::error!("unable to paint SVG due to no rendered image");
+            return;
+        }
+
+        let clip_rect = Rect::ZERO.with_size(size);
+        let img = self.cached.as_ref().unwrap().to_image(ctx.render_ctx);
         ctx.clip(clip_rect);
-        self.svg_data.to_piet(offset_matrix, ctx);
+        ctx.draw_image(&img, clip_rect, InterpolationMode::NearestNeighbor);
     }
 }
 
-/// Stored SVG data.
-/// Implements `FromStr` and can be converted to piet draw instructions.
+/// Stored parsed SVG tree.
 #[derive(Clone, Data)]
 pub struct SvgData {
-    tree: Arc<usvg::Tree>,
+    tree: Arc<Tree>,
 }
 
 impl SvgData {
+    /// Create a new SVG
+    fn new(tree: Arc<Tree>) -> Self {
+        Self { tree }
+    }
+
     /// Create an empty SVG
     pub fn empty() -> Self {
+        use std::str::FromStr;
+
+        let empty_svg = r###"
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <g fill="none">
+                </g>
+            </svg>
+        "###;
+
+        SvgData::from_str(empty_svg).unwrap()
+    }
+}
+
+impl std::str::FromStr for SvgData {
+    type Err = Box<dyn std::error::Error>;
+
+    fn from_str(svg_str: &str) -> Result<Self, Self::Err> {
         let re_opt = usvg::Options {
             keep_named_groups: false,
             ..usvg::Options::default()
         };
 
-        let empty_svg = r###"
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <g fill="none">
-              </g>
-          </svg>
-        "###;
-
-        SvgData {
-            tree: Arc::new(usvg::Tree::from_str(empty_svg, &re_opt).unwrap()),
+        match Tree::from_str(svg_str, &re_opt.to_ref()) {
+            Ok(tree) => Ok(SvgData::new(Arc::new(tree))),
+            Err(err) => Err(err.into()),
         }
     }
+}
 
-    /// Convert SvgData into Piet draw instructions
-    pub fn to_piet(&self, offset_matrix: Affine, ctx: &mut PaintCtx) {
-        let mut state = SvgRenderer::new(offset_matrix * self.inner_affine());
-        // I actually made `SvgRenderer` able to handle a stack of `<defs>`, but I'm gonna see if
-        // resvg always puts them at the top.
-        let root = self.tree.root();
-        for n in root.children() {
-            state.render_node(&n, ctx);
-        }
-    }
-
-    /// Get the viewbox for the svg. This is the area that should be drawn.
-    pub fn viewbox(&self) -> Rect {
-        let root = self.tree.root();
-        let rect = match *root.borrow() {
-            usvg::NodeKind::Svg(svg) => {
-                let r = svg.view_box.rect;
-                Rect::new(r.left(), r.top(), r.right(), r.bottom())
-            }
-            _ => {
-                tracing::error!(
-                    "this SVG has no viewbox. It is expected that usvg always adds a viewbox"
-                );
-                Rect::ZERO
-            }
-        };
-        rect
-    }
-
-    /// Get the size of the svg. This is the size that the svg requests to be drawn. If it is
-    /// different from the viewbox size, then scaling will be required.
-    pub fn size(&self) -> Size {
-        let root = self.tree.root();
-        let rect = match *root.borrow() {
-            usvg::NodeKind::Svg(svg) => {
-                let s = svg.size;
-                Size::new(s.width(), s.height())
-            }
-            _ => {
-                tracing::error!(
-                    "this SVG has no size. It is expected that usvg always adds a size"
-                );
-                Size::ZERO
-            }
-        };
-        rect
-    }
-
-    /// Calculates the transform that should be applied first to the svg path data, to convert from
-    /// image coordinates to piet coordinates.
-    fn inner_affine(&self) -> Affine {
-        let viewbox = self.viewbox();
-        let size = self.size();
-        // we want to move the viewbox top left to (0,0) and then scale it from viewbox size to
-        // size.
-        // TODO respect preserveAspectRatio
-        let t = Affine::translate((viewbox.min_x(), viewbox.min_y()));
-        let scale =
-            Affine::scale_non_uniform(size.width / viewbox.width(), size.height / viewbox.height());
-        scale * t
+impl From<SvgData> for Arc<Tree> {
+    fn from(d: SvgData) -> Self {
+        d.tree
     }
 }
 
 impl Default for SvgData {
     fn default() -> Self {
         SvgData::empty()
-    }
-}
-
-impl FromStr for SvgData {
-    type Err = Box<dyn Error>;
-
-    fn from_str(svg_str: &str) -> Result<Self, Self::Err> {
-        let mut re_opt = usvg::Options {
-            keep_named_groups: false,
-            ..usvg::Options::default()
-        };
-
-        re_opt.fontdb.load_system_fonts();
-
-        match usvg::Tree::from_str(svg_str, &re_opt) {
-            Ok(tree) => Ok(SvgData {
-                tree: Arc::new(tree),
-            }),
-            Err(err) => Err(err.into()),
-        }
-    }
-}
-
-struct SvgRenderer {
-    offset_matrix: Affine,
-    defs: Defs,
-}
-
-impl SvgRenderer {
-    fn new(offset_matrix: Affine) -> Self {
-        Self {
-            offset_matrix,
-            defs: Defs::new(),
-        }
-    }
-
-    /// Take a usvg node and render it to the given context.
-    fn render_node(&mut self, n: &usvg::Node, ctx: &mut PaintCtx) {
-        match *n.borrow() {
-            usvg::NodeKind::Path(ref p) => self.render_path(p, ctx),
-            usvg::NodeKind::Defs => {
-                // children are defs
-                for def in n.children() {
-                    match &*def.borrow() {
-                        usvg::NodeKind::LinearGradient(linear_gradient) => {
-                            self.linear_gradient_def(linear_gradient);
-                        }
-                        usvg::NodeKind::RadialGradient(gradient) => {
-                            self.radial_gradient_def(gradient);
-                        }
-                        other => tracing::error!("unsupported element: {:?}", other),
-                    }
-                }
-            }
-            usvg::NodeKind::Group(_) => {
-                // TODO I'm not sure if we need to apply the transform, or if usvg has already
-                // done it for us? I'm guessing the latter for now, but that could easily be wrong.
-                for child in n.children() {
-                    self.render_node(&child, ctx);
-                }
-            }
-            _ => {
-                // TODO: handle more of the SVG spec.
-                tracing::error!("{:?} is unimplemented", n.clone());
-            }
-        }
-    }
-
-    /// Take a usvg path and render it to the given context.
-    fn render_path(&self, p: &usvg::Path, ctx: &mut PaintCtx) {
-        if matches!(
-            p.visibility,
-            usvg::Visibility::Hidden | usvg::Visibility::Collapse
-        ) {
-            // skip rendering
-            return;
-        }
-
-        let mut path = BezPath::new();
-        for segment in p.data.iter() {
-            match *segment {
-                usvg::PathSegment::MoveTo { x, y } => {
-                    path.move_to((x, y));
-                }
-                usvg::PathSegment::LineTo { x, y } => {
-                    path.line_to((x, y));
-                }
-                usvg::PathSegment::CurveTo {
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    x,
-                    y,
-                } => {
-                    path.curve_to((x1, y1), (x2, y2), (x, y));
-                }
-                usvg::PathSegment::ClosePath => {
-                    path.close_path();
-                }
-            }
-        }
-
-        path.apply_affine(self.offset_matrix * transform_to_affine(p.transform));
-
-        match &p.fill {
-            Some(fill) => {
-                let brush = self.brush_from_usvg(&fill.paint, fill.opacity);
-                if let usvg::FillRule::EvenOdd = fill.rule {
-                    ctx.fill_even_odd(path.clone(), &*brush);
-                } else {
-                    ctx.fill(path.clone(), &*brush);
-                }
-            }
-            None => {}
-        }
-
-        match &p.stroke {
-            Some(stroke) => {
-                let brush = self.brush_from_usvg(&stroke.paint, stroke.opacity);
-                let mut stroke_style = StrokeStyle::new()
-                    .line_join(match stroke.linejoin {
-                        usvg::LineJoin::Miter => LineJoin::Miter {
-                            limit: stroke.miterlimit.value(),
-                        },
-                        usvg::LineJoin::Round => LineJoin::Round,
-                        usvg::LineJoin::Bevel => LineJoin::Bevel,
-                    })
-                    .line_cap(match stroke.linecap {
-                        usvg::LineCap::Butt => LineCap::Butt,
-                        usvg::LineCap::Round => LineCap::Round,
-                        usvg::LineCap::Square => LineCap::Square,
-                    });
-                if let Some(dash_array) = &stroke.dasharray {
-                    stroke_style.set_dash_pattern(dash_array.as_slice());
-                    stroke_style.set_dash_offset(stroke.dashoffset as f64);
-                }
-                ctx.stroke_styled(path, &*brush, stroke.width.value(), &stroke_style);
-            }
-            None => {}
-        }
-    }
-
-    fn linear_gradient_def(&mut self, lg: &usvg::LinearGradient) {
-        let start = UnitPoint::new(lg.x1, lg.y1);
-        let end = UnitPoint::new(lg.x2, lg.y2);
-        let stops: Vec<_> = lg
-            .stops
-            .iter()
-            .map(|stop| GradientStop {
-                pos: stop.offset.value() as f32,
-                color: color_from_svg(stop.color, stop.opacity),
-            })
-            .collect();
-
-        let gradient = LinearGradient::new(start, end, stops);
-        self.defs
-            .add_def(lg.id.clone(), piet::PaintBrush::Linear(gradient));
-    }
-
-    fn radial_gradient_def(&mut self, g: &usvg::RadialGradient) {
-        let center = UnitPoint::new(g.fx, g.fy);
-        let origin = UnitPoint::new(g.cx, g.cy);
-
-        let stops: Vec<_> = g
-            .stops
-            .iter()
-            .map(|stop| GradientStop {
-                pos: stop.offset.value() as f32,
-                color: color_from_svg(stop.color, stop.opacity),
-            })
-            .collect();
-
-        let gradient = RadialGradient::new(g.r.value(), stops)
-            .with_center(center)
-            .with_origin(origin);
-        self.defs
-            .add_def(g.id.clone(), piet::PaintBrush::Radial(gradient));
-    }
-
-    fn brush_from_usvg(&self, paint: &usvg::Paint, opacity: usvg::Opacity) -> Rc<piet::PaintBrush> {
-        match paint {
-            usvg::Paint::Color(c) => {
-                // TODO I'm going to assume here that not retaining colors is OK.
-                let color = color_from_svg(*c, opacity);
-                Rc::new(piet::PaintBrush::Color(color))
-            }
-            usvg::Paint::Link(id) => match self.defs.find(id) {
-                None => {
-                    // generally this occurs due to unimplemented SVG functionality.
-                    // until the SVG implementation matures log as a trace.
-                    // other logging above will detect and emit the error that
-                    // triggered the issue.
-                    trace!("svg link id requested, but not found: {:?}", id);
-                    Rc::new(piet::PaintBrush::Color(Color::TRANSPARENT))
-                }
-                Some(v) => v,
-            },
-        }
-    }
-}
-
-type Def = piet::PaintBrush;
-
-/// A map from id to <def>
-struct Defs(HashMap<String, Rc<Def>>);
-
-impl Defs {
-    fn new() -> Self {
-        Defs(HashMap::new())
-    }
-
-    /// Add a def.
-    fn add_def(&mut self, id: String, def: Def) {
-        self.0.insert(id, Rc::new(def));
-    }
-
-    /// Look for a def by id.
-    fn find(&self, id: &str) -> Option<Rc<Def>> {
-        self.0.get(id).cloned()
-    }
-}
-
-/// Convert a usvg transform to a kurbo `Affine`.
-fn transform_to_affine(t: usvg::Transform) -> Affine {
-    Affine::new([t.a, t.b, t.c, t.d, t.e, t.f])
-}
-
-fn color_from_svg(c: usvg::Color, opacity: usvg::Opacity) -> Color {
-    Color::rgb8(c.red, c.green, c.blue).with_alpha(opacity.value())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_log::test;
-
-    #[test]
-    fn usvg_transform_vs_affine() {
-        assert_eq!(
-            transform_to_affine(usvg::Transform::new_translate(1., 2.)),
-            Affine::translate((1., 2.))
-        );
-        assert_eq!(
-            transform_to_affine(usvg::Transform::new_scale(1., 2.)),
-            Affine::scale_non_uniform(1., 2.)
-        );
-        // amazingly we get actual equality here
-        assert_eq!(
-            transform_to_affine(usvg::Transform::new_rotate(180.)),
-            Affine::rotate(std::f64::consts::PI)
-        );
-    }
-
-    #[test]
-    fn translate() {
-        use crate::tests::harness::Harness;
-
-        let svg_data = SvgData::from_str(
-            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
-        <g>
-            <g>
-                <rect width='1' height='1'/>
-            </g>
-        </g>
-        <g transform=\"translate(1, 1)\">
-            <g>
-                <rect width='1' height='1'/>
-            </g>
-        </g>
-    </svg>",
-        )
-        .unwrap();
-
-        let svg_widget = Svg::new(svg_data);
-
-        Harness::create_with_render(
-            true,
-            svg_widget,
-            Size::new(400., 600.),
-            |harness| {
-                harness.send_initial_events();
-                harness.just_layout();
-                harness.paint();
-            },
-            |target| {
-                let raw_pixels = target.into_raw();
-                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
-
-                // Being a tall widget with a square image the top and bottom rows will be
-                // the padding color and the middle rows will not have any padding.
-
-                // Check that the middle row 400 pix wide is 200 black then 200 white.
-                let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(200),
-                    vec![0, 0, 0, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
-
-                // Check that all of the last 100 rows are all the background color.
-                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
-                assert_eq!(
-                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
-                    expecting[..]
-                );
-            },
-        )
-    }
-
-    #[test]
-    fn scale() {
-        use crate::tests::harness::Harness;
-
-        let svg_data = SvgData::from_str(
-            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'>
-        <g>
-            <g>
-                <rect width='1' height='1'/>
-            </g>
-        </g>
-        <g transform=\"translate(1, 1)\">
-            <g transform=\"scale(1, 2)\">
-                <rect width='1' height='0.5'/>
-            </g>
-        </g>
-    </svg>",
-        )
-        .unwrap();
-
-        let svg_widget = Svg::new(svg_data);
-
-        Harness::create_with_render(
-            true,
-            svg_widget,
-            Size::new(400., 600.),
-            |harness| {
-                harness.send_initial_events();
-                harness.just_layout();
-                harness.paint();
-            },
-            |target| {
-                let raw_pixels = target.into_raw();
-                assert_eq!(raw_pixels.len(), 400 * 600 * 4);
-
-                // Being a tall widget with a square image the top and bottom rows will be
-                // the padding color and the middle rows will not have any padding.
-
-                // Check that the middle row 400 pix wide is 200 black then 200 white.
-                let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(200),
-                    vec![0, 0, 0, 255].repeat(200),
-                ]
-                .concat();
-                assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
-
-                // Check that all of the last 100 rows are all the background color.
-                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
-                assert_eq!(
-                    raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
-                    expecting[..]
-                );
-            },
-        )
     }
 }

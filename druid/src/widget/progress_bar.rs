@@ -79,7 +79,7 @@ impl Widget<f64> for ProgressBar {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &f64, env: &Env) {
         let height = env.get(theme::BASIC_WIDGET_HEIGHT);
         let corner_radius = env.get(theme::PROGRESS_BAR_RADIUS);
-        let clamped = data.max(0.0).min(1.0);
+        let clamped = data.clamp(0.0, 1.0);
         let stroke_width = 2.0;
         let inset = -stroke_width / 2.0;
         let size = ctx.size();

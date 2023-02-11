@@ -20,7 +20,7 @@ use keyboard_types::{Code, Location};
 #[cfg(any(
     all(
         any(feature = "x11", feature = "wayland"),
-        any(target_os = "linux", target_os = "openbsd")
+        any(target_os = "freebsd", target_os = "linux", target_os = "openbsd")
     ),
     target_os = "macos"
 ))]
@@ -57,7 +57,7 @@ pub fn code_to_location(code: Code) -> Location {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "openbsd"))]
+#[cfg(any(target_os = "freebsd", target_os = "linux", target_os = "openbsd"))]
 /// Map hardware keycode to code.
 ///
 /// In theory, the hardware keycode is device dependent, but in

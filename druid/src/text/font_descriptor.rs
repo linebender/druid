@@ -22,20 +22,18 @@ use crate::{Data, FontFamily, FontStyle, FontWeight};
 /// a single type that represents a specific font face at a specific size.
 #[derive(Debug, Data, Clone, PartialEq)]
 pub struct FontDescriptor {
-    /// The font's [`FontFamily`](struct.FontFamily.html).
+    /// The font's [`FontFamily`].
     pub family: FontFamily,
     /// The font's size.
     pub size: f64,
-    /// The font's [`FontWeight`](struct.FontWeight.html).
+    /// The font's [`FontWeight`].
     pub weight: FontWeight,
-    /// The font's [`FontStyle`](struct.FontStyle.html).
+    /// The font's [`FontStyle`].
     pub style: FontStyle,
 }
 
 impl FontDescriptor {
     /// Create a new descriptor with the provided [`FontFamily`].
-    ///
-    /// [`FontFamily`]: struct.FontFamily.html
     pub const fn new(family: FontFamily) -> Self {
         FontDescriptor {
             family,
@@ -52,16 +50,12 @@ impl FontDescriptor {
     }
 
     /// Buider-style method to set the descriptor's [`FontWeight`].
-    ///
-    /// [`FontWeight`]: struct.FontWeight.html
     pub const fn with_weight(mut self, weight: FontWeight) -> Self {
         self.weight = weight;
         self
     }
 
     /// Buider-style method to set the descriptor's [`FontStyle`].
-    ///
-    /// [`FontStyle`]: enum.FontStyle.html
     pub const fn with_style(mut self, style: FontStyle) -> Self {
         self.style = style;
         self

@@ -1,3 +1,17 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use wayland_client as wlc;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client as layershell;
 use wayland_protocols::xdg_shell::client::xdg_surface;
@@ -194,7 +208,7 @@ impl Surface {
     ) -> Self {
         let compositor = CompositorHandle::new(c);
         let wl_surface = surface::Surface::new(compositor.clone(), handler, kurbo::Size::ZERO);
-        let ls_surface = compositor.zwlr_layershell_v1().get_layer_surface(
+        let ls_surface = compositor.zwlr_layershell_v1().unwrap().get_layer_surface(
             &wl_surface.inner.wl_surface.borrow(),
             None,
             config.layer,
@@ -291,46 +305,58 @@ impl Outputs for Surface {
     }
 
     fn inserted(&self, o: &outputs::Meta) {
+        let old = String::from(
+            self.inner
+                .output
+                .borrow()
+                .preferred
+                .as_ref()
+                .map_or("", |name| name),
+        );
+
         let reinitialize = *self.inner.requires_initialization.borrow();
-        let reinitialize = self
-            .inner
-            .output
-            .borrow()
-            .preferred
-            .as_ref()
-            .map_or("", |name| name)
-            == o.name
-            || reinitialize;
+        let reinitialize = old == o.name || reinitialize;
         if !reinitialize {
             tracing::debug!(
-                "skipping reinitialization output for layershell {:?} {:?}",
+                "skipping reinitialization output for layershell {:?} {:?} == {:?} || {:?} -> {:?}",
                 o.id(),
                 o.name,
+                old,
+                *self.inner.requires_initialization.borrow(),
+                reinitialize,
             );
             return;
         }
 
         tracing::debug!(
-            "reinitializing output for layershell {:?} {:?}",
+            "reinitializing output for layershell {:?} {:?} == {:?} || {:?} -> {:?}",
             o.id(),
-            o.name
+            o.name,
+            old,
+            *self.inner.requires_initialization.borrow(),
+            reinitialize,
         );
+
         let sdata = self.inner.wl_surface.borrow().inner.clone();
         self.inner
             .wl_surface
             .replace(surface::Surface::replace(&sdata));
         let sdata = self.inner.wl_surface.borrow().inner.clone();
-        let replacedlayershell =
-            self.inner
-                .ls_surface
-                .replace(sdata.compositor.zwlr_layershell_v1().get_layer_surface(
+        let replacedlayershell = self.inner.ls_surface.replace(
+            sdata
+                .compositor
+                .zwlr_layershell_v1()
+                .unwrap()
+                .get_layer_surface(
                     &self.inner.wl_surface.borrow().inner.wl_surface.borrow(),
-                    None,
+                    o.output.as_ref(),
                     self.inner.config.layer,
                     self.inner.config.namespace.to_string(),
-                ));
+                ),
+        );
 
         Surface::initialize(self);
+
         replacedlayershell.destroy();
     }
 }

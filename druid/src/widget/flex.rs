@@ -14,6 +14,8 @@
 
 //! A widget that arranges its children in a one-dimensional array.
 
+use std::ops::Add;
+
 use crate::debug_state::DebugState;
 use crate::kurbo::{common::FloatExt, Vec2};
 use crate::widget::prelude::*;
@@ -126,16 +128,13 @@ use tracing::{instrument, trace};
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
-/// [`layout`]: ../trait.Widget.html#tymethod.layout
-/// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
-/// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
-/// [`must_fill_main_axis`]: struct.Flex.html#method.must_fill_main_axis
-/// [`FlexParams`]: struct.FlexParams.html
-/// [`WidgetExt`]: ../trait.WidgetExt.html
-/// [`expand_height`]: ../trait.WidgetExt.html#method.expand_height
-/// [`expand_width`]: ../trait.WidgetExt.html#method.expand_width
-/// [`TextBox`]: struct.TextBox.html
-/// [`SizedBox`]: struct.SizedBox.html
+/// [`layout`]: Widget::layout
+/// [`must_fill_main_axis`]: Flex::must_fill_main_axis
+/// [`WidgetExt`]: super::WidgetExt
+/// [`expand_height`]: super::WidgetExt::expand_height
+/// [`expand_width`]: super::WidgetExt::expand_width
+/// [`TextBox`]: super::TextBox
+/// [`SizedBox`]: super::SizedBox
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
@@ -152,7 +151,7 @@ pub struct Flex<T> {
 /// child and the desired flex factor as a `f64`, which has an impl of
 /// `Into<FlexParams>`.
 ///
-/// If you need to set additional paramaters, such as a custom [`CrossAxisAlignment`],
+/// If you need to set additional parameters, such as a custom [`CrossAxisAlignment`],
 /// you can construct `FlexParams` directly. By default, the child has the
 /// same `CrossAxisAlignment` as the container.
 ///
@@ -187,7 +186,7 @@ pub struct FlexParams {
 /// Most often used by widgets to describe
 /// the direction in which they grow as their number of children increases.
 /// Has some methods for manipulating geometry with respect to the axis.
-#[derive(Data, Debug, Clone, Copy, PartialEq)]
+#[derive(Data, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Axis {
     /// The x axis
     Horizontal,
@@ -289,18 +288,18 @@ impl Axis {
 ///
 /// If a widget is smaller than the container on the minor axis, this determines
 /// where it is positioned.
-#[derive(Debug, Clone, Copy, PartialEq, Data)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Data)]
 pub enum CrossAxisAlignment {
     /// Top or leading.
     ///
-    /// In a vertical container, widgets are top aligned. In a horiziontal
+    /// In a vertical container, widgets are top aligned. In a horizontal
     /// container, their leading edges are aligned.
     Start,
     /// Widgets are centered in the container.
     Center,
     /// Bottom or trailing.
     ///
-    /// In a vertical container, widgets are bottom aligned. In a horiziontal
+    /// In a vertical container, widgets are bottom aligned. In a horizontal
     /// container, their trailing edges are aligned.
     End,
     /// Align on the baseline.
@@ -321,7 +320,7 @@ pub enum CrossAxisAlignment {
 ///
 /// If there is surplus space on the main axis after laying out children, this
 /// enum represents how children are laid out in this space.
-#[derive(Debug, Clone, Copy, PartialEq, Data)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Data)]
 pub enum MainAxisAlignment {
     /// Top or leading.
     ///
@@ -449,7 +448,7 @@ impl<T: Data> Flex<T> {
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
-    /// For the non-builder varient, see [`add_flex_child`].
+    /// For the non-builder variant, see [`add_flex_child`].
     ///
     /// # Examples
     ///
@@ -543,7 +542,7 @@ impl<T: Data> Flex<T> {
     /// This function takes a child widget and [`FlexParams`]; importantly
     /// you can pass in a float as your [`FlexParams`] in most cases.
     ///
-    /// For the builder-style varient, see [`with_flex_child`].
+    /// For the builder-style variant, see [`with_flex_child`].
     ///
     /// # Examples
     ///
@@ -569,7 +568,7 @@ impl<T: Data> Flex<T> {
                 flex: params.flex,
             }
         } else {
-            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.7.0/druid/widget/struct.Flex.html");
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.2/druid/widget/struct.Flex.html");
             Child::Fixed {
                 widget: WidgetPod::new(Box::new(child)),
                 alignment: None,
@@ -616,8 +615,7 @@ impl<T: Data> Flex<T> {
         } else {
             debug_assert!(
                 flex >= 0.0,
-                "flex value for space should be greater than equal to 0, received: {}",
-                flex
+                "flex value for space should be greater than equal to 0, received: {flex}"
             );
             tracing::warn!("Provided flex value was less than 0: {}", flex);
             0.0
@@ -848,7 +846,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                     };
 
                     let child_pos: Point = self.direction.pack(major, child_minor_offset).into();
-                    widget.set_origin(ctx, data, env, child_pos);
+                    widget.set_origin(ctx, child_pos);
                     child_paint_rect = child_paint_rect.union(widget.paint_rect());
                     major += self.direction.major(child_size).expand();
                     major += spacing.next().unwrap_or(0.);
@@ -886,7 +884,8 @@ impl<T: Data> Widget<T> for Flex<T> {
 
         let baseline_offset = match self.direction {
             Axis::Horizontal => max_below_baseline,
-            Axis::Vertical => (&self.children)
+            Axis::Vertical => self
+                .children
                 .last()
                 .map(|last| {
                     let child = last.widget();
@@ -940,6 +939,108 @@ impl<T: Data> Widget<T> for Flex<T> {
             display_name: self.short_type_name().to_string(),
             children: children_state,
             ..Default::default()
+        }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        if self.direction != axis {
+            // Direction axis and sizing axis are different.
+            // We compute max(child dim in cross axis).
+            let mut max_size_on_cross_axis: f64 = 0.;
+            let mut available_size_on_main_axis = self.direction.major(bc.max());
+            let mut total_flex = 0.;
+            for child in self.children.iter_mut() {
+                match child {
+                    Child::Fixed { widget, .. } => {
+                        let new_bc = bc
+                            .unbound_max(axis)
+                            .shrink_max_to(self.direction, available_size_on_main_axis);
+                        let size_on_main_axis = widget.widget_mut().compute_max_intrinsic(
+                            self.direction,
+                            ctx,
+                            &new_bc,
+                            data,
+                            env,
+                        );
+                        let new_bc = new_bc.shrink_max_to(self.direction, size_on_main_axis);
+                        let size_on_cross_axis = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                        available_size_on_main_axis -= size_on_main_axis;
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                    }
+                    Child::FixedSpacer(kv, _) => {
+                        let mut s = kv.resolve(env);
+                        if s < 0.0 {
+                            tracing::warn!("Length provided to fixed spacer was less than 0");
+                            s = 0.;
+                        }
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(s);
+                    }
+                    Child::Flex { flex, .. } | Child::FlexedSpacer(flex, _) => total_flex += *flex,
+                }
+            }
+            let space_per_flex = available_size_on_main_axis / total_flex;
+
+            if space_per_flex > 0.0 {
+                for child in self.children.iter_mut() {
+                    // We ignore Child::FlexedSpacer because its cross size is irrelevant.
+                    // Its flex matters only on main axis. But here we are interested in cross size of
+                    // each flex child.
+                    if let Child::Flex { widget, flex, .. } = child {
+                        let main_axis_available_space = *flex * space_per_flex;
+                        let new_bc = bc.shrink_max_to(axis, main_axis_available_space);
+                        let size_on_cross_axis = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, &new_bc, data, env);
+                        max_size_on_cross_axis = max_size_on_cross_axis.max(size_on_cross_axis);
+                    }
+                }
+            }
+            max_size_on_cross_axis
+        } else {
+            // Direction axis and sizing axis are same.
+            // We compute total(child dim on that axis)
+            let mut total: f64 = 0.;
+            let mut max_flex_fraction: f64 = 0.;
+            let mut total_flex = 0.;
+            for child in self.children.iter_mut() {
+                match child {
+                    Child::Fixed { widget, .. } => {
+                        let s = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, bc, data, env);
+                        total = total.add(s);
+                    }
+                    Child::Flex { widget, flex, .. } => {
+                        let s = widget
+                            .widget_mut()
+                            .compute_max_intrinsic(axis, ctx, bc, data, env);
+                        let flex_fraction = s / *flex;
+                        total_flex += *flex;
+                        max_flex_fraction = max_flex_fraction.max(flex_fraction);
+                    }
+                    Child::FixedSpacer(kv, _) => {
+                        let mut s = kv.resolve(env);
+                        if s < 0.0 {
+                            tracing::warn!("Length provided to fixed spacer was less than 0");
+                            s = 0.;
+                        }
+                        total = total.add(s);
+                    }
+                    Child::FlexedSpacer(flex, _) => {
+                        total_flex += *flex;
+                    }
+                }
+            }
+            total + max_flex_fraction * total_flex
         }
     }
 }
@@ -1167,14 +1268,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_flex_params() {
-        use float_cmp::approx_eq;
+        use float_cmp::assert_approx_eq;
         let params = FlexParams::new(0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-1.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
     }
 }

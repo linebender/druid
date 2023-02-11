@@ -262,14 +262,7 @@ pub extern "C" fn first_rect_for_character_range(
 }
 
 pub extern "C" fn do_command_by_selector(this: &mut Object, _: Sel, cmd: Sel) {
-    if with_edit_lock_from_window(this, true, |lock| do_command_by_selector_impl(lock, cmd))
-        .is_none()
-    {
-        // this is not a text field, so forward command to parent
-        if let Some(superclass) = this.class().superclass() {
-            unsafe { msg_send![superclass, doCommandBySelector: cmd] }
-        }
-    }
+    with_edit_lock_from_window(this, true, |lock| do_command_by_selector_impl(lock, cmd));
 }
 
 fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
@@ -535,7 +528,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
                     || next_char == Some('\r')
                     || next_char == Some('\u{2029}')
                     || next_char == Some('\u{2028}')
-                    || next_char == None
+                    || next_char.is_none()
                 {
                     // next char is a newline or end of doc; so end of transpose range will actually be the starting selection.anchor
                     edit_lock.set_selection(old_selection);
@@ -556,7 +549,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
             let selection = edit_lock.selection();
             let first_grapheme = edit_lock.slice(selection.min()..middle_idx).into_owned();
             let second_grapheme = edit_lock.slice(middle_idx..selection.max());
-            let new_string = format!("{}{}", second_grapheme, first_grapheme);
+            let new_string = format!("{second_grapheme}{first_grapheme}");
             // replace_range should automatically set selection to end of inserted range
             edit_lock.replace_range(selection.range(), &new_string);
         }
@@ -601,7 +594,7 @@ fn do_command_by_selector_impl(mut edit_lock: Box<dyn InputHandler>, cmd: Sel) {
         }
         "noop:" => {}
         e => {
-            eprintln!("unknown text editing command from macOS: {}", e);
+            eprintln!("unknown text editing command from macOS: {e}");
         }
     };
 }

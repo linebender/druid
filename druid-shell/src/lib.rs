@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Platform abstraction for druid toolkit.
+//! Platform abstraction for Druid toolkit.
 //!
 //! `druid-shell` is an abstraction around a given platform UI & application
 //! framework. It provides common types, which then defer to a platform-defined
@@ -38,14 +38,15 @@
 // Rename `gtk_rs` back to `gtk`.
 // This allows us to use `gtk` as the feature name.
 // The `target_os` requirement is there to exclude anything `wasm` like.
-#[cfg(all(any(target_os = "linux", target_os = "openbsd"), feature = "gtk"))]
+#[cfg(all(
+    any(target_os = "freebsd", target_os = "linux", target_os = "openbsd"),
+    feature = "gtk"
+))]
 extern crate gtk_rs as gtk;
 
-// Reexport the version of `image` we are using.
 #[cfg(feature = "image")]
-pub use image;
-
-pub use kurbo;
+pub use piet::image_crate as image;
+pub use piet::kurbo;
 pub use piet_common as piet;
 
 // Reexport the version of `raw_window_handle` we are using.

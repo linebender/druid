@@ -96,7 +96,7 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
             // or on WidgetAdded
             self.rebuild_widget(data.is_some());
         }
-        assert_eq!(data.is_some(), self.widget.is_some(), "{:?}", event);
+        assert_eq!(data.is_some(), self.widget.is_some(), "{event:?}");
         match data.as_ref() {
             Some(d) => self.widget.with_some(|w| w.lifecycle(ctx, event, d, env)),
             None => self.widget.with_none(|w| w.lifecycle(ctx, event, &(), env)),
@@ -125,12 +125,12 @@ impl<T: Data> Widget<Option<T>> for Maybe<T> {
         match data.as_ref() {
             Some(d) => self.widget.with_some(|w| {
                 let size = w.layout(ctx, bc, d, env);
-                w.set_origin(ctx, d, env, Point::ORIGIN);
+                w.set_origin(ctx, Point::ORIGIN);
                 size
             }),
             None => self.widget.with_none(|w| {
                 let size = w.layout(ctx, bc, &(), env);
-                w.set_origin(ctx, &(), env, Point::ORIGIN);
+                w.set_origin(ctx, Point::ORIGIN);
                 size
             }),
         }

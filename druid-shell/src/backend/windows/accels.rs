@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use winapi::ctypes::c_int;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
@@ -36,10 +36,8 @@ struct AccelHandle(HACCEL);
 unsafe impl Send for AccelHandle {}
 unsafe impl Sync for AccelHandle {}
 
-lazy_static! {
-    static ref ACCEL_TABLES: Mutex<HashMap<WindowHandle, Arc<AccelTable>>> =
-        Mutex::new(HashMap::default());
-}
+static ACCEL_TABLES: Lazy<Mutex<HashMap<WindowHandle, Arc<AccelTable>>>> =
+    Lazy::new(|| Mutex::new(HashMap::default()));
 
 /// A Accelerators Table for Windows
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

@@ -49,8 +49,6 @@ impl RichText {
     }
 
     /// Builder-style method for adding an [`Attribute`] to a range of text.
-    ///
-    /// [`Attribute`]: enum.Attribute.html
     pub fn with_attribute(mut self, range: impl RangeBounds<usize>, attr: Attribute) -> Self {
         self.add_attribute(range, attr);
         self
@@ -67,8 +65,6 @@ impl RichText {
     }
 
     /// Add an [`Attribute`] to the provided range of text.
-    ///
-    /// [`Attribute`]: enum.Attribute.html
     pub fn add_attribute(&mut self, range: impl RangeBounds<usize>, attr: Attribute) {
         let range = util::resolve_range(range, self.buffer.len());
         Arc::make_mut(&mut self.attrs).add(range, attr);
@@ -122,8 +118,6 @@ impl TextStorage for RichText {
 ///
 /// let rich_text = builder.build();
 /// ```
-///
-/// [`RichText`]: RichText
 #[derive(Default)]
 pub struct RichTextBuilder {
     buffer: String,
@@ -183,7 +177,7 @@ impl RichTextBuilder {
 
 /// Adds Attributes to the text.
 ///
-/// See also: [`RichTextBuilder`](RichTextBuilder)
+/// See also: [`RichTextBuilder`]
 pub struct AttributesAdder<'a> {
     rich_text_builder: &'a mut RichTextBuilder,
     range: Range<usize>,
