@@ -15,7 +15,7 @@
 //! A widget that just adds padding during layout.
 
 use crate::debug_state::DebugState;
-use crate::widget::{prelude::*, WidgetWrapper};
+use crate::widget::{prelude::*, Axis, WidgetWrapper};
 use crate::{Data, Insets, KeyOrValue, Point, WidgetPod};
 
 use tracing::{instrument, trace};
@@ -101,7 +101,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
         let child_bc = bc.shrink((hpad, vpad));
         let size = self.child.layout(ctx, &child_bc, data, env);
         let origin = Point::new(insets.x0, insets.y0);
-        self.child.set_origin(ctx, data, env, origin);
+        self.child.set_origin(ctx, origin);
 
         let my_size = Size::new(size.width + hpad, size.height + vpad);
         let my_insets = self.child.compute_parent_paint_insets(my_size);
@@ -125,5 +125,22 @@ impl<T: Data, W: Widget<T>> Widget<T> for Padding<T, W> {
             children: vec![self.child.widget().debug_state(data)],
             ..Default::default()
         }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        let inset_size = self.insets.resolve(env).size();
+        let child_bc = bc.shrink(inset_size);
+        let child_max_intrinsic_width = self
+            .child
+            .widget_mut()
+            .compute_max_intrinsic(axis, ctx, &child_bc, data, env);
+        child_max_intrinsic_width + axis.major(inset_size)
     }
 }

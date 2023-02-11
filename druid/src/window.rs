@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::mem;
-use tracing::{error, info, info_span};
+use tracing::{error, info, trace_span};
 
 // Automatically defaults to std::time::Instant on non Wasm platforms
 use instant::Instant;
@@ -35,7 +35,7 @@ use crate::win_handler::RUN_COMMANDS_TOKEN;
 use crate::{
     BoxConstraints, Data, Env, Event, EventCtx, ExtEventSink, Handled, InternalEvent,
     InternalLifeCycle, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, PaintCtx, Point, Size, TimerToken,
-    UpdateCtx, Widget, WidgetId, WidgetPod,
+    UpdateCtx, ViewContext, Widget, WidgetId, WidgetPod,
 };
 
 pub type ImeUpdateFn = dyn FnOnce(crate::shell::text::Event);
@@ -182,21 +182,26 @@ impl<T: Data> Window<T> {
             );
         }
 
-        if self.root.state().needs_window_origin && !self.root.state().needs_layout {
-            let event = LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin);
+        if widget_state.children_view_context_changed && !widget_state.needs_layout {
+            let event =
+                LifeCycle::Internal(InternalLifeCycle::RouteViewContextChanged(ViewContext {
+                    window_origin: Point::ORIGIN, // not the same as the root widget's origin
+                    last_mouse_position: self.last_mouse_pos,
+                    clip: self.size.to_rect(),
+                }));
             self.lifecycle(queue, &event, data, env, false);
         }
 
         // Update the disabled state if necessary
         // Always do this before updating the focus-chain
-        if self.root.state().tree_disabled_changed() {
+        if widget_state.tree_disabled_changed() {
             let event = LifeCycle::Internal(InternalLifeCycle::RouteDisabledChanged);
             self.lifecycle(queue, &event, data, env, false);
         }
 
         // Update the focus-chain if necessary
         // Always do this before sending focus change, since this event updates the focus chain.
-        if self.root.state().update_focus_chain {
+        if widget_state.update_focus_chain {
             let event = LifeCycle::BuildFocusChain;
             self.lifecycle(queue, &event, data, env, false);
         }
@@ -285,7 +290,7 @@ impl<T: Data> Window<T> {
             };
 
             {
-                let _span = info_span!("event");
+                let _span = trace_span!("event");
                 let _span = _span.enter();
                 self.root.event(&mut ctx, &event, data, env);
             }
@@ -297,7 +302,7 @@ impl<T: Data> Window<T> {
                     info!("{}: {:?}", i, n);
                 }
                 info!(
-                    "if this was intended use EventCtx::submit_notification_unknown_target instead"
+                    "if this was intended use EventCtx::submit_notification_without_warning instead"
                 );
             }
             Handled::from(ctx.is_handled)
@@ -350,7 +355,7 @@ impl<T: Data> Window<T> {
         };
 
         {
-            let _span = info_span!("lifecycle");
+            let _span = trace_span!("lifecycle");
             let _span = _span.enter();
             self.root.lifecycle(&mut ctx, event, data, env);
         }
@@ -379,7 +384,7 @@ impl<T: Data> Window<T> {
         };
 
         {
-            let _span = info_span!("update");
+            let _span = trace_span!("update");
             let _span = _span.enter();
             self.root.update(&mut update_ctx, data, env);
         }
@@ -467,7 +472,6 @@ impl<T: Data> Window<T> {
         let mut layout_ctx = LayoutCtx {
             state: &mut state,
             widget_state: &mut widget_state,
-            mouse_pos: self.last_mouse_pos,
         };
         let bc = match self.size_policy {
             WindowSizePolicy::User => BoxConstraints::tight(self.size),
@@ -475,7 +479,7 @@ impl<T: Data> Window<T> {
         };
 
         let content_size = {
-            let _span = info_span!("layout");
+            let _span = trace_span!("layout");
             let _span = _span.enter();
             self.root.layout(&mut layout_ctx, &bc, data, env)
         };
@@ -488,15 +492,8 @@ impl<T: Data> Window<T> {
                 self.handle.set_size(full_size)
             }
         }
-        self.root
-            .set_origin(&mut layout_ctx, data, env, Point::ORIGIN);
-        self.lifecycle(
-            queue,
-            &LifeCycle::Internal(InternalLifeCycle::ParentWindowOrigin),
-            data,
-            env,
-            false,
-        );
+        self.root.set_origin(&mut layout_ctx, Point::ORIGIN);
+
         self.post_event_processing(&mut widget_state, queue, data, env, true);
     }
 
@@ -534,7 +531,7 @@ impl<T: Data> Window<T> {
         };
 
         let root = &mut self.root;
-        info_span!("paint").in_scope(|| {
+        trace_span!("paint").in_scope(|| {
             ctx.with_child_ctx(invalid.clone(), |ctx| root.paint_raw(ctx, data, env));
         });
 
@@ -659,7 +656,7 @@ impl<T: Data> Window<T> {
         self.ime_handlers
             .iter()
             .find(|(token, _)| req_token == *token)
-            .and_then(|(_, reg)| reg.document.release().then(|| reg.widget_id))
+            .and_then(|(_, reg)| reg.document.release().then_some(reg.widget_id))
     }
 
     fn widget_for_focus_request(&self, focus: FocusChange) -> Option<WidgetId> {

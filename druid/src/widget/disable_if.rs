@@ -61,7 +61,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for DisabledIf<T, W> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         let size = self.child.layout(ctx, bc, data, env);
-        self.child.set_origin(ctx, data, env, Point::ZERO);
+        self.child.set_origin(ctx, Point::ZERO);
         ctx.set_baseline_offset(self.child.baseline_offset());
         size
     }

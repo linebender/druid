@@ -16,9 +16,15 @@
         </style>
     </head>
     <body>
-        <noscript>This page contains WebAssembly and JavaScript content, please enable JavaScript in your
-            browser.</noscript>
-        <canvas id="canvas"></canvas>
+        <noscript>This page contains WebAssembly and JavaScript content, please enable JavaScript in your browser.</noscript>
+        <div style="text-align: center; margin: 0px; padding: 0px;">
+            <!-- Windowed mode: canvas MUST has a set both `width` AND `height` attributes -->
+            <!-- <canvas id="canvas" style="width: 300px; height: 300px;" width="300" height="300"></canvas> -->
+
+            <!-- Fullscreen mode: unset `height` OR\AND `width` attribute -->
+            <canvas id="canvas"></canvas>
+        </div>
+
         <script type="module" src="./index.js" type="application/javascript"></script>
     </body>
 </html>

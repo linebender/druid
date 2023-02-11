@@ -20,7 +20,7 @@
 use tracing::error;
 
 use druid::{
-    widget::{FillStrat, Flex, Svg, SvgData, WidgetExt},
+    widget::{Flex, Svg, SvgData, WidgetExt},
     AppLauncher, LocalizedString, Widget, WindowDesc,
 };
 
@@ -47,7 +47,7 @@ fn ui_builder() -> impl Widget<u32> {
     let mut col = Flex::column();
 
     col.add_flex_child(Svg::new(tiger_svg.clone()).fix_width(60.0).center(), 1.0);
-    col.add_flex_child(Svg::new(tiger_svg.clone()).fill_mode(FillStrat::Fill), 1.0);
+    col.add_flex_child(Svg::new(tiger_svg.clone()), 1.0);
     col.add_flex_child(Svg::new(tiger_svg), 1.0);
     col.debug_paint_layout()
 }

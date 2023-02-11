@@ -44,8 +44,8 @@ impl Menu {
         _id: u32,
         _text: &str,
         _key: Option<&HotKey>,
+        _selected: Option<bool>,
         _enabled: bool,
-        _selected: bool,
     ) {
         tracing::warn!("unimplemented");
     }

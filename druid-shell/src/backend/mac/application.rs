@@ -23,10 +23,10 @@ use std::rc::Rc;
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil, NO, YES};
 use cocoa::foundation::{NSArray, NSAutoreleasePool};
-use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::runtime::{Class, Object, Sel};
 use objc::{class, msg_send, sel, sel_impl};
+use once_cell::sync::Lazy;
 
 use crate::application::AppHandler;
 
@@ -75,7 +75,7 @@ impl Application {
 
             // Clean up the delegate
             let () = msg_send![self.ns_app, setDelegate: nil];
-            Box::from_raw(state_ptr); // Causes it to drop & dealloc automatically
+            drop(Box::from_raw(state_ptr));
         }
     }
 
@@ -156,25 +156,24 @@ impl DelegateState {
 
 struct AppDelegate(*const Class);
 unsafe impl Sync for AppDelegate {}
+unsafe impl Send for AppDelegate {}
 
-lazy_static! {
-    static ref APP_DELEGATE: AppDelegate = unsafe {
-        let mut decl = ClassDecl::new("DruidAppDelegate", class!(NSObject))
-            .expect("App Delegate definition failed");
-        decl.add_ivar::<*mut c_void>(APP_HANDLER_IVAR);
+static APP_DELEGATE: Lazy<AppDelegate> = Lazy::new(|| unsafe {
+    let mut decl = ClassDecl::new("DruidAppDelegate", class!(NSObject))
+        .expect("App Delegate definition failed");
+    decl.add_ivar::<*mut c_void>(APP_HANDLER_IVAR);
 
-        decl.add_method(
-            sel!(applicationDidFinishLaunching:),
-            application_did_finish_launching as extern "C" fn(&mut Object, Sel, id),
-        );
+    decl.add_method(
+        sel!(applicationDidFinishLaunching:),
+        application_did_finish_launching as extern "C" fn(&mut Object, Sel, id),
+    );
 
-        decl.add_method(
-            sel!(handleMenuItem:),
-            handle_menu_item as extern "C" fn(&mut Object, Sel, id),
-        );
-        AppDelegate(decl.register())
-    };
-}
+    decl.add_method(
+        sel!(handleMenuItem:),
+        handle_menu_item as extern "C" fn(&mut Object, Sel, id),
+    );
+    AppDelegate(decl.register())
+});
 
 extern "C" fn application_did_finish_launching(_this: &mut Object, _: Sel, _notification: id) {
     unsafe {

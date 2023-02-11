@@ -49,7 +49,7 @@ impl<T, W: Widget<T>> EnvScope<T, W> {
     /// # }
     /// ```
     ///
-    /// [`WidgetExt::env_scope`]: ../trait.WidgetExt.html#method.env_scope
+    /// [`WidgetExt::env_scope`]: super::WidgetExt::env_scope
     pub fn new(f: impl Fn(&mut Env, &T) + 'static, child: W) -> EnvScope<T, W> {
         EnvScope {
             f: Box::new(f),
@@ -94,7 +94,7 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
         (self.f)(&mut new_env, data);
 
         let size = self.child.layout(ctx, bc, data, &new_env);
-        self.child.set_origin(ctx, data, env, Point::ORIGIN);
+        self.child.set_origin(ctx, Point::ORIGIN);
         size
     }
 

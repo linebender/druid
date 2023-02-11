@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, WebWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 
@@ -94,7 +94,7 @@ impl Eq for WindowHandle {}
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         error!("HasRawWindowHandle trait not implemented for wasm.");
-        RawWindowHandle::Web(WebHandle::empty())
+        RawWindowHandle::Web(WebWindowHandle::empty())
     }
 }
 
@@ -118,6 +118,7 @@ struct WindowState {
     handler: RefCell<Box<dyn WinHandler>>,
     window: web_sys::Window,
     canvas: web_sys::HtmlCanvasElement,
+    canvas_size: Option<Size>,
     context: web_sys::CanvasRenderingContext2d,
     invalid: RefCell<Region>,
     click_counter: ClickCounter,
@@ -126,7 +127,7 @@ struct WindowState {
 }
 
 // TODO: support custom cursors
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CustomCursor;
 
 impl WindowState {
@@ -167,10 +168,16 @@ impl WindowState {
     /// Returns the window size in css units
     fn get_window_size_and_dpr(&self) -> (f64, f64, f64) {
         let w = &self.window;
-        let width = w.inner_width().unwrap().as_f64().unwrap();
-        let height = w.inner_height().unwrap().as_f64().unwrap();
         let dpr = w.device_pixel_ratio();
-        (width, height, dpr)
+
+        match self.canvas_size {
+            Some(Size { width, height }) => (width, height, dpr),
+            _ => {
+                let width = w.inner_width().unwrap().as_f64().unwrap();
+                let height = w.inner_height().unwrap().as_f64().unwrap();
+                (width, height, dpr)
+            }
+        }
     }
 
     /// Updates the canvas size and scale factor and returns `Scale` and `ScaledArea`.
@@ -414,6 +421,18 @@ impl WindowBuilder {
             .ok_or_else(|| Error::NoElementById("canvas".to_string()))?
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .map_err(|_| Error::JsCast)?;
+
+        let cnv_attr = |attr| {
+            canvas
+                .get_attribute(attr)
+                .and_then(|value| value.parse().ok())
+        };
+
+        let canvas_size = match (cnv_attr("width"), cnv_attr("height")) {
+            (Some(width), Some(height)) => Some(Size::new(width, height)),
+            _ => None,
+        };
+
         let context = canvas
             .get_context("2d")?
             .ok_or(Error::NoContext)?
@@ -446,6 +465,7 @@ impl WindowBuilder {
             handler: RefCell::new(handler),
             window,
             canvas,
+            canvas_size,
             context,
             invalid: RefCell::new(Region::EMPTY),
             click_counter: ClickCounter::default(),
@@ -581,7 +601,6 @@ impl WindowHandle {
     }
 
     pub fn request_timer(&self, deadline: Instant) -> TimerToken {
-        use std::convert::TryFrom;
         let interval = deadline.duration_since(Instant::now()).as_millis();
         let interval = match i32::try_from(interval) {
             Ok(iv) => iv,

@@ -15,6 +15,7 @@
 //! Safe wrapper for menus.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::mem;
 use std::ptr::null;
 
@@ -98,8 +99,8 @@ impl Menu {
         id: u32,
         text: &str,
         key: Option<&HotKey>,
+        selected: Option<bool>,
         enabled: bool,
-        selected: bool,
     ) {
         let mut anno_text = text.to_string();
         if let Some(key) = key {
@@ -111,7 +112,7 @@ impl Menu {
             if !enabled {
                 flags |= MF_GRAYED;
             }
-            if selected {
+            if let Some(true) = selected {
                 flags |= MF_CHECKED;
             }
             AppendMenuW(
@@ -219,6 +220,7 @@ fn format_hotkey(key: &HotKey, s: &mut String) {
         KbKey::ArrowRight => s.push_str("Right"),
         KbKey::ArrowUp => s.push_str("Up"),
         KbKey::ArrowDown => s.push_str("Down"),
-        _ => s.push_str(&format!("{:?}", key.key)),
+        _ => write!(s, "{}", key.key)
+            .unwrap_or_else(|err| tracing::warn!("Failed to convert hotkey to string: {}", err)),
     }
 }

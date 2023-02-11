@@ -1,7 +1,10 @@
 # How to contribute
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+**IMPORTANT:** The Druid project is being discontinued. While we will still accept
+all contributions, we'll prefer bug fixes and documentation improvements to new
+features.
+
+If you still want to contribute, here are the guidelines you need to follow.
 
 ## Changelog
 
@@ -35,9 +38,9 @@ set -e
 echo "cargo fmt"
 cargo fmt --all -- --check
 echo "cargo clippy druid-shell"
-cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets -- -D warnings
+cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --features=raw-win-handle -- -D warnings
 echo "cargo clippy druid"
-cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im -- -D warnings
+cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle -- -D warnings
 echo "cargo clippy druid (wasm)"
 cargo clippy --manifest-path=druid/Cargo.toml --all-targets --features=image,im --target wasm32-unknown-unknown -- -D warnings
 echo "cargo clippy druid-derive"
@@ -67,7 +70,7 @@ it helps to follow a checklist of what needs to be done. This is that list.
 
 The `druid`, `druid-shell`, and `druid-derive` `Cargo.toml` files need to be updated.
 The `version` field needs to be increased to the next [semver] version that makes sense.
-These packages all also import eachother and those cross-dependency versions need updating too.
+These packages all also import each other and those cross-dependency versions need updating too.
 
 You should also search for the previous version number across the whole workspace
 to find any other references that might need updating. There are for example plenty of links
@@ -102,7 +105,7 @@ adds Druid as a dependency and it won't even compile.
 For that reason our CI testing always uses the highest version that is still compatible.
 This mimics what a new developer would experience when they start using Druid.
 
-What about the the minimum supported version or all the versions between the minimum and maximum?
+What about the minimum supported version or all the versions between the minimum and maximum?
 It is not practical for us to test all the combinations of possible sub-dependency versions.
 Without testing there can easily be mistakes. Let's say our `Cargo.toml` specifies that
 we depend on the package `foo` version `^1.1.1` and the latest `foo` version is `1.1.3`.
@@ -123,34 +126,27 @@ old versions of our sub-dependencies and so we shouldn't claim that the old vers
 
 #### Prerequisites for updating the dependency specifications
 
-An easy way to do this is to use the `cargo upgrade` tool available via [cargo-edit].
+An easy way to do this is to use the `cargo upgrade` tool available via [`cargo-edit`].
 
 ```sh
 cargo install cargo-edit
 ```
 
+*Note that the following instructions were written for `cargo-edit` v0.11. If you have a newer
+major version there may have been changes to the way `cargo-edit` works.*
+
 #### Performing the update
 
-All of the following commands must be run from the root workspace.
-
-First we want to update our `Cargo.lock` file to contain the newest versions
-which are still [semver] compatible with what we have specified in our `Cargo.toml` files.
+We want to update our `Cargo.toml` files to specify the newest versions which are still
+[semver] compatible with what we have previously specified in our `Cargo.toml` files.
 
 If you just want to see what would happen you can add the `--dry-run` option.
 
 ```sh
-cargo update
+cargo upgrade
 ```
 
-Next we'll update all the versions in the `Cargo.toml` files to match the versions
-specified in `Cargo.lock`. We'll do this using the `--to-lockfile` option of `cargo upgrade`.
-It's crucial that we use `--to-lockfile` because without it `cargo upgrade` won't respect semver.
-
-If you just want to see what would happen you can add the `--dry-run` option.
-
-```sh
-cargo upgrade --workspace --to-lockfile
-```
+Running this command will update all the `Cargo.toml` files in the workspace and also `Cargo.lock`.
 
 #### Semver incompatible updates
 
@@ -158,7 +154,7 @@ Incompatible version updates should be done manually after carefully reviewing t
 However you can still use the `cargo upgrade` tool to find out which dependencies could be updated.
 
 ```sh
-cargo upgrade --workspace --dry-run
+cargo upgrade -i --dry-run
 ```
 
 Then based on the reported potential updates you should manually go and check out what has changed,
@@ -177,15 +173,69 @@ We need to update the screenshots. This involves:
 Once all the docs, cargo files and screenshots have been updated, we need to
 publish the crate to crates.io.
 
+#### Ensure your git setup supports symbolic links
+
+Druid makes use of symbolic links but not every git configuration has symlink support enabled,
+[most commonly on Windows](https://github.com/git-for-windows/git/wiki/Symbolic-Links).
+Make sure your configuration has it enabled. The following command must not return `false`.
+
+```sh
+git config core.symlinks
+```
+
+If the above command returns `false` then you need to enable this setting and reset your clone.
+
+##### Enabling git supprot for symbolic links on Windows
+
+First you need to make sure your user account has the `SeCreateSymbolicLinkPrivilege` privilege.
+Easiest test for this is to open `cmd.exe` and run the following:
+
+```sh
+echo "Hello" > original.txt
+mklink link.txt original.txt
+type link.txt
+```
+
+If the `mklink` command didn't complain about privileges and the final `type` command prints out
+*Hello* then you have the privilege. If there is a failure, then you need to enable the privilege.
+
+There are [many ways to enable this privilege](https://github.com/git-for-windows/git/wiki/Symbolic-Links#allowing-non-administrators-to-create-symbolic-links),
+but we'll cover two here. First option is to just enable *developer mode* from the settings app.
+This is a bit heavyweight and changes a lot of settings but it will work. Another more precise
+option is to run `gpedit.msc` as Administrator, navigate to *Computer Configuration >
+Windows Settings > Security Settings > Local Policies > User Rights Assignment* and add your
+account name to the *Create symbolic links* policy. Then you will need to log out and back in.
+
+Once you have the system privilege you must change your git system configuration, which you can
+do by executing the following command as Administrator:
+
+```sh
+git config --system core.symlinks true
+```
+
+Then you must also change the configuration of your local clone of the Druid repository,
+by executing the following commands in the repo directory:
+
+```sh
+git config --local core.symlinks true
+git reset --hard
+```
+
+Now you should be all set.
+
+#### Publishing the crates
+
+We need to publish the crates in a specific order, because the `druid` crate depends on the two
+other crates. We use `--no-verify` for `druid-derive` to deal with a cyclic dependency on the
+`druid` version which we haven't published yet.
+
 ```sh
 cargo publish --manifest-path="druid-derive/Cargo.toml" --no-verify
 cargo publish --manifest-path="druid-shell/Cargo.toml"
 cargo publish --manifest-path="druid/Cargo.toml"
 ```
 
-We need to run the commands in this order, because the druid crate depends on the two other crates. We use `--no-verify` for `druid-derive`, because the crate has a cyclic dependency on `druid` that might cause problem, since we haven't published the latest version of `druid` yet.
-
-<!--- TODO: check that the above is actually true. I'm not sure we really need `--no-verify` --->
+#### Tagging the release
 
 Once we've published our crate, we create a new git tag:
 
@@ -198,6 +248,6 @@ Finally, we [create a new Github release](https://docs.github.com/en/github/admi
 [GitHub Help]: https://help.github.com/articles/about-pull-requests/
 [AUTHORS]: AUTHORS
 [changelog]: CHANGELOG.md
-[cargo-edit]: https://github.com/killercup/cargo-edit
+[`cargo-edit`]: https://crates.io/crates/cargo-edit
 [semver]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
 [git `pre-push` hook]: https://githooks.com

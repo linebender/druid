@@ -81,29 +81,24 @@ struct Span<T> {
 /// let theme_color = Attribute::text_color(theme::SELECTION_COLOR);
 /// ```
 ///
-/// [`KeyOrValue`]: ../enum.KeyOrValue.html
-/// [`theme`]: ../theme
-/// [`Attribute::size`]: #method.size
-/// [`Attribute::text_color`]: #method.text_color
+/// [`theme`]: crate::theme
 #[derive(Debug, Clone)]
 pub enum Attribute {
     /// The font family.
     FontFamily(FontFamily),
     /// The font size, in points.
     FontSize(KeyOrValue<f64>),
-    /// The [`FontWeight`](struct.FontWeight.html).
+    /// The [`FontWeight`].
     Weight(FontWeight),
     /// The foreground color of the text.
     TextColor(KeyOrValue<Color>),
     /// The [`FontStyle`]; either regular or italic.
-    ///
-    /// [`FontStyle`]: enum.FontStyle.html
     Style(FontStyle),
     /// Underline.
     Underline(bool),
     /// Strikethrough
     Strikethrough(bool),
-    /// A [`FontDescriptor`](struct.FontDescriptor.html).
+    /// A [`FontDescriptor`].
     Descriptor(KeyOrValue<FontDescriptor>),
 }
 

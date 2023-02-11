@@ -44,7 +44,6 @@ use wayland_client::{
     },
 };
 use wayland_cursor::CursorTheme;
-use wayland_protocols::unstable::xdg_decoration::v1::client::zxdg_decoration_manager_v1::ZxdgDecorationManagerV1;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 use wayland_protocols::xdg_shell::client::xdg_positioner::XdgPositioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
@@ -93,8 +92,7 @@ pub struct Application {
 #[allow(dead_code)]
 pub(crate) struct Data {
     pub(super) wayland: std::rc::Rc<display::Environment>,
-    pub(super) zxdg_decoration_manager_v1: wl::Main<ZxdgDecorationManagerV1>,
-    pub(super) zwlr_layershell_v1: wl::Main<ZwlrLayerShellV1>,
+    pub(super) zwlr_layershell_v1: Option<wl::Main<ZwlrLayerShellV1>>,
     pub(super) wl_compositor: wl::Main<WlCompositor>,
     pub(super) wl_shm: wl::Main<WlShm>,
     /// A map of wayland object IDs to outputs.
@@ -103,7 +101,7 @@ pub(crate) struct Data {
     /// observed a change, and use `Output::changed` to see if there are any newer changes.
     ///
     /// It's a BTreeMap so the ordering is consistent when enumerating outputs (not sure if this is
-    /// necessary, but it negligable cost).
+    /// necessary, but it negligible cost).
     pub(super) outputs: Rc<RefCell<BTreeMap<u32, outputs::Meta>>>,
     pub(super) seats: Rc<RefCell<BTreeMap<u32, Rc<RefCell<Seat>>>>>,
 
@@ -173,11 +171,15 @@ impl Application {
                         let id = *id;
                         let version = *version;
 
-                        if !(interface.as_str() == "wl_seat" && version >= 7) {
+                        if interface.as_str() != "wl_seat" {
                             return;
                         }
+
                         tracing::debug!("seat detected {:?} {:?} {:?}", interface, id, version);
-                        let new_seat = registry.bind::<WlSeat>(7, id);
+
+                        // 7 is the max version supported by wayland-rs 0.29.5
+                        let version = version.min(7);
+                        let new_seat = registry.bind::<WlSeat>(version, id);
                         let prev_seat = weak_seats
                             .upgrade()
                             .unwrap()
@@ -187,6 +189,10 @@ impl Application {
                             prev_seat.is_none(),
                             "internal: wayland should always use new IDs"
                         );
+
+                        // TODO: This code handles only app startup, but seats can come and go on the fly,
+                        // so we have to handle that in the future
+
                         // Defer setting up the pointer/keyboard event handling until we've
                         // finished constructing the `Application`. That way we can pass it as a
                         // parameter.
@@ -201,18 +207,21 @@ impl Application {
         let env = display::new(dispatcher)?;
         display::print(&env.registry);
 
-        let zxdg_decoration_manager_v1 = env
-            .registry
-            .instantiate_exact::<ZxdgDecorationManagerV1>(1)
-            .map_err(|e| Error::global("zxdg_decoration_manager_v1", 1, e))?;
         let zwlr_layershell_v1 = env
             .registry
             .instantiate_exact::<ZwlrLayerShellV1>(1)
-            .map_err(|e| Error::global("zwlr_layershell_v1", 1, e))?;
+            .map_or_else(
+                |e| {
+                    tracing::info!("unable to instantiate layershell {:?}", e);
+                    None
+                },
+                Some,
+            );
+
         let wl_compositor = env
             .registry
-            .instantiate_exact::<WlCompositor>(4)
-            .map_err(|e| Error::global("wl_compositor", 4, e))?;
+            .instantiate_range::<WlCompositor>(1, 5)
+            .map_err(|e| Error::global("wl_compositor", 1, e))?;
         let wl_shm = env
             .registry
             .instantiate_exact::<WlShm>(1)
@@ -230,7 +239,6 @@ impl Application {
 
         // We need to have keyboard events set up for our seats before the next roundtrip.
         let appdata = std::sync::Arc::new(Data {
-            zxdg_decoration_manager_v1,
             zwlr_layershell_v1,
             wl_compositor,
             wl_shm: wl_shm.clone(),
@@ -251,10 +259,6 @@ impl Application {
             outputsqueue: RefCell::new(Some(outputqueue)),
             wayland: std::rc::Rc::new(env),
         });
-
-        for m in outputs::current()? {
-            appdata.outputs.borrow_mut().insert(m.id(), m);
-        }
 
         // Collect the supported image formats.
         wl_shm.quick_assign(with_cloned!(appdata; move |d1, event, d3| {
@@ -294,8 +298,14 @@ impl Application {
                             });
                             seat.pointer = Some(pointer);
                         }
-                        // Dont worry if they go away - we will just stop receiving events. If the
-                        // capability comes back we will start getting events again.
+
+                        // TODO: We should react to capability removal, 
+                        // "if a seat regains the pointer capability 
+                        // and a client has a previously obtained wl_pointer object 
+                        // of version 4 or less, that object may start sending pointer events again. 
+                        // This behavior is considered a misinterpretation of the intended behavior 
+                        // and must not be relied upon by the client", 
+                        // versions 5 up guarantee that events will not be sent for sure
                     }
                     wl_seat::Event::Name { name } => {
                         seat.name = name;
@@ -334,6 +344,7 @@ impl Application {
                     calloop::channel::Event::Closed => {}
                     calloop::channel::Event::Msg(output) => match output {
                         outputs::Event::Located(output) => {
+                            tracing::debug!("output added {:?} {:?}", output.gid, output.id());
                             appdata
                                 .outputs
                                 .borrow_mut()
@@ -343,6 +354,7 @@ impl Application {
                             }
                         }
                         outputs::Event::Removed(output) => {
+                            tracing::debug!("output removed {:?} {:?}", output.gid, output.id());
                             appdata.outputs.borrow_mut().remove(&output.id());
                             for (_, win) in appdata.handles_iter() {
                                 surfaces::Outputs::removed(&win, &output);
@@ -419,11 +431,7 @@ impl surfaces::Compositor for Data {
         self.wayland.xdg_base.get_xdg_surface(s)
     }
 
-    fn zxdg_decoration_manager_v1(&self) -> wl::Main<ZxdgDecorationManagerV1> {
-        self.zxdg_decoration_manager_v1.clone()
-    }
-
-    fn zwlr_layershell_v1(&self) -> wl::Main<ZwlrLayerShellV1> {
+    fn zwlr_layershell_v1(&self) -> Option<wl::Main<ZwlrLayerShellV1>> {
         self.zwlr_layershell_v1.clone()
     }
 }
@@ -441,7 +449,7 @@ impl Data {
             .queue
             .borrow_mut()
             .sync_roundtrip(&mut (), |evt, _, _| {
-                panic!("unexpected wayland event: {:?}", evt)
+                panic!("unexpected wayland event: {evt:?}")
             })
             .map_err(Error::fatal)?;
         Ok(())

@@ -33,8 +33,8 @@ use crate::shell::Region;
 use crate::text::{ImeHandlerRef, TextFieldRegistration};
 use crate::{
     commands, sub_window::SubWindowDesc, widget::Widget, Affine, Command, Cursor, Data, Env,
-    ExtEventSink, Insets, Menu, Notification, Point, Rect, SingleUse, Size, Target, TimerToken,
-    Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
+    ExtEventSink, Insets, Menu, Notification, Point, Rect, Scale, SingleUse, Size, Target,
+    TimerToken, Vec2, WidgetId, WindowConfig, WindowDesc, WindowHandle, WindowId,
 };
 
 /// A macro for implementing methods on multiple contexts.
@@ -48,6 +48,17 @@ macro_rules! impl_context_method {
     ( $ty:ty, $($more:ty),+, { $($method:item)+ } ) => {
         impl_context_method!($ty, { $($method)+ });
         impl_context_method!($($more),+, { $($method)+ });
+    };
+}
+
+/// A macro for implementing context traits for multiple contexts.
+macro_rules! impl_context_trait {
+    ($tr:ty => $ty:ty,  { $($method:item)+ } ) => {
+        impl $tr for $ty { $($method)+ }
+    };
+    ($tr:ty => $ty:ty, $($more:ty),+, { $($method:item)+ } ) => {
+        impl_context_trait!($tr => $ty, { $($method)+ });
+        impl_context_trait!($tr => $($more),+, { $($method)+ });
     };
 }
 
@@ -85,9 +96,9 @@ pub struct EventCtx<'a, 'b> {
 /// specific lifecycle events; for instance [`register_child`]
 /// should only be called while handling [`LifeCycle::WidgetAdded`].
 ///
-/// [`lifecycle`]: trait.Widget.html#tymethod.lifecycle
+/// [`lifecycle`]: Widget::lifecycle
 /// [`register_child`]: #method.register_child
-/// [`LifeCycle::WidgetAdded`]: enum.LifeCycle.html#variant.WidgetAdded
+/// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded
 pub struct LifeCycleCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
@@ -106,7 +117,7 @@ pub struct UpdateCtx<'a, 'b> {
     pub(crate) env: &'a Env,
 }
 
-/// A context provided to layout handling methods of widgets.
+/// A context provided to layout-handling methods of widgets.
 ///
 /// As of now, the main service provided is access to a factory for
 /// creating text layout objects, which are likely to be useful
@@ -114,7 +125,6 @@ pub struct UpdateCtx<'a, 'b> {
 pub struct LayoutCtx<'a, 'b> {
     pub(crate) state: &'a mut ContextState<'b>,
     pub(crate) widget_state: &'a mut WidgetState,
-    pub(crate) mouse_pos: Option<Point>,
 }
 
 /// Z-order paint operations with transformations.
@@ -126,7 +136,7 @@ pub(crate) struct ZOrderPaintOp {
 
 /// A context passed to paint methods of widgets.
 ///
-/// In addition to the API below, [`PaintCtx`] derefs to an implemention of
+/// In addition to the API below, [`PaintCtx`] derefs to an implementation of
 /// the [`RenderContext`] trait, which defines the basic available drawing
 /// commands.
 pub struct PaintCtx<'a, 'b, 'c> {
@@ -141,6 +151,169 @@ pub struct PaintCtx<'a, 'b, 'c> {
     /// The approximate depth in the tree at the time of painting.
     pub(crate) depth: u32,
 }
+
+/// The state of a widget and its global context.
+pub struct State<'a> {
+    // currently the only method using the State struct is set_origin.
+    // the context state could be included into this struct to allow changes to context state
+    // changes from Context traits
+    // pub(crate) state: &'a mut ContextState<'b>,
+    pub(crate) widget_state: &'a mut WidgetState,
+}
+
+/// Convenience trait for code generic over contexts.
+///
+/// Methods that deal with commands and timers.
+/// Available to all contexts but [`PaintCtx`].
+pub trait ChangeCtx {
+    /// Submit a [`Command`] to be run after this event is handled. See [`submit_command`].
+    ///
+    /// [`submit_command`]: EventCtx::submit_command
+    fn submit_command(&mut self, cmd: impl Into<Command>);
+    /// Returns an [`ExtEventSink`] for submitting commands from other threads. See ['get_external_handle'].
+    ///
+    /// [`get_external_handle`]: EventCtx::get_external_handle
+    fn get_external_handle(&self) -> ExtEventSink;
+    /// Request a timer event. See [`request_timer`]
+    ///
+    /// [`request_timer`]: EventCtx::request_timer
+    fn request_timer(&mut self, deadline: Duration) -> TimerToken;
+
+    /// Returns the state of the widget.
+    ///
+    /// This method should only be used by the framework to do mergeups.
+    fn state(&mut self) -> State;
+}
+
+/// Convenience trait for invalidation and request methods available on multiple contexts.
+///
+/// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
+pub trait RequestCtx: ChangeCtx {
+    /// Request a [`paint`] pass. See ['request_paint']
+    ///
+    /// ['request_paint']: EventCtx::request_paint
+    /// [`paint`]: Widget::paint
+    fn request_paint(&mut self);
+    /// Request a [`paint`] pass for redrawing a rectangle. See [`request_paint_rect`].
+    ///
+    /// [`request_paint_rect`]: EventCtx::request_paint_rect
+    /// [`paint`]: Widget::paint
+    fn request_paint_rect(&mut self, rect: Rect);
+    /// Request a layout pass. See [`request_layout`].
+    ///
+    /// [`request_layout`]: EventCtx::request_layout
+    fn request_layout(&mut self);
+    /// Request an animation frame. See [`request_anim_frame`].
+    ///
+    /// [`request_anim_frame`]: EventCtx::request_anim_frame
+    fn request_anim_frame(&mut self);
+    /// Indicate that your children have changed. See [`children_changed`].
+    ///
+    /// [`children_changed`]: EventCtx::children_changed
+    fn children_changed(&mut self);
+    /// Create a new sub-window. See [`new_sub_window`].
+    ///
+    /// [`new_sub_window`]: EventCtx::new_sub_window
+    fn new_sub_window<W: Widget<U> + 'static, U: Data>(
+        &mut self,
+        window_config: WindowConfig,
+        widget: W,
+        data: U,
+        env: Env,
+    ) -> WindowId;
+    /// Change the disabled state of this widget. See [`set_disabled`].
+    ///
+    /// [`set_disabled`]: EventCtx::set_disabled
+    fn set_disabled(&mut self, disabled: bool);
+    /// Indicate that text input state has changed. See [`invalidate_text_input`].
+    ///
+    /// [`invalidate_text_input`]: EventCtx::invalidate_text_input
+    fn invalidate_text_input(&mut self, event: ImeInvalidation);
+    /// Scrolls this widget into view.
+    ///
+    /// [`scroll_to_view`]: EventCtx::scroll_to_view
+    fn scroll_to_view(&mut self);
+    /// Scrolls the area into view. See [`scroll_area_to_view`].
+    ///
+    /// [`scroll_area_to_view`]: EventCtx::scroll_area_to_view
+    fn scroll_area_to_view(&mut self, area: Rect);
+}
+
+impl_context_trait!(
+    ChangeCtx => EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, LayoutCtx<'_, '_>,
+    {
+
+        fn submit_command(&mut self, cmd: impl Into<Command>) {
+            Self::submit_command(self, cmd)
+        }
+
+        fn get_external_handle(&self) -> ExtEventSink {
+            Self::get_external_handle(self)
+        }
+
+        fn request_timer(&mut self, deadline: Duration) -> TimerToken {
+            Self::request_timer(self, deadline)
+        }
+
+        fn state(&mut self) -> State {
+            State {
+                //state: &mut *self.state,
+                widget_state: &mut *self.widget_state,
+            }
+        }
+    }
+);
+
+impl_context_trait!(
+    RequestCtx => EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>,
+    {
+        fn request_paint(&mut self) {
+            Self::request_paint(self)
+        }
+
+        fn request_paint_rect(&mut self, rect: Rect) {
+            Self::request_paint_rect(self, rect)
+        }
+
+        fn request_layout(&mut self) {
+            Self::request_layout(self)
+        }
+
+        fn request_anim_frame(&mut self) {
+            Self::request_anim_frame(self)
+        }
+
+        fn children_changed(&mut self) {
+            Self::children_changed(self)
+        }
+
+        fn new_sub_window<W: Widget<U> + 'static, U: Data>(
+            &mut self,
+            window_config: WindowConfig,
+            widget: W,
+            data: U,
+            env: Env,
+        ) -> WindowId {
+            Self::new_sub_window(self, window_config, widget, data, env)
+        }
+
+        fn set_disabled(&mut self, disabled: bool) {
+            Self::set_disabled(self, disabled)
+        }
+
+        fn invalidate_text_input(&mut self, event: ImeInvalidation) {
+            Self::invalidate_text_input(self, event)
+        }
+
+        fn scroll_to_view(&mut self) {
+            Self::scroll_to_view(self)
+        }
+
+        fn scroll_area_to_view(&mut self, area: Rect) {
+            Self::scroll_area_to_view(self, area)
+        }
+    }
+);
 
 // methods on everyone
 impl_context_method!(
@@ -169,6 +342,18 @@ impl_context_method!(
         pub fn text(&mut self) -> &mut PietText {
             &mut self.state.text
         }
+
+        /// The current window's [`Scale`].
+        ///
+        /// The returned [`Scale`] is a copy and thus its information will be stale after
+        /// the platform changes the window's scale. This means you can only rely on it
+        /// until the next [`Event::WindowScale`] event happens.
+        ///
+        /// [`Scale`]: crate::Scale
+        /// [`Event::WindowScale`]: crate::Event::WindowScale
+        pub fn scale(&self) -> Scale {
+            self.state.window.get_scale().unwrap_or_default()
+        }
     }
 );
 
@@ -187,7 +372,7 @@ impl_context_method!(
         /// Generally it will be the same as the size returned by the child widget's
         /// [`layout`] method.
         ///
-        /// [`layout`]: trait.Widget.html#tymethod.layout
+        /// [`layout`]: Widget::layout
         pub fn size(&self) -> Size {
             self.widget_state.size()
         }
@@ -215,34 +400,20 @@ impl_context_method!(
             content_origin + self.to_window(widget_point).to_vec2()
         }
 
-        /// The "hot" (aka hover) status of a widget.
+        /// Query the "hot" state of the widget.
         ///
-        /// A widget is "hot" when the mouse is hovered over it. Widgets will
-        /// often change their appearance as a visual indication that they
-        /// will respond to mouse interaction.
+        /// See [`WidgetPod::is_hot`] for additional information.
         ///
-        /// The hot status is computed from the widget's layout rect. In a
-        /// container hierarchy, all widgets with layout rects containing the
-        /// mouse position have hot status.
-        ///
-        /// Discussion: there is currently some confusion about whether a
-        /// widget can be considered hot when some other widget is active (for
-        /// example, when clicking to one widget and dragging to the next).
-        /// The documentation should clearly state the resolution.
+        /// [`WidgetPod::is_hot`]: crate::WidgetPod::is_hot
         pub fn is_hot(&self) -> bool {
             self.widget_state.is_hot
         }
 
-        /// The active status of a widget.
+        /// Query the "active" state of the widget.
         ///
-        /// Active status generally corresponds to a mouse button down. Widgets
-        /// with behavior similar to a button will call [`set_active`] on mouse
-        /// down and then up.
+        /// See [`WidgetPod::is_active`] for additional information.
         ///
-        /// When a widget is active, it gets mouse events even when the mouse
-        /// is dragged away.
-        ///
-        /// [`set_active`]: struct.EventCtx.html#method.set_active
+        /// [`WidgetPod::is_active`]: crate::WidgetPod::is_active
         pub fn is_active(&self) -> bool {
             self.widget_state.is_active
         }
@@ -262,9 +433,9 @@ impl_context_method!(
         /// Only one widget at a time is focused. However due to the way events are routed,
         /// all ancestors of that widget will also receive keyboard events.
         ///
-        /// [`request_focus`]: struct.EventCtx.html#method.request_focus
-        /// [`register_for_focus`]: struct.LifeCycleCtx.html#method.register_for_focus
-        /// [`LifeCycle::FocusChanged`]: enum.LifeCycle.html#variant.FocusChanged
+        /// [`request_focus`]: EventCtx::request_focus
+        /// [`register_for_focus`]: LifeCycleCtx::register_for_focus
+        /// [`LifeCycle::FocusChanged`]: crate::LifeCycle::FocusChanged
         /// [`has_focus`]: #method.has_focus
         pub fn is_focused(&self) -> bool {
             self.state.focus_widget == Some(self.widget_id())
@@ -275,7 +446,7 @@ impl_context_method!(
         /// Returns `true` if either this specific widget or any one of its descendants is focused.
         /// To check if only this specific widget is focused use [`is_focused`],
         ///
-        /// [`is_focused`]: #method.is_focused
+        /// [`is_focused`]: crate::EventCtx::is_focused
         pub fn has_focus(&self) -> bool {
             self.widget_state.has_focus
         }
@@ -292,7 +463,7 @@ impl_context_method!(
         /// For an example the decrease button of a counter of type `usize` should be disabled if the
         /// value is `0`.
         ///
-        /// [`set_disabled`]: EventCtx::set_disabled
+        /// [`set_disabled`]: crate::EventCtx::set_disabled
         pub fn is_disabled(&self) -> bool {
             self.widget_state.is_disabled()
         }
@@ -307,10 +478,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// cursor, the child widget's cursor will take precedence. (If that isn't what you want, use
     /// [`override_cursor`] instead.)
     ///
-    /// [`clear_cursor`]: EventCtx::clear_cursor
-    /// [`override_cursor`]: EventCtx::override_cursor
-    /// [`hot`]: EventCtx::is_hot
-    /// [`active`]: EventCtx::is_active
+    /// [`clear_cursor`]: crate::EventCtx::clear_cursor
+    /// [`override_cursor`]: crate::EventCtx::override_cursor
+    /// [`hot`]: crate::EventCtx::is_hot
+    /// [`active`]: crate::EventCtx::is_active
     pub fn set_cursor(&mut self, cursor: &Cursor) {
         trace!("set_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Set(cursor.clone());
@@ -322,10 +493,10 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     /// effect when this widget is either [`hot`] or [`active`]. This will override the cursor
     /// preferences of a child widget. (If that isn't what you want, use [`set_cursor`] instead.)
     ///
-    /// [`clear_cursor`]: EventCtx::clear_cursor
-    /// [`set_cursor`]: EventCtx::override_cursor
-    /// [`hot`]: EventCtx::is_hot
-    /// [`active`]: EventCtx::is_active
+    /// [`clear_cursor`]: crate::EventCtx::clear_cursor
+    /// [`set_cursor`]: crate::EventCtx::set_cursor
+    /// [`hot`]: crate::EventCtx::is_hot
+    /// [`active`]: crate::EventCtx::is_active
     pub fn override_cursor(&mut self, cursor: &Cursor) {
         trace!("override_cursor {:?}", cursor);
         self.widget_state.cursor_change = CursorChange::Override(cursor.clone());
@@ -335,11 +506,28 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, {
     ///
     /// This undoes the effect of [`set_cursor`] and [`override_cursor`].
     ///
-    /// [`override_cursor`]: EventCtx::override_cursor
-    /// [`set_cursor`]: EventCtx::set_cursor
+    /// [`override_cursor`]: crate::EventCtx::override_cursor
+    /// [`set_cursor`]: crate::EventCtx::set_cursor
     pub fn clear_cursor(&mut self) {
         trace!("clear_cursor");
         self.widget_state.cursor_change = CursorChange::Default;
+    }
+});
+
+// methods on event, update and layout.
+impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LayoutCtx<'_, '_>, {
+    /// Indicate that your [`ViewContext`] has changed.
+    ///
+    /// This event is sent after layout is done and before paint is called. Note that you can still
+    /// receive this event even if there was no prior call to layout.
+    ///
+    /// Widgets must call this method after changing the clip region of their children.
+    /// Changes to the other parts of [`ViewContext`] (cursor position and global origin) are tracked
+    /// internally.
+    ///
+    /// [`ViewContext`]: crate::ViewContext
+    pub fn view_context_changed(&mut self) {
+        self.widget_state.view_context_changed = true;
     }
 });
 
@@ -348,9 +536,9 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// Request a [`paint`] pass. This is equivalent to calling
     /// [`request_paint_rect`] for the widget's [`paint_rect`].
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: Widget::paint
     /// [`request_paint_rect`]: #method.request_paint_rect
-    /// [`paint_rect`]: struct.WidgetPod.html#method.paint_rect
+    /// [`paint_rect`]: crate::WidgetPod::paint_rect
     pub fn request_paint(&mut self) {
         trace!("request_paint");
         self.widget_state.invalid.set_rect(
@@ -361,7 +549,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// Request a [`paint`] pass for redrawing a rectangle, which is given
     /// relative to our layout rectangle.
     ///
-    /// [`paint`]: trait.Widget.html#tymethod.paint
+    /// [`paint`]: Widget::paint
     pub fn request_paint_rect(&mut self, rect: Rect) {
         trace!("request_paint_rect {}", rect);
         self.widget_state.invalid.add_rect(rect);
@@ -376,13 +564,25 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// (such as if it would like to change the layout of children in
     /// response to some event) it must call this method.
     ///
-    /// [`layout`]: trait.Widget.html#tymethod.layout
+    /// [`layout`]: Widget::layout
     pub fn request_layout(&mut self) {
         trace!("request_layout");
         self.widget_state.needs_layout = true;
     }
 
-    /// Request an animation frame.
+    /// Request an [`AnimFrame`] event.
+    ///
+    /// Receiving [`AnimFrame`] does not inherently mean a `paint` invocation will follow.
+    /// If you want something actually painted you need to explicitly call [`request_paint`]
+    /// or [`request_paint_rect`] when handling the [`AnimFrame`] event.
+    ///
+    /// Note that not requesting paint when handling the [`AnimFrame`] event and then
+    /// recursively requesting another [`AnimFrame`] can lead to rapid event fire,
+    /// which is probably not what you want and would most likely be wasted compute cycles.
+    ///
+    /// [`AnimFrame`]: crate::Event::AnimFrame
+    /// [`request_paint`]: #method.request_paint
+    /// [`request_paint_rect`]: #method.request_paint_rect
     pub fn request_anim_frame(&mut self) {
         trace!("request_anim_frame");
         self.widget_state.request_anim = true;
@@ -408,7 +608,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     ///
     /// Calling this method during [`LifeCycle::DisabledChanged`] has no effect.
     ///
-    /// [`LifeCycle::DisabledChanged`]: struct.LifeCycle.html#variant.DisabledChanged
+    /// [`LifeCycle::DisabledChanged`]: crate::LifeCycle::DisabledChanged
     /// [`is_disabled`]: EventCtx::is_disabled
     pub fn set_disabled(&mut self, disabled: bool) {
         // widget_state.children_disabled_changed is not set because we want to be able to delete
@@ -438,7 +638,7 @@ impl_context_method!(EventCtx<'_, '_>, UpdateCtx<'_, '_>, LifeCycleCtx<'_, '_>, 
     /// 'U' must be the type of the nearest surrounding [`WidgetPod`]. The 'data' argument should be
     /// the current value of data  for that widget.
     ///
-    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`WidgetPod`]: crate::WidgetPod
     // TODO - dynamically check that the type of the pod we are registering this on is the same as the type of the
     // requirement. Needs type ids recorded. This goes wrong if you don't have a pod between you and a lens.
     pub fn new_sub_window<W: Widget<U> + 'static, U: Data>(
@@ -491,8 +691,7 @@ impl_context_method!(
         ///
         /// [`Target::Auto`] commands will be sent to the window containing the widget.
         ///
-        /// [`Command`]: struct.Command.html
-        /// [`update`]: trait.Widget.html#tymethod.update
+        /// [`update`]: Widget::update
         pub fn submit_command(&mut self, cmd: impl Into<Command>) {
             trace!("submit_command");
             self.state.submit_command(cmd.into())
@@ -500,8 +699,6 @@ impl_context_method!(
 
         /// Returns an [`ExtEventSink`] that can be moved between threads,
         /// and can be used to submit commands back to the application.
-        ///
-        /// [`ExtEventSink`]: struct.ExtEventSink.html
         pub fn get_external_handle(&self) -> ExtEventSink {
             trace!("get_external_handle");
             self.state.ext_handle.clone()
@@ -522,7 +719,7 @@ impl EventCtx<'_, '_> {
     /// Submit a [`Notification`].
     ///
     /// The provided argument can be a [`Selector`] or a [`Command`]; this lets
-    /// us work with the existing API for addding a payload to a [`Selector`].
+    /// us work with the existing API for adding a payload to a [`Selector`].
     ///
     /// If the argument is a `Command`, the command's target will be ignored.
     ///
@@ -554,8 +751,6 @@ impl EventCtx<'_, '_> {
     /// "unhandled notification" warning.
     ///
     /// [`submit_notification`]: crate::EventCtx::submit_notification
-    //TODO: decide if we should use a known_target flag on submit_notification instead,
-    // which would be a breaking change.
     pub fn submit_notification_without_warning(&mut self, note: impl Into<Command>) {
         trace!("submit_notification");
         let note = note
@@ -577,7 +772,7 @@ impl EventCtx<'_, '_> {
     /// Create a new window.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn new_window<T: Any>(&mut self, desc: WindowDesc<T>) {
         trace!("new_window");
         if self.state.root_app_data_type == TypeId::of::<T>() {
@@ -594,7 +789,7 @@ impl EventCtx<'_, '_> {
     /// Show the context menu in the window containing the current widget.
     /// `T` must be the application's root `Data` type (the type provided to [`AppLauncher::launch`]).
     ///
-    /// [`AppLauncher::launch`]: struct.AppLauncher.html#method.launch
+    /// [`AppLauncher::launch`]: crate::AppLauncher::launch
     pub fn show_context_menu<T: Any>(&mut self, menu: Menu<T>, location: Point) {
         trace!("show_context_menu");
         if self.state.root_app_data_type == TypeId::of::<T>() {
@@ -749,7 +944,7 @@ impl UpdateCtx<'_, '_> {
     /// This should only be needed in advanced cases;
     /// see [`EventCtx::request_update`] for more information.
     ///
-    /// [`EventCtx::request_update`]: struct.EventCtx.html#method.request_update
+    /// [`EventCtx::request_update`]: EventCtx::request_update
     pub fn has_requested_update(&mut self) -> bool {
         self.widget_state.request_update
     }
@@ -757,8 +952,7 @@ impl UpdateCtx<'_, '_> {
     /// Returns `true` if the current [`Env`] has changed since the previous
     /// [`update`] call.
     ///
-    /// [`Env`]: struct.Env.html
-    /// [`update`]: trait.Widget.html#tymethod.update
+    /// [`update`]: Widget::update
     pub fn env_changed(&self) -> bool {
         self.prev_env.is_some()
     }
@@ -769,10 +963,9 @@ impl UpdateCtx<'_, '_> {
     /// The argument can be anything that is resolveable from the [`Env`],
     /// such as a [`Key`] or a [`KeyOrValue`].
     ///
-    /// [`update`]: trait.Widget.html#tymethod.update
-    /// [`Env`]: struct.Env.html
-    /// [`Key`]: struct.Key.html
-    /// [`KeyOrValue`]: enum.KeyOrValue.html
+    /// [`update`]: Widget::update
+    /// [`Key`]: crate::Key
+    /// [`KeyOrValue`]: crate::KeyOrValue
     pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
         match self.prev_env.as_ref() {
             Some(prev) => key.changed(prev, self.env),
@@ -812,14 +1005,14 @@ impl LifeCycleCtx<'_, '_> {
         self.widget_state.children.add(&child_id);
     }
 
-    /// Register this widget to be eligile to accept focus automatically.
+    /// Register this widget to be eligible to accept focus automatically.
     ///
     /// This should only be called in response to a [`LifeCycle::BuildFocusChain`] event.
     ///
     /// See [`EventCtx::is_focused`] for more information about focus.
     ///
-    /// [`LifeCycle::BuildFocusChain`]: enum.Lifecycle.html#variant.BuildFocusChain
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
+    /// [`LifeCycle::BuildFocusChain`]: crate::LifeCycle::BuildFocusChain
+    /// [`EventCtx::is_focused`]: EventCtx::is_focused
     pub fn register_for_focus(&mut self) {
         trace!("register_for_focus");
         self.widget_state.focus_chain.push(self.widget_id());
@@ -854,7 +1047,7 @@ impl LifeCycleCtx<'_, '_> {
     }
 }
 
-impl LayoutCtx<'_, '_> {
+impl<'a, 'b> LayoutCtx<'a, 'b> {
     /// Set explicit paint [`Insets`] for this widget.
     ///
     /// You are not required to set explicit paint bounds unless you need
@@ -864,8 +1057,7 @@ impl LayoutCtx<'_, '_> {
     ///
     /// For more information, see [`WidgetPod::paint_insets`].
     ///
-    /// [`Insets`]: struct.Insets.html
-    /// [`WidgetPod::paint_insets`]: struct.WidgetPod.html#method.paint_insets
+    /// [`WidgetPod::paint_insets`]: crate::WidgetPod::paint_insets
     pub fn set_paint_insets(&mut self, insets: impl Into<Insets>) {
         let insets = insets.into();
         trace!("set_paint_insets {:?}", insets);

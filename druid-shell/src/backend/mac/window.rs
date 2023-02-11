@@ -32,15 +32,15 @@ use cocoa::foundation::{
 };
 use core_graphics::context::CGContextRef;
 use foreign_types::ForeignTypeRef;
-use lazy_static::lazy_static;
 use objc::declare::ClassDecl;
 use objc::rc::WeakPtr;
 use objc::runtime::{Class, Object, Protocol, Sel};
 use objc::{class, msg_send, sel, sel_impl};
+use once_cell::sync::Lazy;
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{macos::MacOSHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -180,7 +180,7 @@ struct ViewState {
     parent: Option<crate::WindowHandle>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 // TODO: support custom cursors
 pub struct CustomCursor;
 
@@ -290,6 +290,18 @@ impl WindowBuilder {
             let frame = NSView::frame(content_view);
             view.initWithFrame_(frame);
 
+            // The rect of the tracking area doesn't matter, because
+            // we use the InVisibleRect option where the OS syncs the size automatically.
+            let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
+            let opts = NSTrackingAreaOptions::MouseEnteredAndExited
+                | NSTrackingAreaOptions::MouseMoved
+                | NSTrackingAreaOptions::ActiveAlways
+                | NSTrackingAreaOptions::InVisibleRect;
+            let tracking_area = NSTrackingArea::alloc(nil)
+                .initWithRect_options_owner_userInfo(rect, opts, view, nil)
+                .autorelease();
+            view.addTrackingArea(tracking_area);
+
             let () = msg_send![window, setDelegate: view];
 
             if let Some(menu) = self.menu {
@@ -310,9 +322,9 @@ impl WindowBuilder {
 
             if let Some(level) = self.level {
                 match &level {
-                    WindowLevel::Tooltip(parent) => (*view_state).parent = Some(parent.clone()),
-                    WindowLevel::DropDown(parent) => (*view_state).parent = Some(parent.clone()),
-                    WindowLevel::Modal(parent) => (*view_state).parent = Some(parent.clone()),
+                    WindowLevel::Tooltip(parent) => view_state.parent = Some(parent.clone()),
+                    WindowLevel::DropDown(parent) => view_state.parent = Some(parent.clone()),
+                    WindowLevel::Modal(parent) => view_state.parent = Some(parent.clone()),
                     _ => {}
                 }
                 handle.set_level(level);
@@ -321,9 +333,9 @@ impl WindowBuilder {
             // set_window_state above could have invalidated the frame size
             let frame = NSView::frame(content_view);
 
-            (*view_state).handler.connect(&handle.clone().into());
-            (*view_state).handler.scale(Scale::default());
-            (*view_state)
+            view_state.handler.connect(&handle.clone().into());
+            view_state.handler.scale(Scale::default());
+            view_state
                 .handler
                 .size(Size::new(frame.size.width, frame.size.height));
 
@@ -332,197 +344,210 @@ impl WindowBuilder {
     }
 }
 
-// Wrap pointer because lazy_static requires Sync.
+// Wrap pointer because statics requires Sync.
 struct ViewClass(*const Class);
 unsafe impl Sync for ViewClass {}
+unsafe impl Send for ViewClass {}
 
-lazy_static! {
-    static ref VIEW_CLASS: ViewClass = unsafe {
-        let mut decl = ClassDecl::new("DruidView", class!(NSView)).expect("View class defined");
-        decl.add_ivar::<*mut c_void>("viewState");
+static VIEW_CLASS: Lazy<ViewClass> = Lazy::new(|| unsafe {
+    let mut decl = ClassDecl::new("DruidView", class!(NSView)).expect("View class defined");
+    decl.add_ivar::<*mut c_void>("viewState");
 
-        decl.add_method(
-            sel!(isFlipped),
-            isFlipped as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn isFlipped(_this: &Object, _sel: Sel) -> BOOL {
-            YES
+    decl.add_method(
+        sel!(isFlipped),
+        isFlipped as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn isFlipped(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    decl.add_method(
+        sel!(acceptsFirstResponder),
+        acceptsFirstResponder as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    // acceptsFirstMouse is called when a left mouse click would focus the window
+    decl.add_method(
+        sel!(acceptsFirstMouse:),
+        acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
+    );
+    extern "C" fn acceptsFirstMouse(this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
+        unsafe {
+            let view_state: *mut c_void = *this.get_ivar("viewState");
+            let view_state = &mut *(view_state as *mut ViewState);
+            view_state.focus_click = true;
         }
-        decl.add_method(
-            sel!(acceptsFirstResponder),
-            acceptsFirstResponder as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn acceptsFirstResponder(_this: &Object, _sel: Sel) -> BOOL {
-            YES
+        YES
+    }
+    decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
+    extern "C" fn dealloc(this: &Object, _sel: Sel) {
+        info!("view is dealloc'ed");
+        unsafe {
+            let view_state: *mut c_void = *this.get_ivar("viewState");
+            drop(Box::from_raw(view_state as *mut ViewState));
         }
-        // acceptsFirstMouse is called when a left mouse click would focus the window
-        decl.add_method(
-            sel!(acceptsFirstMouse:),
-            acceptsFirstMouse as extern "C" fn(&Object, Sel, id) -> BOOL,
-        );
-        extern "C" fn acceptsFirstMouse(this: &Object, _sel: Sel, _nsevent: id) -> BOOL {
-            unsafe {
-                let view_state: *mut c_void = *this.get_ivar("viewState");
-                let view_state = &mut *(view_state as *mut ViewState);
-                view_state.focus_click = true;
-            }
-            YES
-        }
-        decl.add_method(sel!(dealloc), dealloc as extern "C" fn(&Object, Sel));
-        extern "C" fn dealloc(this: &Object, _sel: Sel) {
-            info!("view is dealloc'ed");
-            unsafe {
-                let view_state: *mut c_void = *this.get_ivar("viewState");
-                Box::from_raw(view_state as *mut ViewState);
-            }
-        }
+    }
 
-        decl.add_method(
-            sel!(windowDidBecomeKey:),
-            window_did_become_key as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(windowDidResignKey:),
-            window_did_resign_key as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(setFrameSize:),
-            set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
-        );
-        decl.add_method(
-            sel!(mouseDown:),
-            mouse_down_left as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(rightMouseDown:),
-            mouse_down_right as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseDown:),
-            mouse_down_other as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseUp:),
-            mouse_up_left as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(rightMouseUp:),
-            mouse_up_right as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseUp:),
-            mouse_up_other as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseMoved:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseDragged:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(otherMouseDragged:),
-            mouse_move as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseEntered:),
-            mouse_enter as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(mouseExited:),
-            mouse_leave as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(scrollWheel:),
-            scroll_wheel as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(magnifyWithEvent:),
-            pinch_event as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(keyDown:),
-            key_down as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
-        decl.add_method(
-            sel!(flagsChanged:),
-            mods_changed as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(drawRect:),
-            draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
-        );
-        decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
-        decl.add_method(sel!(viewWillDraw), view_will_draw as extern "C" fn(&mut Object, Sel));
-        decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
-        decl.add_method(
-            sel!(handleTimer:),
-            handle_timer as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(handleMenuItem:),
-            handle_menu_item as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(showContextMenu:),
-            show_context_menu as extern "C" fn(&mut Object, Sel, id),
-        );
-        decl.add_method(
-            sel!(windowShouldClose:),
-            window_should_close as extern "C" fn(&mut Object, Sel, id)->BOOL,
-        );
-        decl.add_method(
-            sel!(windowWillClose:),
-            window_will_close as extern "C" fn(&mut Object, Sel, id),
-        );
+    decl.add_method(
+        sel!(windowDidBecomeKey:),
+        window_did_become_key as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(windowDidResignKey:),
+        window_did_resign_key as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(setFrameSize:),
+        set_frame_size as extern "C" fn(&mut Object, Sel, NSSize),
+    );
+    decl.add_method(
+        sel!(mouseDown:),
+        mouse_down_left as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(rightMouseDown:),
+        mouse_down_right as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseDown:),
+        mouse_down_other as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseUp:),
+        mouse_up_left as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(rightMouseUp:),
+        mouse_up_right as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseUp:),
+        mouse_up_other as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseMoved:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseDragged:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(otherMouseDragged:),
+        mouse_move as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseEntered:),
+        mouse_enter as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(mouseExited:),
+        mouse_leave as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(scrollWheel:),
+        scroll_wheel as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(magnifyWithEvent:),
+        pinch_event as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(keyDown:),
+        key_down as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(sel!(keyUp:), key_up as extern "C" fn(&mut Object, Sel, id));
+    decl.add_method(
+        sel!(flagsChanged:),
+        mods_changed as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(drawRect:),
+        draw_rect as extern "C" fn(&mut Object, Sel, NSRect),
+    );
+    decl.add_method(sel!(runIdle), run_idle as extern "C" fn(&mut Object, Sel));
+    decl.add_method(
+        sel!(viewWillDraw),
+        view_will_draw as extern "C" fn(&mut Object, Sel),
+    );
+    decl.add_method(sel!(redraw), redraw as extern "C" fn(&mut Object, Sel));
+    decl.add_method(
+        sel!(handleTimer:),
+        handle_timer as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(handleMenuItem:),
+        handle_menu_item as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(showContextMenu:),
+        show_context_menu as extern "C" fn(&mut Object, Sel, id),
+    );
+    decl.add_method(
+        sel!(windowShouldClose:),
+        window_should_close as extern "C" fn(&mut Object, Sel, id) -> BOOL,
+    );
+    decl.add_method(
+        sel!(windowWillClose:),
+        window_will_close as extern "C" fn(&mut Object, Sel, id),
+    );
 
-        // methods for NSTextInputClient
-        decl.add_method(sel!(hasMarkedText), super::text_input::has_marked_text as extern fn(&mut Object, Sel) -> BOOL);
-        decl.add_method(
-            sel!(markedRange),
-            super::text_input::marked_range as extern fn(&mut Object, Sel) -> NSRange,
-        );
-        decl.add_method(sel!(selectedRange), super::text_input::selected_range as extern fn(&mut Object, Sel) -> NSRange);
-        decl.add_method(
-            sel!(setMarkedText:selectedRange:replacementRange:),
-            super::text_input::set_marked_text as extern fn(&mut Object, Sel, id, NSRange, NSRange),
-        );
-        decl.add_method(sel!(unmarkText), super::text_input::unmark_text as extern fn(&mut Object, Sel));
-        decl.add_method(
-            sel!(validAttributesForMarkedText),
-            super::text_input::valid_attributes_for_marked_text as extern fn(&mut Object, Sel) -> id,
-        );
-        decl.add_method(
-            sel!(attributedSubstringForProposedRange:actualRange:),
-            super::text_input::attributed_substring_for_proposed_range
-                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> id,
-        );
-        decl.add_method(
-            sel!(insertText:replacementRange:),
-            super::text_input::insert_text as extern fn(&mut Object, Sel, id, NSRange),
-        );
-        decl.add_method(
-            sel!(characterIndexForPoint:),
-            super::text_input::character_index_for_point as extern fn(&mut Object, Sel, NSPoint) -> NSUInteger,
-        );
-        decl.add_method(
-            sel!(firstRectForCharacterRange:actualRange:),
-            super::text_input::first_rect_for_character_range
-                as extern fn(&mut Object, Sel, NSRange, *mut c_void) -> NSRect,
-        );
-        decl.add_method(
-            sel!(doCommandBySelector:),
-            super::text_input::do_command_by_selector as extern fn(&mut Object, Sel, Sel),
-        );
+    // methods for NSTextInputClient
+    decl.add_method(
+        sel!(hasMarkedText),
+        super::text_input::has_marked_text as extern "C" fn(&mut Object, Sel) -> BOOL,
+    );
+    decl.add_method(
+        sel!(markedRange),
+        super::text_input::marked_range as extern "C" fn(&mut Object, Sel) -> NSRange,
+    );
+    decl.add_method(
+        sel!(selectedRange),
+        super::text_input::selected_range as extern "C" fn(&mut Object, Sel) -> NSRange,
+    );
+    decl.add_method(
+        sel!(setMarkedText:selectedRange:replacementRange:),
+        super::text_input::set_marked_text as extern "C" fn(&mut Object, Sel, id, NSRange, NSRange),
+    );
+    decl.add_method(
+        sel!(unmarkText),
+        super::text_input::unmark_text as extern "C" fn(&mut Object, Sel),
+    );
+    decl.add_method(
+        sel!(validAttributesForMarkedText),
+        super::text_input::valid_attributes_for_marked_text
+            as extern "C" fn(&mut Object, Sel) -> id,
+    );
+    decl.add_method(
+        sel!(attributedSubstringForProposedRange:actualRange:),
+        super::text_input::attributed_substring_for_proposed_range
+            as extern "C" fn(&mut Object, Sel, NSRange, *mut c_void) -> id,
+    );
+    decl.add_method(
+        sel!(insertText:replacementRange:),
+        super::text_input::insert_text as extern "C" fn(&mut Object, Sel, id, NSRange),
+    );
+    decl.add_method(
+        sel!(characterIndexForPoint:),
+        super::text_input::character_index_for_point
+            as extern "C" fn(&mut Object, Sel, NSPoint) -> NSUInteger,
+    );
+    decl.add_method(
+        sel!(firstRectForCharacterRange:actualRange:),
+        super::text_input::first_rect_for_character_range
+            as extern "C" fn(&mut Object, Sel, NSRange, *mut c_void) -> NSRect,
+    );
+    decl.add_method(
+        sel!(doCommandBySelector:),
+        super::text_input::do_command_by_selector as extern "C" fn(&mut Object, Sel, Sel),
+    );
 
-        let protocol = Protocol::get("NSTextInputClient").unwrap();
-        decl.add_protocol(protocol);
+    let protocol = Protocol::get("NSTextInputClient").unwrap();
+    decl.add_protocol(protocol);
 
-        ViewClass(decl.register())
-    };
-}
+    ViewClass(decl.register())
+});
 
 /// Acquires a lock to an `InputHandler`, passes it to a closure, and releases the lock.
 pub(super) fn with_edit_lock_from_window<R>(
@@ -565,47 +590,31 @@ fn make_view(handler: Box<dyn WinHandler>) -> (id, Weak<Mutex<Vec<IdleKind>>>) {
         let options: NSAutoresizingMaskOptions = NSViewWidthSizable | NSViewHeightSizable;
         view.setAutoresizingMask_(options);
 
-        // The rect of the tracking area doesn't matter, because
-        // we use the InVisibleRect option where the OS syncs the size automatically.
-        let rect = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
-        let opts = NSTrackingAreaOptions::MouseEnteredAndExited
-            | NSTrackingAreaOptions::MouseMoved
-            | NSTrackingAreaOptions::ActiveAlways
-            | NSTrackingAreaOptions::InVisibleRect;
-        let tracking_area = NSTrackingArea::alloc(nil)
-            .initWithRect_options_owner_userInfo(rect, opts, view, nil)
-            .autorelease();
-        view.addTrackingArea(tracking_area);
-
         (view.autorelease(), queue_handle)
     }
 }
 
 struct WindowClass(*const Class);
 unsafe impl Sync for WindowClass {}
+unsafe impl Send for WindowClass {}
 
-lazy_static! {
-    static ref WINDOW_CLASS: WindowClass = unsafe {
-        let mut decl =
-            ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
-        decl.add_method(
-            sel!(canBecomeKeyWindow),
-            canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
-        );
-        extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
-            YES
-        }
-        WindowClass(decl.register())
-    };
-}
+static WINDOW_CLASS: Lazy<WindowClass> = Lazy::new(|| unsafe {
+    let mut decl = ClassDecl::new("DruidWindow", class!(NSWindow)).expect("Window class defined");
+    decl.add_method(
+        sel!(canBecomeKeyWindow),
+        canBecomeKeyWindow as extern "C" fn(&Object, Sel) -> BOOL,
+    );
+    extern "C" fn canBecomeKeyWindow(_this: &Object, _sel: Sel) -> BOOL {
+        YES
+    }
+    WindowClass(decl.register())
+});
 
 extern "C" fn set_frame_size(this: &mut Object, _: Sel, size: NSSize) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state)
-            .handler
-            .size(Size::new(size.width, size.height));
+        view_state.handler.size(Size::new(size.width, size.height));
         let superclass = msg_send![this, superclass];
         let () = msg_send![super(this, superclass), setFrameSize: size];
     }
@@ -622,7 +631,7 @@ fn mouse_event(
     unsafe {
         let point = nsevent.locationInWindow();
         let view_point = view.convertPoint_fromView_(point, nil);
-        let pos = Point::new(view_point.x as f64, view_point.y as f64);
+        let pos = Point::new(view_point.x, view_point.y);
         let buttons = get_mouse_buttons(NSEvent::pressedMouseButtons(nsevent));
         let modifiers = make_modifiers(nsevent.modifierFlags());
         MouseEvent {
@@ -691,7 +700,7 @@ fn mouse_down(this: &mut Object, nsevent: id, button: MouseButton) {
         let count = nsevent.clickCount() as u8;
         let focus = view_state.focus_click && button == MouseButton::Left;
         let event = mouse_event(nsevent, this as id, count, focus, button, Vec2::ZERO);
-        (*view_state).handler.mouse_down(&event);
+        view_state.handler.mouse_down(&event);
     }
 }
 
@@ -722,14 +731,14 @@ fn mouse_up(this: &mut Object, nsevent: id, button: MouseButton) {
             false
         };
         let event = mouse_event(nsevent, this as id, 0, focus, button, Vec2::ZERO);
-        (*view_state).handler.mouse_up(&event);
+        view_state.handler.mouse_up(&event);
         // If we have already received a mouseExited event then that means
         // we're still receiving mouse events because some buttons are being held down.
         // When the last held button is released and we haven't received a mouseEntered event,
         // then we will no longer receive mouse events until the next mouseEntered event
         // and need to inform the handler of the mouse leaving.
         if view_state.mouse_left && event.buttons.is_empty() {
-            (*view_state).handler.mouse_leave();
+            view_state.handler.mouse_leave();
         }
     }
 }
@@ -739,7 +748,7 @@ extern "C" fn mouse_move(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let event = mouse_event(nsevent, this as id, 0, false, MouseButton::None, Vec2::ZERO);
-        (*view_state).handler.mouse_move(&event);
+        view_state.handler.mouse_move(&event);
     }
 }
 
@@ -749,7 +758,7 @@ extern "C" fn mouse_enter(this: &mut Object, _sel: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
         view_state.mouse_left = false;
         let event = mouse_event(nsevent, this, 0, false, MouseButton::None, Vec2::ZERO);
-        (*view_state).handler.mouse_move(&event);
+        view_state.handler.mouse_move(&event);
     }
 }
 
@@ -758,7 +767,7 @@ extern "C" fn mouse_leave(this: &mut Object, _: Sel, _nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         view_state.mouse_left = true;
-        (*view_state).handler.mouse_leave();
+        view_state.handler.mouse_leave();
     }
 }
 
@@ -767,8 +776,8 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
         let (dx, dy) = {
-            let dx = -nsevent.scrollingDeltaX() as f64;
-            let dy = -nsevent.scrollingDeltaY() as f64;
+            let dx = -nsevent.scrollingDeltaX();
+            let dy = -nsevent.scrollingDeltaY();
             if nsevent.hasPreciseScrollingDeltas() == cocoa::base::YES {
                 (dx, dy)
             } else {
@@ -784,7 +793,7 @@ extern "C" fn scroll_wheel(this: &mut Object, _: Sel, nsevent: id) {
             MouseButton::None,
             Vec2::new(dx, dy),
         );
-        (*view_state).handler.wheel(&event);
+        view_state.handler.wheel(&event);
     }
 }
 
@@ -794,7 +803,7 @@ extern "C" fn pinch_event(this: &mut Object, _: Sel, nsevent: id) {
         let view_state = &mut *(view_state as *mut ViewState);
 
         let delta: CGFloat = msg_send![nsevent, magnification];
-        (*view_state).handler.zoom(delta as f64);
+        view_state.handler.zoom(delta);
     }
 }
 
@@ -803,12 +812,12 @@ extern "C" fn key_down(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
-        if !(*view_state).handler.key_down(event) {
-            // key down not handled; foward to text input system
+    if let Some(event) = view_state.keyboard_state.process_native_event(nsevent) {
+        if !view_state.handler.key_down(event) {
+            // key down not handled; forward to text input system
             unsafe {
                 let events = NSArray::arrayWithObjects(nil, &[nsevent]);
-                let _: () = msg_send![*(*view_state).nsview.load(), interpretKeyEvents: events];
+                let _: () = msg_send![*view_state.nsview.load(), interpretKeyEvents: events];
             }
         }
     }
@@ -819,8 +828,8 @@ extern "C" fn key_up(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
-        (*view_state).handler.key_up(event);
+    if let Some(event) = view_state.keyboard_state.process_native_event(nsevent) {
+        view_state.handler.key_up(event);
     }
 }
 
@@ -829,11 +838,11 @@ extern "C" fn mods_changed(this: &mut Object, _: Sel, nsevent: id) {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         &mut *(view_state as *mut ViewState)
     };
-    if let Some(event) = (*view_state).keyboard_state.process_native_event(nsevent) {
+    if let Some(event) = view_state.keyboard_state.process_native_event(nsevent) {
         if event.state == KeyState::Down {
-            (*view_state).handler.key_down(event);
+            view_state.handler.key_down(event);
         } else {
-            (*view_state).handler.key_up(event);
+            view_state.handler.key_up(event);
         }
     }
 }
@@ -842,7 +851,7 @@ extern "C" fn view_will_draw(this: &mut Object, _: Sel) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.prepare_paint();
+        view_state.handler.prepare_paint();
     }
 }
 
@@ -867,7 +876,7 @@ extern "C" fn draw_rect(this: &mut Object, _: Sel, dirtyRect: NSRect) {
         let view_state = &mut *(view_state as *mut ViewState);
         let mut piet_ctx = Piet::new_y_down(cgcontext_ref, Some(view_state.text.clone()));
 
-        (*view_state).handler.paint(&mut piet_ctx, &invalid);
+        view_state.handler.paint(&mut piet_ctx, &invalid);
         if let Err(e) = piet_ctx.finish() {
             error!("{}", e)
         }
@@ -890,7 +899,7 @@ fn set_size_deferred(this: &mut Object, _view_state: &mut ViewState, size: Size)
         let current_frame: NSRect = msg_send![window, frame];
         let mut new_frame = current_frame;
 
-        // maintain druid origin (as mac origin is bottom left)
+        // maintain Druid origin (as mac origin is bottom left)
         new_frame.origin.y -= size.height - current_frame.size.height;
         new_frame.size.width = size.width;
         new_frame.size.height = size.height;
@@ -951,7 +960,7 @@ extern "C" fn handle_timer(this: &mut Object, _: Sel, timer: id) {
         msg_send![user_info, unsignedIntValue]
     };
 
-    (*view_state).handler.timer(TimerToken::from_raw(token));
+    view_state.handler.timer(TimerToken::from_raw(token));
 }
 
 extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
@@ -959,7 +968,7 @@ extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
         let tag: isize = msg_send![item, tag];
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.command(tag as u32);
+        view_state.handler.command(tag as u32);
     }
 }
 
@@ -977,7 +986,7 @@ extern "C" fn window_did_become_key(this: &mut Object, _: Sel, _notification: id
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.got_focus();
+        view_state.handler.got_focus();
     }
 }
 
@@ -985,7 +994,7 @@ extern "C" fn window_did_resign_key(this: &mut Object, _: Sel, _notification: id
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.lost_focus();
+        view_state.handler.lost_focus();
     }
 }
 
@@ -993,7 +1002,7 @@ extern "C" fn window_should_close(this: &mut Object, _: Sel, _window: id) -> BOO
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.request_close();
+        view_state.handler.request_close();
         NO
     }
 }
@@ -1002,7 +1011,7 @@ extern "C" fn window_will_close(this: &mut Object, _: Sel, _notification: id) {
     unsafe {
         let view_state: *mut c_void = *this.get_ivar("viewState");
         let view_state = &mut *(view_state as *mut ViewState);
-        (*view_state).handler.destroy();
+        view_state.handler.destroy();
     }
 }
 
@@ -1199,9 +1208,9 @@ impl WindowHandle {
                     let view_state: *mut c_void = *view.get_ivar("viewState");
                     let view_state = &mut *(view_state as *mut ViewState);
                     if ty == FileDialogType::Open {
-                        (*view_state).handler.open_file(token, url);
+                        view_state.handler.open_file(token, url);
                     } else if ty == FileDialogType::Save {
-                        (*view_state).handler.save_as(token, url);
+                        view_state.handler.save_as(token, url);
                     }
                 }
             });
@@ -1406,8 +1415,8 @@ impl WindowHandle {
 
     /// Get the `Scale` of the window.
     pub fn get_scale(&self) -> Result<Scale, Error> {
-        // TODO: Get actual Scale
-        Ok(Scale::new(1.0, 1.0))
+        let scale_factor: CGFloat = unsafe { msg_send![*self.nsview.load(), backingScaleFactor] };
+        Ok(Scale::new(scale_factor, scale_factor))
     }
 }
 
@@ -1415,11 +1424,9 @@ impl WindowHandle {
 unsafe impl HasRawWindowHandle for WindowHandle {
     fn raw_window_handle(&self) -> RawWindowHandle {
         let nsv = self.nsview.load();
-        let handle = MacOSHandle {
-            ns_view: *nsv as *mut _,
-            ..MacOSHandle::empty()
-        };
-        RawWindowHandle::MacOS(handle)
+        let mut handle = AppKitWindowHandle::empty();
+        handle.ns_view = *nsv as *mut _;
+        RawWindowHandle::AppKit(handle)
     }
 }
 

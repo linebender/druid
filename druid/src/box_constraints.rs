@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The fundamental druid types.
+//! The fundamental Druid types.
 
 use crate::kurbo::Size;
+use crate::widget::Axis;
 
 /// Constraints for layout.
 ///
-/// The layout strategy for druid is strongly inspired by Flutter,
+/// The layout strategy for Druid is strongly inspired by Flutter,
 /// and this struct is similar to the [Flutter BoxConstraints] class.
 ///
 /// At the moment, it represents simply a minimum and maximum size.
@@ -31,9 +32,9 @@ use crate::kurbo::Size;
 /// The constraints are always [rounded away from zero] to integers
 /// to enable pixel perfect layout.
 ///
-/// [`layout`]: trait.Widget.html#tymethod.layout
+/// [`layout`]: crate::Widget::layout
 /// [Flutter BoxConstraints]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
-/// [rounded away from zero]: struct.Size.html#method.expand
+/// [rounded away from zero]: Size::expand
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BoxConstraints {
     min: Size,
@@ -56,7 +57,7 @@ impl BoxConstraints {
     /// The given sizes are also [rounded away from zero],
     /// so that the layout is aligned to integers.
     ///
-    /// [rounded away from zero]: struct.Size.html#method.expand
+    /// [rounded away from zero]: Size::expand
     pub fn new(min: Size, max: Size) -> BoxConstraints {
         BoxConstraints {
             min: min.expand(),
@@ -71,7 +72,7 @@ impl BoxConstraints {
     /// The given size is also [rounded away from zero],
     /// so that the layout is aligned to integers.
     ///
-    /// [rounded away from zero]: struct.Size.html#method.expand
+    /// [rounded away from zero]: Size::expand
     pub fn tight(size: Size) -> BoxConstraints {
         let size = size.expand();
         BoxConstraints {
@@ -95,7 +96,7 @@ impl BoxConstraints {
     /// The given size is also [rounded away from zero],
     /// so that the layout is aligned to integers.
     ///
-    /// [rounded away from zero]: struct.Size.html#method.expand
+    /// [rounded away from zero]: Size::expand
     pub fn constrain(&self, size: impl Into<Size>) -> Size {
         size.into().expand().clamp(self.min, self.max)
     }
@@ -149,7 +150,7 @@ impl BoxConstraints {
     /// The given size is also [rounded away from zero],
     /// so that the layout is aligned to integers.
     ///
-    /// [rounded away from zero]: struct.Size.html#method.expand
+    /// [rounded away from zero]: Size::expand
     pub fn shrink(&self, diff: impl Into<Size>) -> BoxConstraints {
         let diff = diff.into().expand();
         let min = Size::new(
@@ -270,6 +271,53 @@ impl BoxConstraints {
             }
         }
     }
+
+    /// Sets the max on a given axis to infinity.
+    pub fn unbound_max(&self, axis: Axis) -> Self {
+        match axis {
+            Axis::Horizontal => self.unbound_max_width(),
+            Axis::Vertical => self.unbound_max_height(),
+        }
+    }
+
+    /// Sets max width to infinity.
+    pub fn unbound_max_width(&self) -> Self {
+        let mut max = self.max();
+        max.width = f64::INFINITY;
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Sets max height to infinity.
+    pub fn unbound_max_height(&self) -> Self {
+        let mut max = self.max();
+        max.height = f64::INFINITY;
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Shrinks the max dimension on the given axis.
+    /// Does NOT shrink beyond min.
+    pub fn shrink_max_to(&self, axis: Axis, dim: f64) -> Self {
+        match axis {
+            Axis::Horizontal => self.shrink_max_width_to(dim),
+            Axis::Vertical => self.shrink_max_height_to(dim),
+        }
+    }
+
+    /// Shrinks the max width to dim.
+    /// Does NOT shrink beyond min width.
+    pub fn shrink_max_width_to(&self, dim: f64) -> Self {
+        let mut max = self.max();
+        max.width = f64::max(dim, self.min().width);
+        BoxConstraints::new(self.min(), max)
+    }
+
+    /// Shrinks the max height to dim.
+    /// Does NOT shrink beyond min height.
+    pub fn shrink_max_height_to(&self, dim: f64) -> Self {
+        let mut max = self.max();
+        max.height = f64::max(dim, self.min().height);
+        BoxConstraints::new(self.min(), max)
+    }
 }
 
 #[cfg(test)]
@@ -363,10 +411,7 @@ mod tests {
             assert_eq!(
                 bc.constrain_aspect_ratio(*aspect_ratio, *width),
                 *output,
-                "bc:{:?}, ar:{}, w:{}",
-                bc,
-                aspect_ratio,
-                width
+                "bc:{bc:?}, ar:{aspect_ratio}, w:{width}"
             );
         }
     }

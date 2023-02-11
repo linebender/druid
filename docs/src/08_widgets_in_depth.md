@@ -25,7 +25,7 @@ with rounded corners, we could use a `Painter`:
 ```
 
 `Painter` uses all the space that is available to it; if you want to give it a
-set size, you must pass it explicit contraints, such as by wrapping it in a
+set size, you must pass it explicit constraints, such as by wrapping it in a
 [`SizedBox`]:
 
 ```rust,noplaypen
@@ -66,24 +66,10 @@ textbox fire some action (say doing a search) 300ms after the last keypress:
 {{#include ../book_examples/src/custom_widgets_md.rs:annoying_textbox}}
 ```
 
-## todo
-
-v controller, painter
-- how to do layout
-    - how constraints work
-    - child widget, set_layout_rect
-    - paint bounds
-- container widgets
-- widgetpod & architecture
-- commands and widgetid
-- focus / active / hot
-- request paint & request layout
-- changing widgets at runtime
-
-[`Controller`]: https://docs.rs/druid/0.7.0/druid/widget/trait.Controller.html
+[`Controller`]: https://docs.rs/druid/0.8.2/druid/widget/trait.Controller.html
 [`Widget`]: ./widget.md
-[`Painter`]: https://docs.rs/druid/0.7.0/druid/widget/struct.Painter.html
-[`SizedBox`]: https://docs.rs/druid/0.7.0/druid/widget/struct.SizedBox.html
-[`Container`]: https://docs.rs/druid/0.7.0/druid/widget/struct.Container.html
-[`WidgetExt`]: https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html
-[`background`]: https://docs.rs/druid/0.7.0/druid/trait.WidgetExt.html#background
+[`Painter`]: https://docs.rs/druid/0.8.2/druid/widget/struct.Painter.html
+[`SizedBox`]: https://docs.rs/druid/0.8.2/druid/widget/struct.SizedBox.html
+[`Container`]: https://docs.rs/druid/0.8.2/druid/widget/struct.Container.html
+[`WidgetExt`]: https://docs.rs/druid/0.8.2/druid/trait.WidgetExt.html
+[`background`]: https://docs.rs/druid/0.8.2/druid/trait.WidgetExt.html#background

@@ -26,13 +26,14 @@ use winapi::shared::ntdef::LPCWSTR;
 use winapi::shared::windef::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, HCURSOR, HWND};
 use winapi::shared::winerror::HRESULT_FROM_WIN32;
 use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::shellscalingapi::PROCESS_PER_MONITOR_DPI_AWARE;
 use winapi::um::winnls::GetUserDefaultLocaleName;
 use winapi::um::winnt::LOCALE_NAME_MAX_LENGTH;
 use winapi::um::winuser::{
     DispatchMessageW, GetAncestor, GetMessageW, LoadIconW, PeekMessageW, PostMessageW,
     PostQuitMessage, RegisterClassW, TranslateAcceleratorW, TranslateMessage, GA_ROOT,
-    IDI_APPLICATION, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
+    MAKEINTRESOURCEW, MSG, PM_NOREMOVE, WM_TIMER, WNDCLASSW,
 };
 
 use piet_common::D2DLoadedFonts;
@@ -89,25 +90,23 @@ impl Application {
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
         {
-            unsafe {
-                let class_name = CLASS_NAME.to_wide();
-                let icon = LoadIconW(0 as HINSTANCE, IDI_APPLICATION);
-                let wnd = WNDCLASSW {
-                    style: 0,
-                    lpfnWndProc: Some(window::win_proc_dispatch),
-                    cbClsExtra: 0,
-                    cbWndExtra: 0,
-                    hInstance: 0 as HINSTANCE,
-                    hIcon: icon,
-                    hCursor: 0 as HCURSOR,
-                    hbrBackground: ptr::null_mut(), // We control all the painting
-                    lpszMenuName: 0 as LPCWSTR,
-                    lpszClassName: class_name.as_ptr(),
-                };
-                let class_atom = RegisterClassW(&wnd);
-                if class_atom == 0 {
-                    panic!("Error registering class");
-                }
+            let class_name = CLASS_NAME.to_wide();
+            let icon = unsafe { LoadIconW(GetModuleHandleW(0 as LPCWSTR), MAKEINTRESOURCEW(1)) };
+            let wnd = WNDCLASSW {
+                style: 0,
+                lpfnWndProc: Some(window::win_proc_dispatch),
+                cbClsExtra: 0,
+                cbWndExtra: 0,
+                hInstance: 0 as HINSTANCE,
+                hIcon: icon,
+                hCursor: 0 as HCURSOR,
+                hbrBackground: ptr::null_mut(), // We control all the painting
+                lpszMenuName: 0 as LPCWSTR,
+                lpszClassName: class_name.as_ptr(),
+            };
+            let class_atom = unsafe { RegisterClassW(&wnd) };
+            if class_atom == 0 {
+                panic!("Error registering class");
             }
         }
         Ok(())

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Demonstrates how to debug invalidation regions, and also shows the
-//! invalidation behavior of several build-in widgets.
+//! invalidation behavior of several built-in widgets.
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
@@ -50,7 +50,7 @@ fn build_widget() -> impl Widget<AppState> {
     let mut col = Flex::column();
     col.add_child(TextBox::new().lens(AppState::label).padding(3.0));
     for i in 0..30 {
-        col.add_child(Button::new(format!("Button {}", i)).padding(3.0));
+        col.add_child(Button::new(format!("Button {i}")).padding(3.0));
     }
     Split::columns(Scroll::new(col), CircleView.lens(AppState::circles)).debug_invalidation()
 }

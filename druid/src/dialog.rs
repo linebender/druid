@@ -14,7 +14,7 @@
 
 //! Configuration for open and save file dialogs.
 //!
-//! This is a wrapper around [`druid_shell::FileDialogOptions`] with a few extra druid specifics.
+//! This is a wrapper around [`druid_shell::FileDialogOptions`] with a few extra Druid specifics.
 //! As such, many of the docs are copied from `druid_shell`, and should be kept in sync.
 
 use std::path::PathBuf;

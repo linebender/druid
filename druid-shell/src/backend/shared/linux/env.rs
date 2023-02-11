@@ -1,3 +1,17 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 pub fn locale() -> String {
     fn locale_env_var(var: &str) -> Option<String> {
         match std::env::var(var) {
@@ -23,7 +37,7 @@ pub fn locale() -> String {
     // from gettext manual
     // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html#Locale-Environment-Variables
     let mut locale = locale_env_var("LANGUAGE")
-        // the LANGUAGE value is priority list seperated by :
+        // the LANGUAGE value is priority list separated by :
         // See: https://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html#The-LANGUAGE-variable
         .and_then(|locale| locale.split(':').next().map(String::from))
         .or_else(|| locale_env_var("LC_ALL"))

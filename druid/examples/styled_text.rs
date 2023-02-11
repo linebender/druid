@@ -17,8 +17,10 @@
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 
+#[allow(deprecated)]
+use druid::widget::Parse;
 use druid::widget::{
-    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Parse, Scroll,
+    Checkbox, CrossAxisAlignment, Flex, Label, LensWrap, MainAxisAlignment, Painter, Scroll,
     Stepper, TextBox,
 };
 use druid::{
@@ -79,10 +81,10 @@ fn ui_builder() -> impl Widget<AppData> {
         }
     });
 
-    // This is druid's default text style.
+    // This is Druid's default text style.
     // It's set by theme::LABEL_COLOR and theme::UI_FONT
     let label =
-        Label::new(|data: &String, _env: &_| format!("Default: {}", data)).lens(AppData::text);
+        Label::new(|data: &String, _env: &_| format!("Default: {data}")).lens(AppData::text);
 
     // The text_color, text_size, and font builder methods can override the
     // defaults provided by the theme by passing in a Key or a concrete value.
@@ -93,7 +95,7 @@ fn ui_builder() -> impl Widget<AppData> {
     // wrapper. (Like text_color and text_size, the font can be set using the
     // with_font builder method, but overriding here makes it easy to fall back
     // to the default font)
-    let styled_label = Label::new(|data: &AppData, _env: &_| format!("{}", data))
+    let styled_label = Label::new(|data: &AppData, _env: &_| format!("{data}"))
         .with_text_color(theme::PRIMARY_LIGHT)
         .with_font(MY_CUSTOM_FONT)
         .background(my_painter)
@@ -126,6 +128,8 @@ fn ui_builder() -> impl Widget<AppData> {
         .with_wraparound(false)
         .lens(AppData::size);
 
+    // TODO: Replace Parse usage with TextBox::with_formatter
+    #[allow(deprecated)]
     let stepper_textbox = LensWrap::new(
         Parse::new(TextBox::new()),
         AppData::size.map(|x| Some(*x), |x, y| *x = y.unwrap_or(24.0)),

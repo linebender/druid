@@ -126,7 +126,7 @@ impl<T: Data> ListIter<T> for Vector<T> {
     }
 }
 
-//An implementation for ListIter<(K, V)> has been ommitted due to problems
+//An implementation for ListIter<(K, V)> has been omitted due to problems
 //with how the List Widget handles the reordering of its data.
 #[cfg(feature = "im")]
 impl<K, V> ListIter<V> for OrdMap<K, V>
@@ -418,7 +418,7 @@ impl<C: Data, T: ListIter<C>> Widget<T> for List<C> {
             };
 
             let child_pos: Point = axis.pack(major_pos, 0.).into();
-            child.set_origin(ctx, child_data, env, child_pos);
+            child.set_origin(ctx, child_pos);
             paint_rect = paint_rect.union(child.paint_rect());
             minor = minor.max(axis.minor(child_size));
             major_pos += axis.major(child_size) + spacing;

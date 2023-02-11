@@ -1,6 +1,20 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::collections::VecDeque;
 use wayland_client::protocol::wl_pointer;
-use wayland_client::protocol::wl_surface::WlSurface;
+use wayland_client::protocol::wl_surface::{self, WlSurface};
 use wayland_client::{self as wl};
 use wayland_cursor::CursorImageBuffer;
 use wayland_cursor::CursorTheme;
@@ -35,7 +49,7 @@ impl Default for ClickDebouncer {
 }
 
 impl ClickDebouncer {
-    // this threshold was abritrarily chosen based on experimention.
+    // this threshold was arbitrarily chosen based on experimention.
     // there is likely a better default based on research to use.
     // during experimentation this allowed one to get to around 4 clicks.
     // but likely heavily dependent on the machine.
@@ -191,16 +205,23 @@ impl Pointer {
             Some(b) => b,
         };
 
+        let (hot_x, hot_y) = buffer.hotspot();
         self.current_cursor.replace(cursor);
-        wl_pointer.set_cursor(0, Some(&self.cursor_surface), 0, 0);
+        wl_pointer.set_cursor(0, Some(&self.cursor_surface), hot_x as i32, hot_y as i32);
         self.cursor_surface.attach(Some(&*buffer), 0, 0);
-        self.cursor_surface.damage_buffer(0, 0, i32::MAX, i32::MAX);
+
+        if self.cursor_surface.as_ref().version() >= wl_surface::REQ_DAMAGE_BUFFER_SINCE {
+            self.cursor_surface.damage_buffer(0, 0, i32::MAX, i32::MAX);
+        } else {
+            self.cursor_surface.damage(0, 0, i32::MAX, i32::MAX);
+        }
+
         self.cursor_surface.commit();
     }
 
     fn get_cursor_buffer(&self, cursor: &mouse::Cursor) -> Option<CursorImageBuffer> {
         #[allow(deprecated)]
-        return match cursor {
+        match cursor {
             mouse::Cursor::Arrow => self.unpack_image_buffer("left_ptr"),
             mouse::Cursor::IBeam => self.unpack_image_buffer("xterm"),
             mouse::Cursor::Crosshair => self.unpack_image_buffer("cross"),
@@ -213,7 +234,7 @@ impl Pointer {
                 tracing::warn!("custom cursors not implemented");
                 self.unpack_image_buffer("left_ptr")
             }
-        };
+        }
     }
 
     // Just use the first image, people using animated cursors have already made bad life
@@ -312,7 +333,7 @@ impl Pointer {
                     let button = match linux_to_mouse_button(button) {
                         // Skip unsupported buttons.
                         None => {
-                            tracing::debug!("unsupport button click {:?}", button);
+                            tracing::debug!("unsupported button click {:?}", button);
                             continue;
                         }
                         Some(b) => b,
@@ -333,7 +354,7 @@ impl Pointer {
                             ))
                         }
                         ButtonState::Released => {
-                            let mut updated = self.buttons.borrow_mut().remove(button);
+                            self.buttons.borrow_mut().remove(button);
                             self.clickevent.borrow_mut().debounce(MouseEvtKind::Up(
                                 mouse::MouseEvent {
                                     pos: self.pos.get(),

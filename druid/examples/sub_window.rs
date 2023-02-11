@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Example of sub windows.
+
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
 

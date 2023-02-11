@@ -70,9 +70,9 @@ pub trait ValidationDelegate {
 pub enum TextBoxEvent {
     /// The textbox began editing.
     Began,
-    /// An edit occured which was considered valid by the [`Formatter`].
+    /// An edit occurred which was considered valid by the [`Formatter`].
     Changed,
-    /// An edit occured which was rejected by the [`Formatter`].
+    /// An edit occurred which was rejected by the [`Formatter`].
     PartiallyInvalid(ValidationError),
     /// The user attempted to finish editing, but the input was not valid.
     Invalid(ValidationError),
@@ -88,9 +88,8 @@ impl TextBox<String> {
     ///
     /// For simple value formatting, you can use the [`ParseFormatter`].
     ///
-    /// [`ValueTextBox`]: ValueTextBox
-    /// [`Formatter`]: crate::text::format::Formatter
-    /// [`ParseFormatter`]: crate::text::format::ParseFormatter
+    /// [`Formatter`]: crate::text::Formatter
+    /// [`ParseFormatter`]: crate::text::ParseFormatter
     pub fn with_formatter<T: Data>(
         self,
         formatter: impl Formatter<T> + 'static,
@@ -102,8 +101,8 @@ impl TextBox<String> {
 impl<T: Data> ValueTextBox<T> {
     /// Create a new `ValueTextBox` from a normal [`TextBox`] and a [`Formatter`].
     ///
-    /// [`TextBox`]: crate::widget::TextBox
-    /// [`Formatter`]: crate::text::format::Formatter
+    /// [`TextBox`]: super::TextBox
+    /// [`Formatter`]: crate::text::Formatter
     pub fn new(mut child: TextBox<String>, formatter: impl Formatter<T> + 'static) -> Self {
         child.text_mut().borrow_mut().send_notification_on_return = true;
         child.text_mut().borrow_mut().send_notification_on_cancel = true;
@@ -260,7 +259,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                     self.child.event(ctx, event, &mut self.buffer, env);
                 }
             }
-            // if an edit occured, validate it with the formatter
+            // if an edit occurred, validate it with the formatter
             // notifications can arrive before update, so we always ignore them
             if !matches!(event, Event::Notification(_)) && self.buffer != self.old_buffer {
                 let mut validation = self
@@ -372,7 +371,7 @@ impl<T: Data + std::fmt::Debug> Widget<T> for ValueTextBox<T> {
                 self.old_buffer = self.buffer.clone();
             } else {
                 // textbox is not well equipped to deal with the fact that, in
-                // druid, data can change anywhere in the tree. If we are actively
+                // Druid, data can change anywhere in the tree. If we are actively
                 // editing, and new data arrives, we ignore the new data and keep
                 // editing; the alternative would be to cancel editing, which
                 // could also make sense.

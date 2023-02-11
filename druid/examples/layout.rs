@@ -40,7 +40,7 @@ fn build_app() -> impl Widget<u32> {
             )
             // Spacing element that will fill all available space in
             // between label and a button. Notice that weight is non-zero.
-            // We could have achieved a similair result with expanding the
+            // We could have achieved a similar result with expanding the
             // width and setting the main-axis-allignment to SpaceBetween.
             .with_flex_spacer(1.0)
             .with_child(Button::new("Two").padding(20.))
@@ -58,10 +58,7 @@ fn build_app() -> impl Widget<u32> {
         // occupy more space.
         let weight = if i == 2 { 3.0 } else { 1.0 };
         // call `expand_height` to force the buttons to use all their provided flex
-        col.add_flex_child(
-            Button::new(format!("Button #{}", i)).expand_height(),
-            weight,
-        );
+        col.add_flex_child(Button::new(format!("Button #{i}")).expand_height(), weight);
     }
 
     // aspect ratio box
@@ -74,7 +71,7 @@ fn build_app() -> impl Widget<u32> {
         .background(Color::WHITE);
     col.add_flex_child(aspect_ratio_box.center(), 1.0);
 
-    // This method asks druid to draw colored rectangles around our widgets,
+    // This method asks Druid to draw colored rectangles around our widgets,
     // so we can visually inspect their layout rectangles.
     col.debug_paint_layout()
 }

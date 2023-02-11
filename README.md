@@ -13,16 +13,29 @@ performance, a rich palette of interactions (hence a widget library to support
 them), and playing well with the native platform.
 See the [goals section](#Goals) for more details.
 
-Druid's current development is largely driven by its use in [Runebender], a new
-font editor.
-
-We have been doing periodic releases of Druid on crates.io, but it is under
-active development and its API might change. All changes are documented
+We have been doing periodic releases of Druid on crates.io, but the API is still unstable. All changes are documented
 in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
 For an overview of some key concepts, see the (work in progress) [Druid book].
 
+## Project status
+
+**The Druid project is being discontinued by the core developer team.**
+
+New development effort is focused on [Xilem], which has a lot of fundamental changes to allow for
+a wider variety of applications with better performance, but it also heavily inherits from Druid.
+We see [Xilem] as the future of Druid.
+
+Druid is reasonably usable for [some subset of applications](https://github.com/linebender/druid/issues/1360)
+and has a significant testing history, which ensures some stability and correctness.
+However we don't expect any major new features to be added to Druid. As such we don't recommend
+using Druid for brand new applications. If you insist, then at least make sure your application
+doesn't require a feature that Druid doesn't have, e.g. accessibility or 3D support.
+
 ## Contributions
+
+As the Druid project is being discontinued, we will still accept all contributions,
+but we'll prefer bug fixes and documentation improvements to new features.
 
 A very good place to ask questions and discuss development work is our [Zulip
 chat instance], in the #druid-help and #druid channels, respectively.
@@ -58,7 +71,6 @@ fn ui_builder() -> impl Widget<u32> {
     Flex::column().with_child(label).with_child(button)
 }
 ```
-This example works with master. Here's an example for 0.7.0: https://docs.rs/druid/latest/druid/#examples
 
 Check out the [the examples folder] for a more comprehensive demonstration of
 Druid's existing functionality and widgets. Check [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) for more widgets.
@@ -77,7 +89,7 @@ a lone dependency (it re-exports all the parts of `druid-shell`, `piet`, and `ku
 that you'll need):
 
 ```toml
-druid = "0.7.0"
+druid = "0.8.2"
 ```
 
 Since Druid is currently in fast-evolving state, you might prefer to drink from
@@ -130,7 +142,7 @@ the Rust community is working on a variety of different libraries with
 different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
 
-- Use the the platform-native widgets or mimic them. ([Relm], [SixtyFPS])
+- Use the platform-native widgets or mimic them. ([Relm], [Slint])
 - Embed easily into custom render pipelines. ([Conrod])
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when targeting the web. ([Iced], [Moxie])
@@ -156,9 +168,9 @@ couple of [non-`druid` examples].
 
 Druid relies on the [Piet library] for drawing and text layout. Piet is a 2D graphics
 abstraction with multiple backends: `piet-direct2d`, `piet-coregraphics`, `piet-cairo`,
-`piet-web`, and `piet-svg` are currently available, and a GPU backend is planned.
+`piet-web`, and `piet-svg` are currently available.
 In terms of Druid platform support via Piet, macOS uses `piet-coregraphics`,
-Linux and OpenBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
+Linux/OpenBSD/FreeBSD use `piet-cairo`, Windows uses `piet-direct2d`, and web uses `piet-web`.
 
 ```rust
 use druid::kurbo::{BezPath, Point, Rect};
@@ -295,7 +307,7 @@ This is particularly useful when working with types defined in another crate.
 ## Authors
 
 The main authors are Raph Levien and Colin Rofls, with much support from an
-active and friendly community.
+active and friendly community. See the AUTHORS file for more.
 
 [Runebender]: https://github.com/linebender/runebender
 [the examples folder]: /druid/examples
@@ -310,17 +322,18 @@ active and friendly community.
 [Zulip chat instance]: https://xi.zulipchat.com
 [non-`druid` examples]: /druid-shell/examples/shello.rs
 [crates.io]: https://crates.io/crates/druid
-[EventCtx]: https://docs.rs/druid/0.7.0/druid/struct.EventCtx.html
-[LifeCycleCtx]: https://docs.rs/druid/0.7.0/druid/struct.LifeCycleCtx.html
-[LayoutCtx]: https://docs.rs/druid/0.7.0/druid/struct.LayoutCtx.html
-[PaintCtx]: https://docs.rs/druid/0.7.0/druid/struct.PaintCtx.html
-[UpdateCtx]: https://docs.rs/druid/0.7.0/druid/struct.UpdateCtx.html
-[Widget trait]: https://docs.rs/druid/0.7.0/druid/trait.Widget.html
-[Data trait]: https://docs.rs/druid/0.7.0/druid/trait.Data.html
-[Lens datatype]: https://docs.rs/druid/0.7.0/druid/trait.Lens.html
+[EventCtx]: https://docs.rs/druid/0.8.2/druid/struct.EventCtx.html
+[LifeCycleCtx]: https://docs.rs/druid/0.8.2/druid/struct.LifeCycleCtx.html
+[LayoutCtx]: https://docs.rs/druid/0.8.2/druid/struct.LayoutCtx.html
+[PaintCtx]: https://docs.rs/druid/0.8.2/druid/struct.PaintCtx.html
+[UpdateCtx]: https://docs.rs/druid/0.8.2/druid/struct.UpdateCtx.html
+[Widget trait]: https://docs.rs/druid/0.8.2/druid/trait.Widget.html
+[Data trait]: https://docs.rs/druid/0.8.2/druid/trait.Data.html
+[Lens datatype]: https://docs.rs/druid/0.8.2/druid/trait.Lens.html
 [Druid book]: https://linebender.org/druid/
 [Iced]: https://github.com/hecrj/iced
 [Conrod]: https://github.com/PistonDevelopers/conrod
 [Relm]: https://github.com/antoyo/relm
 [Moxie]: https://github.com/anp/moxie
-[SixtyFPS]: https://github.com/sixtyfpsui/sixtyfps
+[Slint]: https://github.com/slint-ui/slint
+[Xilem]: https://github.com/linebender/xilem

@@ -63,7 +63,7 @@ impl<T: Data> Widget<T> for OverPainter {
         let color = env.get_debug_color(self.0);
         let radius = (rect + INSETS).size().height / 2.0;
         let circle = Circle::new(rect.center(), radius);
-        let grad = RadialGradient::new(1.0, (color.clone(), color.clone().with_alpha(0.0)));
+        let grad = RadialGradient::new(1.0, (color, color.with_alpha(0.0)));
         ctx.fill(circle, &grad);
         ctx.stroke(rect, &color, 2.0);
     }

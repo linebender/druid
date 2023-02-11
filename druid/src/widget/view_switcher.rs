@@ -128,7 +128,7 @@ impl<T: Data, U: Data> Widget<T> for ViewSwitcher<T, U> {
         match self.active_child {
             Some(ref mut child) => {
                 let size = child.layout(ctx, bc, data, env);
-                child.set_origin(ctx, data, env, Point::ORIGIN);
+                child.set_origin(ctx, Point::ORIGIN);
                 size
             }
             None => bc.max(),

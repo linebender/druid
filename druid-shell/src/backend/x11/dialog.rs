@@ -1,3 +1,17 @@
+// Copyright 2022 The Druid Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! This module contains functions for opening file dialogs using DBus.
 
 use ashpd::desktop::file_chooser;
@@ -104,7 +118,7 @@ impl From<crate::FileSpec> for file_chooser::FileFilter {
     fn from(spec: crate::FileSpec) -> file_chooser::FileFilter {
         let mut filter = file_chooser::FileFilter::new(spec.name);
         for ext in spec.extensions {
-            filter = filter.glob(&format!("*.{}", ext));
+            filter = filter.glob(&format!("*.{ext}"));
         }
         filter
     }

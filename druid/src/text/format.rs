@@ -23,7 +23,7 @@ use crate::Data;
 /// A trait for types that create, interpret, and validate textual representations
 /// of values.
 ///
-/// A formatter has two responsiblities: converting a value into an appropriate
+/// A formatter has two responsibilities: converting a value into an appropriate
 /// string representation, and attempting to convert a string back into the
 /// appropriate value.
 ///
@@ -68,7 +68,7 @@ pub trait Formatter<T> {
     ///
     /// This must return `Ok()` for any string created by [`format`].
     ///
-    /// [`format`]: #tymethod.format
+    /// [`format`]: Formatter::format
     fn value(&self, input: &str) -> Result<T, ValidationError>;
 }
 
@@ -106,7 +106,7 @@ pub struct ValidationError {
 /// A naive [`Formatter`] for types that implement [`FromStr`].
 ///
 /// For types that implement [`std::fmt::Display`], the [`ParseFormatter::new`]
-/// constructor creates a formatter that format's it's value using that trait.
+/// constructor creates a formatter that format's its value using that trait.
 /// If you would like to customize the formatting, you can use the
 /// [`ParseFormatter::with_format_fn`] constructor, and pass your own formatting
 /// function.
@@ -119,7 +119,7 @@ pub struct ParseFormatter<T> {
 }
 
 impl Validation {
-    /// Create a `Validation` indicating succes.
+    /// Create a `Validation` indicating success.
     pub fn success() -> Self {
         Validation {
             result: Ok(()),

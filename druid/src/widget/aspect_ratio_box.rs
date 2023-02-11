@@ -14,6 +14,7 @@
 
 use crate::debug_state::DebugState;
 
+use crate::widget::Axis;
 use druid::widget::prelude::*;
 use druid::Data;
 use tracing::{instrument, warn};
@@ -143,7 +144,6 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
 
             return self.child.layout(ctx, bc, data, env);
         }
-
         if bc.max().width == f64::INFINITY && bc.max().height == f64::INFINITY {
             warn!("Box constraints are INFINITE. Aspect ratio box won't be able to choose a size because the constraints given by the parent widget are INFINITE.");
 
@@ -169,6 +169,32 @@ impl<T: Data> Widget<T> for AspectRatioBox<T> {
             display_name: self.short_type_name().to_string(),
             children: vec![self.child.debug_state(data)],
             ..Default::default()
+        }
+    }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        match axis {
+            Axis::Horizontal => {
+                if bc.is_height_bounded() {
+                    bc.max().height * self.ratio
+                } else {
+                    self.child.compute_max_intrinsic(axis, ctx, bc, data, env)
+                }
+            }
+            Axis::Vertical => {
+                if bc.is_width_bounded() {
+                    bc.max().width / self.ratio
+                } else {
+                    self.child.compute_max_intrinsic(axis, ctx, bc, data, env)
+                }
+            }
         }
     }
 }

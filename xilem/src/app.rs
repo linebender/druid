@@ -325,7 +325,7 @@ where
                             self.ui_state = UiState::Delayed;
                         }
                     }
-                }
+                },
                 Ok(None) => break,
                 Err(_) => {
                     self.render().await;

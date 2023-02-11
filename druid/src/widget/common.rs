@@ -14,17 +14,17 @@
 
 use crate::{Affine, Data, Size};
 
-// These are based on https://api.flutter.dev/flutter/painting/BoxFit-class.html
+// These are based on https://api.flutter.dev/flutter/painting/BoxFit.html
 /// Strategies for inscribing a rectangle inside another rectangle.
-#[derive(Clone, Data, Copy, PartialEq)]
+#[derive(Clone, Data, Copy, PartialEq, Eq)]
 pub enum FillStrat {
-    /// As large as posible without changing aspect ratio of image and all of image shown
+    /// As large as possible without changing aspect ratio of image and all of image shown
     Contain,
-    /// As large as posible with no dead space so that some of the image may be clipped
+    /// As large as possible with no dead space so that some of the image may be clipped
     Cover,
     /// Fill the widget with no dead space, aspect ratio of widget is used
     Fill,
-    /// Fill the hight with the images aspect ratio, some of the image may be clipped
+    /// Fill the height with the images aspect ratio, some of the image may be clipped
     FitHeight,
     /// Fill the width with the images aspect ratio, some of the image may be clipped
     FitWidth,

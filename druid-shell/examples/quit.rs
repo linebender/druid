@@ -75,15 +75,15 @@ fn main() {
         0x100,
         "E&xit",
         Some(&HotKey::new(SysMods::Cmd, "q")),
+        None,
         true,
-        false,
     );
 
     let mut menubar = Menu::new();
     menubar.add_dropdown(file_menu, "Application", true);
 
     let mut builder = WindowBuilder::new(app.clone());
-    builder.set_handler(Box::new(QuitState::default()));
+    builder.set_handler(Box::<QuitState>::default());
     builder.set_title("Quit example");
     builder.set_menu(menubar);
 
