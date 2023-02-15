@@ -20,7 +20,8 @@ For an overview of some key concepts, see the (work in progress) [Druid book].
 
 ## Project status
 
-**The Druid project is being discontinued by the core developer team.**
+> **Warning**
+> **The Druid project is being discontinued by the core developer team.**
 
 New development effort is focused on [Xilem], which has a lot of fundamental changes to allow for
 a wider variety of applications with better performance, but it also heavily inherits from Druid.
