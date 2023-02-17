@@ -33,7 +33,7 @@ You can click through the other parts
 
 This demo is useful for observing the limitations of each OS.
 - Windows is well supported. Observation: When the titlebar is enabled and the input region is set, the border becomes invisible. Always on top is supported.
-- Mac OS has good support, but doesn't allow toggling titlebar after the Window is opened. Also, it just makes transparent regions transparent automatically when set to have no titlebar. Always on top is supported.
+- macOS has good support, but doesn't allow toggling titlebar after the window is opened. Also, it just makes transparent regions transparent automatically when set to have no titlebar. Always on top is supported.
 - Linux support varies by desktop environment and display server. Wayland is much more restrictive, with it not allowing things like setting position and always on top. Fortunately desktop environments often allow you to manually set window decoration and always on top on the Window itself. The offsets can differ between desktop environments, and sometimes you need to open the window with the titlebar, then turn it off, for it to work.";
 
 #[derive(Clone, Data, Lens)]
@@ -57,14 +57,14 @@ impl InputRegionExampleWidget {
         let toggle_input_region = Button::new("Toggle Input Region")
             .on_click(|ctx, data: &mut bool, _: &Env| {
                 *data = !*data;
-                println!("Setting input region toggle to: {}", *data);
+                tracing::debug!("Setting input region toggle to: {}", *data);
                 ctx.request_layout();
             })
             .lens(AppState::limit_input_region);
         let toggle_titlebar = Button::new("Toggle TitleBar")
             .on_click(|ctx, data: &mut bool, _: &Env| {
                 *data = !*data;
-                println!("Setting titlebar visibility to: {}", *data);
+                tracing::debug!("Setting titlebar visibility to: {}", *data);
                 ctx.window().show_titlebar(*data);
                 ctx.request_layout();
             })
@@ -72,7 +72,7 @@ impl InputRegionExampleWidget {
         let toggle_always_on_top = Button::new("Toggle Always On Top")
             .on_click(|ctx, data: &mut bool, _: &Env| {
                 *data = !*data;
-                println!("Setting always on top to: {}", *data);
+                tracing::debug!("Setting always on top to: {}", *data);
                 ctx.window().set_always_on_top(*data);
             })
             .lens(AppState::always_on_top);

@@ -71,7 +71,7 @@ impl Region {
         self.rects.iter().any(|r| r.intersect(rect).area() > 0.0)
     }
 
-    /// Returns `true` if the given point is contained within any rectangle in the region.
+    /// Returns `true` if the given `point` is contained within any rectangle in the region.
     pub fn contains(&self, point: Point) -> bool {
         self.rects.iter().any(|r| r.contains(point))
     }

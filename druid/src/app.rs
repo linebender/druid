@@ -378,7 +378,7 @@ impl WindowConfig {
         self
     }
 
-    /// Sets the always_on_top value of the window
+    /// Sets whether the window is always on top.
     ///
     /// An always on top window stays on top, even after clicking off of it.
     pub fn set_always_on_top(mut self, always_on_top: bool) -> Self {
@@ -595,7 +595,7 @@ impl<T: Data> WindowDesc<T> {
         self
     }
 
-    /// Sets the always_on_top value of the window
+    /// Sets whether the window is always on top.
     ///
     /// An always on top window stays on top, even after clicking off of it.
     pub fn set_always_on_top(mut self, always_on_top: bool) -> Self {
