@@ -10,8 +10,11 @@ categories = ["os::macos-apis", "os::windows-apis", "gui"]
 edition = "2021"
 
 [package.metadata.docs.rs]
+features = ["raw-win-handle", "image"]
 rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
+# rustdoc-scrape-examples tracking issue https://github.com/rust-lang/rust/issues/88791
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 
 [features]
 default = ["gtk"]
@@ -133,3 +136,9 @@ unicode-segmentation = "1.10.0"
 [build-dependencies]
 bindgen = { version = "0.61.0", optional = true }
 pkg-config = { version = "0.3.26", optional = true }
+
+[[example]]
+name = "shello"
+# This actually enables scraping for all examples, not just `shello`.
+# However it is possible to add another [[example]] entry to disable it for a specific example.
+doc-scrape-examples = true
