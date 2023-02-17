@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! An example using the Either widget to show/hide a slider.
-//! This is a very simple example, it uses a bool to determine
-//! which widget gets shown.
-
 //! A demo of a few window features, including input region, always on top,
 //! and titlebar visibility.
 //! The demo is setup so that there are parts of the window that you can click through.
