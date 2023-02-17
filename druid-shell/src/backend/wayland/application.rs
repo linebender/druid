@@ -449,7 +449,7 @@ impl Data {
             .queue
             .borrow_mut()
             .sync_roundtrip(&mut (), |evt, _, _| {
-                panic!("unexpected wayland event: {:?}", evt)
+                panic!("unexpected wayland event: {evt:?}")
             })
             .map_err(Error::fatal)?;
         Ok(())

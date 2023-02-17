@@ -31,7 +31,7 @@ use crate::{Cursor, Data, Modifiers, MouseButton, MouseButtons};
 /// The position may also have changed in relation to the receiver,
 /// because the receiver's location changed without the mouse moving.
 ///
-/// [`Event::MouseMove`]: enum.Event.html#variant.MouseMove
+/// [`Event::MouseMove`]: crate::Event::MouseMove
 #[derive(Debug, Clone)]
 pub struct MouseEvent {
     /// The position of the mouse in the coordinate space of the receiver.

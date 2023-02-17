@@ -13,10 +13,6 @@
 // limitations under the License.
 
 //! A [`Widget`] that uses a [`Lens`] to change the [`Data`] of its child.
-//!
-//! [`Widget`]: ../trait.Widget.html
-//! [`Lens`]: ../trait.Lens.html
-//! [`Data`]: ../trait.Data.html
 
 use std::marker::PhantomData;
 
@@ -30,7 +26,7 @@ use tracing::{instrument, trace};
 /// A wrapper for its widget subtree to have access to a part
 /// of its parent's data.
 ///
-/// Every widget in druid is instantiated with access to data of some
+/// Every widget in Druid is instantiated with access to data of some
 /// type; the root widget has access to the entire application data.
 /// Often, a part of the widget hierarchy is only concerned with a part
 /// of that data. The `LensWrap` widget is a way to "focus" the data
@@ -45,8 +41,6 @@ use tracing::{instrument, trace};
 ///
 /// This wrapper takes a [`Lens`] as an argument, which is a specification
 /// of a struct field, or some other way of narrowing the scope.
-///
-/// [`Lens`]: trait.Lens.html
 pub struct LensWrap<T, U, L, W> {
     child: W,
     lens: L,

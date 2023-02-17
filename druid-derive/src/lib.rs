@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! derive macros for druid.
+//! derive macros for Druid.
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
 #![doc(

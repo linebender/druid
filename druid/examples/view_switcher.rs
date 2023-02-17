@@ -41,13 +41,13 @@ pub fn main() {
 fn make_ui() -> impl Widget<AppState> {
     let mut switcher_column = Flex::column();
     switcher_column.add_child(
-        Label::new(|data: &u32, _env: &Env| format!("Current view: {}", data))
+        Label::new(|data: &u32, _env: &Env| format!("Current view: {data}"))
             .lens(AppState::current_view),
     );
     for i in 0..6 {
         switcher_column.add_spacer(80.);
         switcher_column.add_child(
-            Button::new(format!("View {}", i))
+            Button::new(format!("View {i}"))
                 .on_click(move |_event, data: &mut u32, _env| {
                     *data = i;
                 })
@@ -80,7 +80,7 @@ fn make_ui() -> impl Widget<AppState> {
                     )
                     .with_flex_child(TextBox::new().lens(AppState::current_text), 1.0)
                     .with_flex_child(
-                        Label::new(|data: &String, _env: &Env| format!("Value entered: {}", data))
+                        Label::new(|data: &String, _env: &Env| format!("Value entered: {data}"))
                             .lens(AppState::current_text),
                         1.0,
                     ),

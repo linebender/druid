@@ -72,8 +72,8 @@ fn transform_coords(monitors_build: Vec<(Rect, Rect)>, max_y: f64) -> Vec<Monito
 #[cfg(test)]
 mod test {
     use crate::backend::mac::screen::transform_coords;
+    use crate::kurbo::Rect;
     use crate::Monitor;
-    use kurbo::Rect;
     use test_log::test;
 
     fn pair(rect: Rect) -> (Rect, Rect) {

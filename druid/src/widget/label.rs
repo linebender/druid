@@ -72,15 +72,7 @@ const LABEL_X_PADDING: f64 = 2.0;
 /// # let _ = SizedBox::<()>::new(important_label);
 /// ```
 ///
-/// [`ArcStr`]: ../type.ArcStr.html
-/// [`Data`]: ../trait.Data.html
-/// [`Env`]: ../struct.Env.html
-/// [`RawLabel`]: struct.RawLabel.html
-/// [`Label::raw`]: #method.raw
-/// [`LabelText`]: enum.LabelText.html
-/// [`LocalizedString`]: ../struct.LocalizedString.html
-/// [`draw_at`]: #method.draw_at
-/// [`Widget`]: ../trait.Widget.html
+/// [`draw_at`]: Label::draw_at
 pub struct Label<T> {
     label: RawLabel<ArcStr>,
     current_text: ArcStr,
@@ -118,10 +110,6 @@ pub enum LineBreaking {
 /// This can be one of three things; either an [`ArcStr`], a [`LocalizedString`],
 /// or a closure with the signature `Fn(&T, &Env) -> impl Into<ArcStr>`, where
 /// `T` is the `Data` at this point in the tree.
-///
-/// [`ArcStr`]: ../type.ArcStr.html
-/// [`LocalizedString`]: ../struct.LocalizedString.html
-/// [`Label`]: struct.Label.html
 #[derive(Clone)]
 pub enum LabelText<T> {
     /// Localized string that will be resolved through `Env`.
@@ -168,7 +156,7 @@ impl<T: TextStorage> RawLabel<T> {
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`Key<Color>`]: crate::Key
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.set_text_color(color);
         self
@@ -178,7 +166,7 @@ impl<T: TextStorage> RawLabel<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
-    /// [`Key<f64>`]: ../struct.Key.html
+    /// [`Key<f64>`]: crate::Key
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.set_text_size(size);
         self
@@ -189,25 +177,19 @@ impl<T: TextStorage> RawLabel<T> {
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Env`]: ../struct.Env.html
-    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
-    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
         self.set_font(font);
         self
     }
 
     /// Builder-style method to set the [`LineBreaking`] behaviour.
-    ///
-    /// [`LineBreaking`]: enum.LineBreaking.html
     pub fn with_line_break_mode(mut self, mode: LineBreaking) -> Self {
         self.set_line_break_mode(mode);
         self
     }
 
     /// Builder-style method to set the [`TextAlignment`].
-    ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
     pub fn with_text_alignment(mut self, alignment: TextAlignment) -> Self {
         self.set_text_alignment(alignment);
         self
@@ -220,8 +202,8 @@ impl<T: TextStorage> RawLabel<T> {
     /// If you change this property, you are responsible for calling
     /// [`request_layout`] to ensure the label is updated.
     ///
-    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`request_layout`]: EventCtx::request_layout
+    /// [`Key<Color>`]: crate::Key
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         let color = color.into();
         if !self.disabled {
@@ -237,8 +219,8 @@ impl<T: TextStorage> RawLabel<T> {
     /// If you change this property, you are responsible for calling
     /// [`request_layout`] to ensure the label is updated.
     ///
-    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
-    /// [`Key<f64>`]: ../struct.Key.html
+    /// [`request_layout`]: EventCtx::request_layout
+    /// [`Key<f64>`]: crate::Key
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         self.layout.set_text_size(size);
     }
@@ -251,10 +233,8 @@ impl<T: TextStorage> RawLabel<T> {
     /// If you change this property, you are responsible for calling
     /// [`request_layout`] to ensure the label is updated.
     ///
-    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
-    /// [`Env`]: ../struct.Env.html
-    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
-    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    /// [`request_layout`]: EventCtx::request_layout
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         self.layout.set_font(font);
     }
@@ -264,15 +244,12 @@ impl<T: TextStorage> RawLabel<T> {
     /// If you change this property, you are responsible for calling
     /// [`request_layout`] to ensure the label is updated.
     ///
-    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
-    /// [`LineBreaking`]: enum.LineBreaking.html
+    /// [`request_layout`]: EventCtx::request_layout
     pub fn set_line_break_mode(&mut self, mode: LineBreaking) {
         self.line_break_mode = mode;
     }
 
     /// Set the [`TextAlignment`] for this layout.
-    ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
         self.layout.set_text_alignment(alignment);
     }
@@ -349,7 +326,7 @@ impl<T: Data> Label<T> {
     /// let label2: Label<u32> = Label::dynamic(|data, _| format!("total is {}", data));
     /// ```
     ///
-    /// [`new`]: #method.new
+    /// [`new`]: Label::new
     pub fn dynamic(text: impl Fn(&T, &Env) -> String + 'static) -> Self {
         let text: LabelText<T> = text.into();
         Label::new(text)
@@ -368,8 +345,8 @@ impl<T: Data> Label<T> {
     /// is called in order to correctly recompute the text. If you are unsure,
     /// call [`request_update`] explicitly.
     ///
-    /// [`update`]: ../trait.Widget.html#tymethod.update
-    /// [`request_update`]: ../struct.EventCtx.html#method.request_update
+    /// [`update`]: Widget::update
+    /// [`request_update`]: EventCtx::request_update
     pub fn set_text(&mut self, text: impl Into<LabelText<T>>) {
         self.text = text.into();
         self.text_should_be_updated = true;
@@ -379,7 +356,7 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either a `Color` or a [`Key<Color>`].
     ///
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`Key<Color>`]: crate::Key
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.label.set_text_color(color);
         self
@@ -389,7 +366,7 @@ impl<T: Data> Label<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
-    /// [`Key<f64>`]: ../struct.Key.html
+    /// [`Key<f64>`]: crate::Key
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.label.set_text_size(size);
         self
@@ -400,25 +377,19 @@ impl<T: Data> Label<T> {
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Env`]: ../struct.Env.html
-    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
-    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
         self.label.set_font(font);
         self
     }
 
     /// Builder-style method to set the [`LineBreaking`] behaviour.
-    ///
-    /// [`LineBreaking`]: enum.LineBreaking.html
     pub fn with_line_break_mode(mut self, mode: LineBreaking) -> Self {
         self.label.set_line_break_mode(mode);
         self
     }
 
     /// Builder-style method to set the [`TextAlignment`].
-    ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
     pub fn with_text_alignment(mut self, alignment: TextAlignment) -> Self {
         self.label.set_text_alignment(alignment);
         self

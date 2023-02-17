@@ -68,7 +68,7 @@ pub trait Formatter<T> {
     ///
     /// This must return `Ok()` for any string created by [`format`].
     ///
-    /// [`format`]: #tymethod.format
+    /// [`format`]: Formatter::format
     fn value(&self, input: &str) -> Result<T, ValidationError>;
 }
 

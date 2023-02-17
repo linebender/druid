@@ -563,7 +563,7 @@ pub(crate) struct Window {
     scale: Cell<Scale>,
     // min size in px
     min_size: Size,
-    /// We've told X11 to destroy this window, so don't so any more X requests with this window id.
+    /// We've told X11 to destroy this window, so don't do any more X requests with this window id.
     destroyed: Cell<bool>,
     /// The region that was invalidated since the last time we rendered.
     invalid: RefCell<Region>,

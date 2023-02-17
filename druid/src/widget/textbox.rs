@@ -34,7 +34,7 @@ use crate::{
 use super::LabelText;
 
 const CURSOR_BLINK_DURATION: Duration = Duration::from_millis(500);
-const MAC_OR_LINUX_OR_OBSD: bool = cfg!(any(
+const MAC_OR_LINUX_OR_BSD: bool = cfg!(any(
     target_os = "freebsd",
     target_os = "macos",
     target_os = "linux",
@@ -53,7 +53,7 @@ const SCROLL_TO_INSETS: Insets = Insets::uniform_xy(40.0, 0.0);
 /// [`Formatter`]. You can create a [`ValueTextBox`] by passing the appropriate
 /// [`Formatter`] to [`TextBox::with_formatter`].
 ///
-/// [`Formatter`]: crate::text::format::Formatter
+/// [`Formatter`]: crate::text::Formatter
 /// [`ValueTextBox`]: super::ValueTextBox
 pub struct TextBox<T> {
     placeholder_text: LabelText<T>,
@@ -226,7 +226,7 @@ impl<T> TextBox<T> {
     ///     .with_text_size(FONT_SIZE)
     ///     .lens(AppState::name);
     /// ```
-    /// [`Key<f64>`]: ../struct.Key.html
+    /// [`Key<f64>`]: crate::Key
     pub fn with_text_size(mut self, size: impl Into<KeyOrValue<f64>>) -> Self {
         self.set_text_size(size);
         self
@@ -264,8 +264,7 @@ impl<T> TextBox<T> {
     ///     .lens(AppState::name);
     /// ```
     ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
-    /// [`multiline`]: #method.multiline
+    /// [`multiline`]: TextBox::multiline
     pub fn with_text_alignment(mut self, alignment: TextAlignment) -> Self {
         self.set_text_alignment(alignment);
         self
@@ -300,9 +299,7 @@ impl<T> TextBox<T> {
     /// ```
     ///
     ///
-    /// [`Env`]: ../struct.Env.html
-    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
-    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn with_font(mut self, font: impl Into<KeyOrValue<FontDescriptor>>) -> Self {
         self.set_font(font);
         self
@@ -332,7 +329,8 @@ impl<T> TextBox<T> {
     ///     .with_text_color(COLOR)
     ///     .lens(AppState::name);
     /// ```
-    /// [`Key<Color>`]: ../struct.Key.html
+    ///
+    /// [`Key<Color>`]: crate::Key
     pub fn with_text_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
         self.set_text_color(color);
         self
@@ -342,7 +340,7 @@ impl<T> TextBox<T> {
     ///
     /// The argument can be either an `f64` or a [`Key<f64>`].
     ///
-    /// [`Key<f64>`]: ../struct.Key.html
+    /// [`Key<f64>`]: crate::Key
     pub fn set_text_size(&mut self, size: impl Into<KeyOrValue<f64>>) {
         if !self.text().can_write() {
             tracing::warn!("set_text_size called with IME lock held.");
@@ -362,9 +360,7 @@ impl<T> TextBox<T> {
     /// The argument can be a [`FontDescriptor`] or a [`Key<FontDescriptor>`]
     /// that refers to a font defined in the [`Env`].
     ///
-    /// [`Env`]: ../struct.Env.html
-    /// [`FontDescriptor`]: ../struct.FontDescriptor.html
-    /// [`Key<FontDescriptor>`]: ../struct.Key.html
+    /// [`Key<FontDescriptor>`]: crate::Key
     pub fn set_font(&mut self, font: impl Into<KeyOrValue<FontDescriptor>>) {
         if !self.text().can_write() {
             tracing::warn!("set_font called with IME lock held.");
@@ -391,8 +387,7 @@ impl<T> TextBox<T> {
     /// This should be considered a bug, but it will not be fixed until proper
     /// BiDi support is implemented.
     ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
-    /// [`multiline`]: #method.multiline
+    /// [`multiline`]: TextBox::multiline
     pub fn set_text_alignment(&mut self, alignment: TextAlignment) {
         if !self.text().can_write() {
             tracing::warn!("set_text_alignment called with IME lock held.");
@@ -408,8 +403,8 @@ impl<T> TextBox<T> {
     /// If you change this property, you are responsible for calling
     /// [`request_layout`] to ensure the label is updated.
     ///
-    /// [`request_layout`]: ../struct.EventCtx.html#method.request_layout
-    /// [`Key<Color>`]: ../struct.Key.html
+    /// [`request_layout`]: EventCtx::request_layout
+    /// [`Key<Color>`]: crate::Key
     pub fn set_text_color(&mut self, color: impl Into<KeyOrValue<Color>>) {
         if !self.text().can_write() {
             tracing::warn!("set_text_color called with IME lock held.");
@@ -673,7 +668,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
                 ctx.scroll_to_view();
             }
             LifeCycle::FocusChanged(false) => {
-                if self.text().can_write() && MAC_OR_LINUX_OR_OBSD && !self.multiline {
+                if self.text().can_write() && MAC_OR_LINUX_OR_BSD && !self.multiline {
                     let selection = self.text().borrow().selection();
                     let selection = Selection::new(selection.active, selection.active);
                     let _ = self.text_mut().borrow_mut().set_selection(selection);

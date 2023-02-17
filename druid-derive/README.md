@@ -1,5 +1,5 @@
 # druid-derive
 
-This crate is implementations of derive macros for [druid][].
+This crate contains the implementations of derive macros for [Druid].
 
-[druid]: https://github.com/linebender/druid
+[Druid]: https://github.com/linebender/druid

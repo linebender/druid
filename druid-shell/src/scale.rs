@@ -28,7 +28,7 @@ use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 /// These display points will be automatically converted into pixels under the hood.
 /// One pixel is equal to one display point when the platform scale factor is `1.0`.
 ///
-/// Read more about pixels and display points [in the druid book].
+/// Read more about pixels and display points [in the Druid book].
 ///
 /// ## Converting with `Scale`
 ///
@@ -42,7 +42,7 @@ use crate::kurbo::{Insets, Line, Point, Rect, Size, Vec2};
 ///
 /// [`x`]: #method.x
 /// [`y`]: #method.y
-/// [in the druid book]: https://linebender.org/druid/resolution_independence.html
+/// [in the Druid book]: https://linebender.org/druid/07_resolution_independence.html
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Scale {
     /// The scale factor on the x axis.

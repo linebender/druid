@@ -182,11 +182,11 @@ impl TabsPolicy for NumberedTabs {
     }
 
     fn tab_info(&self, key: Self::Key, _data: &DynamicTabData) -> TabInfo<DynamicTabData> {
-        TabInfo::new(format!("Tab {:?}", key), true)
+        TabInfo::new(format!("Tab {key:?}"), true)
     }
 
     fn tab_body(&self, key: Self::Key, _data: &DynamicTabData) -> Label<DynamicTabData> {
-        Label::new(format!("Dynamic tab body {:?}", key))
+        Label::new(format!("Dynamic tab body {key:?}"))
     }
 
     fn close_tab(&self, key: Self::Key, data: &mut DynamicTabData) {

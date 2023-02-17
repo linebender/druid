@@ -36,10 +36,7 @@ pub(crate) fn assert_main_thread_or_main_unclaimed() {
     let thread_id = current_thread_id();
     let main_thread_id = MAIN_THREAD_ID.load(Ordering::Acquire);
     if thread_id != main_thread_id && main_thread_id != 0 {
-        panic!(
-            "Main thread assertion failed {} != {}",
-            thread_id, main_thread_id
-        );
+        panic!("Main thread assertion failed {thread_id} != {main_thread_id}");
     }
 }
 
@@ -58,10 +55,7 @@ pub(crate) fn claim_main_thread() {
         Err(0) => {
             tracing::warn!("The main thread status was already claimed by the current thread.")
         }
-        Err(k) => panic!(
-            "The main thread status has already been claimed by thread {}",
-            k
-        ),
+        Err(k) => panic!("The main thread status has already been claimed by thread {k}"),
     }
 }
 
@@ -78,10 +72,7 @@ pub(crate) fn release_main_thread() {
         Ok(n) if n == thread_id => (),
         Ok(_) => unreachable!(), // not possible per the docs
         Err(0) => tracing::warn!("The main thread status was already vacant."),
-        Err(k) => panic!(
-            "The main thread status has already been claimed by thread {}",
-            k
-        ),
+        Err(k) => panic!("The main thread status has already been claimed by thread {k}"),
     }
 }
 

@@ -47,8 +47,7 @@ use crate::{ArcStr, Color, Data, Insets, Point, Rect, Size};
 /// - [`Key`]s must always be set before they are used.
 /// - Values can only be overwritten by values of the same type.
 ///
-/// [`EnvScope`]: widget/struct.EnvScope.html
-/// [`Key`]: struct.Key.html
+/// [`EnvScope`]: crate::widget::EnvScope
 #[derive(Clone)]
 pub struct Env(Arc<EnvImpl>);
 
@@ -84,9 +83,6 @@ struct EnvImpl {
 ///         });
 /// }
 /// ```
-///
-/// [`ValueType`]: trait.ValueType.html
-/// [`Env`]: struct.Env.html
 #[derive(Clone, Debug, PartialEq, Eq, Data)]
 pub struct Key<T> {
     key: &'static str,
@@ -117,19 +113,11 @@ pub enum Value {
 ///
 /// This is a way to allow widgets to interchangeably use either a specific
 /// value or a value from the environment for some purpose.
-///
-/// [`Key<T>`]: struct.Key.html
-/// [`Env`]: struct.Env.html
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum KeyOrValue<T> {
     /// A concrete [`Value`] of type `T`.
-    ///
-    /// [`Value`]: enum.Value.html
     Concrete(T),
     /// A [`Key<T>`] that can be resolved to a value in the [`Env`].
-    ///
-    /// [`Key<T>`]: struct.Key.html
-    /// [`Env`]: struct.Env.html
     Key(Key<T>),
 }
 
@@ -152,8 +140,6 @@ impl<T: Data> Data for KeyOrValue<T> {
 /// [`KeyOrValue`]: enum.KeyOrValue.html
 pub trait KeyLike<T> {
     /// Returns `true` if this item has changed between the old and new [`Env`].
-    ///
-    /// [`Env`]: struct.Env.html
     fn changed(&self, old: &Env, new: &Env) -> bool;
 }
 
@@ -190,8 +176,6 @@ pub struct ValueTypeError {
 }
 
 /// An error type for when a key is missing from the [`Env`].
-///
-/// [`Env`]: struct.Env.html
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct MissingKeyError {
@@ -203,16 +187,16 @@ impl Env {
     /// State for whether or not to paint colorful rectangles for layout
     /// debugging.
     ///
-    /// Set by the `debug_paint_layout()` method on [`WidgetExt`]'.
+    /// Set by the [`WidgetExt::debug_paint_layout`] method.
     ///
-    /// [`WidgetExt`]: trait.WidgetExt.html
+    /// [`WidgetExt::debug_paint_layout`]: crate::WidgetExt::debug_paint_layout
     pub(crate) const DEBUG_PAINT: Key<bool> = Key::new("org.linebender.druid.built-in.debug-paint");
 
     /// State for whether or not to paint `WidgetId`s, for event debugging.
     ///
-    /// Set by the `debug_widget_id()` method on [`WidgetExt`].
+    /// Set by the [`WidgetExt::debug_widget_id`] method.
     ///
-    /// [`WidgetExt`]: trait.WidgetExt.html
+    /// [`WidgetExt::debug_widget_id`]: crate::WidgetExt::debug_widget_id
     pub(crate) const DEBUG_WIDGET_ID: Key<bool> =
         Key::new("org.linebender.druid.built-in.debug-widget-id");
 
@@ -236,7 +220,7 @@ impl Env {
     /// }
     /// ```
     ///
-    /// [`WidgetExt::debug_widget`]: trait.WidgetExt.html#method.debug_widget
+    /// [`WidgetExt::debug_widget`]: crate::WidgetExt::debug_widget
     pub const DEBUG_WIDGET: Key<bool> = Key::new("org.linebender.druid.built-in.debug-widget");
 
     /// Gets a value from the environment, expecting it to be present.
@@ -281,8 +265,6 @@ impl Env {
     /// # Panics
     ///
     /// Panics if the key is not found.
-    ///
-    /// [`Value`]: enum.Value.html
     pub fn get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> &Value {
         match self.try_get_untyped(key) {
             Ok(val) => val,
@@ -296,8 +278,6 @@ impl Env {
     /// # Note
     /// This is not intended for general use, but only for inspecting an `Env`
     /// e.g. for debugging, theme editing, and theme loading.
-    ///
-    /// [`Value`]: enum.Value.html
     pub fn try_get_untyped<V>(&self, key: impl Borrow<Key<V>>) -> Result<&Value, MissingKeyError> {
         self.0.map.get(key.borrow().key).ok_or(MissingKeyError {
             key: key.borrow().key.into(),
@@ -359,9 +339,7 @@ impl Env {
     /// Returns a reference to the [`L10nManager`], which handles localization
     /// resources.
     ///
-    /// This always exists on the base `Env` configured by druid.
-    ///
-    /// [`L10nManager`]: struct.L10nManager.html
+    /// This always exists on the base `Env` configured by Druid.
     pub(crate) fn localization_manager(&self) -> Option<&L10nManager> {
         self.0.l10n.as_deref()
     }
@@ -463,18 +441,18 @@ impl Value {
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Value::Point(p) => write!(f, "Point {:?}", p),
-            Value::Size(s) => write!(f, "Size {:?}", s),
-            Value::Rect(r) => write!(f, "Rect {:?}", r),
-            Value::Insets(i) => write!(f, "Insets {:?}", i),
-            Value::Color(c) => write!(f, "Color {:?}", c),
-            Value::Float(x) => write!(f, "Float {}", x),
-            Value::Bool(b) => write!(f, "Bool {}", b),
-            Value::UnsignedInt(x) => write!(f, "UnsignedInt {}", x),
-            Value::String(s) => write!(f, "String {:?}", s),
-            Value::Font(font) => write!(f, "Font {:?}", font),
-            Value::RoundedRectRadii(radius) => write!(f, "RoundedRectRadii {:?}", radius),
-            Value::Other(other) => write!(f, "{:?}", other),
+            Value::Point(p) => write!(f, "Point {p:?}"),
+            Value::Size(s) => write!(f, "Size {s:?}"),
+            Value::Rect(r) => write!(f, "Rect {r:?}"),
+            Value::Insets(i) => write!(f, "Insets {i:?}"),
+            Value::Color(c) => write!(f, "Color {c:?}"),
+            Value::Float(x) => write!(f, "Float {x}"),
+            Value::Bool(b) => write!(f, "Bool {b}"),
+            Value::UnsignedInt(x) => write!(f, "UnsignedInt {x}"),
+            Value::String(s) => write!(f, "String {s:?}"),
+            Value::Font(font) => write!(f, "Font {font:?}"),
+            Value::RoundedRectRadii(radius) => write!(f, "RoundedRectRadii {radius:?}"),
+            Value::Other(other) => write!(f, "{other:?}"),
         }
     }
 }

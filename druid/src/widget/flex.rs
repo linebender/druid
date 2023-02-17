@@ -128,16 +128,13 @@ use tracing::{instrument, trace};
 /// my_row.add_flex_child(Slider::new(), 1.0);
 /// ```
 ///
-/// [`layout`]: ../trait.Widget.html#tymethod.layout
-/// [`MainAxisAlignment`]: enum.MainAxisAlignment.html
-/// [`CrossAxisAlignment`]: enum.CrossAxisAlignment.html
-/// [`must_fill_main_axis`]: struct.Flex.html#method.must_fill_main_axis
-/// [`FlexParams`]: struct.FlexParams.html
-/// [`WidgetExt`]: ../trait.WidgetExt.html
-/// [`expand_height`]: ../trait.WidgetExt.html#method.expand_height
-/// [`expand_width`]: ../trait.WidgetExt.html#method.expand_width
-/// [`TextBox`]: struct.TextBox.html
-/// [`SizedBox`]: struct.SizedBox.html
+/// [`layout`]: Widget::layout
+/// [`must_fill_main_axis`]: Flex::must_fill_main_axis
+/// [`WidgetExt`]: super::WidgetExt
+/// [`expand_height`]: super::WidgetExt::expand_height
+/// [`expand_width`]: super::WidgetExt::expand_width
+/// [`TextBox`]: super::TextBox
+/// [`SizedBox`]: super::SizedBox
 pub struct Flex<T> {
     direction: Axis,
     cross_alignment: CrossAxisAlignment,
@@ -571,7 +568,7 @@ impl<T: Data> Flex<T> {
                 flex: params.flex,
             }
         } else {
-            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.0/druid/widget/struct.Flex.html");
+            tracing::warn!("Flex value should be > 0.0. To add a non-flex child use the add_child or with_child methods.\nSee the docs for more information: https://docs.rs/druid/0.8.2/druid/widget/struct.Flex.html");
             Child::Fixed {
                 widget: WidgetPod::new(Box::new(child)),
                 alignment: None,
@@ -618,8 +615,7 @@ impl<T: Data> Flex<T> {
         } else {
             debug_assert!(
                 flex >= 0.0,
-                "flex value for space should be greater than equal to 0, received: {}",
-                flex
+                "flex value for space should be greater than equal to 0, received: {flex}"
             );
             tracing::warn!("Provided flex value was less than 0: {}", flex);
             0.0
@@ -1272,14 +1268,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_flex_params() {
-        use float_cmp::approx_eq;
+        use float_cmp::assert_approx_eq;
         let params = FlexParams::new(0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-0.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
 
         let params = FlexParams::new(-1.0, None);
-        approx_eq!(f64, params.flex, 1.0, ulps = 2);
+        assert_approx_eq!(f64, params.flex, 1.0, ulps = 2);
     }
 }

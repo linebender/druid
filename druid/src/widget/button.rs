@@ -34,7 +34,7 @@ pub struct Button<T> {
 impl<T: Data> Button<T> {
     /// Create a new button with a text label.
     ///
-    /// Use the [`.on_click`] method to provide a closure to be called when the
+    /// Use the [`on_click`] method to provide a closure to be called when the
     /// button is clicked.
     ///
     /// # Examples
@@ -47,14 +47,14 @@ impl<T: Data> Button<T> {
     /// });
     /// ```
     ///
-    /// [`.on_click`]: #method.on_click
+    /// [`on_click`]: #method.on_click
     pub fn new(text: impl Into<LabelText<T>>) -> Button<T> {
         Button::from_label(Label::new(text))
     }
 
     /// Create a new button with the provided [`Label`].
     ///
-    /// Use the [`.on_click`] method to provide a closure to be called when the
+    /// Use the [`on_click`] method to provide a closure to be called when the
     /// button is clicked.
     ///
     /// # Examples
@@ -68,8 +68,7 @@ impl<T: Data> Button<T> {
     /// });
     /// ```
     ///
-    /// [`Label`]: struct.Label.html
-    /// [`.on_click`]: #method.on_click
+    /// [`on_click`]: #method.on_click
     pub fn from_label(label: Label<T>) -> Button<T> {
         Button {
             label,

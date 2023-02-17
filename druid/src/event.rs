@@ -20,7 +20,7 @@ use druid_shell::{Clipboard, KeyEvent, TimerToken};
 
 use crate::kurbo::{Rect, Size};
 use crate::mouse::MouseEvent;
-use crate::{Command, Notification, Point, WidgetId};
+use crate::{Command, Notification, Point, Scale, WidgetId};
 
 /// An event, propagated downwards during event flow.
 ///
@@ -47,8 +47,8 @@ use crate::{Command, Notification, Point, WidgetId};
 /// This enum is expected to grow considerably, as there are many, many
 /// different kinds of events that are relevant in a GUI.
 ///
-/// [`event`]: trait.Widget.html#tymethod.event
-/// [`WidgetPod`]: struct.WidgetPod.html
+/// [`event`]: crate::Widget::event
+/// [`WidgetPod`]: crate::WidgetPod
 #[derive(Debug, Clone)]
 pub enum Event {
     /// Sent to all widgets in a given window when that window is first instantiated.
@@ -75,6 +75,12 @@ pub enum Event {
     /// This event means the window *will* go away; it is safe to dispose of resources and
     /// do any other cleanup.
     WindowDisconnected,
+    /// Called when the window's [`Scale`] changes.
+    ///
+    /// This information can be used to switch between different resolution image assets.
+    ///
+    /// [`Scale`]: crate::Scale
+    WindowScale(Scale),
     /// Called on the root widget when the window size changes.
     ///
     /// Discussion: it's not obvious this should be propagated to user
@@ -89,9 +95,11 @@ pub enum Event {
     /// Called when the mouse is moved.
     ///
     /// The `MouseMove` event is propagated to the active widget, if
-    /// there is one, otherwise to hot widgets (see `HotChanged`).
+    /// there is one, otherwise to hot widgets (see [`HotChanged`]).
     /// If a widget loses its hot status due to `MouseMove` then that specific
-    /// `MouseMove` event is also still sent to that widget.
+    /// `MouseMove` event is also still sent to that widget. However a widget
+    /// can lose its hot status even without a `MouseMove` event, so make
+    /// sure to also handle [`HotChanged`] if you care about the hot status.
     ///
     /// The `MouseMove` event is also the primary mechanism for widgets
     /// to set a cursor, for example to an I-bar inside a text widget. A
@@ -99,7 +107,8 @@ pub enum Event {
     /// [`set_cursor`] in the MouseMove handler, as `MouseMove` is only
     /// propagated to active or hot widgets.
     ///
-    /// [`set_cursor`]: struct.EventCtx.html#method.set_cursor
+    /// [`HotChanged`]: LifeCycle::HotChanged
+    /// [`set_cursor`]: crate::EventCtx::set_cursor
     MouseMove(MouseEvent),
     /// Called when the mouse wheel or trackpad is scrolled.
     Wheel(MouseEvent),
@@ -118,14 +127,14 @@ pub enum Event {
     Zoom(f64),
     /// Called on a timer event.
     ///
-    /// Request a timer event through [`EventCtx::request_timer()`]. That will
+    /// Request a timer event through [`EventCtx::request_timer`]. That will
     /// cause a timer event later.
     ///
     /// Note that timer events from other widgets may be delivered as well. Use
-    /// the token returned from the `request_timer()` call to filter events more
+    /// the token returned from the `request_timer` call to filter events more
     /// precisely.
     ///
-    /// [`EventCtx::request_timer()`]: struct.EventCtx.html#method.request_timer
+    /// [`EventCtx::request_timer`]: crate::EventCtx::request_timer
     Timer(TimerToken),
     /// Called at the beginning of a new animation frame.
     ///
@@ -163,9 +172,8 @@ pub enum Event {
     /// - Widgets and other Druid components can send custom [`Command`]s at
     /// runtime, via methods such as [`EventCtx::submit_command`].
     ///
-    /// [`Command`]: struct.Command.html
-    /// [`Widget`]: trait.Widget.html
-    /// [`EventCtx::submit_command`]: struct.EventCtx.html#method.submit_command
+    /// [`Widget`]: Widget
+    /// [`EventCtx::submit_command`]: crate::EventCtx::submit_command
     /// [`ExtEventSink`]: crate::ExtEventSink
     /// [`MenuItem`]: crate::MenuItem
     Command(Command),
@@ -196,21 +204,20 @@ pub enum Event {
     /// should check the shared state, perform invalidation, and update `Data`
     /// as necessary.
     ImeStateChange,
-    /// Internal druid event.
+    /// Internal Druid event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
     ///
-    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`WidgetPod`]: crate::WidgetPod
     Internal(InternalEvent),
 }
 
-/// Internal events used by druid inside [`WidgetPod`].
+/// Internal events used by Druid inside [`WidgetPod`].
 ///
 /// These events are translated into regular [`Event`]s
 /// and should not be used directly.
 ///
-/// [`WidgetPod`]: struct.WidgetPod.html
-/// [`Event`]: enum.Event.html
+/// [`WidgetPod`]: crate::WidgetPod
 #[derive(Debug, Clone)]
 pub enum InternalEvent {
     /// Sent in some cases when the mouse has left the window.
@@ -236,8 +243,8 @@ pub enum InternalEvent {
 ///
 /// Similarly the [`LifeCycle::Size`] method occurs during [`layout`], and
 /// [`LifeCycle::HotChanged`] can occur both during [`event`] (if the mouse
-/// moves over a widget) or during [`layout`], if a widget is resized and
-/// that moves it under the mouse.
+/// moves over a widget) or in response to [`LifeCycle::ViewContextChanged`],
+/// if a widget is moved away from under the mouse.
 ///
 /// [`event`]: crate::Widget::event
 /// [`update`]: crate::Widget::update
@@ -259,15 +266,15 @@ pub enum LifeCycle {
     /// itself will handle registering those children with the system; this is
     /// required for things like correct routing of events.
     ///
-    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`WidgetPod`]: crate::WidgetPod
     WidgetAdded,
     /// Called when the [`Size`] of the widget changes.
     ///
     /// This will be called after [`Widget::layout`], if the [`Size`] returned
     /// by the widget differs from its previous size.
     ///
-    /// [`Size`]: struct.Size.html
-    /// [`Widget::layout`]: trait.Widget.html#tymethod.layout
+    /// [`Size`]: crate::Size
+    /// [`Widget::layout`]: crate::Widget::layout
     Size(Size),
     /// Called when the Disabled state of the widgets is changed.
     ///
@@ -282,12 +289,12 @@ pub enum LifeCycle {
     ///
     /// This will always be called _before_ the event that triggered it; that is,
     /// when the mouse moves over a widget, that widget will receive
-    /// `LifeCycle::HotChanged` before it receives `Event::MouseMove`.
+    /// [`LifeCycle::HotChanged`] before it receives [`Event::MouseMove`].
     ///
-    /// See [`is_hot`](struct.EventCtx.html#method.is_hot) for
+    /// See [`is_hot`](crate::EventCtx::is_hot) for
     /// discussion about the hot status.
     HotChanged(bool),
-    /// This is called when the widget-tree changes and druid wants to rebuild the
+    /// This is called when the widget-tree changes and Druid wants to rebuild the
     /// Focus-chain.
     ///
     /// It is the only place from which [`register_for_focus`] should be called.
@@ -305,30 +312,28 @@ pub enum LifeCycle {
     ///
     /// See [`EventCtx::is_focused`] for more information about focus.
     ///
-    /// [`EventCtx::is_focused`]: struct.EventCtx.html#method.is_focused
+    /// [`EventCtx::is_focused`]: crate::EventCtx::is_focused
     FocusChanged(bool),
     /// Called when the [`ViewContext`] of this widget changed.
     ///
     /// See [`view_context_changed`] on how and when to request this event.
     ///
     /// [`view_context_changed`]: crate::EventCtx::view_context_changed
-    /// [`ViewContext`]: ViewContext
     ViewContextChanged(ViewContext),
-    /// Internal druid lifecycle event.
+    /// Internal Druid lifecycle event.
     ///
     /// This should always be passed down to descendant [`WidgetPod`]s.
     ///
-    /// [`WidgetPod`]: struct.WidgetPod.html
+    /// [`WidgetPod`]: crate::WidgetPod
     Internal(InternalLifeCycle),
 }
 
-/// Internal lifecycle events used by druid inside [`WidgetPod`].
+/// Internal lifecycle events used by Druid inside [`WidgetPod`].
 ///
 /// These events are translated into regular [`LifeCycle`] events
 /// and should not be used directly.
 ///
-/// [`WidgetPod`]: struct.WidgetPod.html
-/// [`LifeCycle`]: enum.LifeCycle.html
+/// [`WidgetPod`]: crate::WidgetPod
 #[derive(Debug, Clone)]
 pub enum InternalLifeCycle {
     /// Used to route the `WidgetAdded` event to the required widgets.
@@ -418,6 +423,7 @@ impl Event {
             Event::WindowConnected
             | Event::WindowCloseRequested
             | Event::WindowDisconnected
+            | Event::WindowScale(_)
             | Event::WindowSize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)
@@ -609,7 +615,7 @@ mod state_cell {
             } else {
                 "None"
             };
-            write!(f, "StateCell({})", inner)
+            write!(f, "StateCell({inner})")
         }
     }
 
@@ -620,7 +626,7 @@ mod state_cell {
             } else {
                 "None"
             };
-            write!(f, "DebugStateCell({})", inner)
+            write!(f, "DebugStateCell({inner})")
         }
     }
 

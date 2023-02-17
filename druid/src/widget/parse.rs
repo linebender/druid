@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This whole widget was deprecated in Druid 0.7
+// https://github.com/linebender/druid/pull/1377
+#![allow(deprecated)]
+
 use std::fmt::Display;
 use std::mem;
 use std::str::FromStr;
@@ -22,6 +26,8 @@ use crate::widget::prelude::*;
 use crate::Data;
 
 /// Converts a `Widget<String>` to a `Widget<Option<T>>`, mapping parse errors to None
+#[doc(hidden)]
+#[deprecated(since = "0.7.0", note = "Use the Formatter trait instead")]
 pub struct Parse<T> {
     widget: T,
     state: String,

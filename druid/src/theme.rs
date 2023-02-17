@@ -25,6 +25,7 @@ use crate::{Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key}
 pub const WINDOW_BACKGROUND_COLOR: Key<Color> =
     Key::new("org.linebender.druid.theme.window_background_color");
 
+#[doc(hidden)]
 #[deprecated(since = "0.8.0", note = "renamed to TEXT_COLOR")]
 pub const LABEL_COLOR: Key<Color> = TEXT_COLOR;
 pub const TEXT_COLOR: Key<Color> = Key::new("org.linebender.druid.theme.label_color");
@@ -56,6 +57,7 @@ pub const BUTTON_BORDER_WIDTH: Key<f64> =
     Key::new("org.linebender.druid.theme.button_border_width");
 pub const BORDER_DARK: Key<Color> = Key::new("org.linebender.druid.theme.border_dark");
 pub const BORDER_LIGHT: Key<Color> = Key::new("org.linebender.druid.theme.border_light");
+#[doc(hidden)]
 #[deprecated(since = "0.8.0", note = "use SELECTED_TEXT_BACKGROUND_COLOR instead")]
 pub const SELECTION_COLOR: Key<Color> = SELECTED_TEXT_BACKGROUND_COLOR;
 pub const SELECTED_TEXT_BACKGROUND_COLOR: Key<Color> =

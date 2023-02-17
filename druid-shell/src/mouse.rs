@@ -27,7 +27,7 @@ use crate::Modifiers;
 pub struct MouseEvent {
     /// The location of the mouse in [display points] in relation to the current window.
     ///
-    /// [display points]: struct.Scale.html
+    /// [display points]: crate::Scale
     pub pos: Point,
     /// Mouse buttons being held down during a move or after a click event.
     /// Thus it will contain the `button` that triggered a mouse-down event,
@@ -118,8 +118,6 @@ impl MouseButton {
 }
 
 /// A set of [`MouseButton`]s.
-///
-/// [`MouseButton`]: enum.MouseButton.html
 #[derive(PartialEq, Eq, Clone, Copy, Default)]
 pub struct MouseButtons(u8);
 
@@ -257,7 +255,11 @@ pub enum Cursor {
     Pointer,
     Crosshair,
 
-    #[deprecated(note = "this will be removed in future because it is not available on windows")]
+    #[doc(hidden)]
+    #[deprecated(
+        since = "0.8.0",
+        note = "This will be removed because it is not available on Windows."
+    )]
     OpenHand,
     NotAllowed,
     ResizeLeftRight,

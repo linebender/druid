@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use kurbo::{BezPath, Rect, Shape, Vec2};
+use crate::kurbo::{BezPath, Rect, Shape, Vec2};
 
 /// A union of rectangles, useful for describing an area that needs to be repainted.
 #[derive(Clone, Debug)]
@@ -59,6 +59,7 @@ impl Region {
         }
     }
 
+    #[doc(hidden)]
     #[deprecated(since = "0.7.0", note = "Use bounding_box() instead")]
     // this existed on the previous Region type, and I've bumped into it
     // a couple times while updating

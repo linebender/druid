@@ -30,6 +30,7 @@ struct BorderStyle {
 /// A widget that provides simple visual styling options to a child.
 pub struct Container<T> {
     background: Option<BackgroundBrush<T>>,
+    foreground: Option<BackgroundBrush<T>>,
     border: Option<BorderStyle>,
     corner_radius: KeyOrValue<RoundedRectRadii>,
 
@@ -41,6 +42,7 @@ impl<T: Data> Container<T> {
     pub fn new(child: impl Widget<T> + 'static) -> Self {
         Self {
             background: None,
+            foreground: None,
             border: None,
             corner_radius: 0.0.into(),
             child: WidgetPod::new(child).boxed(),
@@ -53,11 +55,8 @@ impl<T: Data> Container<T> {
     /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
-    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../enum.Color.html
-    /// [`Key<Color>`]: ../struct.Key.html
-    /// [`Env`]: ../struct.Env.html
-    /// [`Painter`]: struct.Painter.html
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
     pub fn background(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
         self.set_background(brush);
         self
@@ -69,11 +68,8 @@ impl<T: Data> Container<T> {
     /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
     /// any gradient, or a fully custom [`Painter`] widget.
     ///
-    /// [`BackgroundBrush`]: ../enum.BackgroundBrush.html
-    /// [`Color`]: ../enum.Color.html
-    /// [`Key<Color>`]: ../struct.Key.html
-    /// [`Env`]: ../struct.Env.html
-    /// [`Painter`]: struct.Painter.html
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
     pub fn set_background(&mut self, brush: impl Into<BackgroundBrush<T>>) {
         self.background = Some(brush.into());
     }
@@ -83,12 +79,42 @@ impl<T: Data> Container<T> {
         self.background = None;
     }
 
+    /// Builder-style method for setting the foreground for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
+    pub fn foreground(mut self, brush: impl Into<BackgroundBrush<T>>) -> Self {
+        self.set_foreground(brush);
+        self
+    }
+
+    /// Set the foreground for this widget.
+    ///
+    /// This can be passed anything which can be represented by a [`BackgroundBrush`];
+    /// notably, it can be any [`Color`], a [`Key<Color>`] resolvable in the [`Env`],
+    /// any gradient, or a fully custom [`Painter`] widget.
+    ///
+    /// [`Key<Color>`]: crate::Key
+    /// [`Painter`]: super::Painter
+    pub fn set_foreground(&mut self, brush: impl Into<BackgroundBrush<T>>) {
+        self.foreground = Some(brush.into());
+    }
+
+    /// Clears foreground.
+    pub fn clear_foreground(&mut self) {
+        self.foreground = None;
+    }
+
     /// Builder-style method for painting a border around the widget with a color and width.
     ///
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
     ///
-    /// [`Key`]: struct.Key.html
+    /// [`Key`]: crate::Key
     pub fn border(
         mut self,
         color: impl Into<KeyOrValue<Color>>,
@@ -103,7 +129,7 @@ impl<T: Data> Container<T> {
     /// Arguments can be either concrete values, or a [`Key`] of the respective
     /// type.
     ///
-    /// [`Key`]: struct.Key.html
+    /// [`Key`]: crate::Key
     pub fn set_border(
         &mut self,
         color: impl Into<KeyOrValue<Color>>,
@@ -137,6 +163,11 @@ impl<T: Data> Container<T> {
     }
 
     #[cfg(test)]
+    pub(crate) fn foreground_is_some(&self) -> bool {
+        self.foreground.is_some()
+    }
+
+    #[cfg(test)]
     pub(crate) fn border_is_some(&self) -> bool {
         self.border.is_some()
     }
@@ -161,6 +192,11 @@ impl<T: Data> Widget<T> for Container<T> {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
         if let Some(brush) = self.background.as_mut() {
             trace_span!("update background").in_scope(|| {
+                brush.update(ctx, old_data, data, env);
+            });
+        }
+        if let Some(brush) = self.foreground.as_mut() {
+            trace_span!("update foreground").in_scope(|| {
                 brush.update(ctx, old_data, data, env);
             });
         }
@@ -234,6 +270,17 @@ impl<T: Data> Widget<T> for Container<T> {
         };
 
         self.child.paint(ctx, data, env);
+
+        if let Some(foreground) = self.foreground.as_mut() {
+            let panel = ctx.size().to_rounded_rect(corner_radius);
+
+            trace_span!("paint foreground").in_scope(|| {
+                ctx.with_save(|ctx| {
+                    ctx.clip(panel);
+                    foreground.paint(ctx, data, env);
+                });
+            });
+        }
     }
 
     fn debug_state(&self, data: &T) -> DebugState {

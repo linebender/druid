@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This example shows a how a single-line text field might be implemented for druid-shell.
+//! This example shows a how a single-line text field might be implemented for `druid-shell`.
 //! Beyond the omission of multiple lines and text wrapping, it also is missing many motions
 //! (like "move to previous word") and bidirectional text support.
 
@@ -122,7 +122,7 @@ impl WinHandler for AppState {
                 self.handle.close();
                 Application::global().quit()
             }
-            _ => println!("unexpected id {}", id),
+            _ => println!("unexpected id {id}"),
         }
     }
 
@@ -259,7 +259,7 @@ impl InputHandler for AppInputHandler {
 
     fn handle_action(&mut self, action: Action) {
         let handled = apply_default_behavior(self, action);
-        println!("action: {:?} handled: {:?}", action, handled);
+        println!("action: {action:?} handled: {handled:?}");
     }
 }
 

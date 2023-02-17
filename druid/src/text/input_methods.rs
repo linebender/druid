@@ -14,8 +14,8 @@
 
 //! Types related to input method editing.
 //!
-//! Most IME-related code is in druid-shell; these are helper types used
-//! exclusively in druid.
+//! Most IME-related code is in `druid-shell`; these are helper types used
+//! exclusively in `druid`.
 
 use std::rc::Rc;
 
@@ -29,7 +29,7 @@ use crate::WidgetId;
 /// [`LifeCycle::WidgetAdded`] event.
 ///
 /// The widget does not explicitly *deregister* afterwards; rather anytime
-/// the widget tree changes, druid will call [`is_alive`] on each registered
+/// the widget tree changes, `druid` will call [`is_alive`] on each registered
 /// `ImeHandlerRef`, and deregister those that return `false`.
 ///
 /// [`LifeCycle::WidgetAdded`]: crate::LifeCycle::WidgetAdded

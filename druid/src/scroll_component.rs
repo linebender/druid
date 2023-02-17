@@ -509,16 +509,25 @@ impl ScrollComponent {
     ///
     /// Make sure to call on every lifecycle event
     pub fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, env: &Env) {
-        if let LifeCycle::Size(_) = event {
-            // Show the scrollbars any time our size changes
-            self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+        match event {
+            LifeCycle::Size(_) => {
+                // Show the scrollbars any time our size changes
+                self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+            }
+            LifeCycle::HotChanged(false) => {
+                if self.hovered.is_hovered() {
+                    self.hovered = BarHoveredState::None;
+                    self.reset_scrollbar_fade(|d| ctx.request_timer(d), env);
+                }
+            }
+            _ => (),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use float_cmp::approx_eq;
+    use float_cmp::assert_approx_eq;
 
     use super::*;
     use crate::kurbo::Size;
@@ -573,7 +582,7 @@ mod tests {
             "scrollbar should be contained by viewport"
         );
         // scrollbar should be at start of viewport
-        approx_eq!(
+        assert_approx_eq!(
             f64,
             scrollbar_rect.y0,
             viewport.view_rect().y0 + TEST_SCROLLBAR_PAD
@@ -603,7 +612,7 @@ mod tests {
             "scrollbar should be contained by viewport"
         );
         // scrollbar should be at end of viewport
-        approx_eq!(
+        assert_approx_eq!(
             f64,
             scrollbar_rect.y1,
             viewport.view_rect().y1 - TEST_SCROLLBAR_PAD
@@ -688,7 +697,7 @@ mod tests {
             "scrollbar should be contained by viewport"
         );
         // scrollbar should use SCROLLBAR_MIN_SIZE when content is much bigger than viewport
-        approx_eq!(f64, scrollbar_rect.height(), TEST_SCROLLBAR_MIN_SIZE);
+        assert_approx_eq!(f64, scrollbar_rect.height(), TEST_SCROLLBAR_MIN_SIZE);
         assert_eq!(scrollbar_rect, Rect::new(86.0, 29.0, 97.0, 46.0));
     }
 
@@ -714,12 +723,12 @@ mod tests {
             "scrollbar should be contained by viewport"
         );
         // scrollbar should fill viewport if too small for SCROLLBAR_MIN_SIZE
-        approx_eq!(
+        assert_approx_eq!(
             f64,
             scrollbar_rect.y0,
             viewport.view_rect().y0 + TEST_SCROLLBAR_PAD
         );
-        approx_eq!(
+        assert_approx_eq!(
             f64,
             scrollbar_rect.y1,
             viewport.view_rect().y1 - TEST_SCROLLBAR_PAD

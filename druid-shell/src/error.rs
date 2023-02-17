@@ -48,7 +48,7 @@ impl fmt::Display for Error {
             }
             Error::Platform(err) => fmt::Display::fmt(err, f),
             Error::WindowDropped => write!(f, "The window has already been destroyed."),
-            Error::Other(s) => write!(f, "{}", s),
+            Error::Other(s) => write!(f, "{s}"),
         }
     }
 }

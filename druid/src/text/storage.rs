@@ -48,7 +48,7 @@ pub trait TextStorage: PietTextStorage + Data {
     /// require a separate API.
     ///
     /// [`Link`]: super::attribute::Link
-    /// [`piet`]: https://docs.rs/piet
+    /// [`piet`]: crate::piet
     fn links(&self) -> &[Link] {
         &[]
     }
@@ -58,7 +58,9 @@ pub trait TextStorage: PietTextStorage + Data {
 pub struct EnvUpdateCtx<'a, 'b>(&'a UpdateCtx<'a, 'b>);
 
 impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
-    /// Create an EnvChangeCtx for Widget::update
+    /// Create an [`EnvUpdateCtx`] for [`Widget::update`].
+    ///
+    /// [`Widget::update`]: crate::Widget::update
     pub(crate) fn for_update(ctx: &'a UpdateCtx<'a, 'b>) -> Self {
         Self(ctx)
     }
@@ -68,7 +70,7 @@ impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
     ///
     /// See [`UpdateCtx::env_key_changed`] for more details.
     ///
-    /// [`env_update`]: (TextStorage::env_update)
+    /// [`env_update`]: TextStorage::env_update
     pub fn env_key_changed<T>(&self, key: &impl KeyLike<T>) -> bool {
         self.0.env_key_changed(key)
     }
@@ -76,7 +78,7 @@ impl<'a, 'b> EnvUpdateCtx<'a, 'b> {
 
 /// A reference counted string slice.
 ///
-/// This is a data-friendly way to represent strings in druid. Unlike `String`
+/// This is a data-friendly way to represent strings in Druid. Unlike `String`
 /// it cannot be mutated, but unlike `String` it can be cheaply cloned.
 pub type ArcStr = Arc<str>;
 

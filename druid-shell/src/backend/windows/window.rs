@@ -137,7 +137,7 @@ pub enum PresentStrategy {
 /// We work hard to avoid calling into `WinHandler` re-entrantly. Since we use
 /// the system's event loop, and since the `WinHandler` gets a `WindowHandle` to use, this implies
 /// that none of the `WindowHandle`'s methods can return control to the system's event loop
-/// (because if it did, the system could call back into druid-shell with some mouse event, and then
+/// (because if it did, the system could call back into `druid-shell` with some mouse event, and then
 /// we'd try to call the `WinHandler` again).
 ///
 /// The solution is that for every `WindowHandle` method that *wants* to return control to the
@@ -146,12 +146,12 @@ pub enum PresentStrategy {
 /// method returns.
 ///
 /// An example call trace might look like:
-/// 1. the system hands a mouse click event to druid-shell
-/// 2. druid-shell calls `WinHandler::mouse_up`
+/// 1. the system hands a mouse click event to `druid-shell`
+/// 2. `druid-shell` calls `WinHandler::mouse_up`
 /// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
 ///   deferred op and returns immediately
 /// 4. after some more processing, `WinHandler::mouse_up` returns
-/// 5. druid-shell displays the "save as" dialog that was requested in step 3.
+/// 5. `druid-shell` displays the "save as" dialog that was requested in step 3.
 enum DeferredOp {
     SaveAs(FileDialogOptions, FileDialogToken),
     Open(FileDialogOptions, FileDialogToken),

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use float_cmp::approx_eq;
+use float_cmp::assert_approx_eq;
 
 use druid::Data;
 use druid::Lens;
@@ -38,14 +38,14 @@ fn derive_lens() {
     let number_lens = State::lens_number; //named lens for number
 
     text_lens.with(&state, |data| assert_eq!(data, "1.0"));
-    number_lens.with(&state, |data| approx_eq!(f64, *data, 1.0));
+    number_lens.with(&state, |data| assert_approx_eq!(f64, *data, 1.0));
 
     text_lens.with_mut(&mut state, |data| *data = "2.0".into());
     number_lens.with_mut(&mut state, |data| *data = 2.0);
 
     assert_eq!(state.text, "2.0");
-    approx_eq!(f64, state.number, 2.0);
-    approx_eq!(f64, state.ignored, 2.0);
+    assert_approx_eq!(f64, state.number, 2.0);
+    assert_approx_eq!(f64, state.ignored, 2.0);
 }
 
 #[test]
@@ -68,13 +68,13 @@ fn mix_with_data_lens() {
     let number_lens = State::lens_number; //named lens for number
 
     text_lens.with(&state, |data| assert_eq!(data, "1.0"));
-    number_lens.with(&state, |data| approx_eq!(f64, *data, 1.0));
+    number_lens.with(&state, |data| assert_approx_eq!(f64, *data, 1.0));
 
     text_lens.with_mut(&mut state, |data| *data = "2.0".into());
     number_lens.with_mut(&mut state, |data| *data = 2.0);
 
     assert_eq!(state.text, "2.0");
-    approx_eq!(f64, state.number, 2.0);
+    assert_approx_eq!(f64, state.number, 2.0);
 
     //test data
     let two = State {

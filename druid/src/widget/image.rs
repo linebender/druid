@@ -67,7 +67,7 @@ use tracing::{instrument, trace};
 /// image_widget.set_interpolation_mode(InterpolationMode::Bilinear);
 /// ```
 ///
-/// [scaling a bitmap image]: ../struct.Scale.html#pixels-and-display-points
+/// [scaling a bitmap image]: crate::Scale#pixels-and-display-points
 /// [SVG files]: https://en.wikipedia.org/wiki/Scalable_Vector_Graphics
 pub struct Image {
     image_data: ImageBuf,
@@ -260,7 +260,7 @@ mod tests {
     use crate::piet::ImageFormat;
     use test_log::test;
 
-    /// Painting an empty image shouldn't crash druid.
+    /// Painting an empty image shouldn't crash Druid.
     #[test]
     fn empty_paint() {
         use crate::{tests::harness::Harness, WidgetId};
@@ -428,7 +428,7 @@ mod tests {
             widget::{Container, Scroll},
             WidgetExt, WidgetId,
         };
-        use float_cmp::approx_eq;
+        use float_cmp::assert_approx_eq;
 
         let id_1 = WidgetId::next();
         let image_data = ImageBuf::from_raw(
@@ -445,7 +445,7 @@ mod tests {
             harness.send_initial_events();
             harness.just_layout();
             let state = harness.get_state(id_1);
-            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+            assert_approx_eq!(f64, state.layout_rect().x1, 400.0);
         })
     }
 
@@ -456,7 +456,7 @@ mod tests {
             widget::{Container, Scroll},
             WidgetExt, WidgetId,
         };
-        use float_cmp::approx_eq;
+        use float_cmp::assert_approx_eq;
 
         let id_1 = WidgetId::next();
         let image_data = ImageBuf::from_raw(
@@ -473,7 +473,7 @@ mod tests {
             harness.send_initial_events();
             harness.just_layout();
             let state = harness.get_state(id_1);
-            assert!(approx_eq!(f64, state.layout_rect().x1, 400.0));
+            assert_approx_eq!(f64, state.layout_rect().x1, 400.0);
         })
     }
 

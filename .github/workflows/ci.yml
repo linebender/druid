@@ -34,10 +34,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install libx11-dev
+      - name: install linux dependencies
         run: |
           sudo apt update
-          sudo apt install libx11-dev libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo apt install libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
@@ -56,13 +56,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=x11,raw-win-handle --no-default-features -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=x11,image,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets  --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
+          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid-derive
         uses: actions-rs/cargo@v1
@@ -84,7 +84,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; we run them in a parallel task
       # there are no gtk-specific doctests in the main druid crate anyway
@@ -135,13 +135,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=wayland,raw-win-handle --no-default-features -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=wayland,image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features wayland --no-default-features
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no wayland-specific
       # doctests in the main druid crate anyway
@@ -149,7 +149,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im --features wayland --no-default-features
+          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=wayland,svg,image,im,raw-win-handle
 
   # we test the gtk backend as a separate job because gtk install takes
   # a long time.
@@ -179,13 +179,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=raw-win-handle -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml
+          args: --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no gtk-specific
       # doctests in the main druid crate anyway
@@ -230,7 +230,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=druid-shell/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
 
       # We use --all-targets to skip doc tests; there are no wasm-specific
       # doctests in the main druid crate anyway
@@ -275,7 +275,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --doc --no-default-features --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --doc --no-default-features --features=svg,image,im,raw-win-handle
 
   # This tests the future rust compiler to catch errors ahead of time without
   # breaking CI
@@ -304,7 +304,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=raw-win-handle -- -D warnings
+          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
         continue-on-error: true
 
       - name: cargo clippy druid
@@ -319,7 +319,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image
         continue-on-error: true
 
       # We use --all-targets to skip doc tests, which are run in doctest-stable
@@ -364,7 +364,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=druid/Cargo.toml --doc --features=svg,image,im
+          args: --manifest-path=druid/Cargo.toml --doc --features=svg,image,im,raw-win-handle
 
 
   check-docs:
@@ -376,16 +376,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install libgtk-dev
+      - name: install linux dependencies
         run: |
           sudo apt update
-          sudo apt install libgtk-3-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo apt install libgtk-3-dev libwayland-dev libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install stable toolchain
+      - name: install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           profile: minimal
           override: true
 
@@ -397,13 +397,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im --no-deps --document-private-items
+          args: --manifest-path=druid/Cargo.toml --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid-derive
         uses: actions-rs/cargo@v1
@@ -422,7 +422,15 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --features=x11 --no-deps --document-private-items
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
+        if: contains(matrix.os, 'ubuntu')
+
+      # On Linux also attempt docs for Wayland.
+      - name: cargo doc druid-shell (Wayland)
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:

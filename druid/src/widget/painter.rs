@@ -72,10 +72,9 @@ use tracing::instrument;
 /// });
 /// ```
 ///
-/// [`paint`]: ../trait.Widget.html#tymethod.paint
-/// [`Data`]: ../trait.Data.html
-/// [`request_paint`]: ../EventCtx.html#method.request_paint
-/// [`Controller`]: trait.Controller.html
+/// [`paint`]: Widget::paint
+/// [`request_paint`]: EventCtx::request_paint
+/// [`Controller`]: super::Controller
 pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 
 /// Something that can be used as the background for a widget.
@@ -83,9 +82,7 @@ pub struct Painter<T>(Box<dyn FnMut(&mut PaintCtx, &T, &Env)>);
 /// This represents anything that can be painted inside a widgets [`paint`]
 /// method; that is, it may have access to the [`Data`] and the [`Env`].
 ///
-/// [`paint`]: ../trait.Widget.html#tymethod.paint
-/// [`Data`]: ../trait.Data.html
-/// [`Env`]: ../struct.Env.html
+/// [`paint`]: Widget::paint
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum BackgroundBrush<T> {
@@ -100,7 +97,7 @@ pub enum BackgroundBrush<T> {
 impl<T> Painter<T> {
     /// Create a new `Painter` with the provided [`paint`] fn.
     ///
-    /// [`paint`]: ../trait.Widget.html#tymethod.paint
+    /// [`paint`]: Widget::paint
     pub fn new(f: impl FnMut(&mut PaintCtx, &T, &Env) + 'static) -> Self {
         Painter(Box::new(f))
     }
@@ -119,8 +116,6 @@ impl<T: Data> BackgroundBrush<T> {
     }
 
     /// Draw this `BackgroundBrush` into a provided [`PaintCtx`].
-    ///
-    /// [`PaintCtx`]: ../struct.PaintCtx.html
     pub fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
         let bounds = ctx.size().to_rect();
         match self {

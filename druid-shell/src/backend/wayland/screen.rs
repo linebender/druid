@@ -13,6 +13,9 @@
 // limitations under the License.
 
 //! wayland Monitors and Screen information.
+
+use crate::kurbo::Rect;
+
 use crate::screen::Monitor;
 
 use super::error;
@@ -23,7 +26,7 @@ fn _get_monitors() -> Result<Vec<Monitor>, error::Error> {
     let monitors: Vec<Monitor> = metas
         .iter()
         .map(|m| {
-            let rect = kurbo::Rect::from_origin_size(
+            let rect = Rect::from_origin_size(
                 (m.position.x as f64, m.position.y as f64),
                 (m.logical.width as f64, m.logical.height as f64),
             );

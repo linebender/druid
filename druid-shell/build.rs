@@ -52,7 +52,7 @@ fn main() {
             xkbcommon
                 .include_paths
                 .iter()
-                .filter_map(|path| path.to_str().map(|s| format!("-I{}", s))),
+                .filter_map(|path| path.to_str().map(|s| format!("-I{s}"))),
         )
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.

@@ -69,9 +69,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             Error::Hr(hr) => {
-                write!(f, "HRESULT 0x{:x}", hr)?;
+                write!(f, "HRESULT 0x{hr:x}")?;
                 if let Some(description) = hresult_description(*hr) {
-                    write!(f, ": {}", description)?;
+                    write!(f, ": {description}")?;
                 }
                 Ok(())
             }

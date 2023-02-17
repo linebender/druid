@@ -88,6 +88,7 @@ pub use list::{List, ListIter};
 pub use maybe::Maybe;
 pub use padding::Padding;
 pub use painter::{BackgroundBrush, Painter};
+#[allow(deprecated)]
 pub use parse::Parse;
 pub use progress_bar::ProgressBar;
 pub use radio::{Radio, RadioGroup};
@@ -101,42 +102,23 @@ pub use stepper::Stepper;
 #[cfg(feature = "svg")]
 pub use svg::{Svg, SvgData};
 pub use switch::Switch;
-pub use tabs::{TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
+pub use tabs::{AddTab, TabInfo, Tabs, TabsEdge, TabsPolicy, TabsState, TabsTransition};
 pub use textbox::TextBox;
 pub use value_textbox::{TextBoxEvent, ValidationDelegate, ValueTextBox};
 pub use view_switcher::ViewSwitcher;
-#[doc(hidden)]
 pub use widget::{Widget, WidgetId};
-#[doc(hidden)]
 pub use widget_ext::WidgetExt;
 pub use widget_wrapper::WidgetWrapper;
 pub use z_stack::ZStack;
 
-/// The types required to implement a `Widget`.
-///
-/// # Structs
-/// [`BoxConstraints`](../../struct.BoxConstraints.html)\
-/// [`Env`](../../struct.Env.html)\
-/// [`EventCtx`](../../struct.EventCtx.html)\
-/// [`LayoutCtx`](../../struct.LayoutCtx.html)\
-/// [`LifeCycleCtx`](../../struct.LifeCycleCtx.html)\
-/// [`PaintCtx`](../../struct.PaintCtx.html)\
-/// [`Size`](../../struct.Size.html)\
-/// [`UpdateCtx`](../../struct.UpdateCtx.html)\
-/// [`WidgetId`](../../struct.WidgetId.html)\
-///
-/// # Enums
-/// [`Event`](../../enum.Event.html)\
-/// [`LifeCycle`](../../enum.LifeCycle.html)\
-///
-/// # Traits
-/// [`RenderContext`](../../trait.RenderContext.html)\
-/// [`Widget`](../../trait.Widget.html)
-// NOTE: \ at the end works as a line break, but skip on last line!
+/// The types required to implement a [`Widget`].
 pub mod prelude {
-    #[doc(hidden)]
+    // Wildcard because rustdoc has trouble inlining docs of two things called Data
+    pub use crate::data::*;
+
+    #[doc(inline)]
     pub use crate::{
-        BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
+        BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx,
         RenderContext, Size, UpdateCtx, Widget, WidgetId,
     };
 }

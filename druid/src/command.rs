@@ -36,13 +36,12 @@ pub(crate) type SelectorSymbol = &'static str;
 /// The type parameter `T` specifies the command's payload type.
 /// See [`Command`] for more information.
 ///
-/// Certain `Selector`s are defined by druid, and have special meaning
+/// Certain `Selector`s are defined by Druid, and have special meaning
 /// to the framework; these are listed in the [`druid::commands`] module.
 ///
 /// [`Command`]: struct.Command.html
 /// [`Command::get`]: struct.Command.html#method.get
 /// [`get_unchecked`]: struct.Command.html#method.get_unchecked
-/// [`druid::commands`]: commands/index.html
 #[derive(Debug, PartialEq, Eq)]
 pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 
@@ -71,9 +70,7 @@ pub struct Selector<T = ()>(SelectorSymbol, PhantomData<T>);
 /// assert_eq!(command.get(selector), Some(&vec![1, 3, 10, 12]));
 /// ```
 ///
-/// [`EventCtx::new_window`]: struct.EventCtx.html#method.new_window
-/// [`SingleUse`]: struct.SingleUse.html
-/// [`Selector`]: struct.Selector.html
+/// [`EventCtx::new_window`]: crate::EventCtx::new_window
 #[derive(Debug, Clone)]
 pub struct Command {
     symbol: SelectorSymbol,
@@ -131,13 +128,9 @@ pub struct Notification {
 /// // subsequent calls will return `None`
 /// assert!(payload.take().is_none());
 /// ```
-///
-/// [`Command`]: struct.Command.html
 pub struct SingleUse<T>(Mutex<Option<T>>);
 
 /// The target of a [`Command`].
-///
-/// [`Command`]: struct.Command.html
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
     /// The target is the top-level application.
@@ -168,11 +161,9 @@ pub enum Target {
     Auto,
 }
 
-/// Commands with special meaning, defined by druid.
+/// Commands with special meaning, defined by Druid.
 ///
 /// See [`Command`] for more info.
-///
-/// [`Command`]: ../struct.Command.html
 pub mod sys {
     use std::any::Any;
 
@@ -182,7 +173,7 @@ pub mod sys {
         FileDialogOptions, FileInfo, Rect, SingleUse, WidgetId, WindowConfig,
     };
 
-    /// Quit the running application. This command is handled by the druid library.
+    /// Quit the running application. This command is handled by the Druid library.
     pub const QUIT_APP: Selector = Selector::new("druid-builtin.quit-app");
 
     /// Hide the application. (mac only)
@@ -234,7 +225,7 @@ pub mod sys {
     /// Display a context (right-click) menu. The payload must be the [`ContextMenu`]
     /// object to be displayed.
     ///
-    /// [`ContextMenu`]: ../struct.ContextMenu.html
+    /// [`ContextMenu`]: crate::menu::ContextMenu
     pub(crate) const SHOW_CONTEXT_MENU: Selector<SingleUse<Box<dyn Any>>> =
         Selector::new("druid-builtin.show-context-menu");
 
@@ -565,9 +556,9 @@ impl Notification {
         self.source
     }
 
-    /// Builder-style method to set warn_if_unused.
+    /// Builder-style method to set `warn_if_unused`.
     ///
-    /// The default is true.
+    /// The default is `true`.
     pub fn warn_if_unused(mut self, warn_if_unused: bool) -> Self {
         self.warn_if_unused = warn_if_unused;
         self
