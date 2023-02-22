@@ -11,6 +11,7 @@ You can find its changes [documented below](#082---2023-01-27).
 
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
 - `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
+- added new event variant `Event::WindowMoveResize` that can be used to detect when window resize/move started or finished (currently only Implemented for windows) ([#2360] by [@YouKnow-sys])
 
 ### Changed
 
@@ -770,6 +771,7 @@ Last release without a changelog :(
 [@ratmice]: https://github.com/ratmice
 [@giannissc]: https://github.com/giannissc
 [@newcomb-luke]: https://github.com/newcomb-luke
+[@YouKnow-sys]: https://github.com/YouKnow-sys
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1213,6 +1215,7 @@ Last release without a changelog :(
 [#2352]: https://github.com/linebender/druid/pull/2352
 [#2353]: https://github.com/linebender/druid/pull/2353
 [#2356]: https://github.com/linebender/druid/pull/2356
+[#2360]: https://github.com/linebender/druid/pull/2360
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
