@@ -545,6 +545,13 @@ pub trait WinHandler {
     #[allow(unused_variables)]
     fn size(&mut self, size: Size) {}
 
+    /// Called when window start or finished moving/resizing.
+    ///
+    /// If the `begin` value is `true` it mean the windows started moving/resizing
+    /// and if the value is `false` it mean the moving/resizing finished.
+    #[allow(unused_variables)]
+    fn move_resize(&mut self, begin: bool) {}
+
     /// Called when the [scale](crate::Scale) of the window has changed.
     ///
     /// This is always called before the accompanying [`size`](WinHandler::size).
