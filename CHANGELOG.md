@@ -10,6 +10,7 @@ You can find its changes [documented below](#082---2023-01-27).
 ### Added
 
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
+- `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
 
 ### Changed
 
@@ -768,6 +769,7 @@ Last release without a changelog :(
 [@lzhoucs]: https://github.com/lzhoucs
 [@ratmice]: https://github.com/ratmice
 [@giannissc]: https://github.com/giannissc
+[@newcomb-luke]: https://github.com/newcomb-luke
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1164,6 +1166,7 @@ Last release without a changelog :(
 [#2157]: https://github.com/linebender/druid/pull/2157
 [#2158]: https://github.com/linebender/druid/pull/2158
 [#2172]: https://github.com/linebender/druid/pull/2172
+[#2191]: https://github.com/linebender/druid/pull/2191
 [#2195]: https://github.com/linebender/druid/pull/2195
 [#2196]: https://github.com/linebender/druid/pull/2196
 [#2203]: https://github.com/linebender/druid/pull/2203

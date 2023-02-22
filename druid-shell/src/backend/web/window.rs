@@ -545,6 +545,10 @@ impl WindowHandle {
         // TODO
     }
 
+    pub fn hide(&self) {
+        warn!("hide unimplemented for web");
+    }
+
     pub fn bring_to_front_and_focus(&self) {
         warn!("bring_to_frontand_focus unimplemented for web");
     }

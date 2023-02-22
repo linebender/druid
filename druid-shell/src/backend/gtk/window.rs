@@ -1105,6 +1105,13 @@ impl WindowHandle {
         }
     }
 
+    /// Hide the window
+    pub fn hide(&self) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.hide();
+        }
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         if let Some(state) = self.state.upgrade() {

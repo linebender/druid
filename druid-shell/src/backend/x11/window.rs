@@ -853,6 +853,12 @@ impl Window {
         }
     }
 
+    fn hide(&self) {
+        if !self.destroyed() {
+            log_x11!(self.app.connection().unmap_window(self.id));
+        }
+    }
+
     fn close(&self) {
         self.destroy();
     }
@@ -922,12 +928,17 @@ impl Window {
             return;
         }
 
-        // TODO(x11/misc): Unsure if this does exactly what the doc comment says; need a test case.
         let conn = self.app.connection();
+
+        // This has no effect if we are already "mapped" but it shows the application if it was previously hidden
+        log_x11!(conn.map_window(self.id));
+
+        // Ask nicely to have our window to be at the top of the window stack
         log_x11!(conn.configure_window(
             self.id,
             &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
         ));
+
         log_x11!(conn.set_input_focus(
             xproto::InputFocus::POINTER_ROOT,
             self.id,
@@ -1604,6 +1615,14 @@ impl WindowHandle {
     pub fn show(&self) {
         if let Some(w) = self.window.upgrade() {
             w.show();
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
+    }
+
+    pub fn hide(&self) {
+        if let Some(w) = self.window.upgrade() {
+            w.hide();
         } else {
             error!("Window {} has already been dropped", self.id);
         }

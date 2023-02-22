@@ -1038,6 +1038,14 @@ impl WindowHandle {
         }
     }
 
+    /// Hide the window.
+    pub fn hide(&self) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, orderOut: self];
+        }
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
         unsafe {

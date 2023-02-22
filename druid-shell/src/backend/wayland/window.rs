@@ -161,9 +161,14 @@ impl WindowHandle {
         }
     }
 
+    /// Hide the window.
+    pub fn hide(&self) {
+        tracing::warn!("hide is unimplemented on wayland");
+    }
+
     /// Bring this window to the front of the window stack and give it focus.
     pub fn bring_to_front_and_focus(&self) {
-        tracing::warn!("unimplemented bring_to_front_and_focus initiated");
+        tracing::warn!("bring_to_front_and_focus is unimplemented on wayland");
     }
 
     /// Request a new paint, but without invalidating anything.
