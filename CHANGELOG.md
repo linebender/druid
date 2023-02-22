@@ -10,7 +10,7 @@ You can find its changes [documented below](#082---2023-01-27).
 ### Added
 
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
-- Allow hiding/showing a window programmatically ([#2191] by [@newcomb-luke])
+- `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
 
 ### Changed
 
@@ -68,6 +68,7 @@ The work was started by [@derekdreery] and then later picked up by [@james-lawre
 Later support was widened in [#2254] by [@PolyMeilex].
 
 ### Added
+
 - `RichTextBuilder` for creating `RichText` objects. ([#1520], [#1596] by [@Maan2003])
 - `Link` text attribute for links in `RichText`. ([#1627] by [@Maan2003], [#1656] by [@cmyr])
 - Strikethrough support in `RichText`. ([#1953] by [@jenra-uwu])
