@@ -11,7 +11,7 @@ You can find its changes [documented below](#082---2023-01-27).
 
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
 - `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
-- Added support for showing native system menu on window with custom title bar for windows platform ([#2361] by [@YouKnow-sys])
+- Added support for showing native system menu on window with custom title bar for windows platform ([#2362] by [@YouKnow-sys])
 
 ### Changed
 
@@ -1215,7 +1215,7 @@ Last release without a changelog :(
 [#2352]: https://github.com/linebender/druid/pull/2352
 [#2353]: https://github.com/linebender/druid/pull/2353
 [#2356]: https://github.com/linebender/druid/pull/2356
-[#2361]: https://github.com/linebender/druid/pull/2360
+[#2362]: https://github.com/linebender/druid/pull/2362
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
