@@ -466,7 +466,7 @@ fn set_ex_style(hwnd: HWND, always_on_top: bool) {
             0,
             0,
             0,
-            SWP_SHOWWINDOW | SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOACTIVATE,
+            SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOACTIVATE,
         ) == 0
         {
             warn!(

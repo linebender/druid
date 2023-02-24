@@ -8,7 +8,8 @@ You can find its changes [documented below](#082---2023-01-27).
 ### Highlights
 
 ### Added
-- Input Region and Always On Top support ([#2328] by [@jaredoconnell])
+
+- Input Region and Always On Top support. ([#2328] by [@jaredoconnell])
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
 
 ### Changed
