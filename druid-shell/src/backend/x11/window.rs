@@ -120,6 +120,7 @@ pub(crate) struct WindowBuilder {
     min_size: Size,
     resizable: bool,
     level: WindowLevel,
+    always_on_top: bool,
     state: Option<window::WindowState>,
 }
 
@@ -135,6 +136,7 @@ impl WindowBuilder {
             min_size: Size::new(0.0, 0.0),
             resizable: true,
             level: WindowLevel::AppWindow,
+            always_on_top: false,
             state: None,
         }
     }
@@ -171,6 +173,10 @@ impl WindowBuilder {
 
     pub fn set_position(&mut self, position: Point) {
         self.position = Some(position);
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_level(&mut self, level: window::WindowLevel) {
@@ -908,6 +914,18 @@ impl Window {
             self.id,
             &ConfigureWindowAux::new().x(pos.x as i32).y(pos.y as i32),
         ));
+    }
+
+    fn set_always_on_top(&self, _always_on_top: bool) {
+        // Find the Rust equivilant to "_NET_WM_STATE_ABOVE".
+        // Possibly StackMode::Above.
+        warn!("Window::set_always_on_top is currently unimplemented for X11 backend.");
+    }
+
+    fn set_input_region(&self, _region: Option<Region>) {
+        // Looks like con.shape_mask or conn_shape_rectangles may be the
+        // correct way to implement this.
+        warn!("Window::set_input_region is currently unimplemented for X11 backend.");
     }
 
     fn set_size(&self, size: Size) {
@@ -1655,6 +1673,22 @@ impl WindowHandle {
     pub fn set_position(&self, position: Point) {
         if let Some(w) = self.window.upgrade() {
             w.set_position(position);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
+    }
+
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_always_on_top(always_on_top);
+        } else {
+            error!("Window {} has already been dropped", self.id);
+        }
+    }
+
+    pub fn set_input_region(&self, region: Option<Region>) {
+        if let Some(w) = self.window.upgrade() {
+            w.set_input_region(region);
         } else {
             error!("Window {} has already been dropped", self.id);
         }

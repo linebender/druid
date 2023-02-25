@@ -9,6 +9,7 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Added
 
+- Input Region and Always On Top support. ([#2328] by [@jaredoconnell])
 - `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
 - `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
 
@@ -768,6 +769,7 @@ Last release without a changelog :(
 [@liias]: https://github.com/liias
 [@lzhoucs]: https://github.com/lzhoucs
 [@ratmice]: https://github.com/ratmice
+[@jaredoconnell]: https://github.com/jaredoconnell
 [@giannissc]: https://github.com/giannissc
 [@newcomb-luke]: https://github.com/newcomb-luke
 
@@ -1196,6 +1198,7 @@ Last release without a changelog :(
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2327]: https://github.com/linebender/druid/pull/2327
+[#2328]: https://github.com/linebender/druid/pull/2328
 [#2329]: https://github.com/linebender/druid/pull/2329
 [#2330]: https://github.com/linebender/druid/pull/2330
 [#2331]: https://github.com/linebender/druid/pull/2331

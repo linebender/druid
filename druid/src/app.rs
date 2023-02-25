@@ -63,6 +63,7 @@ pub struct WindowConfig {
     pub(crate) transparent: Option<bool>,
     pub(crate) show_titlebar: Option<bool>,
     pub(crate) level: Option<WindowLevel>,
+    pub(crate) always_on_top: Option<bool>,
     pub(crate) state: Option<WindowState>,
 }
 
@@ -292,6 +293,7 @@ impl Default for WindowConfig {
             show_titlebar: None,
             transparent: None,
             level: None,
+            always_on_top: None,
             state: None,
         }
     }
@@ -377,6 +379,14 @@ impl WindowConfig {
         self
     }
 
+    /// Sets whether the window is always on top.
+    ///
+    /// An always on top window stays on top, even after clicking off of it.
+    pub fn set_always_on_top(mut self, always_on_top: bool) -> Self {
+        self.always_on_top = Some(always_on_top);
+        self
+    }
+
     /// Sets the [`WindowState`] of the window.
     pub fn set_window_state(mut self, state: WindowState) -> Self {
         self.state = Some(state);
@@ -415,6 +425,10 @@ impl WindowConfig {
 
         if let Some(level) = self.level.clone() {
             builder.set_level(level)
+        }
+
+        if let Some(always_on_top) = self.always_on_top {
+            builder.set_always_on_top(always_on_top)
         }
 
         if let Some(state) = self.state {
@@ -579,6 +593,14 @@ impl<T: Data> WindowDesc<T> {
     /// [`WindowLevel`]: WindowLevel
     pub fn set_level(mut self, level: WindowLevel) -> Self {
         self.config = self.config.set_level(level);
+        self
+    }
+
+    /// Sets whether the window is always on top.
+    ///
+    /// An always on top window stays on top, even after clicking off of it.
+    pub fn set_always_on_top(mut self, always_on_top: bool) -> Self {
+        self.config = self.config.set_always_on_top(always_on_top);
         self
     }
 

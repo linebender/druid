@@ -25,6 +25,7 @@ use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, WaylandWindowHandle
 use super::application::{self, Timer};
 use super::{error::Error, menu::Menu, outputs, surfaces};
 
+use crate::Region;
 use crate::{
     dialog::FileDialogOptions,
     error::Error as ShellError,
@@ -112,6 +113,15 @@ impl WindowHandle {
 
     pub fn set_position(&self, _position: Point) {
         tracing::warn!("set_position is unimplemented on wayland");
+    }
+
+    pub fn set_always_on_top(&self, _always_on_top: bool) {
+        // Not supported by wayland
+        tracing::warn!("set_always_on_top is unimplemented on wayland");
+    }
+
+    pub fn set_input_region(&self, region: Option<Region>) {
+        self.inner.surface.set_input_region(region);
     }
 
     pub fn get_position(&self) -> Point {
@@ -378,6 +388,13 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_always_on_top(&mut self, _always_on_top: bool) {
+        // This needs to be handled manually by the user with the desktop environment.
+        tracing::warn!(
+            "set_always_on_top unimplemented for wayland, since wayland is more restrictive."
+        );
     }
 
     pub fn set_transparent(&mut self, _transparent: bool) {

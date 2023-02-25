@@ -396,6 +396,10 @@ impl WindowBuilder {
         // Ignored
     }
 
+    pub fn set_always_on_top(&self, _always_on_top: bool) {
+        // Ignored
+    }
+
     pub fn set_window_state(&self, _state: window::WindowState) {
         // Ignored
     }
@@ -507,6 +511,14 @@ impl WindowHandle {
 
     pub fn set_position(&self, _position: Point) {
         warn!("WindowHandle::set_position unimplemented for web");
+    }
+
+    pub fn set_input_region(&self, _region: Option<Region>) {
+        warn!("WindowHandle::set_input_region unimplemented for web");
+    }
+
+    pub fn set_always_on_top(&self, _always_on_top: bool) {
+        warn!("WindowHandle::set_always_on_top unimplemented for web");
     }
 
     pub fn get_position(&self) -> Point {

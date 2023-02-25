@@ -99,6 +99,7 @@ pub(crate) struct WindowBuilder {
     min_size: Option<Size>,
     position: Option<Point>,
     level: Option<WindowLevel>,
+    always_on_top: bool,
     state: window::WindowState,
 }
 
@@ -163,6 +164,8 @@ enum DeferredOp {
     SetWindowState(window::WindowState),
     ShowWindow(bool),
     ReleaseMouseCapture,
+    SetRegion(Option<Region>),
+    SetAlwaysOnTop(bool),
 }
 
 #[derive(Clone, Debug)]
@@ -238,6 +241,7 @@ struct WindowState {
     // False for tooltips, to prevent stealing focus from owner window.
     is_focusable: bool,
     window_level: WindowLevel,
+    is_always_on_top: Cell<bool>,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -426,6 +430,54 @@ fn set_style(hwnd: HWND, resizable: bool, titlebar: bool) {
     }
 }
 
+/// The ex style is different from the non-ex styles.
+fn set_ex_style(hwnd: HWND, always_on_top: bool) {
+    unsafe {
+        let mut style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        if style == 0 {
+            warn!(
+                "failed to get window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+            return;
+        }
+
+        if !always_on_top {
+            style &= !WS_EX_TOPMOST;
+        } else {
+            style |= WS_EX_TOPMOST;
+        }
+        if SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style as _) == 0 {
+            warn!(
+                "failed to set the window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        }
+        // This is necessary to ensure it properly changes the z order.
+        let z_insert_after = if always_on_top {
+            HWND_TOPMOST
+        } else {
+            HWND_NOTOPMOST
+        };
+        // Since ES_EX_TOPMOST can change the z order, don't disable changing the z order on SetWindowPos
+        if SetWindowPos(
+            hwnd,
+            z_insert_after,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOACTIVATE,
+        ) == 0
+        {
+            warn!(
+                "failed to update window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        };
+    }
+}
+
 impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) -> Result<(), Error> {
         unsafe {
@@ -605,6 +657,10 @@ impl MyWndProc {
                     self.with_window_state(|s| s.is_resizable.set(resizable));
                     set_style(hwnd, resizable, self.has_titlebar());
                 }
+                DeferredOp::SetAlwaysOnTop(always_on_top) => {
+                    self.with_window_state(|s| s.is_always_on_top.set(always_on_top));
+                    set_ex_style(hwnd, always_on_top);
+                }
                 DeferredOp::SetWindowState(val) => {
                     let show = if self.handle.borrow().is_focusable() {
                         match val {
@@ -678,9 +734,153 @@ impl MyWndProc {
                         }
                     }
                 },
+                DeferredOp::SetRegion(region) => {
+                    unsafe {
+                        match region {
+                            Some(region) => {
+                                let (x_offset, y_offset, client_width) =
+                                    self.get_client_area_specs(hwnd);
+                                let win32_region: HRGN = CreateRectRgn(0, 0, 0, 0);
+                                if win32_region.is_null() {
+                                    warn!(
+                                        "Error creating RectRgn in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
+
+                                // Add header if there is a frame
+                                if self.has_titlebar() {
+                                    let region_tmp = win32_region;
+                                    let header_rect = CreateRectRgn(0, 0, client_width, y_offset);
+                                    if header_rect.is_null() {
+                                        warn!(
+                                            "Error creating RectRgn in SetRegion deferred op for titlebar: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
+                                    } else {
+                                        let result = CombineRgn(
+                                            win32_region,
+                                            header_rect,
+                                            region_tmp,
+                                            RGN_OR,
+                                        );
+                                        DeleteObject(header_rect as _);
+                                        if result == ERROR {
+                                            warn!(
+                                                "Error combining regions in SetRegion deferred op for titlebar: {}",
+                                                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                            );
+                                        }
+                                    }
+                                }
+
+                                let scale = self.scale();
+                                for rect in region.rects() {
+                                    // Create the region as win32 expects it. Round down for low coords and up for high coords
+                                    let region_part = CreateRectRgn(
+                                        (rect.x0 * scale.x()).floor() as i32 + x_offset,
+                                        (rect.y0 * scale.y()).floor() as i32 + y_offset,
+                                        (rect.x1 * scale.x()).ceil() as i32 + x_offset,
+                                        (rect.y1 * scale.y()).ceil() as i32 + y_offset,
+                                    );
+                                    if region_part.is_null() {
+                                        warn!(
+                                            "Error creating RectRgn for section of region in SetRegion deferred op: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
+                                        continue; // Try the next. Don't try to combine a null region.
+                                    }
+                                    let region_tmp = win32_region;
+                                    let result = CombineRgn(
+                                        win32_region,
+                                        region_part,
+                                        region_tmp,
+                                        RGN_OR, /* area from both */
+                                    );
+                                    // Delete the region part, as it is now incorporated into the combined region.
+                                    // Deleting the temp region deletes the combined region.
+                                    DeleteObject(region_part as _);
+                                    if result == ERROR {
+                                        warn!(
+                                            "Error combining regions in SetRegion deferred op: {}",
+                                            Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                        );
+                                    }
+                                }
+
+                                let result = SetWindowRgn(hwnd, win32_region, 1);
+                                if result == ERROR {
+                                    DeleteObject(win32_region as _); // Must delete it if and only if it fails.
+                                    warn!(
+                                        "Error calling SetWindowRgn in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
+                            }
+                            None => {
+                                // Set it to have no region
+                                let result = SetWindowRgn(hwnd, null_mut(), 1);
+                                if result == ERROR {
+                                    // No region to delete since we're just passing in a null region.
+                                    warn!(
+                                        "Error calling SetWindowRgn to null in SetRegion deferred op: {}",
+                                        Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } else {
             warn!("Could not get HWND");
+        }
+    }
+
+    // Returns the top offset, and the side offsets, window width
+    fn get_client_area_specs(&self, hwnd: HWND) -> (i32, i32, i32) {
+        unsafe {
+            // First get window rect
+            // Then get client rect
+            // Convert to same units, then subtract
+
+            let mut window_rect = RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            if GetWindowRect(hwnd, &mut window_rect) == ERROR {
+                warn!(
+                    "failed to get window rect: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            };
+            let mut client_rect = RECT {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+            };
+            if GetClientRect(hwnd, &mut client_rect) == FALSE {
+                warn!(
+                    "failed to get client rect: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            }
+            // Convert client rect to screen coords to match the window rect
+            let mut client_screen_offset_point = POINT { x: 0, y: 0 };
+            if ClientToScreen(hwnd, &mut client_screen_offset_point) == ERROR {
+                warn!(
+                    "Error calling ClientToScreen in get_client_area-specs: {}",
+                    Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+                );
+            };
+            let top_offset = client_screen_offset_point.y - window_rect.top;
+
+            let left_offset = client_screen_offset_point.x - window_rect.left;
+
+            (left_offset, top_offset, client_rect.right)
         }
     }
 
@@ -1303,6 +1503,7 @@ impl WindowBuilder {
             min_size: None,
             position: None,
             level: None,
+            always_on_top: false,
             state: window::WindowState::Restored,
         }
     }
@@ -1326,6 +1527,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
@@ -1448,6 +1653,7 @@ impl WindowBuilder {
                 active_text_input: Cell::new(None),
                 is_focusable: focusable,
                 window_level,
+                is_always_on_top: Cell::new(self.always_on_top),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -1479,6 +1685,10 @@ impl WindowBuilder {
 
             if self.present_strategy == PresentStrategy::Flip {
                 dwExStyle |= WS_EX_NOREDIRECTIONBITMAP;
+            }
+
+            if self.always_on_top {
+                dwExStyle |= WS_EX_TOPMOST;
             }
 
             match self.state {
@@ -2046,6 +2256,14 @@ impl WindowHandle {
             }
         }
         Size::new(0.0, 0.0)
+    }
+
+    pub fn set_input_region(&self, area: Option<Region>) {
+        self.defer(DeferredOp::SetRegion(area));
+    }
+
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        self.defer(DeferredOp::SetAlwaysOnTop(always_on_top));
     }
 
     pub fn resizable(&self, resizable: bool) {
