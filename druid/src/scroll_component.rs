@@ -22,7 +22,7 @@ use crate::theme;
 use crate::widget::{Axis, Viewport};
 use crate::{Env, Event, EventCtx, LifeCycle, LifeCycleCtx, PaintCtx, RenderContext, TimerToken};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 /// Which scroll bars of a scroll area are currently enabled.
 pub enum ScrollbarsEnabled {
     /// No scrollbars are enabled
@@ -32,6 +32,7 @@ pub enum ScrollbarsEnabled {
     /// Scrolling on the y axis is allowed
     Vertical,
     /// Bidirectional scrolling is allowed
+    #[default]
     Both,
 }
 
@@ -83,12 +84,6 @@ impl ScrollbarsEnabled {
                 ScrollbarsEnabled::Horizontal
             }
         }
-    }
-}
-
-impl Default for ScrollbarsEnabled {
-    fn default() -> Self {
-        ScrollbarsEnabled::Both
     }
 }
 
