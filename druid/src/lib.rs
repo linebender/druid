@@ -125,7 +125,7 @@
 //! Features can be added with `cargo`. For example, in your `Cargo.toml`:
 //! ```no_compile
 //! [dependencies.druid]
-//! version = "0.8.2"
+//! version = "0.8.3"
 //! features = ["im", "svg", "image"]
 //! ```
 //!
@@ -136,7 +136,7 @@
 //! crate.
 //!
 //! [`druid-shell`]: druid_shell
-//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.8.2/druid/examples
+//! [`druid/examples`]: https://github.com/linebender/druid/tree/v0.8.3/druid/examples
 //! [Druid book]: https://linebender.org/druid/
 //! [`im` crate]: https://crates.io/crates/im
 //! [`im` module]: im/index.html

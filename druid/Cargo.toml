@@ -1,6 +1,6 @@
 [package]
 name = "druid"
-version = "0.8.2"
+version = "0.8.3"
 license = "Apache-2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Data-oriented Rust UI design toolkit."
@@ -51,7 +51,7 @@ hdr = ["druid-shell/hdr"]
 image-all = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "tiff", "webp", "pnm", "dds", "tga", "farbfeld", "dxt", "hdr"]
 
 [dependencies]
-druid-shell = { version = "0.8.0", default-features = false, path = "../druid-shell" }
+druid-shell = { version = "0.8.3", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.5.0", path = "../druid-derive" }
 
 tracing = { version = "0.1.37" }
