@@ -1,7 +1,7 @@
 # Changelog
 
-The latest published Druid release is [0.8.3](#083---2023-03-01) which was released on 2023-03-01.
-You can find its changes [documented below](#083---2023-03-01).
+The latest published Druid release is [0.8.3](#083---2023-02-28) which was released on 2023-02-28.
+You can find its changes [documented below](#083---2023-02-28).
 
 ## [Unreleased]
 
@@ -27,7 +27,7 @@ You can find its changes [documented below](#083---2023-03-01).
 
 ### Outside News
 
-## [0.8.3] - 2023-03-01
+## [0.8.3] - 2023-02-28
 
 ### Added
 
