@@ -103,7 +103,7 @@ pub(crate) struct WindowBuilder {
     state: window::WindowState,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 /// It's very tricky to get smooth dynamics (especially resizing) and
 /// good performance on Windows. This setting lets clients experiment
 /// with different strategies.
@@ -119,6 +119,7 @@ pub enum PresentStrategy {
     /// incremental present seems to work fine.
     ///
     /// Also note, this swap effect is not compatible with DX12.
+    #[default]
     Sequential,
 
     /// Corresponds to the swap effect DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
@@ -335,12 +336,6 @@ const DS_RUN_IDLE: UINT = WM_USER;
 /// send this message to request destroying the window, so that at the
 /// time it is handled, we can successfully borrow the handler.
 pub(crate) const DS_REQUEST_DESTROY: UINT = WM_USER + 1;
-
-impl Default for PresentStrategy {
-    fn default() -> PresentStrategy {
-        PresentStrategy::Sequential
-    }
-}
 
 /// Extract the buttons that are being held down from wparam in mouse events.
 fn get_buttons(wparam: WPARAM) -> MouseButtons {
