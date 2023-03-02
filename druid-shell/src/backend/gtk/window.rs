@@ -152,6 +152,7 @@ pub(crate) struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     transparent: bool,
+    always_on_top: bool,
 }
 
 #[derive(Clone)]
@@ -234,6 +235,7 @@ impl WindowBuilder {
             resizable: true,
             show_titlebar: true,
             transparent: false,
+            always_on_top: false,
         }
     }
 
@@ -255,6 +257,10 @@ impl WindowBuilder {
 
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.show_titlebar = show_titlebar;
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_transparent(&mut self, transparent: bool) {
@@ -1089,6 +1095,42 @@ impl WindowHandle {
             }
         }
         Restored
+    }
+
+    pub fn set_input_region(&self, region: Option<Region>) {
+        if let Some(state) = self.state.upgrade() {
+            match region {
+                Some(region) => {
+                    let cairo_region = cairo::Region::create();
+                    for contained_rect in region.rects() {
+                        let cairo_rect = cairo::RectangleInt::new(
+                            contained_rect.x0.floor() as i32,
+                            contained_rect.y0.floor() as i32,
+                            contained_rect.width().ceil() as i32,
+                            contained_rect.height().ceil() as i32,
+                        );
+                        let union_result = cairo_region.union_rectangle(&cairo_rect);
+                        if union_result.is_err() {
+                            warn!(
+                                "Unable to add rectangle to GTK region: {:?}",
+                                union_result.err()
+                            );
+                        }
+                    }
+                    let some_region = Some(&cairo_region);
+                    state.window.input_shape_combine_region(some_region);
+                }
+                None => {
+                    state.window.input_shape_combine_region(None);
+                }
+            }
+        };
+    }
+
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        if let Some(state) = self.state.upgrade() {
+            state.window.set_keep_above(always_on_top);
+        }
     }
 
     pub fn handle_titlebar(&self, val: bool) {

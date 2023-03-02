@@ -19,6 +19,7 @@ use wayland_client::protocol::wl_surface;
 use wayland_protocols::xdg_shell::client::xdg_popup;
 use wayland_protocols::xdg_shell::client::xdg_positioner;
 use wayland_protocols::xdg_shell::client::xdg_surface;
+use wlc::protocol::wl_region::WlRegion;
 
 use crate::kurbo;
 use crate::window;
@@ -191,6 +192,10 @@ impl Handle for Surface {
         self.inner.set_focused_text_field(active_field)
     }
 
+    fn set_input_region(&self, region: Option<Region>) {
+        self.inner.set_interactable_region(region);
+    }
+
     fn get_idle_handle(&self) -> idle::Handle {
         self.inner.get_idle_handle()
     }
@@ -331,6 +336,32 @@ impl Data {
         }
 
         dim
+    }
+
+    pub(super) fn set_interactable_region(&self, region: Option<Region>) {
+        match region {
+            Some(region) => {
+                let wl_region = self.compositor.create_region();
+
+                let detached_region: WlRegion = wl_region.detach();
+                for rect in region.rects() {
+                    detached_region.add(
+                        rect.x0 as i32,
+                        rect.y0 as i32,
+                        rect.width().ceil() as i32,
+                        rect.height().ceil() as i32,
+                    );
+                }
+                self.wl_surface
+                    .borrow()
+                    .set_input_region(Some(&detached_region));
+                detached_region.destroy();
+            }
+            None => {
+                // This, for some reason, causes a shift in the cursor.
+                self.wl_surface.borrow().set_input_region(None);
+            }
+        }
     }
 
     /// Assert that the physical size = logical size * scale
@@ -629,6 +660,10 @@ impl Handle for Dead {
 
     fn set_focused_text_field(&self, _active_field: Option<TextFieldToken>) {
         tracing::warn!("set_focused_text_field invoked on a dead surface")
+    }
+
+    fn set_input_region(&self, _region: Option<Region>) {
+        tracing::warn!("set_input_region invoked on a dead surface")
     }
 
     fn get_idle_handle(&self) -> idle::Handle {

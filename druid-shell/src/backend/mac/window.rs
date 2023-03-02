@@ -45,6 +45,8 @@ use raw_window_handle::{AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle}
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
 
+use self::levels::{NSFloatingWindowLevel, NSNormalWindowLevel};
+
 use super::appkit::{
     NSRunLoopCommonModes, NSTrackingArea, NSTrackingAreaOptions, NSView as NSViewExt,
 };
@@ -144,6 +146,7 @@ pub(crate) struct WindowBuilder {
     resizable: bool,
     show_titlebar: bool,
     transparent: bool,
+    always_on_top: bool,
 }
 
 #[derive(Clone)]
@@ -198,6 +201,7 @@ impl WindowBuilder {
             resizable: true,
             show_titlebar: true,
             transparent: false,
+            always_on_top: false,
         }
     }
 
@@ -227,6 +231,10 @@ impl WindowBuilder {
 
     pub fn set_level(&mut self, level: WindowLevel) {
         self.level = Some(level);
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_position(&mut self, position: Point) {
@@ -328,6 +336,10 @@ impl WindowBuilder {
                     _ => {}
                 }
                 handle.set_level(level);
+            }
+
+            if self.always_on_top {
+                handle.set_always_on_top(self.always_on_top);
             }
 
             // set_window_state above could have invalidated the frame size
@@ -1308,6 +1320,29 @@ impl WindowHandle {
                 (content_frame_r.size.width, content_frame_r.size.height),
             );
             window_frame_rk - content_frame_rk
+        }
+    }
+
+    pub fn set_input_region(&self, _region: Option<Region>) {
+        // Explicit setting of input region unnecessary for mac, due to it automatically
+        // doing this for transparent regions.
+        // However, changing the region normally changes the shape, so this
+        // can result in the need to invalidate the shadow.
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            window.invalidateShadow();
+        }
+    }
+
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        unsafe {
+            let level = if always_on_top {
+                NSFloatingWindowLevel
+            } else {
+                NSNormalWindowLevel
+            };
+            let window: id = msg_send![*self.nsview.load(), window];
+            let () = msg_send![window, setLevel: level];
         }
     }
 
