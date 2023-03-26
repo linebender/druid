@@ -228,6 +228,33 @@ impl WindowHandle {
         self.0.set_position(position.into())
     }
 
+    /// Sets whether the window is always on top of other windows.
+    ///
+    /// How and if this works is system dependent, by either setting a flag, or setting the level.
+    /// On Wayland systems, the user needs to manually set this in the titlebar.
+    pub fn set_always_on_top(&self, always_on_top: bool) {
+        self.0.set_always_on_top(always_on_top);
+    }
+
+    /// Sets where in the window the user can interact with the program.
+    ///
+    /// This enables irregularly shaped windows. For example, you can make it simply
+    /// not rectangular or you can make a sub-window which can be moved even on Wayland.
+    ///
+    /// The contents of `region` are added together, and are specified in [display points], so
+    /// you do not need to deal with scale yourself.
+    ///
+    /// On GTK and Wayland, this is specified as where the user can interact with the program.
+    /// On Windows, this is specified as both where you can interact, and where the window is
+    /// visible. So on Windows it will hide all regions not specified.
+    /// On macOS, this does nothing, but you can make the window transparent for the same effect.
+    /// On Web, this does nothing.
+    ///
+    /// [display points]: crate::Scale
+    pub fn set_input_region(&self, region: Option<Region>) {
+        self.0.set_input_region(region)
+    }
+
     /// Returns the position of the top left corner of the window.
     ///
     /// The position is returned in [display points], measured relative to the parent window if
@@ -480,6 +507,11 @@ impl WindowBuilder {
     /// Set whether the window should have a titlebar and decorations.
     pub fn show_titlebar(&mut self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Set whether the window should be always positioned above all other windows.
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.0.set_always_on_top(always_on_top);
     }
 
     /// Set whether the window background should be transparent

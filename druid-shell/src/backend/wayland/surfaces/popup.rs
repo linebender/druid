@@ -227,6 +227,10 @@ impl Handle for Surface {
         self.inner.wl_surface.set_focused_text_field(active_field)
     }
 
+    fn set_input_region(&self, region: Option<crate::Region>) {
+        self.inner.wl_surface.set_input_region(region)
+    }
+
     fn get_idle_handle(&self) -> super::idle::Handle {
         self.inner.wl_surface.get_idle_handle()
     }

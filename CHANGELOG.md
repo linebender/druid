@@ -1,7 +1,7 @@
 # Changelog
 
-The latest published Druid release is [0.8.2](#082---2023-01-27) which was released on 2023-01-27.
-You can find its changes [documented below](#082---2023-01-27).
+The latest published Druid release is [0.8.3](#083---2023-02-28) which was released on 2023-02-28.
+You can find its changes [documented below](#083---2023-02-28).
 
 ## [Unreleased]
 
@@ -9,8 +9,6 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Added
 
-- `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
-- `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
 - added new event variant `Event::WindowMoveResize` that can be used to detect when window resize/move started or finished (currently only Implemented for windows) ([#2360] by [@YouKnow-sys])
 
 ### Changed
@@ -21,9 +19,27 @@ You can find its changes [documented below](#082---2023-01-27).
 
 ### Fixed
 
-- `AddTab` is now properly exported from the `widget` module. ([#2351] by [@cbondurant])
-
 ### Visual
+
+### Docs
+
+### Examples
+
+### Maintenance
+
+### Outside News
+
+## [0.8.3] - 2023-02-28
+
+### Added
+
+- Input Region and Always On Top support. ([#2328] by [@jaredoconnell])
+- `foreground`, `set_foreground`, and `clear_foreground` methods to `Container` and `WidgetExt::foreground` method for convenience. ([#2346] by [@giannissc])
+- `WindowHandle::hide` method to hide a window. ([#2191] by [@newcomb-luke])
+
+### Fixed
+
+- `AddTab` is now properly exported from the `widget` module. ([#2351] by [@cbondurant])
 
 ### Docs
 
@@ -32,13 +48,9 @@ You can find its changes [documented below](#082---2023-01-27).
 - Fixed `rustdoc` example scraping configuration. ([#2353] by [@xStrom])
 - Added info about git symlinks to `CONTRIBUTING.md`. ([#2349] by [@xStrom])
 
-### Examples
-
 ### Maintenance
 
 - Synchronized `kurbo` and `image` imports with `piet-common`. ([#2352] by [@xStrom])
-
-### Outside News
 
 ## [0.8.2] - 2023-01-27
 
@@ -769,6 +781,7 @@ Last release without a changelog :(
 [@liias]: https://github.com/liias
 [@lzhoucs]: https://github.com/lzhoucs
 [@ratmice]: https://github.com/ratmice
+[@jaredoconnell]: https://github.com/jaredoconnell
 [@giannissc]: https://github.com/giannissc
 [@newcomb-luke]: https://github.com/newcomb-luke
 [@YouKnow-sys]: https://github.com/YouKnow-sys
@@ -1198,6 +1211,7 @@ Last release without a changelog :(
 [#2323]: https://github.com/linebender/druid/pull/2323
 [#2324]: https://github.com/linebender/druid/pull/2324
 [#2327]: https://github.com/linebender/druid/pull/2327
+[#2328]: https://github.com/linebender/druid/pull/2328
 [#2329]: https://github.com/linebender/druid/pull/2329
 [#2330]: https://github.com/linebender/druid/pull/2330
 [#2331]: https://github.com/linebender/druid/pull/2331
@@ -1217,7 +1231,8 @@ Last release without a changelog :(
 [#2356]: https://github.com/linebender/druid/pull/2356
 [#2360]: https://github.com/linebender/druid/pull/2360
 
-[Unreleased]: https://github.com/linebender/druid/compare/v0.8.2...master
+[Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
+[0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/linebender/druid/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/linebender/druid/compare/v0.7.0...v0.8.0

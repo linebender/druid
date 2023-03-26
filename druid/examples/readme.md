@@ -80,6 +80,13 @@ cargo run --example identity
 ```
 In Druid identity is used to send specific widgets commands. Instead of a command going to all the widgets, you can send them to just the one you need. This example has some colorwells and some buttons that interact with them. All of them are identical, except the identity, which makes it possible for the buttons to only affect a single colorwell.
 
+## Input Region
+```
+cargo run --example input_region
+```
+A demo of a few window features, including input region, always on top, and titlebar visibility.
+The demo is setup so that there are parts of the window that you can click through. There are also buttons for setting always on top and setting the visibility of the titlebar.
+
 ## Invalidation
 ```
 cargo run --example invalidation --features="im"
