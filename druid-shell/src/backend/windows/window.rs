@@ -1136,11 +1136,18 @@ impl WndProc for MyWndProc {
                         }
                     }
                 }
-                let mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
-                if self.with_window_state(|state| state.handle_titlebar.get()) && !mouseDown {
+                let left_mouseDown = GetAsyncKeyState(VK_LBUTTON) < 0;
+                let right_mouseDown = GetAsyncKeyState(VK_RBUTTON) < 0;
+                if self.with_window_state(|state| state.handle_titlebar.get())
+                    && !(left_mouseDown || right_mouseDown)
+                {
                     self.with_window_state(move |state| state.handle_titlebar.set(false));
-                };
-                if self.with_window_state(|state| state.handle_titlebar.get()) && hit == HTCLIENT {
+                }
+
+                if self.with_window_state(|state| state.handle_titlebar.get())
+                    && hit == HTCLIENT
+                    && left_mouseDown
+                {
                     hit = HTCAPTION;
                 }
                 Some(hit)
@@ -1352,6 +1359,23 @@ impl WndProc for MyWndProc {
             WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP | WM_RBUTTONDBLCLK
             | WM_RBUTTONDOWN | WM_RBUTTONUP | WM_MBUTTONDBLCLK | WM_MBUTTONDOWN | WM_MBUTTONUP
             | WM_XBUTTONDBLCLK | WM_XBUTTONDOWN | WM_XBUTTONUP => {
+                // Check if its needed to show system menu.
+                if msg == WM_RBUTTONUP
+                    && self.with_window_state(|state| state.handle_titlebar.get())
+                {
+                    if let Ok(handle) = self.handle.try_borrow() {
+                        self.with_window_state(|state| unsafe {
+                            show_system_menu(
+                                hwnd,
+                                handle.get_window_state() == window::WindowState::Maximized,
+                                state.is_resizable.get(),
+                            )
+                        });
+                        // Return early from function, because we dont want to handle any other event after showing system menu.
+                        return Some(0);
+                    }
+                }
+
                 if let Some(button) = match msg {
                     WM_LBUTTONDBLCLK | WM_LBUTTONDOWN | WM_LBUTTONUP => Some(MouseButton::Left),
                     WM_RBUTTONDBLCLK | WM_RBUTTONDOWN | WM_RBUTTONUP => Some(MouseButton::Right),
@@ -1675,7 +1699,7 @@ impl WindowBuilder {
                 dwStyle &= !(WS_THICKFRAME | WS_MAXIMIZEBOX);
             }
             if !self.show_titlebar {
-                dwStyle &= !(WS_SYSMENU | WS_OVERLAPPED);
+                dwStyle &= !WS_OVERLAPPED;
             }
 
             if self.present_strategy == PresentStrategy::Flip {
@@ -1765,6 +1789,70 @@ impl WindowBuilder {
             }
             Ok(handle)
         }
+    }
+}
+
+/// Try to get the available system menu on windows and show it at the current cursor position.
+unsafe fn show_system_menu(hwnd: HWND, maximized: bool, resizable: bool) {
+    let mut point: POINT = mem::zeroed();
+    if GetCursorPos(&mut point) == FALSE {
+        warn!("Can't get cursor position.");
+        return;
+    }
+
+    let h_menu = GetSystemMenu(hwnd, 0);
+    if h_menu.is_null() {
+        warn!("The corresponding window doesn't have a system menu");
+        // This situation should not be treated as an error so just return without showing menu.
+        return;
+    }
+
+    // Change the menu items according to the current window status.
+    let enable = |b| if b { MFS_ENABLED } else { MFS_DISABLED };
+    EnableMenuItem(
+        h_menu,
+        SC_RESTORE as _,
+        MF_BYCOMMAND | enable(maximized && resizable),
+    );
+    // HiliteMenuItem(hwnd, h_menu, SC_RESTORE as _, MF_BYCOMMAND | MFS_HILITE);
+    EnableMenuItem(h_menu, SC_MOVE as _, MF_BYCOMMAND | enable(!maximized));
+    EnableMenuItem(
+        h_menu,
+        SC_SIZE as _,
+        MF_BYCOMMAND | enable(!maximized && resizable),
+    );
+    EnableMenuItem(h_menu, SC_MINIMIZE as _, MF_BYCOMMAND | MFS_ENABLED);
+    EnableMenuItem(
+        h_menu,
+        SC_MAXIMIZE as _,
+        MF_BYCOMMAND | enable(!maximized && resizable),
+    );
+    EnableMenuItem(h_menu, SC_CLOSE as _, MF_BYCOMMAND | MFS_ENABLED);
+
+    // Set the default menu item.
+    SetMenuDefaultItem(h_menu, SC_CLOSE as _, 0);
+
+    // Popup the system menu at the position.
+    let result = TrackPopupMenu(
+        h_menu,
+        TPM_RETURNCMD | TPM_LEFTALIGN,
+        point.x,
+        point.y,
+        0,
+        hwnd,
+        std::ptr::null_mut(),
+    );
+
+    // HiliteMenuItem(hwnd, h_menu, SC_RESTORE as _, MF_BYCOMMAND | MFS_UNHILITE);
+
+    if result == 0 {
+        // User canceled the menu, no need to continue.
+        return;
+    }
+
+    // Send the command that the user select to the corresponding window.
+    if PostMessageW(hwnd, WM_SYSCOMMAND, result as _, 0) == 0 {
+        warn!("Can't post the system menu message to the window.");
     }
 }
 
