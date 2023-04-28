@@ -49,6 +49,7 @@ You can find its changes [documented below](#083---2023-02-28).
 ### Maintenance
 
 - Synchronized `kurbo` and `image` imports with `piet-common`. ([#2352] by [@xStrom])
+- `syn` feature `extra-traits` is now enabled. ([#2375] by [@AtomicGamer9523])
 
 ## [0.8.2] - 2023-01-27
 

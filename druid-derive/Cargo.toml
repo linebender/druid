@@ -15,7 +15,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
-syn = "1.0.109"
+syn = { version = "1.0.109", features = ["extra-traits"] }
 quote = "1.0.23"
 proc-macro2 = "1.0.51"
 

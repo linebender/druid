@@ -337,3 +337,4 @@ active and friendly community. See the AUTHORS file for more.
 [Moxie]: https://github.com/anp/moxie
 [Slint]: https://github.com/slint-ui/slint
 [Xilem]: https://github.com/linebender/xilem
+[Матвей Т]: https://github.com/AtomicGamer9523
