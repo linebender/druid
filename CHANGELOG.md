@@ -17,6 +17,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Fixed
 
+- `syn` feature `extra-traits` is now always enabled. ([#2375] by [@AtomicGamer9523])
+
 ### Visual
 
 ### Docs
@@ -49,7 +51,6 @@ You can find its changes [documented below](#083---2023-02-28).
 ### Maintenance
 
 - Synchronized `kurbo` and `image` imports with `piet-common`. ([#2352] by [@xStrom])
-- `syn` feature `extra-traits` is now enabled. ([#2375] by [@AtomicGamer9523])
 
 ## [0.8.2] - 2023-01-27
 
@@ -783,6 +784,7 @@ Last release without a changelog :(
 [@jaredoconnell]: https://github.com/jaredoconnell
 [@giannissc]: https://github.com/giannissc
 [@newcomb-luke]: https://github.com/newcomb-luke
+[@AtomicGamer9523]: https://github.com/AtomicGamer9523
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1227,6 +1229,7 @@ Last release without a changelog :(
 [#2352]: https://github.com/linebender/druid/pull/2352
 [#2353]: https://github.com/linebender/druid/pull/2353
 [#2356]: https://github.com/linebender/druid/pull/2356
+[#2375]: https://github.com/linebender/druid/pull/2375
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
