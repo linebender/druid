@@ -88,6 +88,13 @@ pub enum Event {
     /// in the WindowPod, but after that it might be considered better
     /// to just handle it in `layout`.
     WindowSize(Size),
+    /// Called on beginning or end of windows move or resize event.
+    ///
+    /// `true`: move/resize began\
+    /// `false`: move/resize finished
+    ///
+    /// Currently only Implemented for `Windows`
+    WindowMoveResize(bool),
     /// Called when a mouse button is pressed.
     MouseDown(MouseEvent),
     /// Called when a mouse button is released.
@@ -425,6 +432,7 @@ impl Event {
             | Event::WindowDisconnected
             | Event::WindowScale(_)
             | Event::WindowSize(_)
+            | Event::WindowMoveResize(_)
             | Event::Timer(_)
             | Event::AnimFrame(_)
             | Event::Command(_)

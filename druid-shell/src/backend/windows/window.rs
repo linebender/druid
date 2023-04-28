@@ -1187,6 +1187,14 @@ impl WndProc for MyWndProc {
                 })
                 .map(|_| 0)
             },
+            WM_ENTERSIZEMOVE => {
+                self.with_wnd_state(|s| s.handler.move_resize(true));
+                Some(0)
+            }
+            WM_EXITSIZEMOVE => {
+                self.with_wnd_state(|s| s.handler.move_resize(false));
+                Some(0)
+            }
             WM_COMMAND => {
                 self.with_wnd_state(|s| s.handler.command(LOWORD(wparam as u32) as u32));
                 Some(0)

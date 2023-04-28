@@ -965,6 +965,11 @@ impl<T: Data> WinHandler for DruidHandler<T> {
         self.app_state.do_window_event(event, self.window_id);
     }
 
+    fn move_resize(&mut self, begin: bool) {
+        let event = Event::WindowMoveResize(begin);
+        self.app_state.do_window_event(event, self.window_id);
+    }
+
     fn scale(&mut self, scale: Scale) {
         let event = Event::WindowScale(scale);
         self.app_state.do_window_event(event, self.window_id);
