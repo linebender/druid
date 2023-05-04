@@ -1799,7 +1799,7 @@ pub fn should_use_light_theme() -> bool {
 
     // ERROR_SUCCESS
     if res == 0 {
-        i32::from_le_bytes(data) == 1
+        i32::from_le_bytes(data) == 0
     } else {
         true // Default to light theme.
     }
