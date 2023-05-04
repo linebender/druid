@@ -1801,7 +1801,7 @@ pub fn should_use_dark_theme() -> bool {
     if res == 0 {
         i32::from_le_bytes(data) == 0
     } else {
-        true // Default to light theme.
+        false // Default to light theme.
     }
 }
 
