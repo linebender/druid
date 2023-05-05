@@ -1749,7 +1749,7 @@ impl WindowBuilder {
             // Dark mode support
             // https://docs.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes
             const DWMWA_USE_IMMERSIVE_DARK_MODE: u32 = 20;
-            let value = should_use_light_theme() as BOOL;
+            let value = should_use_dark_theme() as BOOL;
             let value_ptr = &value as *const _ as *const c_void;
             DwmSetWindowAttribute(
                 hwnd,
@@ -1780,7 +1780,7 @@ fn calculate_window_pos(parent_pos_dp: Option<Point>, pos_dp: Point, scale: Scal
 
 /// Attempt to read the registry and see if the system is set to a dark or
 /// light theme.
-pub fn should_use_light_theme() -> bool {
+pub fn should_use_dark_theme() -> bool {
     let mut data: [u8; 4] = [0; 4];
     let mut cb_data: u32 = data.len() as u32;
     let res = unsafe {
@@ -1799,9 +1799,9 @@ pub fn should_use_light_theme() -> bool {
 
     // ERROR_SUCCESS
     if res == 0 {
-        i32::from_le_bytes(data) == 1
+        i32::from_le_bytes(data) == 0
     } else {
-        true // Default to light theme.
+        false // Default to light theme.
     }
 }
 
