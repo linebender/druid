@@ -1,6 +1,6 @@
 [package]
 name = "druid-derive"
-version = "0.5.0"
+version = "0.5.1"
 license = "Apache-2.0"
 authors = ["Druid authors"]
 description = "derive impls for Druid, a Rust UI toolkit."
@@ -16,8 +16,8 @@ default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 syn = { version = "1.0.109", features = ["extra-traits"] }
-quote = "1.0.23"
-proc-macro2 = "1.0.51"
+quote = "1.0.26"
+proc-macro2 = "1.0.56"
 
 [dev-dependencies]
 druid = { version = "0.8.3", path = "../druid" }
