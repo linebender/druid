@@ -142,7 +142,7 @@ impl<T: Data> ValueTextBox<T> {
     /// Builder-style method to set whether or not this text box updates the
     /// incoming data during editing.
     ///
-    /// If `false` (the default) the data is only updated when editing completes.
+    /// If `true` (the default) the data is updated while editing.
     pub fn update_data_while_editing(mut self, flag: bool) -> Self {
         self.update_data_while_editing = flag;
         self
