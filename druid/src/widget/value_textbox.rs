@@ -114,7 +114,7 @@ impl<T: Data> ValueTextBox<T> {
             is_editing: false,
             last_known_data: None,
             validate_while_editing: true,
-            update_data_while_editing: false,
+            update_data_while_editing: true,
             old_buffer: String::new(),
             buffer: String::new(),
             force_selection: None,
