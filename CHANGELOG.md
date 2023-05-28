@@ -9,6 +9,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Added
 
+- Type name is now included in panic error messages in WidgetPod ([#2376] by [@matthewgapp])
+
 ### Changed
 
 ### Deprecated
@@ -141,7 +143,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 - `ClipBox::unmanaged` constructor for when you are using `ClipBox` in the widget tree directly. ([#2141] by [@xarvic])
 - Scroll-to-view support for `ClipBox` and `Tabs`. ([#2141] by [@xarvic])
 - `with_tab_index`, `set_tab_index`, and `tab_index` methods to `Tabs` to control the index. ([#2082] by [@rjwittams]
-- `state` and `state_mut` methods to `Scope` to get references to the inner state.  ([#2082] by [@rjwittams]
+- `state` and `state_mut` methods to `Scope` to get references to the inner state. ([#2082] by [@rjwittams]
 - `Slider::with_step` method for stepping functionality. ([#1875] by [@raymanfx])
 - `RangeSlider` and `Annotated` widgets, which are both variations on `Slider`. ([#1979] by [@xarvic])
 - `Checkbox::from_label` constructor. ([#2111] by [@maurerdietmar])
@@ -296,7 +298,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 
 - Rewrote multiple chapters of the Druid book. ([#2301] by [@PoignardAzur])
 - Rewrote the lens chapter of the Druid book. ([#1444] by [@derekdreery])
-- Fixed example code in the *Get started with Druid* chapter of the book. ([#1698] by [@ccqpein])
+- Fixed example code in the _Get started with Druid_ chapter of the book. ([#1698] by [@ccqpein])
 - Added more detailed explanation of `Target::Auto`. ([#1761] by [@arthmis])
 - Added code examples to `TextBox` docs. ([#2284] by [@ThomasMcandrew])
 - Added a link to the [druid_widget_nursery](https://github.com/linebender/druid-widget-nursery) to `README.md`. ([#1754] by [@xarvic])
@@ -353,7 +355,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 
 - Text improvements: `TextLayout` type ([#1182]) and rich text support ([#1245]).
 - The `Formatter` trait provides more flexible handling of conversions between
-values and their textual representations. ([#1377])
+  values and their textual representations. ([#1377])
 
 ### Added
 
@@ -671,10 +673,15 @@ This means that Druid no longer requires Cairo on macOS and uses Core Graphics i
 Last release without a changelog :(
 
 ## [0.4.0] - 2019-12-28
+
 ## [0.3.2] - 2019-11-05
+
 ## [0.3.1] - 2019-11-04
+
 ## 0.3.0 - 2019-11-02
+
 ## 0.1.1 - 2018-11-02
+
 ## 0.1.0 - 2018-11-02
 
 [@futurepaul]: https://github.com/futurepaul
@@ -787,7 +794,6 @@ Last release without a changelog :(
 [@newcomb-luke]: https://github.com/newcomb-luke
 [@AtomicGamer9523]: https://github.com/AtomicGamer9523
 [@Insprill]: https://github.com/Insprill
-
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
 [#695]: https://github.com/linebender/druid/pull/695
@@ -1233,7 +1239,6 @@ Last release without a changelog :(
 [#2356]: https://github.com/linebender/druid/pull/2356
 [#2375]: https://github.com/linebender/druid/pull/2375
 [#2378]: https://github.com/linebender/druid/pull/2378
-
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/linebender/druid/compare/v0.8.1...v0.8.2
