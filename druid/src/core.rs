@@ -549,7 +549,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
     ) -> Size {
         if !self.is_initialized() {
             debug_panic!(
-                "{:?}: layout method called before receiving WidgetAdded.",
+                "{:?} with widget id: {:?}: layout method called before receiving WidgetAdded.",
+                self.inner.type_name(),
                 ctx.widget_id()
             );
             return Size::ZERO;
@@ -1015,7 +1016,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
             }
             _ if !self.is_initialized() => {
                 debug_panic!(
-                    "{:?}: received LifeCycle::{:?} before WidgetAdded.",
+                    "{:?} with widget id {:?}: received LifeCycle::{:?} before WidgetAdded.",
+                    self.inner.type_name(),
                     self.id(),
                     event
                 );
@@ -1149,7 +1151,8 @@ impl<T: Data, W: Widget<T>> WidgetPod<T, W> {
                 (Some(_), None) => self.env = Some(env.clone()),
                 (None, _) => {
                     debug_panic!(
-                        "{:?} is receiving an update without having first received WidgetAdded.",
+                        "{:?} with widget id: {:?} is receiving an update without having first received WidgetAdded.",
+                        self.inner.type_name(),
                         self.id()
                     );
                     return;
