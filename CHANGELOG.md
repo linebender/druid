@@ -9,7 +9,7 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Added
 
-- Type name is now included in panic error messages in WidgetPod ([#2380] by [@matthewgapp])
+- Type name is now included in panic error messages in `WidgetPod`. ([#2380] by [@matthewgapp])
 
 ### Changed
 
