@@ -9,6 +9,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Added
 
+- Type name is now included in panic error messages in `WidgetPod`. ([#2380] by [@matthewgapp])
+
 ### Changed
 
 ### Deprecated
@@ -787,6 +789,7 @@ Last release without a changelog :(
 [@newcomb-luke]: https://github.com/newcomb-luke
 [@AtomicGamer9523]: https://github.com/AtomicGamer9523
 [@Insprill]: https://github.com/Insprill
+[@matthewgapp]: https://github.com/matthewgapp
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1233,6 +1236,7 @@ Last release without a changelog :(
 [#2356]: https://github.com/linebender/druid/pull/2356
 [#2375]: https://github.com/linebender/druid/pull/2375
 [#2378]: https://github.com/linebender/druid/pull/2378
+[#2380]: https://github.com/linebender/druid/pull/2380
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
