@@ -19,6 +19,7 @@ You can find its changes [documented below](#083---2023-02-28).
 
 - `syn` feature `extra-traits` is now always enabled. ([#2375] by [@AtomicGamer9523])
 - Title bar color was opposite of the system theme on Windows. ([#2378] by [@Insprill])
+- Input field focus would cause visual artifacts (grey rectangles) to be drawn when focus changed ([#2381] by [@matthewgapp])
 
 ### Visual
 
