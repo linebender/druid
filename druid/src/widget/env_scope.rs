@@ -113,6 +113,19 @@ impl<T: Data, W: Widget<T>> Widget<T> for EnvScope<T, W> {
             ..Default::default()
         }
     }
+
+    fn compute_max_intrinsic(
+        &mut self,
+        axis: super::Axis,
+        ctx: &mut LayoutCtx,
+        bc: &BoxConstraints,
+        data: &T,
+        env: &Env,
+    ) -> f64 {
+        self.child
+            .widget_mut()
+            .compute_max_intrinsic(axis, ctx, bc, data, env)
+    }
 }
 
 impl<T, W: Widget<T>> WidgetWrapper for EnvScope<T, W> {
