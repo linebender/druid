@@ -4,37 +4,24 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Resolution independence - Druid</title>
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -42,19 +29,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -70,7 +56,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -82,12 +68,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -103,8 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -114,35 +101,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -150,10 +132,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -163,8 +144,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
-<h2><a class="header" href="#what-is-a-pixel-anyway" id="what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
+                        <h1 id="resolution-independence"><a class="header" href="#resolution-independence">Resolution independence</a></h1>
+<h2 id="what-is-a-pixel-anyway"><a class="header" href="#what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
 <p>Pixel is short for <em>picture element</em> and although due to its popularity
 it has many meanings depending on context, when talking about pixels in the context of druid
 a pixel means always only one thing. It is <strong>the smallest configurable area of color
@@ -174,7 +155,7 @@ Even if the display pixel resolution matches the platform resolution,
 the display itself can control even smaller elements than pixels - the sub-pixels.</p>
 <p>The shape of the physical pixel could be complex and definitely varies from display model to model.
 However for simplicity you can think of a pixel as a square which you can choose a color for.</p>
-<h2><a class="header" href="#display-pixel-density" id="display-pixel-density">Display pixel density</a></h2>
+<h2 id="display-pixel-density"><a class="header" href="#display-pixel-density">Display pixel density</a></h2>
 <p>As technology advances the physical size of pixels is getting smaller and smaller.
 This allows display manufacturers to put more and more pixels into the same sized screen.
 The <strong>pixel densities of displays are increasing</strong>.</p>
@@ -182,26 +163,26 @@ The <strong>pixel densities of displays are increasing</strong>.</p>
 Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
 while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
 It might even be the same person on the same computer with a multi-display setup.</p>
-<h2><a class="header" href="#the-naive-old-school-approach-to-ui" id="the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
+<h2 id="the-naive-old-school-approach-to-ui"><a class="header" href="#the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
 <p>For a very long time UIs have been designed without thinking about pixel density at all.
 People tended to have displays with roughly similar pixel densities, so it all kind of
 worked most of the time. However <strong>it breaks down horribly</strong> in a modern world.
 The <em>200px * 200px</em> UI that looks decent on that <em>HD ready</em> display is barely visible
 on the <em>8K UHD</em> display. If you redesign it according to the <em>8K UHD</em> display then
 it won't even fit on the <em>HD ready</em> screen.</p>
-<h2><a class="header" href="#platform-specific-band-aids" id="platform-specific-band-aids">Platform specific band-aids</a></h2>
+<h2 id="platform-specific-band-aids"><a class="header" href="#platform-specific-band-aids">Platform specific band-aids</a></h2>
 <p>Some platforms have mitigations in place where that small <em>200px * 200px</em> UI
 will get scaled up by essentially <strong>taking a screenshot of it and enlarging the image.</strong>
 This will result in a blurry UI with diagonal and curved lines suffering the most.
 There is more hope with fonts where the vector information is still available to the platform,
 and instead of scaling up the image the text can be immediately drawn at the larger size.</p>
-<h2><a class="header" href="#a-better-solution" id="a-better-solution">A better solution</a></h2>
+<h2 id="a-better-solution"><a class="header" href="#a-better-solution">A better solution</a></h2>
 <p>The application should draw everything it can with <strong>vector graphics</strong>,
 and have <strong>very large resolution image</strong> assets available where vectors aren't viable.
 Then at runtime the application should identify the display pixel density
 and resize everything accordingly. The vector graphics are easy to resize and
 the large image assets would be scaled down to the size that makes sense for the specific display.</p>
-<h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
+<h2 id="an-even-better-way"><a class="header" href="#an-even-better-way">An even better way</a></h2>
 <p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
 Druid has expressive vector drawing capabilities that you should use whenever possible.
 Vector drawing is also used by the widgets that come included with Druid.
@@ -222,17 +203,13 @@ based on the display that the window is currently located on.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
                             <a rel="prev" href="06_env.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        
 
-                        
                             <a rel="next" href="08_widgets_in_depth.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -240,49 +217,36 @@ based on the display that the window is currently located on.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
                     <a rel="prev" href="06_env.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                
 
-                
                     <a rel="next" href="08_widgets_in_depth.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
 
+    </div>
     </body>
 </html>

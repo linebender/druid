@@ -4,37 +4,24 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Data trait - Druid</title>
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -42,19 +29,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -70,7 +56,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -82,12 +68,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -103,8 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -114,35 +101,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -150,10 +132,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -163,7 +144,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#dataflow-and-the-data-trait" id="dataflow-and-the-data-trait">Dataflow and the <code>Data</code> trait</a></h1>
+                        <h1 id="dataflow-and-the-data-trait"><a class="header" href="#dataflow-and-the-data-trait">Dataflow and the <code>Data</code> trait</a></h1>
 <p>The Druid architecture is based on a two-way dataflow.</p>
 <p>At the root level, you define the application state, which is passed to each child widget as associated data. Some Widgets (eg LensWrap) will only pass a subset of that data to their children.</p>
 <p>Some widgets (eg Button, TextBox, Checkbox) can mutate the data passed to them by their parents in reaction to user events. The data mutated in a child widget is also changed in the parent widgets, all the way to the root.</p>
@@ -180,12 +161,11 @@
     /// Note that &quot;equal&quot; above has a slightly different meaning than
     /// `PartialEq`, for example two floating point NaN values should
     /// be considered equal when they have the same bit representation.
-    fn same(&amp;self, other: &amp;Self) -&gt; bool;
-</code></pre>
+    fn same(&amp;self, other: &amp;Self) -&gt; bool;</code></pre>
 <p>This method checks for equality, but allows for false negatives.</p>
-<h2><a class="header" href="#performance" id="performance">Performance</a></h2>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <p>It is important that your data is cheap to clone and cheap to compare; we encourage the use of reference counted pointers to allow cheap cloning of more expensive types. <code>Arc</code> and <code>Rc</code> have blanket <code>Data</code> impls that do pointer comparison, so if you have a type that does not implement <code>Data</code>, you can always just wrap it in one of those smart pointers.</p>
-<h3><a class="header" href="#collections" id="collections">Collections</a></h3>
+<h3 id="collections"><a class="header" href="#collections">Collections</a></h3>
 <p><code>Data</code> is expected to be cheap to clone and cheap to compare, which can cause
 issues with collection types. For this reason, <code>Data</code> is not implemented for
 <code>std</code> types like <code>Vec</code> or <code>HashMap</code>.</p>
@@ -194,7 +174,7 @@ larger collections you can build Druid with the <code>im</code> feature, which b
 the <a href="https://docs.rs/im"><code>im</code> crate</a>, and adds a <code>Data</code> impl for the collections there. The <a href="https://docs.rs/im"><code>im</code>
 crate</a> is a collection of immutable data structures that act a lot like the <code>std</code>
 collections, but can be cloned efficiently.</p>
-<h2><a class="header" href="#derive" id="derive">Derive</a></h2>
+<h2 id="derive"><a class="header" href="#derive">Derive</a></h2>
 <p><code>Data</code> can be derived. This is recursive; it requires <code>Data</code> to be implemented
 for all members. For 'C style' enums (enums where no variant has any fields)
 this also requires an implementation of <code>PartialEq</code>. <code>Data</code> is implemented for
@@ -202,8 +182,7 @@ a number of <code>std</code> types, including all primitive types, <code>String<
 as well as <code>Option</code>, <code>Result</code>, and various tuples whose members implement
 <code>Data</code>.</p>
 <p>Here is an example of using <code>Data</code> to implement a simple data model:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use druid::Data;
 use std::sync::Arc;
@@ -243,26 +222,22 @@ enum Category {
     Play,
     Revolution,
 }
-<span class="boring">}
-</span></code></pre></pre>
-<h2><a class="header" href="#mapping-data-with-lenses" id="mapping-data-with-lenses">Mapping <code>Data</code> with lenses</a></h2>
+<span class="boring">}</span></code></pre></pre>
+<h2 id="mapping-data-with-lenses"><a class="header" href="#mapping-data-with-lenses">Mapping <code>Data</code> with lenses</a></h2>
 <p>In Druid, most container widgets expect their children to have the same associated data. If you have a <code>Flex&lt;Foobar&gt;</code>, you can only append widgets that implement <code>Widget&lt;Foobar&gt;</code> to it.</p>
 <p>In some cases, however, you want to compose widgets that operate on different subsets of the data. Maybe you want to add two widgets to the above Flex, one that uses the field <code>foo</code> and another that uses the field <code>bar</code>, and they might respectively implement <code>Widget&lt;Foo&gt;</code> and <code>Widget&lt;Bar&gt;</code>.</p>
 <p>Lenses allow you to bridge that type difference. A lens is a type that represents a <em>two-way</em> mapping between two data types. That is, a lens from X to Y can take an instance of X and give you an instance of Y, and can take a modified Y and apply the modification to X.</p>
 <p>To expand on our Foobar example:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Foobar {
     foo: Foo,
     bar: Bar,
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The derive macro above generates two lenses: <code>Foobar::foo</code> and <code>Foobar::bar</code>. <code>Foobar::foo</code> can take an instance of <code>Foobar</code> and give you a shared or mutable reference to its <code>foo</code> field. Finally, the type <code>LensWrap</code> can take that lens and use it to map between different widget types:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn build_foo() -&gt; impl Widget&lt;Foo&gt; {
     // ...
@@ -281,25 +256,20 @@ fn build_foobar() -&gt; impl Widget&lt;Foobar&gt; {
             LensWrap::new(build_bar(), Foobar::bar),
         )
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>See the Lens chapter for a more in-depth explanation of what lenses are and how they're implemented.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
                             <a rel="prev" href="02_getting_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        
 
-                        
                             <a rel="next" href="04_widget.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -307,49 +277,36 @@ fn build_foobar() -&gt; impl Widget&lt;Foobar&gt; {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
                     <a rel="prev" href="02_getting_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                
 
-                
                     <a rel="next" href="04_widget.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
 
+    </div>
     </body>
 </html>

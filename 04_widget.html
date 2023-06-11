@@ -4,37 +4,24 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Widget trait - Druid</title>
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -42,19 +29,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -70,7 +56,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -82,12 +68,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -103,8 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -114,35 +101,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -150,10 +132,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -163,7 +144,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#widgets-and-the-widget-trait" id="widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
+                        <h1 id="widgets-and-the-widget-trait"><a class="header" href="#widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
 <p>The <code>Widget</code> trait represents components of your UI. Druid includes a set of
 built-in widgets, and you can also write your own. You combine the built-in
 and custom widgets to create a <em>widget tree</em>; you will start with some single
@@ -207,7 +188,7 @@ as if a widget has gained focus) happens as a consequence of other events.</li>
 </ul>
 <p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
 widgets</a>.</p>
-<h2><a class="header" href="#modularity-and-composition" id="modularity-and-composition">Modularity and composition</a></h2>
+<h2 id="modularity-and-composition"><a class="header" href="#modularity-and-composition">Modularity and composition</a></h2>
 <p>Widgets are intended to be modular and composable, not monolithic. For instance,
 widgets generally do not control their own alignment or padding; if you have
 a label, and you would like it to have 8dp of horizontal padding and 4dp of
@@ -217,17 +198,15 @@ vertical padding, you can just do,</p>
 fn padded_label() {
     let label: Label&lt;()&gt; = Label::new(&quot;Humour me&quot;);
     let padded = Padding::new((4.0, 8.0), label);
-}
-</code></pre>
+}</code></pre>
 <p>to force the label to be center-aligned if it is given extra space you can write,</p>
 <pre><code class="language-rust noplaypen">use druid::widget::Align;
 
 fn align_center() {
     let label: Label&lt;()&gt; = Label::new(&quot;Center me&quot;);
     let centered = Align::centered(label);
-}
-</code></pre>
-<h2><a class="header" href="#builder-methods-and-widgetext" id="builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
+}</code></pre>
+<h2 id="builder-methods-and-widgetext"><a class="header" href="#builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
 <p>Widgets are generally constructed using builder-style methods. Unlike the normal
 <a href="https://doc.rust-lang.org/1.0.0/style/ownership/builders.html">builder pattern</a>, we generally do not separate the type that is
 built from the builder type; instead the builder methods are on the widget
@@ -247,8 +226,7 @@ fn steppers() {
         .with_range(10.0, 50.0)
         .with_step(2.5)
         .with_wraparound(true);
-}
-</code></pre>
+}</code></pre>
 <p>Additionally, there are a large number of helper methods available on all
 widgets, as part of the <code>WidgetExt</code> trait. These builder-style methods take one
 widget and wrap it in another. The following two functions produce the same
@@ -260,16 +238,14 @@ fn padded_stepper() {
     let stepper = Stepper::new().with_range(10.0, 50.0);
     let padding = Padding::new(8.0, stepper);
     let padded_and_center_aligned_stepper = Align::centered(padding);
-}
-</code></pre>
+}</code></pre>
 <p><strong>WidgetExt</strong>:</p>
 <pre><code class="language-rust noplaypen">use druid::widget::{Stepper, WidgetExt};
 
 fn padded_stepper() {
     let padded_and_center_aligned_stepper =
         Stepper::new().with_range(10.0, 50.0).padding(8.0).center();
-}
-</code></pre>
+}</code></pre>
 <p>These builder-style methods also exist on containers. For instance, to create
 a stack of three labels, you can do:</p>
 <pre><code class="language-rust noplaypen">use druid::widget::Flex;
@@ -279,24 +255,19 @@ fn flex_builder() -&gt; Flex&lt;()&gt; {
         .with_child(Label::new(&quot;Number One&quot;))
         .with_child(Label::new(&quot;Number Two&quot;))
         .with_child(Label::new(&quot;Some Other Number&quot;))
-}
-</code></pre>
+}</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
                             <a rel="prev" href="03_data.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        
 
-                        
                             <a rel="next" href="05_lens.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -304,49 +275,36 @@ fn flex_builder() -&gt; Flex&lt;()&gt; {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
                     <a rel="prev" href="03_data.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                
 
-                
                     <a rel="next" href="05_lens.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
 
+    </div>
     </body>
 </html>

@@ -4,37 +4,24 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Env - Druid</title>
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -42,19 +29,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -70,7 +56,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -82,12 +68,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -103,8 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -114,35 +101,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -150,10 +132,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -163,7 +144,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
+                        <h1 id="the-env"><a class="header" href="#the-env">The <code>Env</code></a></h1>
 <p>The <a href="https://docs.rs/druid/latest/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
 and accessing state about your specific application, such as color schemes,
 localized strings, and other resources.</p>
@@ -173,7 +154,7 @@ environment can be overridden with other values of the same type, but they can
 never be removed. If something exists in the <code>Env</code> at a given level of the tree,
 it will exist for everything 'below' that level; that is, for all children of that
 widget.</p>
-<h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
+<h2 id="keys-values-and-themes"><a class="header" href="#keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
 <p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
 <code>Env</code> can only store a few types of things; these are represented by the
 <a href="https://docs.rs/druid/latest/druid/enum.Value.html"><code>Value</code></a> type, which looks like this:</p>
@@ -190,8 +171,7 @@ widget.</p>
     Font(FontDescriptor),
     RoundedRectRadii(RoundedRectRadii),
     Other(Arc&lt;dyn Any + Send + Sync&gt;),
-}
-</code></pre>
+}</code></pre>
 <p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a> is
 a combination of a string identifier and a type.</p>
 <p>You can think of this as strict types, enforced at runtime. <strong>It is the programmer's responsibility to ensure that the key used to get a value has the same type as the one used to set it</strong>. The API is aggressive about checking for misuse, and many methods will panic if anything is amiss. In practice this shouldn't almost never happen if you follow these guidelines:</p>
@@ -202,8 +182,7 @@ key, you should declare it as a <code>const</code>, and give it a unique name. B
 convention, you should namespace your keys using something like <a href="https://en.wikipedia.org/wiki/Reverse_domain_name_notation">reverse-DNS</a>
 notation, or even just prefixing them with the name of your app.</p>
 <pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new(&quot;height&quot;);
-const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);
-</code></pre>
+const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);</code></pre>
 </li>
 <li>
 <p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
@@ -218,7 +197,7 @@ replace it with any other type.</p>
 </li>
 </ol>
 <p>Assuming these rules are followed, <code>Env</code> should just work.</p>
-<h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
+<h3 id="keyorvalue"><a class="header" href="#keyorvalue">KeyOrValue</a></h3>
 <p>Druid includes a <a href="https://docs.rs/druid/latest/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
@@ -228,9 +207,8 @@ const RED: Color = Color::rgb8(0xFF, 0, 0);
 fn make_labels() {
     let with_value = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(RED);
     let with_key = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(IMPORTANT_LABEL_COLOR);
-}
-</code></pre>
-<h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
+}</code></pre>
+<h3 id="envscope"><a class="header" href="#envscope">EnvScope</a></h3>
 <p>You may override values in the environment for a given widget (and all of its
 children) by using the <a href="https://docs.rs/druid/latest/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
 the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
@@ -239,9 +217,8 @@ the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_
         env.set(druid::theme::TEXT_COLOR, Color::BLACK);
         env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
     });
-}
-</code></pre>
-<h2><a class="header" href="#localization" id="localization">Localization</a></h2>
+}</code></pre>
+<h2 id="localization"><a class="header" href="#localization">Localization</a></h2>
 <p><em>Localization is currently half-baked.</em></p>
 <p>The <code>Env</code> contains the localization resources for the current locale. A
 <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
@@ -251,17 +228,13 @@ calling its <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.h
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
                             <a rel="prev" href="05_lens.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        
 
-                        
                             <a rel="next" href="07_resolution_independence.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -269,49 +242,36 @@ calling its <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.h
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
                     <a rel="prev" href="05_lens.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                
 
-                
                     <a rel="next" href="07_resolution_independence.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
 
+    </div>
     </body>
 </html>

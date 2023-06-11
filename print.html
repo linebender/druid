@@ -4,39 +4,25 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Druid</title>
-        
         <meta name="robots" content="noindex" />
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -44,19 +30,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -72,7 +57,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -84,12 +69,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -105,8 +92,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -116,35 +102,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -152,10 +133,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -165,7 +145,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#druid" id="druid">Druid</a></h1>
+                        <h1 id="druid"><a class="header" href="#druid">Druid</a></h1>
 <p><strong>Note:</strong> Druid is being discontinued in favor of other projects based on the same general principles, such as <a href="https://github.com/linebender/xilem/">Xilem</a>.</p>
 <p>Druid is a framework for building simple graphical applications.</p>
 <p>Druid is composed of a number of related projects. <a href="https://docs.rs/druid-shell"><code>druid-shell</code></a> is a
@@ -178,22 +158,22 @@ contemporary declarative UI frameworks such as <a href="https://flutter.dev">Flu
 and <a href="https://developer.apple.com/documentation/swiftui">SwiftUI</a>, while also attempting to be conceptually simple and largely
 <em>non-magical</em>. A programmer familiar with Rust should be able to understand how
 Druid works without special difficulty.</p>
-<h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <p>This tutorial assumes basic familiarity with Rust and a working setup with the basic tooling like
 Rustup and Cargo. This tutorial will use stable Rust (v1.65.0 at the time of writing) and the latest
 released version of Druid (v0.8).</p>
-<h2><a class="header" href="#key-concepts" id="key-concepts">Key Concepts</a></h2>
+<h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
 <li><strong><a href="./data.html">the <code>Data</code> trait</a></strong>: How you represent your application model.</li>
 <li><strong><a href="./widget.html">the <code>Widget</code> trait</a></strong>: How you represent your UI.</li>
 <li><strong><a href="./lens.html">the <code>Lens</code> trait</a></strong>: How you associate parts of your model with parts of
 your UI.</li>
 </ul>
-<h1><a class="header" href="#get-started-with-druid" id="get-started-with-druid">Get started with Druid</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="get-started-with-druid"><a class="header" href="#get-started-with-druid">Get started with Druid</a></h1>
 <p>This chapter will walk you through setting up a simple Druid application from start to finish.</p>
-<h2><a class="header" href="#setting-up-druid-dependencies" id="setting-up-druid-dependencies">Setting up Druid dependencies</a></h2>
+<h2 id="setting-up-druid-dependencies"><a class="header" href="#setting-up-druid-dependencies">Setting up Druid dependencies</a></h2>
 <p>If you're on Linux or OpenBSD, you'll need to install GTK-3's development kit first.</p>
-<h3><a class="header" href="#linux" id="linux">Linux</a></h3>
+<h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
 <p>On Linux, Druid requires gtk+3.</p>
 <p>On Ubuntu this can be installed with</p>
 <pre><code class="language-sh">&gt; sudo apt-get install libgtk-3-dev
@@ -202,11 +182,11 @@ your UI.</li>
 <pre><code class="language-sh">&gt; sudo dnf install gtk3-devel glib2-devel
 </code></pre>
 <p>See <a href="https://www.gtk.org/docs/installations/linux/">GTK installation page</a> for more installation instructions.</p>
-<h3><a class="header" href="#openbsd" id="openbsd">OpenBSD</a></h3>
+<h3 id="openbsd"><a class="header" href="#openbsd">OpenBSD</a></h3>
 <p>On OpenBSD, Druid requires gtk+3;  install from packages:</p>
 <pre><code class="language-sh">&gt; pkg_add gtk+3
 </code></pre>
-<h2><a class="header" href="#starting-a-project" id="starting-a-project">Starting a project</a></h2>
+<h2 id="starting-a-project"><a class="header" href="#starting-a-project">Starting a project</a></h2>
 <p>Create a new cargo binary crate, and add <code>druid</code> as a dependency:</p>
 <pre><code class="language-sh">&gt; cargo new my-druid-app
       Created binary (application) `my-druid-app` package
@@ -221,9 +201,9 @@ your UI.</li>
 └── src
     └── main.rs
 </code></pre>
-<h2><a class="header" href="#hello-world" id="hello-world">Hello world</a></h2>
+<h2 id="hello-world"><a class="header" href="#hello-world">Hello world</a></h2>
 <p>To show a minimal window with a label, write the following code in your <code>main.rs</code>:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::Label;
+<pre><code class="language-rust  noplaypen">use druid::widget::Label;
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_ui() -&gt; impl Widget&lt;()&gt; {
@@ -239,16 +219,15 @@ fn main() {
     AppLauncher::with_window(main_window)
         .launch(initial_data)
         .expect(&quot;Failed to launch application&quot;);
-}
-</code></pre>
+}</code></pre>
 <p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code>, and launch it. We use <code>build_ui</code> to create a tree of widgets to pass to our <code>WindowDesc</code>. For now this tree consists of one simple label widget.</p>
 <p>This is a very simple example application, using only the bare minimum of features. We can do something more complex.</p>
-<h2><a class="header" href="#add-more-widgets" id="add-more-widgets">Add more widgets</a></h2>
+<h2 id="add-more-widgets"><a class="header" href="#add-more-widgets">Add more widgets</a></h2>
 <p>The first thing we could do to make our example application more interesting is to display more than one widget. However, <code>WindowDesc::new</code> expects a function that returns only one Widget. We also need a way to tell Druid how to lay out our widgets.</p>
 <p>What we need to do is initialize our <code>WindowDesc</code> with a widget tree, with a single widget at the root. Some widgets can have children, and know how to lay them out; these are called container widgets.</p>
 <p>We describe our window as a widget tree with container widgets as nodes, and label widgets as the leaves. Our <code>build_ui</code> function is then responsible for building this widget tree.</p>
 <p>As an example, we'll build a todo-list app. At first, this app will have two columns, one with the list, and one with a placeholder for a button, each in a box with visible borders. We'll need to use the <code>Split</code>, <code>Flex</code> and <code>Container</code> widgets:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::{Container, Flex, Split};
+<pre><code class="language-rust  noplaypen">use druid::widget::{Container, Flex, Split};
 use druid::Color;
 
 // ...
@@ -270,24 +249,22 @@ fn build_ui() -&gt; impl Widget&lt;()&gt; {
         )
         .border(Color::grey(0.6), 2.0),
     )
-}
-</code></pre>
+}</code></pre>
 <p>We get a UI which is starting to look like a real application. Still, it's inherently static. We would like to add some interactivity, but before we can do that, our next step will be to make the UI data-driven.</p>
-<h2><a class="header" href="#widget-data" id="widget-data">Widget data</a></h2>
+<h2 id="widget-data"><a class="header" href="#widget-data">Widget data</a></h2>
 <p>You may have noticed that our <code>build_ui()</code> function returns <code>impl Widget&lt;()&gt;</code>. This syntax describes an existential type which implements the <code>Widget</code> trait, with a generic parameter.</p>
 <p>This generic parameter is the Widget's data. Since our UI so far has been stateless, the data is the unit type. But since we're writing a todo-list, we'll want our widget to depend on the list data:</p>
-<pre><code class="language-rust noplaypen">use im::Vector;
+<pre><code class="language-rust  noplaypen">use im::Vector;
 type TodoList = Vector&lt;String&gt;;
 
 // ...
 
 fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>Here we're using a Vector from the <code>im</code> crate; for reasons we'll get into later, we can't use the standard library's Vec as our data. But <code>im::Vector</code> is functionally equivalent to <code>std::vec::Vec</code>.</p>
 <p>To build a UI that changes depending on our widget data, we use the <code>List</code> widget, and <code>Label::dynamic</code>:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::List;
+<pre><code class="language-rust  noplaypen">use druid::widget::List;
 
 // ...
 
@@ -305,12 +282,11 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
         )
         .border(Color::grey(0.6), 2.0),
     )
-}
-</code></pre>
+}</code></pre>
 <p>List is a special widget that takes a collection as data, and creates one widget with per collection item, with the item as data. In other words, our <code>List</code> implements <code>Widget&lt;Vector&lt;String&gt;&gt;</code> while the label returned by <code>Label::dynamic</code> implements <code>Widget&lt;String&gt;</code>. This is all resolved automatically by type inference.</p>
 <p><code>Label::dynamic</code> creates a label whose content depends on the data parameter.</p>
 <p>Now, to test our UI, we can launch it with a hardcoded list:</p>
-<pre><code class="language-rust noplaypen">use im::vector;
+<pre><code class="language-rust  noplaypen">use im::vector;
 
 // ...
 
@@ -329,12 +305,11 @@ fn main() {
     AppLauncher::with_window(main_window)
         .launch(initial_data)
         .expect(&quot;Failed to launch application&quot;);
-}
-</code></pre>
+}</code></pre>
 <p>We can now change the contents of the UI depending on the data we want to display; but our UI is still static. To add user interaction, we need a way to modify our data.</p>
-<h2><a class="header" href="#interaction-widgets" id="interaction-widgets">Interaction widgets</a></h2>
+<h2 id="interaction-widgets"><a class="header" href="#interaction-widgets">Interaction widgets</a></h2>
 <p>First, to interact with our UI, we add a button:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::Button;
+<pre><code class="language-rust  noplaypen">use druid::widget::Button;
 
 // ...
 
@@ -345,40 +320,36 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     Button::new(&quot;Add item&quot;)
 
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>If you build this, you'll notice clicking the button doesn't do anything. We need to give it a callback, that will take the data as parameter and mutate it:</p>
-<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
+<pre><code class="language-rust  noplaypen">fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
     Button::new(&quot;Add item&quot;)
         .on_click(|_, data: &amp;mut Vector&lt;String&gt;, _| data.push_back(&quot;New item&quot;.into()))
 
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>Now, clicking on the button adds an item to our list, but it always adds the same item. To change this, we need to add a textbox to our app, which will require that we make our data type a bit more complex.</p>
-<h3><a class="header" href="#selecting-a-structures-field-with-lenses" id="selecting-a-structures-field-with-lenses">Selecting a structure's field with lenses</a></h3>
+<h3 id="selecting-a-structures-field-with-lenses"><a class="header" href="#selecting-a-structures-field-with-lenses">Selecting a structure's field with lenses</a></h3>
 <p>To complete our todo-list, we need to change our app data type. Instead of just having a list of strings, we need to have a list <em>and</em> a string representing the next item to be added:</p>
-<pre><code class="language-rust noplaypen">struct TodoList {
+<pre><code class="language-rust  noplaypen">struct TodoList {
     items: Vector&lt;String&gt;,
     next_item: String,
-}
-</code></pre>
+}</code></pre>
 <p>However, now we have a problem: our List widget which expected a <code>Vector&lt;...&gt;</code> won't know how to handle a struct. So, we need to modify Druid's dataflow so that, given the TodoList above, the List widget will have access to the <code>items</code> field. This is done with a <code>Lens</code>, which we'll explain next chapter.</p>
 <p>Furthermore, to pass our type as the a generic parameter to <code>Widget</code>, we need it to implement the <code>Data</code> trait (and <code>Clone</code>), more on that next chapter.</p>
 <p>So, given the two requirements above, our declaration will actually look like:</p>
-<pre><code class="language-rust noplaypen">use druid::{Data, Lens};
+<pre><code class="language-rust  noplaypen">use druid::{Data, Lens};
 
 #[derive(Clone, Data, Lens)]
 struct TodoList {
     items: Vector&lt;String&gt;,
     next_item: String,
-}
-</code></pre>
+}</code></pre>
 <p>Among other things, the above declaration defines two lenses, <code>TodoList::items</code> and <code>TodoList::next_item</code>, which take a TodoList as input and give a mutable reference to its <code>items</code> and <code>next_item</code> fields, respectively.</p>
 <p>Next, we'll use the <code>LensWrap</code> widget wrapper to pass <code>items</code> to our <code>List</code> widget:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::LensWrap;
+<pre><code class="language-rust  noplaypen">use druid::widget::LensWrap;
 
 // ...
 
@@ -392,10 +363,9 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     )
 
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>We also need to modify the callback of our button:</p>
-<pre><code class="language-rust noplaypen">fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
+<pre><code class="language-rust  noplaypen">fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
     // Replace previous Button with:
@@ -405,10 +375,9 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     })
 
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>Finally, we add a textbox to our widget with <code>TodoList::next_item</code> as its data:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::TextBox;
+<pre><code class="language-rust  noplaypen">use druid::widget::TextBox;
 
 // ...
 
@@ -419,12 +388,11 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     LensWrap::new(TextBox::new(), TodoList::next_item)
 
     // ...
-}
-</code></pre>
+}</code></pre>
 <p>Now, when we push the button, whatever was in the textbox is added to the list.</p>
-<h2><a class="header" href="#putting-it-all-together" id="putting-it-all-together">Putting it all together</a></h2>
+<h2 id="putting-it-all-together"><a class="header" href="#putting-it-all-together">Putting it all together</a></h2>
 <p>If we pull all the code we have written so far, our <code>main.rs</code> now looks like this:</p>
-<pre><code class="language-rust noplaypen">use druid::widget::Label;
+<pre><code class="language-rust  noplaypen">use druid::widget::Label;
 use druid::{AppLauncher, Widget, WindowDesc};
 use druid::widget::{Container, Flex, Split};
 use druid::Color;
@@ -479,10 +447,9 @@ fn main() {
     AppLauncher::with_window(main_window)
         .launch(initial_data)
         .expect(&quot;Failed to launch application&quot;);
-}
-</code></pre>
+}</code></pre>
 <p>We now have a list of items, which we can add to by filling a textbox and clicking a button.</p>
-<h1><a class="header" href="#dataflow-and-the-data-trait" id="dataflow-and-the-data-trait">Dataflow and the <code>Data</code> trait</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="dataflow-and-the-data-trait"><a class="header" href="#dataflow-and-the-data-trait">Dataflow and the <code>Data</code> trait</a></h1>
 <p>The Druid architecture is based on a two-way dataflow.</p>
 <p>At the root level, you define the application state, which is passed to each child widget as associated data. Some Widgets (eg LensWrap) will only pass a subset of that data to their children.</p>
 <p>Some widgets (eg Button, TextBox, Checkbox) can mutate the data passed to them by their parents in reaction to user events. The data mutated in a child widget is also changed in the parent widgets, all the way to the root.</p>
@@ -499,12 +466,11 @@ fn main() {
     /// Note that &quot;equal&quot; above has a slightly different meaning than
     /// `PartialEq`, for example two floating point NaN values should
     /// be considered equal when they have the same bit representation.
-    fn same(&amp;self, other: &amp;Self) -&gt; bool;
-</code></pre>
+    fn same(&amp;self, other: &amp;Self) -&gt; bool;</code></pre>
 <p>This method checks for equality, but allows for false negatives.</p>
-<h2><a class="header" href="#performance" id="performance">Performance</a></h2>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <p>It is important that your data is cheap to clone and cheap to compare; we encourage the use of reference counted pointers to allow cheap cloning of more expensive types. <code>Arc</code> and <code>Rc</code> have blanket <code>Data</code> impls that do pointer comparison, so if you have a type that does not implement <code>Data</code>, you can always just wrap it in one of those smart pointers.</p>
-<h3><a class="header" href="#collections" id="collections">Collections</a></h3>
+<h3 id="collections"><a class="header" href="#collections">Collections</a></h3>
 <p><code>Data</code> is expected to be cheap to clone and cheap to compare, which can cause
 issues with collection types. For this reason, <code>Data</code> is not implemented for
 <code>std</code> types like <code>Vec</code> or <code>HashMap</code>.</p>
@@ -513,7 +479,7 @@ larger collections you can build Druid with the <code>im</code> feature, which b
 the <a href="https://docs.rs/im"><code>im</code> crate</a>, and adds a <code>Data</code> impl for the collections there. The <a href="https://docs.rs/im"><code>im</code>
 crate</a> is a collection of immutable data structures that act a lot like the <code>std</code>
 collections, but can be cloned efficiently.</p>
-<h2><a class="header" href="#derive" id="derive">Derive</a></h2>
+<h2 id="derive"><a class="header" href="#derive">Derive</a></h2>
 <p><code>Data</code> can be derived. This is recursive; it requires <code>Data</code> to be implemented
 for all members. For 'C style' enums (enums where no variant has any fields)
 this also requires an implementation of <code>PartialEq</code>. <code>Data</code> is implemented for
@@ -521,8 +487,7 @@ a number of <code>std</code> types, including all primitive types, <code>String<
 as well as <code>Option</code>, <code>Result</code>, and various tuples whose members implement
 <code>Data</code>.</p>
 <p>Here is an example of using <code>Data</code> to implement a simple data model:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>use druid::Data;
 use std::sync::Arc;
@@ -562,26 +527,22 @@ enum Category {
     Play,
     Revolution,
 }
-<span class="boring">}
-</span></code></pre></pre>
-<h2><a class="header" href="#mapping-data-with-lenses" id="mapping-data-with-lenses">Mapping <code>Data</code> with lenses</a></h2>
+<span class="boring">}</span></code></pre></pre>
+<h2 id="mapping-data-with-lenses"><a class="header" href="#mapping-data-with-lenses">Mapping <code>Data</code> with lenses</a></h2>
 <p>In Druid, most container widgets expect their children to have the same associated data. If you have a <code>Flex&lt;Foobar&gt;</code>, you can only append widgets that implement <code>Widget&lt;Foobar&gt;</code> to it.</p>
 <p>In some cases, however, you want to compose widgets that operate on different subsets of the data. Maybe you want to add two widgets to the above Flex, one that uses the field <code>foo</code> and another that uses the field <code>bar</code>, and they might respectively implement <code>Widget&lt;Foo&gt;</code> and <code>Widget&lt;Bar&gt;</code>.</p>
 <p>Lenses allow you to bridge that type difference. A lens is a type that represents a <em>two-way</em> mapping between two data types. That is, a lens from X to Y can take an instance of X and give you an instance of Y, and can take a modified Y and apply the modification to X.</p>
 <p>To expand on our Foobar example:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Foobar {
     foo: Foo,
     bar: Bar,
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The derive macro above generates two lenses: <code>Foobar::foo</code> and <code>Foobar::bar</code>. <code>Foobar::foo</code> can take an instance of <code>Foobar</code> and give you a shared or mutable reference to its <code>foo</code> field. Finally, the type <code>LensWrap</code> can take that lens and use it to map between different widget types:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn build_foo() -&gt; impl Widget&lt;Foo&gt; {
     // ...
@@ -600,10 +561,9 @@ fn build_foobar() -&gt; impl Widget&lt;Foobar&gt; {
             LensWrap::new(build_bar(), Foobar::bar),
         )
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>See the Lens chapter for a more in-depth explanation of what lenses are and how they're implemented.</p>
-<h1><a class="header" href="#widgets-and-the-widget-trait" id="widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="widgets-and-the-widget-trait"><a class="header" href="#widgets-and-the-widget-trait">Widgets and the <code>Widget</code> trait</a></h1>
 <p>The <code>Widget</code> trait represents components of your UI. Druid includes a set of
 built-in widgets, and you can also write your own. You combine the built-in
 and custom widgets to create a <em>widget tree</em>; you will start with some single
@@ -647,7 +607,7 @@ as if a widget has gained focus) happens as a consequence of other events.</li>
 </ul>
 <p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
 widgets</a>.</p>
-<h2><a class="header" href="#modularity-and-composition" id="modularity-and-composition">Modularity and composition</a></h2>
+<h2 id="modularity-and-composition"><a class="header" href="#modularity-and-composition">Modularity and composition</a></h2>
 <p>Widgets are intended to be modular and composable, not monolithic. For instance,
 widgets generally do not control their own alignment or padding; if you have
 a label, and you would like it to have 8dp of horizontal padding and 4dp of
@@ -657,17 +617,15 @@ vertical padding, you can just do,</p>
 fn padded_label() {
     let label: Label&lt;()&gt; = Label::new(&quot;Humour me&quot;);
     let padded = Padding::new((4.0, 8.0), label);
-}
-</code></pre>
+}</code></pre>
 <p>to force the label to be center-aligned if it is given extra space you can write,</p>
 <pre><code class="language-rust noplaypen">use druid::widget::Align;
 
 fn align_center() {
     let label: Label&lt;()&gt; = Label::new(&quot;Center me&quot;);
     let centered = Align::centered(label);
-}
-</code></pre>
-<h2><a class="header" href="#builder-methods-and-widgetext" id="builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
+}</code></pre>
+<h2 id="builder-methods-and-widgetext"><a class="header" href="#builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
 <p>Widgets are generally constructed using builder-style methods. Unlike the normal
 <a href="https://doc.rust-lang.org/1.0.0/style/ownership/builders.html">builder pattern</a>, we generally do not separate the type that is
 built from the builder type; instead the builder methods are on the widget
@@ -687,8 +645,7 @@ fn steppers() {
         .with_range(10.0, 50.0)
         .with_step(2.5)
         .with_wraparound(true);
-}
-</code></pre>
+}</code></pre>
 <p>Additionally, there are a large number of helper methods available on all
 widgets, as part of the <code>WidgetExt</code> trait. These builder-style methods take one
 widget and wrap it in another. The following two functions produce the same
@@ -700,16 +657,14 @@ fn padded_stepper() {
     let stepper = Stepper::new().with_range(10.0, 50.0);
     let padding = Padding::new(8.0, stepper);
     let padded_and_center_aligned_stepper = Align::centered(padding);
-}
-</code></pre>
+}</code></pre>
 <p><strong>WidgetExt</strong>:</p>
 <pre><code class="language-rust noplaypen">use druid::widget::{Stepper, WidgetExt};
 
 fn padded_stepper() {
     let padded_and_center_aligned_stepper =
         Stepper::new().with_range(10.0, 50.0).padding(8.0).center();
-}
-</code></pre>
+}</code></pre>
 <p>These builder-style methods also exist on containers. For instance, to create
 a stack of three labels, you can do:</p>
 <pre><code class="language-rust noplaypen">use druid::widget::Flex;
@@ -719,28 +674,24 @@ fn flex_builder() -&gt; Flex&lt;()&gt; {
         .with_child(Label::new(&quot;Number One&quot;))
         .with_child(Label::new(&quot;Number Two&quot;))
         .with_child(Label::new(&quot;Some Other Number&quot;))
-}
-</code></pre>
-<h1><a class="header" href="#lenses-and-the-lens-trait" id="lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
+}</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="lenses-and-the-lens-trait"><a class="header" href="#lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
 <p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es are a complex but powerful concept, that allow you to abstract over the notion of &quot;X owns an instance of Y&quot;.</p>
-<h2><a class="header" href="#fundamentals-definition-and-implementation" id="fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
-<h3><a class="header" href="#definition" id="definition">Definition</a></h3>
+<h2 id="fundamentals-definition-and-implementation"><a class="header" href="#fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
+<h3 id="definition"><a class="header" href="#definition">Definition</a></h3>
 <p>Let's start with the (simplified) definition of a <code>Lens</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub trait Lens&lt;T, U&gt; {
     fn with&lt;F: FnOnce(&amp;U)&gt;(&amp;self, data: &amp;T, f: F);
 
     fn with_mut&lt;F: FnOnce(&amp;mut U)&gt;(&amp;self, data: &amp;mut T, f: F);
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involved in the lens: <code>Self</code> (the lens itself), <code>T</code> and <code>U</code>. The two type parameters represent the mismatch that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
-<h3><a class="header" href="#implementation" id="implementation">Implementation</a></h3>
+<h3 id="implementation"><a class="header" href="#implementation">Implementation</a></h3>
 <p>As an example, let's write a manual implementation of the <code>Lens</code> trait:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container {
     inner: String,
@@ -761,13 +712,11 @@ impl Lens&lt;Container, String&gt; for InnerLens {
         f(&amp;mut data.inner);
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The implementation is straightforward: it projects the given function onto the <code>inner</code> field of our struct. (Notice that this isn't the only valid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>).</p>
 <p>You'll also notice that both methods take an immutable reference to <code>self</code>, even the <code>mut</code> variant. The lense itself should be thought of as a fixed value that knows how to do the mapping. In the above case it contains no data, and will likely not even be present in the final compiled/optimized code.</p>
 <p>Now for a slightly more involved example</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     first_name: String,
@@ -798,14 +747,12 @@ impl Lens&lt;Container2, Name&gt; for NameLens {
         data.last_name = name.last;
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <blockquote>
 <p>Side note: if you try doing this with <code>struct Name&lt;'a&gt; { first: &amp;'a String, ...</code>, you'll find that it's not possible to be generic over the mutability of the fields in <code>Name</code>, so we can't make the <code>Name</code> struct borrow the data both mutably and immutably. Even if we could in this case, things quickly get very complicated. Also, sometimes <code>Widget</code>s need to keep a copy of the data around for use internally. For now the accepted best practice is to make <code>Clone</code>ing cheap and use that.</p>
 </blockquote>
 <p>Now as I'm sure you've realised, the above is very inefficient. Given that we will be traversing our data very often, we need it to be cheap. (This wasn't a problem before, because when we don't need to build the inner type, we can just use references. It also wouldn't be a problem if our data was cheap to copy/clone, for example any of the primitive number types <code>u8</code>, ... <code>f64</code>.) Luckily, this is exactly the kind of thing that rust excels at. Let's rewrite the above example to be fast!</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     first_name: Rc&lt;String&gt;,
@@ -823,13 +770,11 @@ struct NameLens;
 impl Lens&lt;Container2, Name&gt; for NameLens {
     // .. identical to previous example
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>As you'll see, we've introduced <code>Rc</code>: the reference-counted pointer. You will see this and its multithreaded cousin <code>Arc</code> used pervasively in the examples. Now, the only time we actually have to copy memory is when <code>Rc::make_mut</code> is called in the <code>f</code> in <code>with_mut</code>. This means that in the case where nothing changes, all we will be doing is incrementing and decrementing reference counts. Moreover, we give the compiler the opportunity to inline <code>f</code> and <code>with</code>/<code>with_mut</code>, making this abstraction potentially zero-cost (disclaimer: I haven't actually studied the produced assembly to validate this claim).</p>
 <p>The trade-off is that we introduce more complexity into the <code>Name</code> type: to make changes to the data we have to use <code>Rc::make_mut</code> to get mutable access to the <code>String</code>. (The code in the lens will ensure that the newer copy of the <code>Rc</code>d data is saved to the outer type.) This means the writing fast Druid code requires knowledge of the Rust pointer types (<code>Rc</code>/<code>Arc</code>, and also potentially <code>RefCell</code>/<code>Mutex</code>).</p>
 <p>We can actually do even better than this. Suppose that we are working on a vector of data rather than a string. We can import the <code>im</code> crate to get collections that use <em>structural sharing</em>, meaning that even when the vector is mutated, we only <em>Clone</em> what we need to. Because <code>im</code> is so useful, it is included in <code>druid</code> (behind the <code>im</code> feature).</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     // Pretend that it's the 1980s and we store only ASCII names.
@@ -848,26 +793,22 @@ struct NameLens;
 impl Lens&lt;Container2, Name&gt; for NameLens {
     // .. identical to previous example
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Now in addition to almost free <code>Clone</code>s, we also have cheap incremental updates to the data itself. That means your UI won't get slowdowns if your data structure gets very large (eg a list of entries in a database).</p>
 <p>Hopefully, this makes sense to you. This was a technical overview of lenses as generic data structures. The next section will cover how lenses are integrated in Druid in more detail.</p>
-<h2><a class="header" href="#lenses-in-druid" id="lenses-in-druid">Lenses in Druid</a></h2>
+<h2 id="lenses-in-druid"><a class="header" href="#lenses-in-druid">Lenses in Druid</a></h2>
 <p>Now on to the more fun bit: how we can use <code>Lens</code>es to get all those lovely qualities we talked about in the introduction. What you'll notice in this section is that we rarely have to build lenses ourself: we can often get what we want using the <code>Lens</code> proc macro, or through the functions in <code>LensExt</code>.</p>
-<h3><a class="header" href="#deriving-lenses" id="deriving-lenses">Deriving lenses</a></h3>
+<h3 id="deriving-lenses"><a class="header" href="#deriving-lenses">Deriving lenses</a></h3>
 <p>Let's go back to the first example we looked at, with one of the fields removed for simplicity:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Container {
     inner: u8,
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Let's look at the code that gets generated (I captured this using <code>cargo-expand</code>, then removed some unimportant bits).</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub mod container_derived_lenses {
     #[allow(non_camel_case_types)]
@@ -885,16 +826,14 @@ impl druid::Lens&lt;Container, u8&gt; for container_derived_lenses::inner {
 impl Container {
     pub const inner: container_derived_lenses::inner = container_derived_lenses::inner;
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The macro has created a new module with a long name, put a struct in it that breaks the type naming convention, implemented <code>Lens</code> on the type, and then put a constant in an <code>impl</code> block for your data type with the same name. The upshot is that we can do <code>StructName::field_name</code> and get a lens from the struct to its field.</p>
 <blockquote>
 <p>Side note: Doing this makes using the lenses very simple (you just do <code>StructName::field_name</code>), but it can be a bit confusing, because of breaking the naming conventions. This is the reason I've included the expanded code in the page.</p>
 </blockquote>
-<h3><a class="header" href="#composing-lenses" id="composing-lenses">Composing lenses</a></h3>
+<h3 id="composing-lenses"><a class="header" href="#composing-lenses">Composing lenses</a></h3>
 <p>If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be surprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a <code>String</code>. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like <code>f(&amp;outer.inner.text)</code>, but actually we don't need to do this: we can use the <code>then</code> combinator. The full example is below</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Outer {
@@ -908,16 +847,15 @@ struct Inner {
 
 // `composed_lens` will contain a lens that goes from `Outer` through `Inner` to `text`.
 let composed_lens = Outer::inner.then(Inner::text);
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p><code>LensExt</code> contains a few more useful methods for handling things like negating a boolean, or auto-<code>Deref</code>ing a value.</p>
 <p>There are also 3 special structs in <code>druid::lens</code>: <code>Constant</code>, <code>Identity</code> and <code>Unit</code>. <code>Constant</code> is a lens that always returns the same value, and always discards any changes, while <code>Identity</code> is a lens that does nothing. You might say &quot;what is the point of a lens that does nothing&quot;, which would be a fair question. Well, there are some places where a lens is required, and having an identity allows the user to say act as if there was no lens. It's also used to begin a composition chain using the combinators like <code>then</code>. <code>Unit</code> is a special case of <code>Constant</code> where the constant in question is <code>()</code>.</p>
-<h3><a class="header" href="#the-lens-macro" id="the-lens-macro">The <code>lens</code> macro</a></h3>
+<h3 id="the-lens-macro"><a class="header" href="#the-lens-macro">The <code>lens</code> macro</a></h3>
 <p>Finally, there is a macro for constructing lenses on the fly. It allows you to lens into fields of a struct you don't control (so you can't derive <code>Lens</code> for it), it also allows lensing into tuples and tuple structs, and lastly it will create index lenses into slices.</p>
-<h3><a class="header" href="#wrapping-up" id="wrapping-up">Wrapping up</a></h3>
+<h3 id="wrapping-up"><a class="header" href="#wrapping-up">Wrapping up</a></h3>
 <p>Whew, that was quite complicated. Hopefully now you have a solid understanding of the problem that lenses solve, how they solve it, and how to use them effectively.</p>
 <p>If any parts of this page are confusing, please open an issue on the issue tracker or mention it on zulip, and we will see if we can improve the docs (and clear up any misunderstandings you might have).</p>
-<h1><a class="header" href="#the-env" id="the-env">The <code>Env</code></a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="the-env"><a class="header" href="#the-env">The <code>Env</code></a></h1>
 <p>The <a href="https://docs.rs/druid/latest/druid/struct.Env.html"><code>Env</code></a> represents the environment; it is intended as a way of managing
 and accessing state about your specific application, such as color schemes,
 localized strings, and other resources.</p>
@@ -927,7 +865,7 @@ environment can be overridden with other values of the same type, but they can
 never be removed. If something exists in the <code>Env</code> at a given level of the tree,
 it will exist for everything 'below' that level; that is, for all children of that
 widget.</p>
-<h2><a class="header" href="#keys-values-and-themes" id="keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
+<h2 id="keys-values-and-themes"><a class="header" href="#keys-values-and-themes"><code>Key</code>s, <code>Value</code>s, and themes</a></h2>
 <p>The most prominent role of <code>Env</code> is to store a set of typed keys and values. The
 <code>Env</code> can only store a few types of things; these are represented by the
 <a href="https://docs.rs/druid/latest/druid/enum.Value.html"><code>Value</code></a> type, which looks like this:</p>
@@ -944,8 +882,7 @@ widget.</p>
     Font(FontDescriptor),
     RoundedRectRadii(RoundedRectRadii),
     Other(Arc&lt;dyn Any + Send + Sync&gt;),
-}
-</code></pre>
+}</code></pre>
 <p>The only way to get an item out of the <code>Env</code> is with a <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a>. A <a href="https://docs.rs/druid/latest/druid/struct.Key.html"><code>Key</code></a> is
 a combination of a string identifier and a type.</p>
 <p>You can think of this as strict types, enforced at runtime. <strong>It is the programmer's responsibility to ensure that the key used to get a value has the same type as the one used to set it</strong>. The API is aggressive about checking for misuse, and many methods will panic if anything is amiss. In practice this shouldn't almost never happen if you follow these guidelines:</p>
@@ -956,8 +893,7 @@ key, you should declare it as a <code>const</code>, and give it a unique name. B
 convention, you should namespace your keys using something like <a href="https://en.wikipedia.org/wiki/Reverse_domain_name_notation">reverse-DNS</a>
 notation, or even just prefixing them with the name of your app.</p>
 <pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new(&quot;height&quot;);
-const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);
-</code></pre>
+const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);</code></pre>
 </li>
 <li>
 <p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
@@ -972,7 +908,7 @@ replace it with any other type.</p>
 </li>
 </ol>
 <p>Assuming these rules are followed, <code>Env</code> should just work.</p>
-<h3><a class="header" href="#keyorvalue" id="keyorvalue">KeyOrValue</a></h3>
+<h3 id="keyorvalue"><a class="header" href="#keyorvalue">KeyOrValue</a></h3>
 <p>Druid includes a <a href="https://docs.rs/druid/latest/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
@@ -982,9 +918,8 @@ const RED: Color = Color::rgb8(0xFF, 0, 0);
 fn make_labels() {
     let with_value = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(RED);
     let with_key = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(IMPORTANT_LABEL_COLOR);
-}
-</code></pre>
-<h3><a class="header" href="#envscope" id="envscope">EnvScope</a></h3>
+}</code></pre>
+<h3 id="envscope"><a class="header" href="#envscope">EnvScope</a></h3>
 <p>You may override values in the environment for a given widget (and all of its
 children) by using the <a href="https://docs.rs/druid/latest/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
 the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
@@ -993,15 +928,14 @@ the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_
         env.set(druid::theme::TEXT_COLOR, Color::BLACK);
         env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
     });
-}
-</code></pre>
-<h2><a class="header" href="#localization" id="localization">Localization</a></h2>
+}</code></pre>
+<h2 id="localization"><a class="header" href="#localization">Localization</a></h2>
 <p><em>Localization is currently half-baked.</em></p>
 <p>The <code>Env</code> contains the localization resources for the current locale. A
 <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.html"><code>LocalizedString</code></a> can be resolved to a given string in the current locale by
 calling its <a href="https://docs.rs/druid/latest/druid/struct.LocalizedString.html#method.resolve"><code>resolve</code></a> method.</p>
-<h1><a class="header" href="#resolution-independence" id="resolution-independence">Resolution independence</a></h1>
-<h2><a class="header" href="#what-is-a-pixel-anyway" id="what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="resolution-independence"><a class="header" href="#resolution-independence">Resolution independence</a></h1>
+<h2 id="what-is-a-pixel-anyway"><a class="header" href="#what-is-a-pixel-anyway">What is a pixel anyway?</a></h2>
 <p>Pixel is short for <em>picture element</em> and although due to its popularity
 it has many meanings depending on context, when talking about pixels in the context of druid
 a pixel means always only one thing. It is <strong>the smallest configurable area of color
@@ -1011,7 +945,7 @@ Even if the display pixel resolution matches the platform resolution,
 the display itself can control even smaller elements than pixels - the sub-pixels.</p>
 <p>The shape of the physical pixel could be complex and definitely varies from display model to model.
 However for simplicity you can think of a pixel as a square which you can choose a color for.</p>
-<h2><a class="header" href="#display-pixel-density" id="display-pixel-density">Display pixel density</a></h2>
+<h2 id="display-pixel-density"><a class="header" href="#display-pixel-density">Display pixel density</a></h2>
 <p>As technology advances the physical size of pixels is getting smaller and smaller.
 This allows display manufacturers to put more and more pixels into the same sized screen.
 The <strong>pixel densities of displays are increasing</strong>.</p>
@@ -1019,26 +953,26 @@ The <strong>pixel densities of displays are increasing</strong>.</p>
 Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
 while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
 It might even be the same person on the same computer with a multi-display setup.</p>
-<h2><a class="header" href="#the-naive-old-school-approach-to-ui" id="the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
+<h2 id="the-naive-old-school-approach-to-ui"><a class="header" href="#the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
 <p>For a very long time UIs have been designed without thinking about pixel density at all.
 People tended to have displays with roughly similar pixel densities, so it all kind of
 worked most of the time. However <strong>it breaks down horribly</strong> in a modern world.
 The <em>200px * 200px</em> UI that looks decent on that <em>HD ready</em> display is barely visible
 on the <em>8K UHD</em> display. If you redesign it according to the <em>8K UHD</em> display then
 it won't even fit on the <em>HD ready</em> screen.</p>
-<h2><a class="header" href="#platform-specific-band-aids" id="platform-specific-band-aids">Platform specific band-aids</a></h2>
+<h2 id="platform-specific-band-aids"><a class="header" href="#platform-specific-band-aids">Platform specific band-aids</a></h2>
 <p>Some platforms have mitigations in place where that small <em>200px * 200px</em> UI
 will get scaled up by essentially <strong>taking a screenshot of it and enlarging the image.</strong>
 This will result in a blurry UI with diagonal and curved lines suffering the most.
 There is more hope with fonts where the vector information is still available to the platform,
 and instead of scaling up the image the text can be immediately drawn at the larger size.</p>
-<h2><a class="header" href="#a-better-solution" id="a-better-solution">A better solution</a></h2>
+<h2 id="a-better-solution"><a class="header" href="#a-better-solution">A better solution</a></h2>
 <p>The application should draw everything it can with <strong>vector graphics</strong>,
 and have <strong>very large resolution image</strong> assets available where vectors aren't viable.
 Then at runtime the application should identify the display pixel density
 and resize everything accordingly. The vector graphics are easy to resize and
 the large image assets would be scaled down to the size that makes sense for the specific display.</p>
-<h2><a class="header" href="#an-even-better-way" id="an-even-better-way">An even better way</a></h2>
+<h2 id="an-even-better-way"><a class="header" href="#an-even-better-way">An even better way</a></h2>
 <p>Druid aims to make all of this as <strong>easy and automatic</strong> as possible.
 Druid has expressive vector drawing capabilities that you should use whenever possible.
 Vector drawing is also used by the widgets that come included with Druid.
@@ -1054,14 +988,14 @@ Remember there might be multiple displays connected with different pixel densiti
 and your application might have multiple windows - with each window on a different display.
 It will all just work, because Druid will adjust the actual pixel dimensions
 based on the display that the window is currently located on.</p>
-<h1><a class="header" href="#create-custom-widgets" id="create-custom-widgets">Create custom widgets</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="create-custom-widgets"><a class="header" href="#create-custom-widgets">Create custom widgets</a></h1>
 <p>The <code>Widget</code> trait is the heart of Druid, and in any serious application you
 will eventually need to create and use custom <code>Widget</code>s.</p>
-<h2><a class="header" href="#painter-and-controller" id="painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
+<h2 id="painter-and-controller"><a class="header" href="#painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
 <p>There are two helper widgets in Druid that let you customize widget behaviour
 without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Painter.html"><code>Painter</code></a> and
 <a href="https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
-<h3><a class="header" href="#painter" id="painter">Painter</a></h3>
+<h3 id="painter"><a class="header" href="#painter">Painter</a></h3>
 <p>The <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
 respond to events or otherwise contain update logic. Its general use is to
 either provide a custom background to some other widget, or to implement
@@ -1076,15 +1010,13 @@ with rounded corners, we could use a <code>Painter</code>:</p>
         ctx.fill(rounded, data);
         ctx.stroke(rounded, &amp;env.get(druid::theme::PRIMARY_DARK), STROKE_WIDTH);
     })
-}
-</code></pre>
+}</code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
 set size, you must pass it explicit constraints, such as by wrapping it in a
 <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
-}
-</code></pre>
+}</code></pre>
 <p>One other useful thing about <code>Painter</code> is that it can be used as the background
 of a <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
 as a background, we could do:</p>
@@ -1094,11 +1026,10 @@ as a background, we could do:</p>
         format!(&quot;#{r:X}{g:X}{b:X}&quot;)
     })
     .background(make_color_swatch())
-}
-</code></pre>
+}</code></pre>
 <p>(This uses the <a href="https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
 container.)</p>
-<h3><a class="header" href="#controller" id="controller">Controller</a></h3>
+<h3 id="controller"><a class="header" href="#controller">Controller</a></h3>
 <p>The <a href="https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
 make widgets that handle events, but don't do any layout or drawing. The idea
 here is that you can use some <code>Controller</code> type to customize the behaviour of
@@ -1148,19 +1079,18 @@ impl Controller&lt;String, TextBox&lt;String&gt;&gt; for TextBoxActionController
             _ =&gt; child.event(ctx, event, data, env),
         }
     }
-}
-</code></pre>
-<h1><a class="header" href="#more-information" id="more-information">More information</a></h1>
+}</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="more-information"><a class="header" href="#more-information">More information</a></h1>
 <p>If you want more information about Druid this document contains links more tutorials, blogposts and
 youtube videos.</p>
-<h2><a class="header" href="#related-projects" id="related-projects">Related projects</a></h2>
+<h2 id="related-projects"><a class="header" href="#related-projects">Related projects</a></h2>
 <p>These three projects provide the basis that Druid works on</p>
 <ul>
 <li><a href="https://github.com/linebender/piet">Piet</a> An abstraction for 2D graphics.</li>
 <li><a href="https://github.com/linebender/kurbo">Kurbo</a> A Rust library for manipulating curves</li>
 <li><a href="https://github.com/linebender/skribo">Skribo</a> A Rust library for low-level text layout</li>
 </ul>
-<h2><a class="header" href="#projects-using-druid" id="projects-using-druid">Projects using Druid</a></h2>
+<h2 id="projects-using-druid"><a class="header" href="#projects-using-druid">Projects using Druid</a></h2>
 <ul>
 <li><a href="https://github.com/tbillington/kondo">Kondo</a> Save disk space by cleaning unneeded files from software projects.</li>
 <li><a href="https://github.com/derekdreery/jack-mixer">jack-mixer</a> A jack client that provides mixing, levels and a 3-band eq.</li>
@@ -1169,17 +1099,17 @@ youtube videos.</p>
 <li><a href="https://github.com/wandercn/flac_music">flac_music</a> A music player.</li>
 <li><em>pull requests welcome</em></li>
 </ul>
-<h2><a class="header" href="#projects-that-work-with-druid-widgets-etc" id="projects-that-work-with-druid-widgets-etc">Projects that work with Druid (widgets etc)</a></h2>
+<h2 id="projects-that-work-with-druid-widgets-etc"><a class="header" href="#projects-that-work-with-druid-widgets-etc">Projects that work with Druid (widgets etc)</a></h2>
 <ul>
 <li><em>pull requests welcome</em></li>
 </ul>
-<h2><a class="header" href="#presentations" id="presentations">Presentations</a></h2>
+<h2 id="presentations"><a class="header" href="#presentations">Presentations</a></h2>
 <p>Some presentations about Druid, its background and related topics have been recorded</p>
 <ul>
 <li><a href="https://youtu.be/xH2x99FTY4k">Declarative UI patterns in Rust</a> by Raph Levien at the Bay Area Rust Meetup December 3 2019</li>
 <li><a href="https://youtu.be/4YTfxresvS8">Data oriented GUI in Rust</a> by Raph Levien at the Bay Area Rust Meetup June 28 2018</li>
 </ul>
-<h2><a class="header" href="#blog-posts" id="blog-posts">Blog posts</a></h2>
+<h2 id="blog-posts"><a class="header" href="#blog-posts">Blog posts</a></h2>
 <p>People have been blogging about Druid</p>
 <ul>
 <li><a href="https://pauljmiller.com/posts/druid-widget-tutorial.html">Building a widget for Druid</a> a blog post by Paul Miller on how to create custom Widgets that explains lots of Druid on the way</li>
@@ -1189,9 +1119,7 @@ youtube videos.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
 
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -1199,49 +1127,35 @@ youtube videos.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
 
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
-        
-        <script type="text/javascript">
+        <script>
         window.addEventListener('load', function() {
             window.setTimeout(window.print, 100);
         });
         </script>
-        
-        
 
+    </div>
     </body>
 </html>

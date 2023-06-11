@@ -4,37 +4,24 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Lens trait - Druid</title>
-        
-        
 
 
         <!-- Custom HTML head -->
         
-
-
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        
         <link rel="icon" href="favicon.svg">
-        
-        
         <link rel="shortcut icon" href="favicon.png">
-        
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        
         <link rel="stylesheet" href="css/print.css" media="print">
-        
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        
         <link rel="stylesheet" href="fonts/fonts.css">
-        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -42,19 +29,18 @@
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        
 
-        
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -70,7 +56,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -82,12 +68,14 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var sidebar = null;
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
             html.classList.remove('sidebar-visible');
             html.classList.add("sidebar-" + sidebar);
@@ -103,8 +91,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -114,35 +101,30 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                        
                     </div>
 
                     <h1 class="menu-title">Druid</h1>
 
                     <div class="right-buttons">
-                        
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
-                        
-                        
+
                     </div>
                 </div>
 
-                
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -150,10 +132,9 @@
                         </ul>
                     </div>
                 </div>
-                
 
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -163,26 +144,23 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#lenses-and-the-lens-trait" id="lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
+                        <h1 id="lenses-and-the-lens-trait"><a class="header" href="#lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
 <p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es are a complex but powerful concept, that allow you to abstract over the notion of &quot;X owns an instance of Y&quot;.</p>
-<h2><a class="header" href="#fundamentals-definition-and-implementation" id="fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
-<h3><a class="header" href="#definition" id="definition">Definition</a></h3>
+<h2 id="fundamentals-definition-and-implementation"><a class="header" href="#fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
+<h3 id="definition"><a class="header" href="#definition">Definition</a></h3>
 <p>Let's start with the (simplified) definition of a <code>Lens</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub trait Lens&lt;T, U&gt; {
     fn with&lt;F: FnOnce(&amp;U)&gt;(&amp;self, data: &amp;T, f: F);
 
     fn with_mut&lt;F: FnOnce(&amp;mut U)&gt;(&amp;self, data: &amp;mut T, f: F);
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The first thing to notice is the generics on the <code>Lens</code> itself. There are 3 types involved in the lens: <code>Self</code> (the lens itself), <code>T</code> and <code>U</code>. The two type parameters represent the mismatch that lenses solve: we have a function that operates on <code>U</code>, and an object of type <code>T</code>, so we need to transform <code>T</code> into <code>U</code> somehow.</p>
-<h3><a class="header" href="#implementation" id="implementation">Implementation</a></h3>
+<h3 id="implementation"><a class="header" href="#implementation">Implementation</a></h3>
 <p>As an example, let's write a manual implementation of the <code>Lens</code> trait:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container {
     inner: String,
@@ -203,13 +181,11 @@ impl Lens&lt;Container, String&gt; for InnerLens {
         f(&amp;mut data.inner);
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The implementation is straightforward: it projects the given function onto the <code>inner</code> field of our struct. (Notice that this isn't the only valid lens from <code>Container</code> to <code>String</code> we could have made - we could also project from <code>Container</code> to <code>another</code>).</p>
 <p>You'll also notice that both methods take an immutable reference to <code>self</code>, even the <code>mut</code> variant. The lense itself should be thought of as a fixed value that knows how to do the mapping. In the above case it contains no data, and will likely not even be present in the final compiled/optimized code.</p>
 <p>Now for a slightly more involved example</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     first_name: String,
@@ -240,14 +216,12 @@ impl Lens&lt;Container2, Name&gt; for NameLens {
         data.last_name = name.last;
     }
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <blockquote>
 <p>Side note: if you try doing this with <code>struct Name&lt;'a&gt; { first: &amp;'a String, ...</code>, you'll find that it's not possible to be generic over the mutability of the fields in <code>Name</code>, so we can't make the <code>Name</code> struct borrow the data both mutably and immutably. Even if we could in this case, things quickly get very complicated. Also, sometimes <code>Widget</code>s need to keep a copy of the data around for use internally. For now the accepted best practice is to make <code>Clone</code>ing cheap and use that.</p>
 </blockquote>
 <p>Now as I'm sure you've realised, the above is very inefficient. Given that we will be traversing our data very often, we need it to be cheap. (This wasn't a problem before, because when we don't need to build the inner type, we can just use references. It also wouldn't be a problem if our data was cheap to copy/clone, for example any of the primitive number types <code>u8</code>, ... <code>f64</code>.) Luckily, this is exactly the kind of thing that rust excels at. Let's rewrite the above example to be fast!</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     first_name: Rc&lt;String&gt;,
@@ -265,13 +239,11 @@ struct NameLens;
 impl Lens&lt;Container2, Name&gt; for NameLens {
     // .. identical to previous example
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>As you'll see, we've introduced <code>Rc</code>: the reference-counted pointer. You will see this and its multithreaded cousin <code>Arc</code> used pervasively in the examples. Now, the only time we actually have to copy memory is when <code>Rc::make_mut</code> is called in the <code>f</code> in <code>with_mut</code>. This means that in the case where nothing changes, all we will be doing is incrementing and decrementing reference counts. Moreover, we give the compiler the opportunity to inline <code>f</code> and <code>with</code>/<code>with_mut</code>, making this abstraction potentially zero-cost (disclaimer: I haven't actually studied the produced assembly to validate this claim).</p>
 <p>The trade-off is that we introduce more complexity into the <code>Name</code> type: to make changes to the data we have to use <code>Rc::make_mut</code> to get mutable access to the <code>String</code>. (The code in the lens will ensure that the newer copy of the <code>Rc</code>d data is saved to the outer type.) This means the writing fast Druid code requires knowledge of the Rust pointer types (<code>Rc</code>/<code>Arc</code>, and also potentially <code>RefCell</code>/<code>Mutex</code>).</p>
 <p>We can actually do even better than this. Suppose that we are working on a vector of data rather than a string. We can import the <code>im</code> crate to get collections that use <em>structural sharing</em>, meaning that even when the vector is mutated, we only <em>Clone</em> what we need to. Because <code>im</code> is so useful, it is included in <code>druid</code> (behind the <code>im</code> feature).</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Container2 {
     // Pretend that it's the 1980s and we store only ASCII names.
@@ -290,26 +262,22 @@ struct NameLens;
 impl Lens&lt;Container2, Name&gt; for NameLens {
     // .. identical to previous example
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Now in addition to almost free <code>Clone</code>s, we also have cheap incremental updates to the data itself. That means your UI won't get slowdowns if your data structure gets very large (eg a list of entries in a database).</p>
 <p>Hopefully, this makes sense to you. This was a technical overview of lenses as generic data structures. The next section will cover how lenses are integrated in Druid in more detail.</p>
-<h2><a class="header" href="#lenses-in-druid" id="lenses-in-druid">Lenses in Druid</a></h2>
+<h2 id="lenses-in-druid"><a class="header" href="#lenses-in-druid">Lenses in Druid</a></h2>
 <p>Now on to the more fun bit: how we can use <code>Lens</code>es to get all those lovely qualities we talked about in the introduction. What you'll notice in this section is that we rarely have to build lenses ourself: we can often get what we want using the <code>Lens</code> proc macro, or through the functions in <code>LensExt</code>.</p>
-<h3><a class="header" href="#deriving-lenses" id="deriving-lenses">Deriving lenses</a></h3>
+<h3 id="deriving-lenses"><a class="header" href="#deriving-lenses">Deriving lenses</a></h3>
 <p>Let's go back to the first example we looked at, with one of the fields removed for simplicity:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Container {
     inner: u8,
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>Let's look at the code that gets generated (I captured this using <code>cargo-expand</code>, then removed some unimportant bits).</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub mod container_derived_lenses {
     #[allow(non_camel_case_types)]
@@ -327,16 +295,14 @@ impl druid::Lens&lt;Container, u8&gt; for container_derived_lenses::inner {
 impl Container {
     pub const inner: container_derived_lenses::inner = container_derived_lenses::inner;
 }
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p>The macro has created a new module with a long name, put a struct in it that breaks the type naming convention, implemented <code>Lens</code> on the type, and then put a constant in an <code>impl</code> block for your data type with the same name. The upshot is that we can do <code>StructName::field_name</code> and get a lens from the struct to its field.</p>
 <blockquote>
 <p>Side note: Doing this makes using the lenses very simple (you just do <code>StructName::field_name</code>), but it can be a bit confusing, because of breaking the naming conventions. This is the reason I've included the expanded code in the page.</p>
 </blockquote>
-<h3><a class="header" href="#composing-lenses" id="composing-lenses">Composing lenses</a></h3>
+<h3 id="composing-lenses"><a class="header" href="#composing-lenses">Composing lenses</a></h3>
 <p>If I told you that the concept of lenses comes from Haskell (the functional megolith), I'm sure you won't be surprised when I also tell you that they really excel when it comes to composition. Let's say we have an outer struct that contains an inner struct, with the inner struct containing a <code>String</code>. Now let's say we want to tell a label widget to display the string as text in a label. We could write a lens from the outer struct to the string, which would look something like <code>f(&amp;outer.inner.text)</code>, but actually we don't need to do this: we can use the <code>then</code> combinator. The full example is below</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Lens)]
 struct Outer {
@@ -350,13 +316,12 @@ struct Inner {
 
 // `composed_lens` will contain a lens that goes from `Outer` through `Inner` to `text`.
 let composed_lens = Outer::inner.then(Inner::text);
-<span class="boring">}
-</span></code></pre></pre>
+<span class="boring">}</span></code></pre></pre>
 <p><code>LensExt</code> contains a few more useful methods for handling things like negating a boolean, or auto-<code>Deref</code>ing a value.</p>
 <p>There are also 3 special structs in <code>druid::lens</code>: <code>Constant</code>, <code>Identity</code> and <code>Unit</code>. <code>Constant</code> is a lens that always returns the same value, and always discards any changes, while <code>Identity</code> is a lens that does nothing. You might say &quot;what is the point of a lens that does nothing&quot;, which would be a fair question. Well, there are some places where a lens is required, and having an identity allows the user to say act as if there was no lens. It's also used to begin a composition chain using the combinators like <code>then</code>. <code>Unit</code> is a special case of <code>Constant</code> where the constant in question is <code>()</code>.</p>
-<h3><a class="header" href="#the-lens-macro" id="the-lens-macro">The <code>lens</code> macro</a></h3>
+<h3 id="the-lens-macro"><a class="header" href="#the-lens-macro">The <code>lens</code> macro</a></h3>
 <p>Finally, there is a macro for constructing lenses on the fly. It allows you to lens into fields of a struct you don't control (so you can't derive <code>Lens</code> for it), it also allows lensing into tuples and tuple structs, and lastly it will create index lenses into slices.</p>
-<h3><a class="header" href="#wrapping-up" id="wrapping-up">Wrapping up</a></h3>
+<h3 id="wrapping-up"><a class="header" href="#wrapping-up">Wrapping up</a></h3>
 <p>Whew, that was quite complicated. Hopefully now you have a solid understanding of the problem that lenses solve, how they solve it, and how to use them effectively.</p>
 <p>If any parts of this page are confusing, please open an issue on the issue tracker or mention it on zulip, and we will see if we can improve the docs (and clear up any misunderstandings you might have).</p>
 
@@ -364,17 +329,13 @@ let composed_lens = Outer::inner.then(Inner::text);
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                        
                             <a rel="prev" href="04_widget.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                        
 
-                        
                             <a rel="next" href="06_env.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
-                        
 
                         <div style="clear: both"></div>
                     </nav>
@@ -382,49 +343,36 @@ let composed_lens = Outer::inner.then(Inner::text);
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                
                     <a rel="prev" href="04_widget.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                
 
-                
                     <a rel="next" href="06_env.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-                
             </nav>
 
         </div>
 
-        
 
-        
 
-        
 
-        
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        
 
-        
 
-        
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        
 
-        
 
+    </div>
     </body>
 </html>
