@@ -164,9 +164,9 @@ Rustup and Cargo. This tutorial will use stable Rust (v1.65.0 at the time of wri
 released version of Druid (v0.8).</p>
 <h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
 <ul>
-<li><strong><a href="./data.html">the <code>Data</code> trait</a></strong>: How you represent your application model.</li>
-<li><strong><a href="./widget.html">the <code>Widget</code> trait</a></strong>: How you represent your UI.</li>
-<li><strong><a href="./lens.html">the <code>Lens</code> trait</a></strong>: How you associate parts of your model with parts of
+<li><strong><a href="./03_data.html">the <code>Data</code> trait</a></strong>: How you represent your application model.</li>
+<li><strong><a href="./04_widget.html">the <code>Widget</code> trait</a></strong>: How you represent your UI.</li>
+<li><strong><a href="./05_lens.html">the <code>Lens</code> trait</a></strong>: How you associate parts of your model with parts of
 your UI.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="get-started-with-druid"><a class="header" href="#get-started-with-druid">Get started with Druid</a></h1>
@@ -569,12 +569,12 @@ built-in widgets, and you can also write your own. You combine the built-in
 and custom widgets to create a <em>widget tree</em>; you will start with some single
 <em>root widget</em>, which will (generally) have children, which may themselves have
 children, and so on. <code>Widget</code> has a generic parameter <code>T</code> that represents
-the <a href="./data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
+the <a href="./03_data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
 may be entirely agnostic about what sort of <code>Data</code> they encounter, while other
 widgets (such as a slider) may expect a single type (such as <code>f64</code>).</p>
 <blockquote>
-<p><strong>Note</strong>: For more information on how different parts of your <a href="./data.html"><code>Data</code></a> are exposed
-to different widgets, see <a href="./lens.html"><code>Lens</code></a>.</p>
+<p><strong>Note</strong>: For more information on how different parts of your <a href="./03_data.html"><code>Data</code></a> are exposed
+to different widgets, see <a href="./05_lens.html"><code>Lens</code></a>.</p>
 </blockquote>
 <p>At a high level, Druid works like this:</p>
 <ul>
@@ -605,7 +605,7 @@ called in response to various changes to framework state; it is not called
 predictably during event handling, but only when extra information (such
 as if a widget has gained focus) happens as a consequence of other events.</li>
 </ul>
-<p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
+<p>For more information on implementing these methods, see <a href="./08_widgets_in_depth.html">Creating custom
 widgets</a>.</p>
 <h2 id="modularity-and-composition"><a class="header" href="#modularity-and-composition">Modularity and composition</a></h2>
 <p>Widgets are intended to be modular and composable, not monolithic. For instance,
@@ -993,10 +993,10 @@ based on the display that the window is currently located on.</p>
 will eventually need to create and use custom <code>Widget</code>s.</p>
 <h2 id="painter-and-controller"><a class="header" href="#painter-and-controller"><code>Painter</code> and <code>Controller</code></a></h2>
 <p>There are two helper widgets in Druid that let you customize widget behaviour
-without needing to implement the full widget trait: <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Painter.html"><code>Painter</code></a> and
-<a href="https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
+without needing to implement the full widget trait: <a href="https://docs.rs/druid/latest/druid/widget/struct.Painter.html"><code>Painter</code></a> and
+<a href="https://docs.rs/druid/latest/druid/widget/trait.Controller.html"><code>Controller</code></a>.</p>
 <h3 id="painter"><a class="header" href="#painter">Painter</a></h3>
-<p>The <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
+<p>The <a href="https://docs.rs/druid/latest/druid/widget/struct.Painter.html"><code>Painter</code></a> widget lets you draw arbitrary custom content, but cannot
 respond to events or otherwise contain update logic. Its general use is to
 either provide a custom background to some other widget, or to implement
 something like an icon or another graphical element that will be contained in
@@ -1013,12 +1013,12 @@ with rounded corners, we could use a <code>Painter</code>:</p>
 }</code></pre>
 <p><code>Painter</code> uses all the space that is available to it; if you want to give it a
 set size, you must pass it explicit constraints, such as by wrapping it in a
-<a href="https://docs.rs/druid/0.8.3/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
+<a href="https://docs.rs/druid/latest/druid/widget/struct.SizedBox.html"><code>SizedBox</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn sized_swatch() -&gt; impl Widget&lt;Color&gt; {
     SizedBox::new(make_color_swatch()).width(20.0).height(20.0)
 }</code></pre>
 <p>One other useful thing about <code>Painter</code> is that it can be used as the background
-of a <a href="https://docs.rs/druid/0.8.3/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
+of a <a href="https://docs.rs/druid/latest/druid/widget/struct.Container.html"><code>Container</code></a> widget. If we wanted to have a label that used our swatch
 as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
@@ -1027,16 +1027,16 @@ as a background, we could do:</p>
     })
     .background(make_color_swatch())
 }</code></pre>
-<p>(This uses the <a href="https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
+<p>(This uses the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#background"><code>background</code></a> method on <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html"><code>WidgetExt</code></a> to embed our label in a
 container.)</p>
 <h3 id="controller"><a class="header" href="#controller">Controller</a></h3>
-<p>The <a href="https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
+<p>The <a href="https://docs.rs/druid/latest/druid/widget/trait.Controller.html"><code>Controller</code></a> trait is sort of the inverse of <code>Painter</code>; it is a way to
 make widgets that handle events, but don't do any layout or drawing. The idea
 here is that you can use some <code>Controller</code> type to customize the behaviour of
 some set of children.</p>
-<p>The <a href="https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
-like <a href="./widget.html"><code>Widget</code></a>; it does not have <code>paint</code> or <code>layout</code> methods. Also unlike
-<a href="./widget.html"><code>Widget</code></a>, all of its methods are optional; you can override only the method
+<p>The <a href="https://docs.rs/druid/latest/druid/widget/trait.Controller.html"><code>Controller</code></a> trait has <code>event</code>, <code>update</code>, and <code>lifecycle</code> methods, just
+like <a href="./04_widget.html"><code>Widget</code></a>; it does not have <code>paint</code> or <code>layout</code> methods. Also unlike
+<a href="./04_widget.html"><code>Widget</code></a>, all of its methods are optional; you can override only the method
 that you need.</p>
 <p>There's one other difference to the <code>Controller</code> methods; it is explicitly
 passed a mutable reference to its child in each method, so that it can modify it

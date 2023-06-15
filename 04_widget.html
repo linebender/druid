@@ -150,12 +150,12 @@ built-in widgets, and you can also write your own. You combine the built-in
 and custom widgets to create a <em>widget tree</em>; you will start with some single
 <em>root widget</em>, which will (generally) have children, which may themselves have
 children, and so on. <code>Widget</code> has a generic parameter <code>T</code> that represents
-the <a href="./data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
+the <a href="./03_data.html"><code>Data</code></a> handled by that widget. Some widgets (such as layout widgets)
 may be entirely agnostic about what sort of <code>Data</code> they encounter, while other
 widgets (such as a slider) may expect a single type (such as <code>f64</code>).</p>
 <blockquote>
-<p><strong>Note</strong>: For more information on how different parts of your <a href="./data.html"><code>Data</code></a> are exposed
-to different widgets, see <a href="./lens.html"><code>Lens</code></a>.</p>
+<p><strong>Note</strong>: For more information on how different parts of your <a href="./03_data.html"><code>Data</code></a> are exposed
+to different widgets, see <a href="./05_lens.html"><code>Lens</code></a>.</p>
 </blockquote>
 <p>At a high level, Druid works like this:</p>
 <ul>
@@ -186,7 +186,7 @@ called in response to various changes to framework state; it is not called
 predictably during event handling, but only when extra information (such
 as if a widget has gained focus) happens as a consequence of other events.</li>
 </ul>
-<p>For more information on implementing these methods, see <a href="./custom_widgets.html">Creating custom
+<p>For more information on implementing these methods, see <a href="./08_widgets_in_depth.html">Creating custom
 widgets</a>.</p>
 <h2 id="modularity-and-composition"><a class="header" href="#modularity-and-composition">Modularity and composition</a></h2>
 <p>Widgets are intended to be modular and composable, not monolithic. For instance,
