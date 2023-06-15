@@ -93,8 +93,8 @@ a stack of three labels, you can do:
 {{#include ../book_examples/src/widget_md.rs:flex_builder}}
 ```
 
-[`Data`]: ./data.md
-[`Lens`]: ./lens.md
+[`Data`]: ./03_data.md
+[`Lens`]: ./05_lens.md
 [box layout model]: https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html
-[Creating custom widgets]: ./custom_widgets.md
+[Creating custom widgets]: ./08_widgets_in_depth.md
 [builder pattern]: https://doc.rust-lang.org/1.0.0/style/ownership/builders.html

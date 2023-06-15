@@ -37,6 +37,6 @@ released version of Druid (v0.8).
 [Flutter]: https://flutter.dev
 [Jetpack Compose]: https://developer.android.com/jetpack/compose
 [SwiftUI]: https://developer.apple.com/documentation/swiftui
-[the `Data` trait]: ./data.md
-[the `Widget` trait]: ./widget.md
-[the `Lens` trait]: ./lens.md
+[the `Data` trait]: ./03_data.md
+[the `Widget` trait]: ./04_widget.md
+[the `Lens` trait]: ./05_lens.md

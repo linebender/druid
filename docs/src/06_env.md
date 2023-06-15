@@ -82,7 +82,6 @@ calling its [`resolve`] method.
 [`Value`]: https://docs.rs/druid/latest/druid/enum.Value.html
 [`LocalizedString`]: https://docs.rs/druid/latest/druid/struct.LocalizedString.html
 [`resolve`]: https://docs.rs/druid/latest/druid/struct.LocalizedString.html#method.resolve
-[localization]: ./localization.md
 [reverse-DNS]: https://en.wikipedia.org/wiki/Reverse_domain_name_notation
 [`AppLauncher::configure_env`]: https://docs.rs/druid/latest/druid/struct.AppLauncher.html#method.configure_env
 [`KeyOrValue`]: https://docs.rs/druid/latest/druid/enum.KeyOrValue.html
