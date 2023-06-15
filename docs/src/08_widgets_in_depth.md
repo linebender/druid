@@ -66,10 +66,10 @@ textbox fire some action (say doing a search) 300ms after the last keypress:
 {{#include ../book_examples/src/custom_widgets_md.rs:annoying_textbox}}
 ```
 
-[`Controller`]: https://docs.rs/druid/0.8.3/druid/widget/trait.Controller.html
-[`Widget`]: ./widget.md
-[`Painter`]: https://docs.rs/druid/0.8.3/druid/widget/struct.Painter.html
-[`SizedBox`]: https://docs.rs/druid/0.8.3/druid/widget/struct.SizedBox.html
-[`Container`]: https://docs.rs/druid/0.8.3/druid/widget/struct.Container.html
-[`WidgetExt`]: https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html
-[`background`]: https://docs.rs/druid/0.8.3/druid/trait.WidgetExt.html#background
+[`Controller`]: https://docs.rs/druid/latest/druid/widget/trait.Controller.html
+[`Widget`]: ./04_widget.md
+[`Painter`]: https://docs.rs/druid/latest/druid/widget/struct.Painter.html
+[`SizedBox`]: https://docs.rs/druid/latest/druid/widget/struct.SizedBox.html
+[`Container`]: https://docs.rs/druid/latest/druid/widget/struct.Container.html
+[`WidgetExt`]: https://docs.rs/druid/latest/druid/trait.WidgetExt.html
+[`background`]: https://docs.rs/druid/latest/druid/trait.WidgetExt.html#background
