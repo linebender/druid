@@ -197,20 +197,44 @@ impl<T: Data> Widget<T> for Image {
     ) -> Size {
         bc.debug_check("Image");
 
-        // If either the width or height is constrained calculate a value so that the image fits
-        // in the size exactly. If it is unconstrained by both width and height take the size of
-        // the image.
+        // Let the fill strat determine the size of the widget as a function of the bc.max()
+        // and the original image size. But catch cases were they would return INFINITY
+        // and try to make a sensible area as a function of the fill strat.
         let max = bc.max();
         let image_size = self.image_size();
-        let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
-            let ratio = max.width / image_size.width;
-            Size::new(max.width, ratio * image_size.height)
-        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
-            let ratio = max.height / image_size.height;
-            Size::new(ratio * image_size.width, max.height)
-        } else {
-            bc.constrain(image_size)
-        };
+        let mut max_width = bc.max().width;
+        let mut max_height = bc.max().height;
+        let mut fill_strat = self.fill;
+        if max_width == f64::INFINITY && max_height == f64::INFINITY {
+            // If we are in a scroll box for width and height then fall back to
+            // original image size
+            max_height = image_size.height;
+            max_width = image_size.width;
+        } else if max_width == f64::INFINITY || max_height == f64::INFINITY {
+            // If we are in a scroll box for width or heigh but not both
+            // then give self.fill a box the size of the scroll box and let it decide how to
+            // fill it. Unless that would result in requesting INFINITY in which case fall back
+            // to contain.
+            fill_strat = match fill_strat {
+                FillStrat::FitWidth if max_width == f64::INFINITY => FillStrat::Contain,
+                FillStrat::FitHeight if max_height == f64::INFINITY => FillStrat::Contain,
+                FillStrat::Cover | FillStrat::Fill => FillStrat::Contain,
+                _ => fill_strat,
+            }
+        }
+        let affine = fill_strat
+            .affine_to_fill(Size::new(max_width, max_height), image_size)
+            .as_coeffs();
+        // The first and forth elements of the affine are the x and y scale factor.
+        // So just multiply them by the original size to get the ideal area based on `self.fill`.
+        let mut width = affine[0] * image_size.width;
+        let mut height = affine[3] * image_size.height;
+        // We are using the image scale properties so if one dimension
+        // would be over scaled to keep AR fixed then we just clip back to the `bc.max()`
+        width = width.min(max.width);
+        height = height.min(max.height);
+
+        let size = Size::new(width, height);
         trace!("Computed size: {}", size);
         size
     }
@@ -367,20 +391,18 @@ mod tests {
 
                 // A middle row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
                     vec![255, 255, 255, 255].repeat(200),
                     vec![0, 0, 0, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    vec![41, 41, 41, 255].repeat(200),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[199 * 600 * 4..200 * 600 * 4], expecting[..]);
 
                 // The final row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
                     vec![0, 0, 0, 255].repeat(200),
                     vec![255, 255, 255, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    vec![41, 41, 41, 255].repeat(200),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[399 * 600 * 4..400 * 600 * 4], expecting[..]);
@@ -438,8 +460,10 @@ mod tests {
             2,
         );
 
-        let image_widget =
-            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).vertical();
+        let image_widget = Scroll::new(
+            Container::new(Image::new(image_data).fill_mode(FillStrat::Fill)).with_id(id_1),
+        )
+        .vertical();
 
         Harness::create_simple(true, image_widget, |harness| {
             harness.send_initial_events();
@@ -466,8 +490,10 @@ mod tests {
             2,
         );
 
-        let image_widget =
-            Scroll::new(Container::new(Image::new(image_data)).with_id(id_1)).horizontal();
+        let image_widget = Scroll::new(
+            Container::new(Image::new(image_data).fill_mode(FillStrat::Fill)).with_id(id_1),
+        )
+        .horizontal();
 
         Harness::create_simple(true, image_widget, |harness| {
             harness.send_initial_events();
