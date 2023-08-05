@@ -88,7 +88,7 @@ impl CalcState {
             }
             '.' => {
                 if !self.in_num {
-                    self.value = "0".to_string();
+                    self.value.push('.');
                     self.in_num = true;
                 }
                 if self.value.find('.').is_none() {
