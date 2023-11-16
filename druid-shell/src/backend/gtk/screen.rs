@@ -17,6 +17,7 @@
 use crate::kurbo::{Point, Rect, Size};
 use crate::screen::Monitor;
 use gtk::gdk::{Display, DisplayManager, Rectangle};
+use gtk_rs::prelude::MonitorExt as _;
 
 fn translate_gdk_rectangle(r: Rectangle) -> Rect {
     Rect::from_origin_size(
