@@ -132,12 +132,12 @@ impl SvgData {
     pub fn empty() -> Self {
         use std::str::FromStr;
 
-        let empty_svg = r###"
+        let empty_svg = r#"
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                 <g fill="none">
                 </g>
             </svg>
-        "###;
+        "#;
 
         SvgData::from_str(empty_svg).unwrap()
     }
