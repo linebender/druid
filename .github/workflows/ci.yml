@@ -1,111 +1,87 @@
+env:
+  # We aim to always test with the latest stable Rust toolchain, however we pin to a specific
+  # version like 1.70. Note that we only specify MAJOR.MINOR and not PATCH so that bugfixes still
+  # come automatically. If the version specified here is no longer the latest stable version,
+  # then please feel free to submit a PR that adjusts it along with the potential clippy fixes.
+  RUST_STABLE_VER: "1.76" # In quotes because otherwise 1.70 would be interpreted as 1.7
+
+name: CI
+
 on:
-  push:
-    branches:
-      - master
   pull_request:
+  merge_group:
 
 jobs:
   rustfmt:
     runs-on: ubuntu-latest
     name: cargo fmt
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          profile: minimal
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: rustfmt
-          override: true
 
       - name: cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all --check
 
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     name: cargo clippy+test
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: install linux dependencies
+      - name: install additional linux dependencies
         run: |
           sudo apt update
           sudo apt install libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=x11,image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=x11,image,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
         # there's no platform specific code here so we only run once
         if: contains(matrix.os, 'mac')
 
       - name: cargo clippy book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
         if: contains(matrix.os, 'mac')
 
       # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; we run them in a parallel task
       # there are no gtk-specific doctests in the main druid crate anyway
       - name: cargo test druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11
+        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11
 
       - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-derive/Cargo.toml
+        run: cargo test --manifest-path=druid-derive/Cargo.toml
         if: contains(matrix.os, 'mac')
 
       - name: cargo test book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
+        run: cargo test --manifest-path=docs/book_examples/Cargo.toml
         if: contains(matrix.os, 'mac')
 
   # we test the wayland backend as a separate job 
@@ -113,43 +89,32 @@ jobs:
     runs-on: ubuntu-latest
     name: cargo clippy+test (wayland)
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: install wayland
+      - name: install additional wayland dependencies
         run: |
           sudo apt update
           sudo apt install libwayland-dev libpango1.0-dev libxkbcommon-dev
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=wayland,image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=wayland,image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no wayland-specific
       # doctests in the main druid crate anyway
       - name: cargo test druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=wayland,svg,image,im,raw-win-handle
+        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=wayland,svg,image,im,raw-win-handle
 
   # we test the gtk backend as a separate job because gtk install takes
   # a long time.
@@ -157,49 +122,38 @@ jobs:
     runs-on: ubuntu-latest
     name: cargo clippy+test (gtk)
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: install libgtk-3-dev
+      - name: install additional gtk dependencies
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no gtk-specific
       # doctests in the main druid crate anyway
       - name: cargo test druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle
+        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle
 
   test-stable-wasm:
     runs-on: macOS-latest
     name: cargo test (wasm32)
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: install wasm-pack
         uses: jetli/wasm-pack-action@v0.3.0
@@ -207,45 +161,31 @@ jobs:
           version: latest
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
+          targets: wasm32-unknown-unknown
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell (wasm)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
       - name: cargo test compile druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
 
       # We use --all-targets to skip doc tests; there are no wasm-specific
       # doctests in the main druid crate anyway
       - name: cargo test compile druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          # TODO: Add svg feature when it's no longer broken with wasm
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=image,im --no-run --target wasm32-unknown-unknown
+        # TODO: Add svg feature when it's no longer broken with wasm
+        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --features=image,im --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
 
       ## build the special druid-web-examples package.
       - name: wasm-pack build examples
@@ -259,201 +199,81 @@ jobs:
     runs-on: macOS-latest
     name: druid doctests
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: restore cache
-        uses: Swatinem/rust-cache@v1
-
-      - name: cargo test druid --doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --doc --no-default-features --features=svg,image,im,raw-win-handle
-
-  # This tests the future rust compiler to catch errors ahead of time without
-  # breaking CI
-  # We only run on a single OS to save time; this might let some errors go
-  # undetected until the compiler updates and they break CI; but that should
-  # happen rarely, and not pose too much of a problem when it does.
-  test-beta:
-    runs-on: macOS-latest
-    name: cargo clippy+test beta
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: install beta toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: beta
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
-
-      # Clippy packages in deeper-to-higher dependency order
-      - name: cargo clippy druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
-        continue-on-error: true
-
-      - name: cargo clippy druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle -- -D warnings
-        continue-on-error: true
-
-      # Test packages in deeper-to-higher dependency order
-      - name: cargo test druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image
-        continue-on-error: true
-
-      # We use --all-targets to skip doc tests, which are run in doctest-stable
-      - name: cargo test druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11
-        continue-on-error: true
-
-      - name: cargo test druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid-derive/Cargo.toml
-        continue-on-error: true
-
-      - name: cargo test book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=docs/book_examples/Cargo.toml
-        continue-on-error: true
-
-  doctest-beta:
-    runs-on: macOS-latest
-    name: druid doctests beta
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: install beta toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: beta
-          profile: minimal
-          override: true
-
-      - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: cargo test druid --doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=druid/Cargo.toml --doc --features=svg,image,im,raw-win-handle
-
+        run: cargo test --manifest-path=druid/Cargo.toml --doc --no-default-features --features=svg,image,im,raw-win-handle
 
   check-docs:
     name: Docs
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: install linux dependencies
+      - name: install additional linux dependencies
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev libwayland-dev libpango1.0-dev libxkbcommon-dev libxkbcommon-x11-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       # Doc packages in deeper-to-higher dependency order
       - name: cargo doc druid-shell
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid/Cargo.toml --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid/Cargo.toml --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid-derive
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-derive/Cargo.toml --no-deps --document-private-items
+        run: cargo doc --manifest-path=druid-derive/Cargo.toml --no-deps --document-private-items
 
       - name: cargo doc book examples
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=docs/book_examples/Cargo.toml --no-deps --document-private-items
+        run: cargo doc --manifest-path=docs/book_examples/Cargo.toml --no-deps --document-private-items
 
       # On Linux also attempt docs for X11.
       - name: cargo doc druid-shell (X11)
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
       # On Linux also attempt docs for Wayland.
       - name: cargo doc druid-shell (Wayland)
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
     runs-on: ubuntu-latest
     name: mdbook build
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          components: clippy
 
       - name: restore cache
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: install mdbook
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --vers "^0.4" mdbook
+        run: cargo install --vers "^0.4" mdbook
 
       - name: mdbook build
         run: mdbook build

@@ -462,7 +462,7 @@ impl Data {
 
     fn current_window_id(&self) -> u64 {
         static DEFAULT: u64 = 0_u64;
-        *self.active_surface_id.borrow().get(0).unwrap_or(&DEFAULT)
+        *self.active_surface_id.borrow().front().unwrap_or(&DEFAULT)
     }
 
     pub(super) fn acquire_current_window(&self) -> Option<WindowHandle> {

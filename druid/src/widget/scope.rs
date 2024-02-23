@@ -117,8 +117,8 @@ impl<L: Lens<State, In>, In, State> LensScopeTransfer<L, In, State> {
     pub fn new(lens: L) -> Self {
         LensScopeTransfer {
             lens,
-            phantom_in: PhantomData::default(),
-            phantom_state: PhantomData::default(),
+            phantom_in: PhantomData,
+            phantom_state: PhantomData,
         }
     }
 }

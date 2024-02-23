@@ -309,6 +309,8 @@ struct DxgiState {
 }
 
 #[derive(Clone, PartialEq, Eq)]
+// TODO: Convert this from Arc to Rc when doing a breaking release
+#[allow(clippy::arc_with_non_send_sync)]
 pub struct CustomCursor(Arc<HCursor>);
 
 #[derive(PartialEq, Eq)]
@@ -1076,7 +1078,7 @@ impl WndProc for MyWndProc {
                             // When maximized, windows still adds offsets for the frame
                             // so we counteract them here.
                             let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
-                            if let Some(mut s) = s.as_mut() {
+                            if let Some(s) = s.as_mut() {
                                 let border = self.get_system_metric(SM_CXPADDEDBORDER);
                                 let frame = self.get_system_metric(SM_CYSIZEFRAME);
                                 s.rgrc[0].top += border + frame;
@@ -2435,6 +2437,8 @@ impl WindowHandle {
                 };
                 let icon = CreateIconIndirect(&mut icon_info);
 
+                // TODO: Convert this from Arc to Rc when doing a breaking release
+                #[allow(clippy::arc_with_non_send_sync)]
                 Some(Cursor::Custom(CustomCursor(Arc::new(HCursor(icon)))))
             }
         } else {

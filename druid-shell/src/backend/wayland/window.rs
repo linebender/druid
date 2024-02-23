@@ -424,7 +424,7 @@ impl WindowBuilder {
     }
 
     pub fn build(self) -> Result<WindowHandle, ShellError> {
-        if matches!(self.menu, Some(_)) {
+        if self.menu.is_some() {
             tracing::warn!("menus unimplemented for wayland");
         }
 
@@ -552,7 +552,7 @@ pub mod layershell {
 
             let handle = WindowHandle::new(
                 surface.clone(),
-                surfaces::surface::Dead::default(),
+                surfaces::surface::Dead,
                 surface.clone(),
                 surface.clone(),
                 self.appdata.clone(),
@@ -622,7 +622,7 @@ pub mod popup {
 
         let handle = WindowHandle::new(
             surface.clone(),
-            surfaces::surface::Dead::default(),
+            surfaces::surface::Dead,
             surface.clone(),
             surface.clone(),
             wappdata,

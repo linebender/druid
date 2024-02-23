@@ -20,7 +20,6 @@ use crate::win_handler::AppState;
 use crate::{Data, Point, Widget, WidgetExt, WidgetId, WidgetPod, WindowHandle, WindowId};
 use druid_shell::Error;
 use std::any::Any;
-use std::ops::Deref;
 use tracing::{instrument, warn};
 // We can't have any type arguments here, as both ends would need to know them
 // ahead of time in order to instantiate correctly.
@@ -70,7 +69,7 @@ impl SubWindowDesc {
         app_state: &mut AppState<T>,
     ) -> Result<WindowHandle, Error> {
         let sub_window_root = self.sub_window_root;
-        let pending = PendingWindow::new(sub_window_root.lens(Unit::default()));
+        let pending = PendingWindow::new(sub_window_root.lens(Unit));
         app_state.build_native_window(self.window_id, pending, self.window_config)
     }
 }
@@ -107,7 +106,7 @@ impl<U: Data, W: Widget<U>> Widget<()> for SubWindowHost<U, W> {
                 let update = cmd.get_unchecked(SUB_WINDOW_PARENT_TO_HOST);
                 if let Some(data_update) = &update.data {
                     if let Some(dc) = data_update.downcast_ref::<U>() {
-                        self.data = dc.deref().clone();
+                        self.data = dc.clone();
                         ctx.request_update();
                     } else {
                         warn!("Received a sub window parent to host command that could not be unwrapped. \

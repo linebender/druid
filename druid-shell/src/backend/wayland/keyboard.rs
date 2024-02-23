@@ -384,7 +384,6 @@ impl Manager {
                         if let Some(windata) = winhandle.data() {
                             windata.with_handler({
                                 let windata = windata.clone();
-                                let evt = evt;
                                 move |handler| match evt.state {
                                     KeyState::Up => {
                                         handler.key_up(evt.clone());
