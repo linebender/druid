@@ -270,8 +270,7 @@ impl State {
             }
             // add 1 because we will get a null-terminated string.
             let len = usize::try_from(len).unwrap() + 1;
-            let mut buf: Vec<u8> = Vec::new();
-            buf.resize(len, 0);
+            let mut buf: Vec<u8> = vec![0; len];
             xkb_state_key_get_utf8(self.state, scancode, buf.as_mut_ptr() as *mut c_char, len);
             assert!(buf[buf.len() - 1] == 0);
             buf.pop();

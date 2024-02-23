@@ -14,6 +14,9 @@
 
 //! wayland platform support
 
+// TODO: Remove this and fix the non-Send/Sync Arc issues
+#![allow(clippy::arc_with_non_send_sync)]
+
 pub mod application;
 pub mod clipboard;
 mod display;
