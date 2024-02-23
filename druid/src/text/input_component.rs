@@ -951,6 +951,8 @@ impl<T> Default for TextComponent<T> {
 
         TextComponent {
             edit_session: Arc::new(RefCell::new(inner)),
+            // TODO: Figure out if this needs to stay Arc, or if it can be switched to Rc
+            #[allow(clippy::arc_with_non_send_sync)]
             lock: Arc::new(Cell::new(ImeLock::None)),
             has_focus: false,
         }

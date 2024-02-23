@@ -318,15 +318,12 @@ mod tests {
                 // the padding color and the middle rows will not have any padding.
 
                 // Check that the middle row 400 pix wide is 200 black then 200 white.
-                let expecting: Vec<u8> = [
-                    vec![0, 0, 0, 255].repeat(200),
-                    vec![255, 255, 255, 255].repeat(200),
-                ]
-                .concat();
+                let expecting: Vec<u8> =
+                    [[0, 0, 0, 255].repeat(200), [255, 255, 255, 255].repeat(200)].concat();
                 assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
 
                 // Check that all of the last 100 rows are all the background color.
-                let expecting: Vec<u8> = vec![41, 41, 41, 255].repeat(400 * 100);
+                let expecting: Vec<u8> = [41, 41, 41, 255].repeat(400 * 100);
                 assert_eq!(
                     raw_pixels[400 * 600 * 4 - 4 * 400 * 100..400 * 600 * 4],
                     expecting[..]
@@ -367,20 +364,20 @@ mod tests {
 
                 // A middle row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
-                    vec![255, 255, 255, 255].repeat(200),
-                    vec![0, 0, 0, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    [41, 41, 41, 255].repeat(100),
+                    [255, 255, 255, 255].repeat(200),
+                    [0, 0, 0, 255].repeat(200),
+                    [41, 41, 41, 255].repeat(100),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[199 * 600 * 4..200 * 600 * 4], expecting[..]);
 
                 // The final row of 600 pixels is 100 padding 200 black, 200 white and then 100 padding.
                 let expecting: Vec<u8> = [
-                    vec![41, 41, 41, 255].repeat(100),
-                    vec![0, 0, 0, 255].repeat(200),
-                    vec![255, 255, 255, 255].repeat(200),
-                    vec![41, 41, 41, 255].repeat(100),
+                    [41, 41, 41, 255].repeat(100),
+                    [0, 0, 0, 255].repeat(200),
+                    [255, 255, 255, 255].repeat(200),
+                    [41, 41, 41, 255].repeat(100),
                 ]
                 .concat();
                 assert_eq!(raw_pixels[399 * 600 * 4..400 * 600 * 4], expecting[..]);

@@ -153,6 +153,8 @@ impl std::str::FromStr for SvgData {
         };
 
         match Tree::from_str(svg_str, &re_opt.to_ref()) {
+            // TODO: Figure out if this needs to stay Arc, or if it can be switched to Rc
+            #[allow(clippy::arc_with_non_send_sync)]
             Ok(tree) => Ok(SvgData::new(Arc::new(tree))),
             Err(err) => Err(err.into()),
         }

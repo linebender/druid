@@ -44,6 +44,8 @@ impl RichText {
         RichText {
             buffer,
             attrs: Arc::new(attributes),
+            // TODO: Figure out if this needs to stay Arc, or if it can be switched to Rc
+            #[allow(clippy::arc_with_non_send_sync)]
             links: Arc::new([]),
         }
     }

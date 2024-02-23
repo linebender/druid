@@ -14,6 +14,9 @@
 
 //! An environment which is passed downward into the widget tree.
 
+// TODO: Figure out if Env really needs to stay Arc, or if it can be switched to Rc
+#![allow(clippy::arc_with_non_send_sync)]
+
 use std::any::{self, Any};
 use std::borrow::Borrow;
 use std::collections::{hash_map::Entry, HashMap};

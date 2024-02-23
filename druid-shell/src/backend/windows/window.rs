@@ -309,7 +309,7 @@ struct DxgiState {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct CustomCursor(Arc<HCursor>);
+pub struct CustomCursor(Rc<HCursor>);
 
 #[derive(PartialEq, Eq)]
 struct HCursor(HCURSOR);
@@ -1076,7 +1076,7 @@ impl WndProc for MyWndProc {
                             // When maximized, windows still adds offsets for the frame
                             // so we counteract them here.
                             let s: *mut NCCALCSIZE_PARAMS = lparam as *mut NCCALCSIZE_PARAMS;
-                            if let Some(mut s) = s.as_mut() {
+                            if let Some(s) = s.as_mut() {
                                 let border = self.get_system_metric(SM_CXPADDEDBORDER);
                                 let frame = self.get_system_metric(SM_CYSIZEFRAME);
                                 s.rgrc[0].top += border + frame;
@@ -2435,7 +2435,7 @@ impl WindowHandle {
                 };
                 let icon = CreateIconIndirect(&mut icon_info);
 
-                Some(Cursor::Custom(CustomCursor(Arc::new(HCursor(icon)))))
+                Some(Cursor::Custom(CustomCursor(Rc::new(HCursor(icon)))))
             }
         } else {
             None
