@@ -247,7 +247,7 @@ impl Clipboard {
 
     /// Get a string from the system clipboard, if one is available.
     pub fn get_string(&self) -> Option<String> {
-        vec![Clipboard::UTF8, Clipboard::TEXT, Clipboard::UTF8_STRING]
+        [Clipboard::UTF8, Clipboard::TEXT, Clipboard::UTF8_STRING]
             .iter()
             .find_map(
                 |mimetype| match std::str::from_utf8(&self.inner.receive(*mimetype)?) {
