@@ -309,7 +309,9 @@ struct DxgiState {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct CustomCursor(Rc<HCursor>);
+// TODO: Convert this from Arc to Rc when doing a breaking release
+#[allow(clippy::arc_with_non_send_sync)]
+pub struct CustomCursor(Arc<HCursor>);
 
 #[derive(PartialEq, Eq)]
 struct HCursor(HCURSOR);
@@ -2435,7 +2437,9 @@ impl WindowHandle {
                 };
                 let icon = CreateIconIndirect(&mut icon_info);
 
-                Some(Cursor::Custom(CustomCursor(Rc::new(HCursor(icon)))))
+                // TODO: Convert this from Arc to Rc when doing a breaking release
+                #[allow(clippy::arc_with_non_send_sync)]
+                Some(Cursor::Custom(CustomCursor(Arc::new(HCursor(icon)))))
             }
         } else {
             None
