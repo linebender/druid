@@ -318,8 +318,11 @@ mod tests {
                 // the padding color and the middle rows will not have any padding.
 
                 // Check that the middle row 400 pix wide is 200 black then 200 white.
-                let expecting: Vec<u8> =
-                    [[0, 0, 0, 255].repeat(200), [255, 255, 255, 255].repeat(200)].concat();
+                let expecting: Vec<u8> = [
+                    [0, 0, 0, 255].repeat(200),
+                    [255, 255, 255, 255].repeat(200),
+                ]
+                .concat();
                 assert_eq!(raw_pixels[400 * 300 * 4..400 * 301 * 4], expecting[..]);
 
                 // Check that all of the last 100 rows are all the background color.
