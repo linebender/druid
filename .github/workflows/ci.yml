@@ -27,6 +27,14 @@ jobs:
       - name: cargo fmt
         run: cargo fmt --all --check
 
+      - name: install ripgrep
+        run: |
+          sudo apt update
+          sudo apt install ripgrep
+
+      - name: check copyright headers
+        run: bash .github/copyright.sh
+
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
