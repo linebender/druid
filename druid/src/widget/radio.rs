@@ -164,12 +164,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         } else {
             env.get(theme::BORDER_DARK)
         };
-
-        ctx.stroke(circle, &border_color, 1.);
+        
+        ctx.stroke(circle, &border_color, 2.);
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), INNER_CIRCLE_RADIUS);
+            let inner_circle = Circle::new((size / 2., size / 2.), (size/3.0).ceil());
 
             let fill = if ctx.is_disabled() {
                 env.get(theme::DISABLED_TEXT_COLOR)
