@@ -128,7 +128,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         bc.debug_check("Radio");
 
         let label_size = self.child_label.layout(ctx, bc, data, env);
-        let radio_diam = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
+        let radio_diam = env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
         let desired_size = Size::new(
@@ -165,7 +165,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
             env.get(theme::BORDER_DARK)
         };
         
-        ctx.stroke(circle, &border_color, 2.);
+        ctx.stroke(circle, &border_color, 1.);
 
         // Check if data enum matches our variant
         if *data == self.variant {
