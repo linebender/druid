@@ -21,8 +21,8 @@ use crate::widget::{Axis, CrossAxisAlignment, Flex, Label};
 use crate::{theme, Data, LinearGradient, UnitPoint};
 use tracing::{instrument, trace};
 
-const DEFAULT_RADIO_RADIUS: f64 = 7.0;
-const INNER_CIRCLE_RADIUS: f64 = 2.0;
+//const DEFAULT_RADIO_RADIUS: f64 = 7.0;
+//const INNER_CIRCLE_RADIUS: f64 = 2.0;
 /// A group of radio buttons
 #[derive(Debug, Clone)]
 pub struct RadioGroup;
@@ -182,7 +182,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
 
         // Paint the text label
-        self.child_label.draw_at(ctx, (size + x_padding, 0.0));
+        self.child_label.draw_at(ctx, (size/2. + x_padding, 0.0));
     }
 
     fn debug_state(&self, data: &T) -> DebugState {
