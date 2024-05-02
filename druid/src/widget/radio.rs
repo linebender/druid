@@ -17,12 +17,12 @@
 use crate::debug_state::DebugState;
 use crate::kurbo::Circle;
 use crate::widget::prelude::*;
-use crate::widget::{Axis, CrossAxisAlignment, Flex, Label};
+use crate::widget::{Axis, CrossAxisAlignment, Flex, Label, LabelText};
 use crate::{theme, Data, LinearGradient, UnitPoint};
 use tracing::{instrument, trace};
 
-//const DEFAULT_RADIO_RADIUS: f64 = 7.0;
-//const INNER_CIRCLE_RADIUS: f64 = 2.0;
+const DEFAULT_RADIO_RADIUS: f64 = 7.0;
+const INNER_CIRCLE_RADIUS: f64 = 2.0;
 /// A group of radio buttons
 #[derive(Debug, Clone)]
 pub struct RadioGroup;
@@ -31,7 +31,7 @@ impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     /// along the vertical axis.
     pub fn column<T: Data + PartialEq>(
-        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
+        variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T, f64, f64)>,
     ) -> impl Widget<T> {
         RadioGroup::for_axis(Axis::Vertical, variants)
     }
@@ -39,7 +39,7 @@ impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     /// along the horizontal axis.
     pub fn row<T: Data + PartialEq>(
-        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
+        variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T, f64, f64)>,
     ) -> impl Widget<T> {
         RadioGroup::for_axis(Axis::Horizontal, variants)
     }
@@ -48,15 +48,15 @@ impl RadioGroup {
     /// along the specified axis.
     pub fn for_axis<T: Data + PartialEq>(
         axis: Axis,
-        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
+        variants: impl IntoIterator<Item = (impl Into<LabelText<T>> + 'static, T, f64, f64)>,
     ) -> impl Widget<T> {
         let mut col = Flex::for_axis(axis).cross_axis_alignment(CrossAxisAlignment::Start);
         let mut is_first = true;
-        for (label, variant, button_size) in variants.into_iter() {
+        for (label, variant, size, padding) in variants.into_iter() {
             if !is_first {
                 col.add_default_spacer();
             }
-            let radio = Radio::new(label, variant, button_size);
+            let radio = Radio::new(label, variant, size, padding);
             col.add_child(radio);
             is_first = false;
         }
@@ -68,16 +68,18 @@ impl RadioGroup {
 pub struct Radio<T> {
     variant: T,
     child_label: Label<T>,
-    button_size: f64,
+    size: f64,
+    padding: f64
 }
 
 impl<T: Data> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
-    pub fn new(label: Label<T>, variant: T, button_size: f64) -> Radio<T> {
+    pub fn new(label: impl Into<LabelText<T>>, variant: T, size: f64, padding: f64) -> Radio<T> {
         Radio {
             variant,
-            child_label: label,
-            button_size: button_size,
+            child_label: Label::new(label).with_text_size(size),
+            size: size,
+            padding: padding
         }
     }
 }
@@ -128,12 +130,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         bc.debug_check("Radio");
 
         let label_size = self.child_label.layout(ctx, bc, data, env);
-        let radio_diam = env.get(theme::BASIC_WIDGET_HEIGHT);
-        let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
+        let radio_height = self.size;//env.get(theme::BASIC_WIDGET_HEIGHT);
+        let x_padding = 3.;//env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
         let desired_size = Size::new(
-            label_size.width + radio_diam + x_padding,
-            label_size.height//radio_diam.max(label_size.height),
+            label_size.width + radio_height + x_padding,
+            radio_height//radio_diam.max(label_size.height),
         );
         let size = bc.constrain(desired_size);
         trace!("Computed size: {}", size);
@@ -142,11 +144,10 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
     #[instrument(name = "Radio", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size =  env.get(theme::BASIC_WIDGET_HEIGHT);
-        let radius = self.button_size;
-        let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
+        let size = self.size;//env.get(theme::BASIC_WIDGET_HEIGHT);
+        let x_padding = self.padding;//env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        let circle = Circle::new((size / 2., size / 2.), radius);
+        let circle = Circle::new((size / 2., size / 2.), size);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
@@ -165,12 +166,12 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         } else {
             env.get(theme::BORDER_DARK)
         };
-        
+
         ctx.stroke(circle, &border_color, 1.);
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), (radius/3.0).ceil());
+            let inner_circle = Circle::new((size / 2., size / 2.), size);
 
             let fill = if ctx.is_disabled() {
                 env.get(theme::DISABLED_TEXT_COLOR)
@@ -182,7 +183,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         }
 
         // Paint the text label
-        self.child_label.draw_at(ctx, (size/2. + x_padding, 0.0));
+        self.child_label.draw_at(ctx, (size + x_padding, 0.0));
     }
 
     fn debug_state(&self, data: &T) -> DebugState {
