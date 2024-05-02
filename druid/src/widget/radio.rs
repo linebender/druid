@@ -147,7 +147,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         let size = self.size;//env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = self.padding;//env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        let circle = Circle::new((size / 2., size / 2.), size);
+        let circle = Circle::new((size / 2., size / 2.), size/2.);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
@@ -171,7 +171,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), size);
+            let inner_circle = Circle::new((size / 2., size / 2.), (size/3.).ceil());
 
             let fill = if ctx.is_disabled() {
                 env.get(theme::DISABLED_TEXT_COLOR)
