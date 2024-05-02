@@ -17,7 +17,7 @@
 use crate::debug_state::DebugState;
 use crate::kurbo::Circle;
 use crate::widget::prelude::*;
-use crate::widget::{Axis, CrossAxisAlignment, Flex, SizedBox};
+use crate::widget::{Axis, CrossAxisAlignment, Flex, Label};
 use crate::{theme, Data, LinearGradient, UnitPoint};
 use tracing::{instrument, trace};
 
@@ -31,7 +31,7 @@ impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     /// along the vertical axis.
     pub fn column<T: Data + PartialEq>(
-        variants: impl IntoIterator<Item = (SizedBox<T>, T)>,
+        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
     ) -> impl Widget<T> {
         RadioGroup::for_axis(Axis::Vertical, variants)
     }
@@ -39,7 +39,7 @@ impl RadioGroup {
     /// Given a vector of `(label_text, enum_variant)` tuples, create a group of Radio buttons
     /// along the horizontal axis.
     pub fn row<T: Data + PartialEq>(
-        variants: impl IntoIterator<Item = (SizedBox<T>, T)>,
+        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
     ) -> impl Widget<T> {
         RadioGroup::for_axis(Axis::Horizontal, variants)
     }
@@ -48,15 +48,15 @@ impl RadioGroup {
     /// along the specified axis.
     pub fn for_axis<T: Data + PartialEq>(
         axis: Axis,
-        variants: impl IntoIterator<Item = (SizedBox<T>, T)>,
+        variants: impl IntoIterator<Item = (Label<T>, T, f64)>,
     ) -> impl Widget<T> {
         let mut col = Flex::for_axis(axis).cross_axis_alignment(CrossAxisAlignment::Start);
         let mut is_first = true;
-        for (label, variant) in variants.into_iter() {
+        for (label, variant, button_size) in variants.into_iter() {
             if !is_first {
                 col.add_default_spacer();
             }
-            let radio = Radio::new(label, variant);
+            let radio = Radio::new(label, variant, button_size);
             col.add_child(radio);
             is_first = false;
         }
@@ -67,15 +67,17 @@ impl RadioGroup {
 /// A single radio button
 pub struct Radio<T> {
     variant: T,
-    child_label: SizedBox<T>,
+    child_label: Label<T>,
+    button_size: f64,
 }
 
 impl<T: Data> Radio<T> {
     /// Create a lone Radio button from label text and an enum variant
-    pub fn new(label: SizedBox<T>, variant: T) -> Radio<T> {
+    pub fn new(label: Label<T>, variant: T, button_size: f64) -> Radio<T> {
         Radio {
             variant,
             child_label: label,
+            button_size: button_size,
         }
     }
 }
@@ -126,7 +128,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         bc.debug_check("Radio");
 
         let label_size = self.child_label.layout(ctx, bc, data, env);
-        let radio_diam = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let radio_diam = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
         let desired_size = Size::new(
@@ -140,7 +142,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
     #[instrument(name = "Radio", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size = env.get(theme::BASIC_WIDGET_HEIGHT);
+        let size = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
         let circle = Circle::new((size / 2., size / 2.), DEFAULT_RADIO_RADIUS);
