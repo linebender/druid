@@ -133,7 +133,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         let desired_size = Size::new(
             label_size.width + radio_diam + x_padding,
-            radio_diam.max(label_size.height),
+            label_size.height//radio_diam.max(label_size.height),
         );
         let size = bc.constrain(desired_size);
         trace!("Computed size: {}", size);
