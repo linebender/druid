@@ -127,13 +127,13 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         bc.debug_check("Radio");
 
-        //let label_size = self.child_label.layout(ctx, bc, data, env);
+        let label_size = self.child_label.layout(ctx, bc, data, env);
         let radio_diam = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
         let desired_size = Size::new(
-            /*label_size.width + */radio_diam + x_padding,
-            radio_diam.max(self.button_size/*label_size.height*/),
+            label_size.width + radio_diam + x_padding,
+            radio_diam.max(label_size.height),
         );
         let size = bc.constrain(desired_size);
         trace!("Computed size: {}", size);
@@ -145,7 +145,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
         let size = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        let circle = Circle::new((size / 2., size / 2.), /*DEFAULT_RADIO_RADIUS*/ size);
+        let circle = Circle::new((size / 2., size / 2.), size);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
