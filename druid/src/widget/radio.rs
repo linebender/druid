@@ -142,10 +142,11 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
     #[instrument(name = "Radio", level = "trace", skip(self, ctx, data, env))]
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let size = self.button_size; //env.get(theme::BASIC_WIDGET_HEIGHT);
+        let size =  env.get(theme::BASIC_WIDGET_HEIGHT);
+        let radius = self.button_size;
         let x_padding = env.get(theme::WIDGET_CONTROL_COMPONENT_PADDING);
 
-        let circle = Circle::new((size / 2., size / 2.), size);
+        let circle = Circle::new((size / 2., size / 2.), radius);
 
         // Paint the background
         let background_gradient = LinearGradient::new(
@@ -169,7 +170,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), (size/3.0).ceil());
+            let inner_circle = Circle::new((size / 2., size / 2.), (radius/3.0).ceil());
 
             let fill = if ctx.is_disabled() {
                 env.get(theme::DISABLED_TEXT_COLOR)
