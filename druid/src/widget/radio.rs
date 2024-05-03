@@ -21,8 +21,8 @@ use crate::widget::{Axis, CrossAxisAlignment, Flex, Label, LabelText};
 use crate::{theme, Data, LinearGradient, UnitPoint};
 use tracing::{instrument, trace};
 
-const DEFAULT_RADIO_RADIUS: f64 = 7.0;
-const INNER_CIRCLE_RADIUS: f64 = 2.0;
+//const DEFAULT_RADIO_RADIUS: f64 = 7.0;
+//const INNER_CIRCLE_RADIUS: f64 = 2.0;
 /// A group of radio buttons
 #[derive(Debug, Clone)]
 pub struct RadioGroup;
@@ -171,7 +171,7 @@ impl<T: Data + PartialEq> Widget<T> for Radio<T> {
 
         // Check if data enum matches our variant
         if *data == self.variant {
-            let inner_circle = Circle::new((size / 2., size / 2.), (size/3.).ceil());
+            let inner_circle = Circle::new((size / 2., size / 2.), (size/4.).ceil());
 
             let fill = if ctx.is_disabled() {
                 env.get(theme::DISABLED_TEXT_COLOR)
