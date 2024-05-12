@@ -76,7 +76,7 @@ anyhow = "1.0.69"
 keyboard-types = { version = "0.6.2", default-features = false }
 
 # Optional dependencies
-raw-window-handle = { version = "0.5.0", optional = true, default-features = false }
+raw-window-handle = { version = "0.6.0", optional = true, default-features = false }
 
 [target.'cfg(target_os="windows")'.dependencies]
 scopeguard = "1.1.0"

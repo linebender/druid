@@ -42,7 +42,7 @@ use x11rb::wrapper::ConnectionExt as _;
 use x11rb::xcb_ffi::XCBConnection;
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, XcbWindowHandle};
+use raw_window_handle::{HandleError, HasWindowHandle, RawWindowHandle, XcbWindowHandle};
 
 use crate::backend::shared::Timer;
 use crate::common_util::IdleCallback;
@@ -1903,12 +1903,14 @@ impl WindowHandle {
 }
 
 #[cfg(feature = "raw-win-handle")]
-unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        let mut handle = XcbWindowHandle::empty();
-        handle.window = self.id;
-        handle.visual_id = self.visual_id;
-        RawWindowHandle::Xcb(handle)
+impl HasWindowHandle for WindowHandle {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, HandleError> {
+        let mut handle = XcbWindowHandle::new(std::num::NonZeroU32::new(self.id).unwrap());
+        handle.visual_id = std::num::NonZeroU32::new(self.visual_id);
+
+        let handle =
+            unsafe { raw_window_handle::WindowHandle::borrow_raw(RawWindowHandle::Xcb(handle)) };
+        Ok(handle)
     }
 }
 

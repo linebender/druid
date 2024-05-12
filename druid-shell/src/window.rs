@@ -31,7 +31,7 @@ use crate::scale::Scale;
 use crate::text::{Event, InputHandler};
 use piet_common::PietText;
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{HandleError, HasWindowHandle};
 
 /// A token that uniquely identifies a running timer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -449,9 +449,9 @@ impl WindowHandle {
 }
 
 #[cfg(feature = "raw-win-handle")]
-unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        self.0.raw_window_handle()
+impl HasWindowHandle for WindowHandle {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, HandleError> {
+        self.0.window_handle()
     }
 }
 

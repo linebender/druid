@@ -24,7 +24,7 @@ use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
-use cairo::glib::{Propagation, ControlFlow};
+use cairo::glib::{ControlFlow, Propagation};
 use gtk::gdk_pixbuf::Colorspace::Rgb;
 use gtk::gdk_pixbuf::Pixbuf;
 use gtk::glib::translate::FromGlib;
@@ -44,7 +44,7 @@ use instant::Duration;
 use tracing::{error, warn};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, XcbWindowHandle};
+use raw_window_handle::{HandleError, HasWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -122,11 +122,10 @@ impl PartialEq for WindowHandle {
 impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
-unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        error!("HasRawWindowHandle trait not implemented for gtk.");
-        // GTK is not a platform, and there's no empty generic handle. Pick XCB randomly as fallback.
-        RawWindowHandle::Xcb(XcbWindowHandle::empty())
+impl HasWindowHandle for WindowHandle {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, HandleError> {
+        tracing::error!("HasRawWindowHandle trait not implemented for gtk.");
+        Err(HandleError::NotSupported)
     }
 }
 

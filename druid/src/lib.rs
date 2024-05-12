@@ -217,7 +217,7 @@ pub use shell::{
 };
 
 #[cfg(feature = "raw-win-handle")]
-pub use crate::shell::raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+pub use crate::shell::raw_window_handle::{self, HandleError, HasWindowHandle, RawWindowHandle};
 
 pub use crate::core::{WidgetPod, WidgetState};
 pub use app::{AppLauncher, WindowConfig, WindowDesc, WindowSizePolicy};

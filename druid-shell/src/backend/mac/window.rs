@@ -40,7 +40,7 @@ use once_cell::sync::Lazy;
 use tracing::{debug, error, info};
 
 #[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{AppKitWindowHandle, HasRawWindowHandle, RawWindowHandle};
+use raw_window_handle::{AppKitWindowHandle, HandleError, HasWindowHandle, RawWindowHandle};
 
 use crate::kurbo::{Insets, Point, Rect, Size, Vec2};
 use crate::piet::{Piet, PietText, RenderContext};
@@ -1464,12 +1464,14 @@ impl WindowHandle {
 }
 
 #[cfg(feature = "raw-win-handle")]
-unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
+impl HasWindowHandle for WindowHandle {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, HandleError> {
         let nsv = self.nsview.load();
-        let mut handle = AppKitWindowHandle::empty();
-        handle.ns_view = *nsv as *mut _;
-        RawWindowHandle::AppKit(handle)
+        let handle = AppKitWindowHandle::new(std::ptr::NonNull::from(&nsv).cast());
+
+        let handle =
+            unsafe { raw_window_handle::WindowHandle::borrow_raw(RawWindowHandle::AppKit(handle)) };
+        Ok(handle)
     }
 }
 

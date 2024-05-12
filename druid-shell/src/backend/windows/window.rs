@@ -47,9 +47,6 @@ use winapi::um::winuser::*;
 use winapi::Interface;
 use wio::com::ComPtr;
 
-#[cfg(feature = "raw-win-handle")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle, Win32WindowHandle};
-
 use piet_common::d2d::{D2DFactory, DeviceContext};
 use piet_common::dwrite::DwriteFactory;
 
@@ -187,20 +184,28 @@ impl PartialEq for WindowHandle {
 impl Eq for WindowHandle {}
 
 #[cfg(feature = "raw-win-handle")]
-unsafe impl HasRawWindowHandle for WindowHandle {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        if let Some(hwnd) = self.get_hwnd() {
-            let mut handle = Win32WindowHandle::empty();
-            handle.hwnd = hwnd as *mut core::ffi::c_void;
-            handle.hinstance = unsafe {
-                winapi::um::libloaderapi::GetModuleHandleW(0 as winapi::um::winnt::LPCWSTR)
-                    as *mut core::ffi::c_void
-            };
-            RawWindowHandle::Win32(handle)
-        } else {
-            error!("Cannot retrieved HWND for window.");
-            RawWindowHandle::Win32(Win32WindowHandle::empty())
-        }
+impl raw_window_handle::HasWindowHandle for WindowHandle {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        let hwnd = self
+            .get_hwnd()
+            .ok_or(raw_window_handle::HandleError::Unavailable)?;
+        let mut handle = raw_window_handle::Win32WindowHandle::new(unsafe {
+            std::num::NonZeroIsize::new_unchecked(hwnd as isize)
+        });
+        handle.hinstance = unsafe {
+            std::num::NonZeroIsize::new(winapi::um::libloaderapi::GetModuleHandleW(
+                0 as winapi::um::winnt::LPCWSTR,
+            ) as isize)
+        };
+        let handle = unsafe {
+            raw_window_handle::WindowHandle::borrow_raw(raw_window_handle::RawWindowHandle::Win32(
+                handle,
+            ))
+        };
+
+        Ok(handle)
     }
 }
 
