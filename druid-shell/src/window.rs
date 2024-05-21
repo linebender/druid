@@ -225,6 +225,11 @@ impl WindowHandle {
         self.0.set_always_on_top(always_on_top);
     }
 
+    /// Sets whether the mouse passes through the window to whatever is behind.
+    pub fn set_mouse_pass_through(&self, mouse_pass_through: bool) {
+        self.0.set_mouse_pass_through(mouse_pass_through);
+    }
+
     /// Sets where in the window the user can interact with the program.
     ///
     /// This enables irregularly shaped windows. For example, you can make it simply
