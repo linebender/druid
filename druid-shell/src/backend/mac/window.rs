@@ -1363,7 +1363,11 @@ impl WindowHandle {
     }
 
     pub fn is_foreground_window(&self) -> bool {
-        true
+        unsafe {
+            let application: id = msg_send![class![NSRunningApplication], currentApplication];
+            let is_active: BOOL = msg_send![application, isActive];
+            is_active != NO
+        }
     }
 
     pub fn get_window_state(&self) -> WindowState {
