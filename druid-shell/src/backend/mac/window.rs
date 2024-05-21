@@ -1362,6 +1362,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn get_window_state(&self) -> WindowState {
         unsafe {
             let window: id = msg_send![*self.nsview.load(), window];

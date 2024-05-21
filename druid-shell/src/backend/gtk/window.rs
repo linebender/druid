@@ -1056,6 +1056,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
         use window::WindowState::{Maximized, Minimized, Restored};
         let cur_size_state = self.get_window_state();

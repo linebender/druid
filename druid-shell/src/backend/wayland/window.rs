@@ -134,6 +134,10 @@ impl WindowHandle {
         self.inner.surface.get_size()
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn set_window_state(&mut self, _current_state: window::WindowState) {
         tracing::warn!("set_window_state is unimplemented on wayland");
     }

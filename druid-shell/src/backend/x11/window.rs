@@ -1718,6 +1718,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn set_window_state(&self, _state: window::WindowState) {
         warn!("WindowHandle::set_window_state is currently unimplemented for X11 backend.");
     }

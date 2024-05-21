@@ -528,6 +528,10 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn content_insets(&self) -> Insets {
         warn!("WindowHandle::content_insets unimplemented for web.");
         Insets::ZERO
