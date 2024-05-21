@@ -2285,6 +2285,14 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        let Some(w) = self.state.upgrade() else {
+            return true;
+        };
+        let hwnd = w.hwnd.get();
+        unsafe { GetForegroundWindow() == hwnd }
+    }
+
     pub fn set_input_region(&self, area: Option<Region>) {
         self.defer(DeferredOp::SetRegion(area));
     }

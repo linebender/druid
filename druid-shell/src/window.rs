@@ -249,6 +249,12 @@ impl WindowHandle {
         self.0.set_input_region(region)
     }
 
+    /// Returns true if the window is the foreground window or this is unknown.
+    /// Returns false if a different window is known to be the foreground window.
+    pub fn is_foreground_window(&self) -> bool {
+        self.0.is_foreground_window()
+    }
+
     /// Returns the position of the top left corner of the window.
     ///
     /// The position is returned in [display points], measured relative to the parent window if
