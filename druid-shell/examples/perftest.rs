@@ -1,20 +1,8 @@
-// Copyright 2018 The Druid Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018 the Druid Authors
+// SPDX-License-Identifier: Apache-2.0
 
 use std::any::Any;
-
-use time::Instant;
+use std::time::Instant;
 
 use piet_common::kurbo::{Line, Size};
 use piet_common::{Color, FontFamily, Piet, RenderContext, Text, TextLayoutBuilder};
@@ -53,7 +41,7 @@ impl WinHandler for PerfTest {
             1.0,
         );
 
-        let current_ns = (Instant::now() - self.start_time).whole_nanoseconds();
+        let current_ns = (Instant::now() - self.start_time).as_nanos();
         let th = ::std::f64::consts::PI * (current_ns as f64) * 2e-9;
         let dx = 100.0 * th.sin();
         let dy = 100.0 * th.cos();
@@ -64,7 +52,7 @@ impl WinHandler for PerfTest {
         );
 
         let now = Instant::now();
-        let msg = format!("{}ms", (now - self.last_time).whole_milliseconds());
+        let msg = format!("{}ms", (now - self.last_time).as_millis());
         self.last_time = now;
         let layout = piet
             .text()
@@ -142,8 +130,8 @@ fn main() {
     let perf_test = PerfTest {
         size: Size::ZERO,
         handle: Default::default(),
-        start_time: time::Instant::now(),
-        last_time: time::Instant::now(),
+        start_time: Instant::now(),
+        last_time: Instant::now(),
         red: true,
     };
     builder.set_handler(Box::new(perf_test));
