@@ -1675,6 +1675,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_mouse_pass_through(&self, _mouse_pass_thorugh: bool) {
+        warn!("set_mouse_pass_through unimplemented");
+    }
+
     pub fn set_input_region(&self, region: Option<Region>) {
         if let Some(w) = self.window.upgrade() {
             w.set_input_region(region);

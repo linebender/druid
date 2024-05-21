@@ -510,6 +510,10 @@ impl WindowHandle {
         warn!("WindowHandle::set_always_on_top unimplemented for web");
     }
 
+    pub fn set_mouse_pass_through(&self, _mouse_pass_thorugh: bool) {
+        warn!("WindowHandle::set_mouse_pass_through unimplemented for web");
+    }
+
     pub fn get_position(&self) -> Point {
         warn!("WindowHandle::get_position unimplemented for web.");
         Point::new(0.0, 0.0)

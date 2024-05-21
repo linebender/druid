@@ -1122,6 +1122,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_mouse_pass_through(&self, _mouse_pass_thorugh: bool) {
+        warn!("set_mouse_pass_through unimplemented");
+    }
+
     pub fn handle_titlebar(&self, val: bool) {
         if let Some(state) = self.state.upgrade() {
             state.handle_titlebar.set(val);
