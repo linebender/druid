@@ -1335,6 +1335,13 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_mouse_pass_through(&self, mouse_pass_through: bool) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            window.setIgnoresMouseEvents_(mouse_pass_through as BOOL);
+        }
+    }
+
     fn set_level(&self, level: WindowLevel) {
         unsafe {
             let level = levels::as_raw_window_level(level);
