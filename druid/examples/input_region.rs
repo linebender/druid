@@ -66,7 +66,10 @@ impl InputRegionExampleWidget {
         let toggle_mouse_pass_through_while_not_in_focus = Button::new("Toggle Mouse Pass Through")
             .on_click(|_, data: &mut bool, _: &Env| {
                 *data = !*data;
-                tracing::debug!("Setting mouse pass through while not in focus to: {}", *data);
+                tracing::debug!(
+                    "Setting mouse pass through while not in focus to: {}",
+                    *data
+                );
             })
             .lens(AppState::mouse_pass_through_while_not_in_focus);
         let controls_flex = Flex::row()
@@ -91,7 +94,8 @@ impl Widget<AppState> for InputRegionExampleWidget {
     ) {
         self.info_label.event(ctx, event, data, env);
         self.controls.event(ctx, event, data, env);
-        let mouse_pass_through = data.mouse_pass_through_while_not_in_focus && !ctx.window().is_foreground_window();
+        let mouse_pass_through =
+            data.mouse_pass_through_while_not_in_focus && !ctx.window().is_foreground_window();
         if mouse_pass_through != data.mouse_pass_through {
             data.mouse_pass_through = mouse_pass_through;
             tracing::debug!("Setting mouse pass through to: {}", mouse_pass_through);
