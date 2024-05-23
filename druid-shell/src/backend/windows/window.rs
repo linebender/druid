@@ -89,6 +89,7 @@ pub(crate) struct WindowBuilder {
     position: Option<Point>,
     level: Option<WindowLevel>,
     always_on_top: bool,
+    mouse_pass_through: bool,
     state: window::WindowState,
 }
 
@@ -156,6 +157,7 @@ enum DeferredOp {
     ReleaseMouseCapture,
     SetRegion(Option<Region>),
     SetAlwaysOnTop(bool),
+    SetMousePassThrough(bool),
 }
 
 #[derive(Clone, Debug)]
@@ -232,6 +234,7 @@ struct WindowState {
     is_focusable: bool,
     window_level: WindowLevel,
     is_always_on_top: Cell<bool>,
+    is_mouse_pass_through: Cell<bool>,
 }
 
 impl std::fmt::Debug for WindowState {
@@ -464,6 +467,38 @@ fn set_ex_style(hwnd: HWND, always_on_top: bool) {
     }
 }
 
+fn set_mouse_pass_through(hwnd: HWND, mouse_pass_through: bool) {
+    unsafe {
+        let mut style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        if style == 0 {
+            warn!(
+                "failed to get window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+            return;
+        }
+
+        if !mouse_pass_through {
+            // Not removing WS_EX_LAYERED because it may still be needed if Opacity != 1.
+            style &= !WS_EX_TRANSPARENT;
+        } else if (style & (WS_EX_LAYERED | WS_EX_TRANSPARENT))
+            != (WS_EX_LAYERED | WS_EX_TRANSPARENT)
+        {
+            // We have to add WS_EX_LAYERED, because WS_EX_TRANSPARENT won't work otherwise.
+            style |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
+        } else {
+            // nothing to do
+            return;
+        }
+        if SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style as _) == 0 {
+            warn!(
+                "failed to set the window ex style: {}",
+                Error::Hr(HRESULT_FROM_WIN32(GetLastError()))
+            );
+        }
+    }
+}
+
 impl WndState {
     fn rebuild_render_target(&mut self, d2d: &D2DFactory, scale: Scale) -> Result<(), Error> {
         unsafe {
@@ -646,6 +681,10 @@ impl MyWndProc {
                 DeferredOp::SetAlwaysOnTop(always_on_top) => {
                     self.with_window_state(|s| s.is_always_on_top.set(always_on_top));
                     set_ex_style(hwnd, always_on_top);
+                }
+                DeferredOp::SetMousePassThrough(mouse_pass_through) => {
+                    self.with_window_state(|s| s.is_mouse_pass_through.set(mouse_pass_through));
+                    set_mouse_pass_through(hwnd, mouse_pass_through);
                 }
                 DeferredOp::SetWindowState(val) => {
                     let show = if self.handle.borrow().is_focusable() {
@@ -1490,6 +1529,7 @@ impl WindowBuilder {
             position: None,
             level: None,
             always_on_top: false,
+            mouse_pass_through: false,
             state: window::WindowState::Restored,
         }
     }
@@ -1640,6 +1680,7 @@ impl WindowBuilder {
                 is_focusable: focusable,
                 window_level,
                 is_always_on_top: Cell::new(self.always_on_top),
+                is_mouse_pass_through: Cell::new(self.mouse_pass_through),
             };
             let win = Rc::new(window);
             let handle = WindowHandle {
@@ -2244,12 +2285,24 @@ impl WindowHandle {
         Size::new(0.0, 0.0)
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        let Some(w) = self.state.upgrade() else {
+            return true;
+        };
+        let hwnd = w.hwnd.get();
+        unsafe { GetForegroundWindow() == hwnd }
+    }
+
     pub fn set_input_region(&self, area: Option<Region>) {
         self.defer(DeferredOp::SetRegion(area));
     }
 
     pub fn set_always_on_top(&self, always_on_top: bool) {
         self.defer(DeferredOp::SetAlwaysOnTop(always_on_top));
+    }
+
+    pub fn set_mouse_pass_through(&self, mouse_pass_through: bool) {
+        self.defer(DeferredOp::SetMousePassThrough(mouse_pass_through));
     }
 
     pub fn resizable(&self, resizable: bool) {

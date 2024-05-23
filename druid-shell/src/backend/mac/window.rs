@@ -1335,6 +1335,13 @@ impl WindowHandle {
         }
     }
 
+    pub fn set_mouse_pass_through(&self, mouse_pass_through: bool) {
+        unsafe {
+            let window: id = msg_send![*self.nsview.load(), window];
+            window.setIgnoresMouseEvents_(mouse_pass_through as BOOL);
+        }
+    }
+
     fn set_level(&self, level: WindowLevel) {
         unsafe {
             let level = levels::as_raw_window_level(level);
@@ -1352,6 +1359,14 @@ impl WindowHandle {
             let window: id = msg_send![*self.nsview.load(), window];
             let current_frame: NSRect = msg_send![window, frame];
             Size::new(current_frame.size.width, current_frame.size.height)
+        }
+    }
+
+    pub fn is_foreground_window(&self) -> bool {
+        unsafe {
+            let application: id = msg_send![class![NSRunningApplication], currentApplication];
+            let is_active: BOOL = msg_send![application, isActive];
+            is_active != NO
         }
     }
 

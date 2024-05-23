@@ -109,6 +109,10 @@ impl WindowHandle {
         tracing::warn!("set_always_on_top is unimplemented on wayland");
     }
 
+    pub fn set_mouse_pass_through(&self, _mouse_pass_thorugh: bool) {
+        tracing::warn!("set_mouse_pass_through unimplemented");
+    }
+
     pub fn set_input_region(&self, region: Option<Region>) {
         self.inner.surface.set_input_region(region);
     }
@@ -128,6 +132,10 @@ impl WindowHandle {
 
     pub fn get_size(&self) -> Size {
         self.inner.surface.get_size()
+    }
+
+    pub fn is_foreground_window(&self) -> bool {
+        true
     }
 
     pub fn set_window_state(&mut self, _current_state: window::WindowState) {

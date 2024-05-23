@@ -26,6 +26,8 @@ struct AppState {
     limit_input_region: bool,
     show_titlebar: bool,
     always_on_top: bool,
+    mouse_pass_through_while_not_in_focus: bool,
+    mouse_pass_through: bool,
 }
 
 struct InputRegionExampleWidget {
@@ -38,7 +40,7 @@ impl InputRegionExampleWidget {
         let info_label = Label::new(INFO_TEXT)
             .with_line_break_mode(LineBreaking::WordWrap)
             .padding(20.0)
-            .background(Color::rgba(0.2, 0.2, 0.2, 1.0));
+            .background(Color::rgba(0.2, 0.2, 0.2, 0.5));
         let toggle_input_region = Button::new("Toggle Input Region")
             .on_click(|ctx, data: &mut bool, _: &Env| {
                 *data = !*data;
@@ -61,10 +63,20 @@ impl InputRegionExampleWidget {
                 ctx.window().set_always_on_top(*data);
             })
             .lens(AppState::always_on_top);
+        let toggle_mouse_pass_through_while_not_in_focus = Button::new("Toggle Mouse Pass Through")
+            .on_click(|_, data: &mut bool, _: &Env| {
+                *data = !*data;
+                tracing::debug!(
+                    "Setting mouse pass through while not in focus to: {}",
+                    *data
+                );
+            })
+            .lens(AppState::mouse_pass_through_while_not_in_focus);
         let controls_flex = Flex::row()
             .with_child(toggle_input_region)
             .with_child(toggle_titlebar)
-            .with_child(toggle_always_on_top);
+            .with_child(toggle_always_on_top)
+            .with_child(toggle_mouse_pass_through_while_not_in_focus);
         Self {
             info_label: WidgetPod::new(info_label),
             controls: WidgetPod::new(controls_flex),
@@ -82,6 +94,13 @@ impl Widget<AppState> for InputRegionExampleWidget {
     ) {
         self.info_label.event(ctx, event, data, env);
         self.controls.event(ctx, event, data, env);
+        let mouse_pass_through =
+            data.mouse_pass_through_while_not_in_focus && !ctx.window().is_foreground_window();
+        if mouse_pass_through != data.mouse_pass_through {
+            data.mouse_pass_through = mouse_pass_through;
+            tracing::debug!("Setting mouse pass through to: {}", mouse_pass_through);
+            ctx.window().set_mouse_pass_through(mouse_pass_through);
+        }
     }
 
     fn lifecycle(
@@ -196,6 +215,8 @@ fn main() {
         limit_input_region: true,
         always_on_top: false,
         show_titlebar: false,
+        mouse_pass_through_while_not_in_focus: false,
+        mouse_pass_through: false,
     };
 
     AppLauncher::with_window(main_window)

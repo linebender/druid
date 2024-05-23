@@ -1056,6 +1056,10 @@ impl WindowHandle {
         }
     }
 
+    pub fn is_foreground_window(&self) -> bool {
+        true
+    }
+
     pub fn set_window_state(&mut self, size_state: window::WindowState) {
         use window::WindowState::{Maximized, Minimized, Restored};
         let cur_size_state = self.get_window_state();
@@ -1120,6 +1124,10 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             state.window.set_keep_above(always_on_top);
         }
+    }
+
+    pub fn set_mouse_pass_through(&self, _mouse_pass_thorugh: bool) {
+        warn!("set_mouse_pass_through unimplemented");
     }
 
     pub fn handle_titlebar(&self, val: bool) {
