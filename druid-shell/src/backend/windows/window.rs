@@ -85,6 +85,7 @@ pub(crate) struct WindowBuilder {
     show_titlebar: bool,
     size: Option<Size>,
     transparent: bool,
+    always_on_top: bool,
     min_size: Option<Size>,
     position: Option<Point>,
     level: Option<WindowLevel>,
@@ -1484,6 +1485,7 @@ impl WindowBuilder {
             resizable: true,
             show_titlebar: true,
             transparent: false,
+            always_on_top: false,
             present_strategy: Default::default(),
             size: None,
             min_size: None,
@@ -1530,6 +1532,10 @@ impl WindowBuilder {
                 tracing::warn!("Transparency requires Windows 8 or newer");
             }
         }
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.always_on_top = always_on_top;
     }
 
     pub fn set_title<S: Into<String>>(&mut self, title: S) {
