@@ -143,13 +143,16 @@ impl<T: Data> Widget<T> for Button<T> {
         // HACK: to make sure we look okay at default sizes when beside a textbox,
         // we make sure we will have at least the same height as the default textbox.
         let min_height = env.get(theme::BORDERED_WIDGET_HEIGHT);
-        let baseline = self.label.baseline_offset();
-        ctx.set_baseline_offset(baseline + LABEL_INSETS.y1);
 
         let button_size = bc.constrain(Size::new(
             self.label_size.width + padding.width,
             (self.label_size.height + padding.height).max(min_height),
         ));
+
+        let extra_height = (button_size.height - self.label_size.height).max(0.0);
+        let baseline = self.label.baseline_offset() + extra_height / 2.0;
+        ctx.set_baseline_offset(baseline);
+
         trace!("Computed button size: {}", button_size);
         button_size
     }
