@@ -59,7 +59,7 @@ pub(crate) fn get_file_dialog_path(
         if let Some(file_types) = &options.allowed_types {
             for f in file_types {
                 let filter = file_filter(f);
-                dialog.add_filter(&filter);
+                dialog.add_filter(filter.clone());
 
                 if let Some(default) = &options.default_type {
                     if default == f {
