@@ -177,38 +177,33 @@ pub trait ChangeCtx {
 /// Convenience trait for invalidation and request methods available on multiple contexts.
 ///
 /// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
+#[allow(dead_code)]
 pub trait RequestCtx: ChangeCtx {
     /// Request a [`paint`] pass. See ['request_paint']
     ///
     /// ['request_paint']: EventCtx::request_paint
     /// [`paint`]: Widget::paint
-    #[allow(dead_code)]
     fn request_paint(&mut self);
     /// Request a [`paint`] pass for redrawing a rectangle. See [`request_paint_rect`].
     ///
     /// [`request_paint_rect`]: EventCtx::request_paint_rect
     /// [`paint`]: Widget::paint
-    #[allow(dead_code)]
     fn request_paint_rect(&mut self, rect: Rect);
     /// Request a layout pass. See [`request_layout`].
     ///
     /// [`request_layout`]: EventCtx::request_layout
-    #[allow(dead_code)]
     fn request_layout(&mut self);
     /// Request an animation frame. See [`request_anim_frame`].
     ///
     /// [`request_anim_frame`]: EventCtx::request_anim_frame
-    #[allow(dead_code)]
     fn request_anim_frame(&mut self);
     /// Indicate that your children have changed. See [`children_changed`].
     ///
     /// [`children_changed`]: EventCtx::children_changed
-    #[allow(dead_code)]
     fn children_changed(&mut self);
     /// Create a new sub-window. See [`new_sub_window`].
     ///
     /// [`new_sub_window`]: EventCtx::new_sub_window
-    #[allow(dead_code)]
     fn new_sub_window<W: Widget<U> + 'static, U: Data>(
         &mut self,
         window_config: WindowConfig,
@@ -219,22 +214,18 @@ pub trait RequestCtx: ChangeCtx {
     /// Change the disabled state of this widget. See [`set_disabled`].
     ///
     /// [`set_disabled`]: EventCtx::set_disabled
-    #[allow(dead_code)]
     fn set_disabled(&mut self, disabled: bool);
     /// Indicate that text input state has changed. See [`invalidate_text_input`].
     ///
     /// [`invalidate_text_input`]: EventCtx::invalidate_text_input
-    #[allow(dead_code)]
     fn invalidate_text_input(&mut self, event: ImeInvalidation);
     /// Scrolls this widget into view.
     ///
     /// [`scroll_to_view`]: EventCtx::scroll_to_view
-    #[allow(dead_code)]
     fn scroll_to_view(&mut self);
     /// Scrolls the area into view. See [`scroll_area_to_view`].
     ///
     /// [`scroll_area_to_view`]: EventCtx::scroll_area_to_view
-    #[allow(dead_code)]
     fn scroll_area_to_view(&mut self, area: Rect);
 }
 
