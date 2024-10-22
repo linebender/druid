@@ -152,14 +152,14 @@ pub enum Event {
     /// may be generated from a number of sources:
     ///
     /// - If your application uses  menus (either window or context menus)
-    /// then the [`MenuItem`]s in the menu will each correspond to a `Command`.
-    /// When the menu item is selected, that [`Command`] will be delivered to
-    /// the root widget of the appropriate window.
+    ///   then the [`MenuItem`]s in the menu will each correspond to a `Command`.
+    ///   When the menu item is selected, that [`Command`] will be delivered to
+    ///   the root widget of the appropriate window.
     /// - If you are doing work in another thread (using an [`ExtEventSink`])
-    /// then [`Command`]s are the mechanism by which you communicate back to
-    /// the main thread.
+    ///   then [`Command`]s are the mechanism by which you communicate back to
+    ///   the main thread.
     /// - Widgets and other Druid components can send custom [`Command`]s at
-    /// runtime, via methods such as [`EventCtx::submit_command`].
+    ///   runtime, via methods such as [`EventCtx::submit_command`].
     ///
     /// [`Widget`]: Widget
     /// [`EventCtx::submit_command`]: crate::EventCtx::submit_command

@@ -439,7 +439,7 @@ impl WindowHandle {
 
     /// Get the DPI scale of the window.
     ///
-    /// The returned [`Scale`](crate::Scale) is a copy and thus its information will be stale after
+    /// The returned [`Scale`] is a copy and thus its information will be stale after
     /// the platform DPI changes. This means you should not stash it and rely on it later; it is
     /// only guaranteed to be valid for the current pass of the runloop.
     // TODO: Can we get rid of the Result/Error for ergonomics?
@@ -461,7 +461,7 @@ pub struct WindowBuilder(backend::WindowBuilder);
 impl WindowBuilder {
     /// Create a new `WindowBuilder`.
     ///
-    /// Takes the [`Application`](crate::Application) that this window is for.
+    /// Takes the [`Application`] that this window is for.
     pub fn new(app: Application) -> WindowBuilder {
         WindowBuilder(backend::WindowBuilder::new(app.backend_app))
     }

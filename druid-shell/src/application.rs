@@ -50,7 +50,7 @@ static APPLICATION_CREATED: AtomicBool = AtomicBool::new(false);
 
 thread_local! {
     /// A reference object to the current `Application`, if any.
-    static GLOBAL_APP: RefCell<Option<Application>> = RefCell::new(None);
+    static GLOBAL_APP: RefCell<Option<Application>> = const { RefCell::new(None) };
 }
 
 impl Application {
