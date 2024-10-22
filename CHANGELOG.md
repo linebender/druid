@@ -10,6 +10,8 @@ You can find its changes [documented below](#083---2023-02-28).
 ### Added
 
 - Type name is now included in panic error messages in `WidgetPod`. ([#2380] by [@matthewgapp])
+- `set_mouse_pass_through` sets whether the mouse passes through the window to whatever is behind. ([#2402] by [@AlexKnauth])
+- `is_foreground_window` returns true if the window is the foreground window or this is unknown, and returns false if a different window is known to be the foreground window. ([#2402] by [@AlexKnauth])
 
 ### Changed
 
@@ -790,6 +792,7 @@ Last release without a changelog :(
 [@AtomicGamer9523]: https://github.com/AtomicGamer9523
 [@Insprill]: https://github.com/Insprill
 [@matthewgapp]: https://github.com/matthewgapp
+[@AlexKnauth]: https://github.com/AlexKnauth
 
 [#599]: https://github.com/linebender/druid/pull/599
 [#611]: https://github.com/linebender/druid/pull/611
@@ -1237,6 +1240,7 @@ Last release without a changelog :(
 [#2375]: https://github.com/linebender/druid/pull/2375
 [#2378]: https://github.com/linebender/druid/pull/2378
 [#2380]: https://github.com/linebender/druid/pull/2380
+[#2402]: https://github.com/linebender/druid/pull/2402
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
