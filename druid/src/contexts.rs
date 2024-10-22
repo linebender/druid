@@ -177,6 +177,7 @@ pub trait ChangeCtx {
 /// Convenience trait for invalidation and request methods available on multiple contexts.
 ///
 /// These methods are available on [`EventCtx`], [`LifeCycleCtx`], and [`UpdateCtx`].
+#[allow(dead_code)]
 pub trait RequestCtx: ChangeCtx {
     /// Request a [`paint`] pass. See ['request_paint']
     ///

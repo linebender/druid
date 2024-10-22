@@ -671,7 +671,7 @@ fn wait_for_event_with_deadline(
         // Use poll() to wait for the socket to become readable.
         let mut poll_fds = [PollFd::new(conn.as_raw_fd(), PollFlags::POLLIN)];
         let poll_timeout = c_int::try_from(deadline.duration_since(now).as_millis())
-            .unwrap_or(c_int::max_value() - 1)
+            .unwrap_or(c_int::MAX - 1)
             // The above rounds down, but we don't want to wake up to early, so add one
             .saturating_add(1);
 

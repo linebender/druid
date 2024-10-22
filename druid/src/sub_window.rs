@@ -32,7 +32,7 @@ impl SubWindowDesc {
     /// Creates a subwindow requirement that hosts the provided widget within a sub window host.
     /// It will synchronise data updates with the provided parent_id if "sync" is true, and it will expect to be sent
     /// SUB_WINDOW_PARENT_TO_HOST commands to update the provided data for the widget.
-    pub fn new<U, W: Widget<U>>(
+    pub fn new<U, W>(
         parent_id: WidgetId,
         window_config: WindowConfig,
         widget: W,
@@ -40,7 +40,7 @@ impl SubWindowDesc {
         env: Env,
     ) -> SubWindowDesc
     where
-        W: 'static,
+        W: Widget<U> + 'static,
         U: Data,
     {
         let host_id = WidgetId::next();

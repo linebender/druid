@@ -619,7 +619,7 @@ impl WindowHandle {
             Ok(iv) => iv,
             Err(_) => {
                 warn!("Timer duration exceeds 32 bit integer max");
-                i32::max_value()
+                i32::MAX
             }
         };
 

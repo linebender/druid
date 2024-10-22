@@ -597,7 +597,7 @@ fn decode_nsrange(
     range: &NSRange,
     start_offset: usize,
 ) -> Option<Range<usize>> {
-    if range.location as usize >= i32::max_value() as usize {
+    if range.location as usize >= i32::MAX as usize {
         return None;
     }
     let start_offset_utf16 = edit_lock.utf8_to_utf16(0..start_offset);

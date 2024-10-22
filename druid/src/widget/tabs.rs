@@ -498,7 +498,7 @@ impl TabsTransitionState {
     }
 }
 
-fn ensure_for_tabs<Content, TP: TabsPolicy + ?Sized>(
+fn ensure_for_tabs<Content, TP: TabsPolicy>(
     contents: &mut Vec<(TP::Key, Content)>,
     policy: &TP,
     data: &TP::Input,

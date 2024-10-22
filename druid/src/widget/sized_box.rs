@@ -4,7 +4,6 @@
 //! A widget with predefined size.
 
 use crate::debug_state::DebugState;
-use std::f64::INFINITY;
 use tracing::{instrument, trace, warn};
 
 use crate::widget::prelude::*;
@@ -71,8 +70,8 @@ impl<T> SizedBox<T> {
     /// [`expand_height`]: #method.expand_height
     /// [`expand_width`]: #method.expand_width
     pub fn expand(mut self) -> Self {
-        self.width = Some(KeyOrValue::Concrete(INFINITY));
-        self.height = Some(KeyOrValue::Concrete(INFINITY));
+        self.width = Some(KeyOrValue::Concrete(f64::INFINITY));
+        self.height = Some(KeyOrValue::Concrete(f64::INFINITY));
         self
     }
 
@@ -80,7 +79,7 @@ impl<T> SizedBox<T> {
     ///
     /// This will force the child to have maximum width.
     pub fn expand_width(mut self) -> Self {
-        self.width = Some(KeyOrValue::Concrete(INFINITY));
+        self.width = Some(KeyOrValue::Concrete(f64::INFINITY));
         self
     }
 
@@ -88,7 +87,7 @@ impl<T> SizedBox<T> {
     ///
     /// This will force the child to have maximum height.
     pub fn expand_height(mut self) -> Self {
-        self.height = Some(KeyOrValue::Concrete(INFINITY));
+        self.height = Some(KeyOrValue::Concrete(f64::INFINITY));
         self
     }
 

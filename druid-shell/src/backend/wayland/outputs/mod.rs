@@ -94,6 +94,7 @@ pub(super) fn current() -> Result<Vec<Meta>, error::Error> {
     Ok(result.take())
 }
 
+#[allow(dead_code)]
 pub trait Wayland {
     fn consume<'a>(
         &'a mut self,
@@ -130,6 +131,7 @@ impl From<(i32, i32)> for Position {
 }
 
 #[derive(Debug, Default, Clone)]
+#[allow(dead_code)]
 pub struct Mode {
     pub logical: Dimensions,
     pub refresh: i32,

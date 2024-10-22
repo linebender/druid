@@ -76,16 +76,16 @@ use tracing::{instrument, trace};
 /// To experiment with these options, see the `flex` example in `druid/examples`.
 ///
 /// - [`CrossAxisAlignment`] determines how children are positioned on the
-/// cross or 'minor' axis. The default is `CrossAxisAlignment::Center`.
+///   cross or 'minor' axis. The default is `CrossAxisAlignment::Center`.
 ///
 /// - [`MainAxisAlignment`] determines how children are positioned on the main
-/// axis; this is only meaningful if the container has more space on the main
-/// axis than is taken up by its children.
+///   axis; this is only meaningful if the container has more space on the main
+///   axis than is taken up by its children.
 ///
 /// - [`must_fill_main_axis`] determines whether the container is obliged to
-/// be maximally large on the major axis, as determined by its own constraints.
-/// If this is `true`, then the container must fill the available space on that
-/// axis; otherwise it may be smaller if its children are smaller.
+///   be maximally large on the major axis, as determined by its own constraints.
+///   If this is `true`, then the container must fill the available space on that
+///   axis; otherwise it may be smaller if its children are smaller.
 ///
 /// Additional options can be set (or overridden) in the [`FlexParams`].
 ///
@@ -676,9 +676,7 @@ impl<T: Data> Widget<T> for Flex<T> {
                         any_use_baseline |= alignment == CrossAxisAlignment::Baseline;
 
                         let old_size = widget.layout_rect().size();
-                        let child_bc =
-                            self.direction
-                                .constraints(&loosened_bc, 0.0, std::f64::INFINITY);
+                        let child_bc = self.direction.constraints(&loosened_bc, 0.0, f64::INFINITY);
                         let child_size = widget.layout(ctx, &child_bc, data, env);
 
                         if child_size.width.is_infinite() {

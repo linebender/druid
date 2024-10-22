@@ -256,7 +256,7 @@ impl WidgetId {
     /// `u64::max_value() - raw`.
     #[allow(unsafe_code)]
     pub const fn reserved(raw: u16) -> WidgetId {
-        let id = u64::max_value() - raw as u64;
+        let id = u64::MAX - raw as u64;
         // safety: by construction this can never be zero.
         WidgetId(unsafe { std::num::NonZeroU64::new_unchecked(id) })
     }

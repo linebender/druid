@@ -3,7 +3,7 @@ env:
   # version like 1.70. Note that we only specify MAJOR.MINOR and not PATCH so that bugfixes still
   # come automatically. If the version specified here is no longer the latest stable version,
   # then please feel free to submit a PR that adjusts it along with the potential clippy fixes.
-  RUST_STABLE_VER: "1.76" # In quotes because otherwise 1.70 would be interpreted as 1.7
+  RUST_STABLE_VER: "1.82" # In quotes because otherwise 1.70 would be interpreted as 1.7
 
 name: CI
 

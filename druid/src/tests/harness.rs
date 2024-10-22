@@ -112,14 +112,14 @@ impl<T: Data> Harness<'_, T> {
     /// # Arguments
     ///
     /// * `data` - A structure that matches the type of the widget and that will be
-    ///  passed to the `harness_closure` callback via the `Harness` structure.
+    ///   passed to the `harness_closure` callback via the `Harness` structure.
     ///
     /// * `root` - The widget under test
     ///
     /// * `shape` - The shape of the render_context in the `Harness` structure
     ///
     /// * `harness_closure` - A closure used to interact with the widget under test through the
-    /// `Harness` structure.
+    ///   `Harness` structure.
     ///
     /// * `render_context_closure` - A closure used to inspect the final render_context via the `TargetGuard` structure.
     ///

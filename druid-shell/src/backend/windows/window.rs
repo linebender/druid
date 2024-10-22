@@ -141,7 +141,7 @@ pub enum PresentStrategy {
 /// 1. the system hands a mouse click event to `druid-shell`
 /// 2. `druid-shell` calls `WinHandler::mouse_up`
 /// 3. after some processing, the `WinHandler` calls `WindowHandle::save_as`, which schedules a
-///   deferred op and returns immediately
+///    deferred op and returns immediately
 /// 4. after some more processing, `WinHandler::mouse_up` returns
 /// 5. `druid-shell` displays the "save as" dialog that was requested in step 3.
 enum DeferredOp {
@@ -301,9 +301,7 @@ struct DxgiState {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-// TODO: Convert this from Arc to Rc when doing a breaking release
-#[allow(clippy::arc_with_non_send_sync)]
-pub struct CustomCursor(Arc<HCursor>);
+pub struct CustomCursor(Rc<HCursor>);
 
 #[derive(PartialEq, Eq)]
 struct HCursor(HCURSOR);
@@ -2479,9 +2477,7 @@ impl WindowHandle {
                 };
                 let icon = CreateIconIndirect(&mut icon_info);
 
-                // TODO: Convert this from Arc to Rc when doing a breaking release
-                #[allow(clippy::arc_with_non_send_sync)]
-                Some(Cursor::Custom(CustomCursor(Arc::new(HCursor(icon)))))
+                Some(Cursor::Custom(CustomCursor(Rc::new(HCursor(icon)))))
             }
         } else {
             None

@@ -15,6 +15,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Changed
 
+- Windows: Custom cursor is now encapsulated by `Rc` instead of `Arc`. ([#2409] by [@xStrom])
+
 ### Deprecated
 
 ### Removed
@@ -1241,6 +1243,7 @@ Last release without a changelog :(
 [#2378]: https://github.com/linebender/druid/pull/2378
 [#2380]: https://github.com/linebender/druid/pull/2380
 [#2402]: https://github.com/linebender/druid/pull/2402
+[#2409]: https://github.com/linebender/druid/pull/2409
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3

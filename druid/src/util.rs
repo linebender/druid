@@ -39,6 +39,7 @@ pub trait ExtendDrain {
     /// This function may swap the underlying memory locations,
     /// so keep that in mind if one of the collections has a large allocation
     /// and it should keep that allocation.
+    #[allow(dead_code)]
     fn extend_drain(&mut self, source: &mut Self);
 }
 

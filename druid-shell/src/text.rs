@@ -390,11 +390,11 @@ pub trait InputHandler {
     /// This method also sets the composition range to `None`, and updates the
     /// selection:
     ///
-    /// - If both the selection's anchor and active are `< range.start`, then
-    /// nothing is updated.  - If both the selection's anchor and active are `>
-    /// range.end`, then subtract `range.len()` from both, and add `text.len()`.
-    /// - If neither of the previous two conditions are true, then set both
-    /// anchor and active to `range.start + text.len()`.
+    /// - If both the selection's anchor and active are `< range.start`, then nothing is updated.
+    /// - If both the selection's anchor and active are `> range.end`, then subtract `range.len()`
+    ///   from both, and add `text.len()`.
+    /// - If neither of the previous two conditions are true, then set both anchor and active to
+    ///   `range.start + text.len()`.
     ///
     /// After the above update, if we increase each end of the selection if
     /// necessary to put it on a grapheme cluster boundary.

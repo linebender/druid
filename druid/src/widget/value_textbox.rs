@@ -21,16 +21,16 @@ const COMPLETE_EDITING: Selector = Selector::new("druid.builtin.textbox-complete
 /// in relation to the provided [`Formatter`]:
 ///
 /// - [`ValueTextBox::validate_while_editing`] takes a flag that determines whether
-/// or not the textbox can display text that is not valid, while editing is
-/// in progress. (Text will still be validated when the user attempts to complete
-/// editing.)
+///   or not the textbox can display text that is not valid, while editing is
+///   in progress. (Text will still be validated when the user attempts to complete
+///   editing.)
 ///
 /// - [`ValueTextBox::update_data_while_editing`] takes a flag that determines
-/// whether the output value is updated during editing, when possible.
+///   whether the output value is updated during editing, when possible.
 ///
 /// - [`ValueTextBox::delegate`] allows you to provide some implementation of
-/// the [`ValidationDelegate`] trait, which receives a callback during editing;
-/// this can be used to report errors further back up the tree.
+///   the [`ValidationDelegate`] trait, which receives a callback during editing;
+///   this can be used to report errors further back up the tree.
 pub struct ValueTextBox<T> {
     child: TextBox<String>,
     formatter: Box<dyn Formatter<T>>,

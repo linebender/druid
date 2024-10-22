@@ -50,6 +50,7 @@ impl From<HRESULT> for Error {
 }
 
 pub trait ToWide {
+    #[allow(dead_code)]
     fn to_wide_sized(&self) -> Vec<u16>;
     fn to_wide(&self) -> Vec<u16>;
 }
@@ -147,6 +148,7 @@ type DCompositionCreateDevice = unsafe extern "system" fn(
 
 #[allow(non_snake_case)] // For member fields
 pub struct OptionalFunctions {
+    #[allow(dead_code)]
     pub GetDpiForSystem: Option<GetDpiForSystem>,
     pub GetDpiForWindow: Option<GetDpiForWindow>,
     pub SetProcessDpiAwarenessContext: Option<SetProcessDpiAwarenessContext>,
@@ -178,6 +180,7 @@ fn load_optional_functions() -> OptionalFunctions {
                     $min_windows_version
                 );
             } else {
+                #[allow(clippy::missing_transmute_annotations)]
                 let function = unsafe { mem::transmute::<_, $function>(function_ptr) };
                 $function = Some(function);
             }

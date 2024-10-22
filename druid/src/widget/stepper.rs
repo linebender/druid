@@ -3,7 +3,6 @@
 
 //! A stepper widget.
 
-use std::f64::EPSILON;
 use std::time::Duration;
 use tracing::{instrument, trace};
 
@@ -34,8 +33,8 @@ impl Stepper {
     /// Create a new `Stepper`.
     pub fn new() -> Self {
         Stepper {
-            max: std::f64::MAX,
-            min: std::f64::MIN,
+            max: f64::MAX,
+            min: f64::MIN,
             step: 1.0,
             wrap: false,
             increase_active: false,
@@ -66,7 +65,8 @@ impl Stepper {
     /// When wraparound is enabled incrementing above max behaves like this:
     /// - if the previous value is < max it becomes max
     /// - if the previous value is = max it becomes min
-    /// Same logic applies for decrementing
+    ///
+    /// Same logic applies for decrementing.
     ///
     /// The default is `false`.
     pub fn with_wraparound(mut self, wrap: bool) -> Self {
@@ -76,8 +76,8 @@ impl Stepper {
 
     fn increment(&mut self, data: &mut f64) {
         let next = *data + self.step;
-        let was_greater = *data + EPSILON >= self.max;
-        let is_greater = next + EPSILON > self.max;
+        let was_greater = *data + f64::EPSILON >= self.max;
+        let is_greater = next + f64::EPSILON > self.max;
         *data = match (self.wrap, was_greater, is_greater) {
             (true, true, true) => self.min,
             (true, false, true) => self.max,
@@ -88,8 +88,8 @@ impl Stepper {
 
     fn decrement(&mut self, data: &mut f64) {
         let next = *data - self.step;
-        let was_less = *data - EPSILON <= self.min;
-        let is_less = next - EPSILON < self.min;
+        let was_less = *data - f64::EPSILON <= self.min;
+        let is_less = next - f64::EPSILON < self.min;
         *data = match (self.wrap, was_less, is_less) {
             (true, true, true) => self.max,
             (true, false, true) => self.min,
@@ -268,7 +268,7 @@ impl Widget<f64> for Stepper {
         skip(self, ctx, old_data, data, _env)
     )]
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &f64, data: &f64, _env: &Env) {
-        if (*data - old_data).abs() > EPSILON {
+        if (*data - old_data).abs() > f64::EPSILON {
             ctx.request_paint();
         }
     }
