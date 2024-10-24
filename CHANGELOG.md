@@ -5,6 +5,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ## [Unreleased]
 
+- Always on top setting for WindowBuilder ([#2265] by [@mgalos999])
+
 ### Highlights
 
 ### Added
