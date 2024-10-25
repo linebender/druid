@@ -21,6 +21,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Removed
 
+- `text::format` module which was previously deprecated. ([#2413] by [@xStrom])
+
 ### Fixed
 
 - `syn` feature `extra-traits` is now always enabled. ([#2375] by [@AtomicGamer9523])
@@ -1244,6 +1246,7 @@ Last release without a changelog :(
 [#2380]: https://github.com/linebender/druid/pull/2380
 [#2402]: https://github.com/linebender/druid/pull/2402
 [#2409]: https://github.com/linebender/druid/pull/2409
+[#2413]: https://github.com/linebender/druid/pull/2413
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
 [0.8.3]: https://github.com/linebender/druid/compare/v0.8.2...v0.8.3
