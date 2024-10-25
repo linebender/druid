@@ -221,7 +221,7 @@ impl<T: Data> Widget<T> for Image {
             self.paint_data
                 .get_or_insert_with(|| image_data.to_image(ctx.render_ctx))
         };
-        if piet_image.size().is_empty() {
+        if piet_image.size().is_zero_area() {
             // zero-sized image = nothing to draw
             return;
         }

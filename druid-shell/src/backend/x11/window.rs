@@ -192,14 +192,14 @@ impl WindowBuilder {
         let conn = self.app.connection();
         let cairo_xcb_connection = unsafe {
             CairoXCBConnection::from_raw_none(
-                conn.get_raw_xcb_connection() as *mut cairo_sys::xcb_connection_t
+                conn.get_raw_xcb_connection() as *mut cairo::ffi::xcb_connection_t
             )
         };
         let cairo_drawable = XCBDrawable(window_id);
         let mut xcb_visual = xcb_visualtype_t::from(*visual_type);
         let cairo_visual_type = unsafe {
             XCBVisualType::from_raw_none(
-                &mut xcb_visual as *mut xcb_visualtype_t as *mut cairo_sys::xcb_visualtype_t,
+                &mut xcb_visual as *mut xcb_visualtype_t as *mut cairo::ffi::xcb_visualtype_t,
             )
         };
         let cairo_surface = XCBSurface::create(
