@@ -1,12 +1,15 @@
 # druid-shell
 
 `druid-shell` provides a common interface to the various elements of different platform application
-frameworks. It is designed to be used by [Druid], a UI toolkit.
+frameworks. It was designed to be used by [Druid], an experimental UI toolkit.
 
 ## Project status
 
-`druid-shell` v0.8 was forked to form [Glazier], which is where all new development happens.
-No further development is expected on `druid-shell`. We recommend everyone migrates to [Glazier].
+**UNMAINTAINED**
+
+`druid-shell` v0.8 was forked to form [Glazier], which is where some additional development happened.
+No further development is expected on `druid-shell` or [Glazier].
+Our recommendation for new apps is to use [Winit].
 
 ## Design
 
@@ -28,3 +31,4 @@ a safe interface to `druid` and other possible consumers.
 
 [Druid]: https://github.com/linebender/druid
 [Glazier]: https://github.com/linebender/glazier
+[Winit]: https://github.com/rust-windowing/winit

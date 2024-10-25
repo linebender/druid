@@ -7,41 +7,38 @@
 [![license](https://img.shields.io/crates/l/druid)](https://github.com/linebender/druid/blob/master/LICENSE)
 [![chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://xi.zulipchat.com)
 
-Druid is an experimental Rust-native UI toolkit. Its main goal is to offer a
-polished user experience. There are many factors to this goal, including
+Druid was an experimental Rust-native UI toolkit. Its main goal was to offer a
+polished user experience. There were many factors to this goal, including
 performance, a rich palette of interactions (hence a widget library to support
 them), and playing well with the native platform.
 See the [goals section](#Goals) for more details.
 
-We have been doing periodic releases of Druid on crates.io, but the API is still unstable. All changes are documented
+We did periodic releases of Druid on crates.io. All changes were documented
 in [the changelog](https://github.com/linebender/druid/blob/master/CHANGELOG.md).
 
-For an overview of some key concepts, see the (work in progress) [Druid book].
+For an overview of some key concepts, see the incomplete [Druid book].
 
 ## Project status
 
-**The Druid project is being discontinued by the core developer team.**
+**UNMAINTAINED**
 
-New development effort is focused on [Xilem], which has a lot of fundamental changes to allow for
+**The Druid project has been discontinued.**
+
+New development effort moved on to [Xilem], which has a lot of fundamental changes to allow for
 a wider variety of applications with better performance, but it also heavily inherits from Druid.
 We see [Xilem] as the future of Druid.
 
 Druid is reasonably usable for [some subset of applications](https://github.com/linebender/druid/issues/1360)
 and has a significant testing history, which ensures some stability and correctness.
-However we don't expect any major new features to be added to Druid. As such we don't recommend
+However, there will not be any new features or bug fixes coming to Druid. As such we don't recommend
 using Druid for brand new applications. If you insist, then at least make sure your application
 doesn't require a feature that Druid doesn't have, e.g. accessibility or 3D support.
 
 ## Contributions
 
-As the Druid project is being discontinued, we will still accept all contributions,
-but we'll prefer bug fixes and documentation improvements to new features.
+As the Druid project has been discontinued, **we will not be accepting any more contributions**.
 
-A very good place to ask questions and discuss development work is our [Zulip
-chat instance], in the #druid-help and #druid channels, respectively.
-
-We gladly accept contributions via GitHub pull requests. Please see
-[CONTRIBUTING.md] for more details.
+Please take a look at some of our other projects instead, especially the Druid successor [Xilem].
 
 ## Example
 
@@ -83,20 +80,12 @@ Druid's existing functionality and widgets. Check [druid_widget_nursery](https:/
 
 ## Using Druid
 
-An explicit goal of Druid is to be easy to build, so please open an issue if you
-run into any difficulties. Druid is available on [crates.io] and should work as
-a lone dependency (it re-exports all the parts of `druid-shell`, `piet`, and `kurbo`
-that you'll need):
+An explicit goal of Druid was to be easy to build.
+Druid is available on [crates.io] and should work as a lone dependency
+(it re-exports all the parts of `druid-shell`, `piet`, and `kurbo` that you'll need):
 
 ```toml
 druid = "0.8.3"
-```
-
-Since Druid is currently in fast-evolving state, you might prefer to drink from
-the firehose:
-
-```toml
-druid = { git = "https://github.com/linebender/druid.git" }
 ```
 
 ### Platform notes
@@ -119,9 +108,9 @@ You can try it out with `--features=x11`.
 
 ## Goals
 
-Druid's goal is to make it easy to write and deploy high quality desktop
+Druid's goal was to make it easy to write and deploy high quality desktop
 applications with a smooth and polished user experience on all common
-platforms. In order to achieve this we strive for a variety of things:
+platforms. In order to achieve this we strived for a variety of things:
 
 - Make it easy to build and package on all supported platforms.
 - Implement abstractions to avoid platform specific quirks.
@@ -137,7 +126,7 @@ platforms. In order to achieve this we strive for a variety of things:
 
 ### Non-Goals
 
-In order to fulfill those goals, we cannot support every use case. Luckily
+In order to fulfill those goals, we couldn't support every use case. Luckily
 the Rust community is working on a variety of different libraries with
 different goals, so here are some of Druid's non-goals and possible
 alternatives that can offer those capabilities:
@@ -147,8 +136,7 @@ alternatives that can offer those capabilities:
 - Adhere to a specific architectural style such as Elm. ([Iced], [Relm])
 - Support rendering to HTML when targeting the web. ([Iced], [Moxie])
 
-Druid is just one of many ongoing [Rust-native GUI experiments]. If it
-doesn't suit your use case, perhaps one of the others will!
+Druid was just one of many ongoing [Rust-native GUI experiments].
 
 ## Concepts
 
@@ -159,7 +147,7 @@ The Druid toolkit uses `druid-shell` for a platform-abstracting application shel
 events, converting them into a platform-agnostic representation, and calling a
 user-provided handler with them.
 
-While `druid-shell` is being developed with the Druid toolkit in mind, it is
+While `druid-shell` was being developed with the Druid toolkit in mind, it was
 intended to be general enough that it could be reused by other projects
 interested in experimenting with Rust GUI. The `druid-shell` crate includes a
 couple of [non-`druid` examples].
@@ -254,7 +242,7 @@ fn build_widget() -> impl Widget<u32> {
 
 ### layout
 
-Druid's layout protocol is strongly inspired by [Flutter's box layout model].
+Druid's layout protocol was strongly inspired by [Flutter's box layout model].
 In Druid, widgets are passed a `BoxConstraint` that provides them a minimum and
 maximum size for layout. Widgets are also responsible for computing appropriate
 constraints for their children if applicable.

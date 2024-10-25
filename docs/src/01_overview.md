@@ -1,6 +1,14 @@
 # Druid
 
-**Note:** Druid is being discontinued in favor of other projects based on the same general principles, such as [Xilem](https://github.com/linebender/xilem/).
+**UNMAINTAINED**
+
+**The Druid project has been discontinued.**
+
+New development effort moved on to [Xilem], which has a lot of fundamental changes to allow for
+a wider variety of applications with better performance, but it also heavily inherits from Druid.
+We see [Xilem] as the future of Druid.
+
+## Introduction
 
 Druid is a framework for building simple graphical applications.
 
@@ -40,3 +48,4 @@ released version of Druid (v0.8).
 [the `Data` trait]: ./03_data.md
 [the `Widget` trait]: ./04_widget.md
 [the `Lens` trait]: ./05_lens.md
+[Xilem]: https://github.com/linebender/xilem

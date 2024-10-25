@@ -15,10 +15,10 @@ These three projects provide the basis that Druid works on
 - [kiro-synth](https://github.com/chris-zen/kiro-synth) An in progress modular sound synthesizer.
 - [psst](https://github.com/jpochyla/psst) A non-Electron GUI Spotify client.
 - [flac_music](https://github.com/wandercn/flac_music) A music player.
-- *pull requests welcome*
+- *And many more*
 
 ## Projects that work with Druid (widgets etc)
-- *pull requests welcome*
+- *No data filled in here*
 
 ## Presentations
 Some presentations about Druid, its background and related topics have been recorded
