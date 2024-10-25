@@ -16,8 +16,8 @@ default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 syn = { version = "1.0.109", features = ["extra-traits"] }
-quote = "1.0.26"
-proc-macro2 = "1.0.56"
+quote = "1.0.37"
+proc-macro2 = "1.0.89"
 
 [dev-dependencies]
 druid = { version = "0.8.3", path = "../druid" }
