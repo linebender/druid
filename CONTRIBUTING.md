@@ -1,10 +1,12 @@
+# UNMAINTAINED
+
+As the Druid project has been discontinued, **we will not be accepting any more contributions**.
+
+Please take a look at some of our other projects instead, especially the Druid successor [Xilem].
+
 # How to contribute
 
-**IMPORTANT:** The Druid project is being discontinued. While we will still accept
-all contributions, we'll prefer bug fixes and documentation improvements to new
-features.
-
-If you still want to contribute, here are the guidelines you need to follow.
+The following document reflects the state of contribution policy before the project was discontinued.
 
 ## Changelog
 
@@ -251,3 +253,4 @@ Finally, we [create a new Github release](https://docs.github.com/en/github/admi
 [`cargo-edit`]: https://crates.io/crates/cargo-edit
 [semver]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
 [git `pre-push` hook]: https://githooks.com
+[Xilem]: https://github.com/linebender/xilem

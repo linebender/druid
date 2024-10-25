@@ -96,7 +96,6 @@
 //!
 //! - png
 //! - jpeg
-//! - jpeg_rayon
 //! - gif
 //! - bmp
 //! - ico
@@ -105,8 +104,6 @@
 //! - pnm
 //! - dds
 //! - tga
-//! - farbfeld
-//! - dxt
 //! - hdr
 //!
 //! You can enable all these formats with `image-all`.
