@@ -67,19 +67,19 @@ serde = ["piet-common/serde"]
 [dependencies]
 piet-common = "0.6.2"
 
-tracing = "0.1.37"
-once_cell = "1.17.1"
-time = "0.3.20"
+tracing = "0.1.40"
+once_cell = "1.20.2"
+time = "0.3.36"
 cfg-if = "1.0.0"
-instant = { version = "0.1.12", features = ["wasm-bindgen"] }
-anyhow = "1.0.69"
+instant = { version = "0.1.13", features = ["wasm-bindgen"] }
+anyhow = "1.0.91"
 keyboard-types = { version = "0.6.2", default-features = false }
 
 # Optional dependencies
-raw-window-handle = { version = "0.5.0", optional = true, default-features = false }
+raw-window-handle = { version = "0.5.2", optional = true, default-features = false }
 
 [target.'cfg(target_os="windows")'.dependencies]
-scopeguard = "1.1.0"
+scopeguard = "1.2.0"
 wio = "0.2.2"
 
 [target.'cfg(target_os="windows")'.dependencies.winapi]
@@ -102,7 +102,7 @@ ashpd = { version = "0.3.2", optional = true }
 # TODO(x11/dependencies): only use feature "xcb" if using X11
 cairo-rs = { version = "0.16.7", default-features = false, features = ["xcb"] }
 cairo-sys-rs = { version = "0.16.3", default-features = false, optional = true }
-futures = { version = "0.3.26", optional = true, features = ["executor"]}
+futures = { version = "0.3.31", optional = true, features = ["executor"]}
 gdk-sys = { version = "0.16.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
 gtk-rs = { version = "0.16.2", package = "gtk", optional = true }
@@ -115,27 +115,27 @@ wayland-protocols = { version = "0.29.5", optional = true }
 wayland-cursor = { version = "0.29.5", optional = true }
 rand = { version = "0.8.5", optional = true }
 calloop = { version = "0.7.2", optional = true }
-log = { version = "0.4.17", optional = true }
+log = { version = "0.4.22", optional = true }
 im = { version = "15.1.0", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-wasm-bindgen = "0.2.84"
-js-sys = "0.3.61"
+wasm-bindgen = "0.2.95"
+js-sys = "0.3.72"
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.61"
+version = "0.3.72"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
 piet-common = { version = "0.6.2", features = ["png"] }
 static_assertions = "1.1.0"
-test-log = { version = "0.2.11", features = ["trace"], default-features = false }
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-unicode-segmentation = "1.10.1"
+test-log = { version = "0.2.16", features = ["trace"], default-features = false }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+unicode-segmentation = "1.12.0"
 
 [build-dependencies]
 bindgen = { version = "0.61.0", optional = true }
-pkg-config = { version = "0.3.26", optional = true }
+pkg-config = { version = "0.3.31", optional = true }
 
 [[example]]
 name = "shello"
