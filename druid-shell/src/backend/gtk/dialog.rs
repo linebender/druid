@@ -59,13 +59,12 @@ pub(crate) fn get_file_dialog_path(
         if let Some(file_types) = &options.allowed_types {
             for f in file_types {
                 let filter = file_filter(f);
-                dialog.add_filter(&filter);
+                // We need to clone filter, because we may need it again for the default filter.
+                // It has to be the same FileFilter instance and can't be a new file_filter() call.
+                dialog.add_filter(filter.clone());
 
                 if let Some(default) = &options.default_type {
                     if default == f {
-                        // Note that we're providing the same FileFilter object to
-                        // add_filter and set_filter, because gtk checks them for
-                        // identity, not structural equality.
                         dialog.set_filter(&filter);
                         found_default_filter = true;
                     }

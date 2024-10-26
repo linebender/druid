@@ -34,7 +34,6 @@ raw-win-handle = ["druid-shell/raw-win-handle"]
 # support decoding, and that's all we use `Image` for.
 png = ["druid-shell/image_png"]
 jpeg = ["druid-shell/jpeg"]
-jpeg_rayon = ["druid-shell/jpeg_rayon"]
 gif = ["druid-shell/gif"]
 bmp = ["druid-shell/bmp"]
 ico = ["druid-shell/ico"]
@@ -43,12 +42,10 @@ webp = ["druid-shell/webp"]
 pnm = ["druid-shell/pnm"]
 dds = ["druid-shell/dds"]
 tga = ["druid-shell/tga"]
-farbfeld = ["druid-shell/farbfeld"]
-dxt = ["druid-shell/dxt"]
 hdr = ["druid-shell/hdr"]
 
 # Remember to update this when changing an image feature.
-image-all = ["image", "svg", "png", "jpeg", "jpeg_rayon", "gif", "bmp", "ico", "tiff", "webp", "pnm", "dds", "tga", "farbfeld", "dxt", "hdr"]
+image-all = ["image", "svg", "png", "jpeg", "gif", "bmp", "ico", "tiff", "webp", "pnm", "dds", "tga", "hdr"]
 
 [dependencies]
 druid-shell = { version = "0.8.3", default-features = false, path = "../druid-shell" }
@@ -79,7 +76,7 @@ console_error_panic_hook = { version = "0.1.7" }
 [dev-dependencies]
 float-cmp = { version = "0.9.0", features = ["std"], default-features = false }
 tempfile = "3.13.0"
-piet-common = { version = "0.6.2", features = ["png"] }
+piet-common = { version = "=0.7.0-cairo18", features = ["png"] }
 pulldown-cmark = { version = "0.8.0", default-features = false }
 test-log = { version = "0.2.16", features = ["trace"], default-features = false }
 # test-env-log needs it

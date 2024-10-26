@@ -500,7 +500,10 @@ impl Data {
         tracing::trace!("invalidate_rect initiated {:?}", rect);
         // Quick check to see if we can skip the rect entirely (if it is outside the visible
         // screen).
-        if rect.intersect(self.logical_size.get().to_rect()).is_empty() {
+        if rect
+            .intersect(self.logical_size.get().to_rect())
+            .is_zero_area()
+        {
             return;
         }
         /* this would be useful for debugging over-keen invalidation by clients.

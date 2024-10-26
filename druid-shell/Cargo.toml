@@ -18,22 +18,21 @@ cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 
 [features]
 default = ["gtk"]
-gtk = ["gdk-sys", "glib-sys", "gtk-sys", "gtk-rs"]
+gtk = ["gtk-rs"]
 x11 = [
     "ashpd",
     "bindgen",
-    "cairo-sys-rs",
     "futures",
     "nix",
     "pkg-config",
     "x11rb",
+    "cairo-rs/xcb",
 ]
 wayland = [
     "wayland-client",
     "wayland-protocols/client",
     "wayland-protocols/unstable_protocols",
     "nix",
-    "cairo-sys-rs",
     "rand",
     "calloop",
     "wayland-cursor",
@@ -50,7 +49,6 @@ raw-win-handle = ["raw-window-handle"]
 image = ["piet-common/image"]
 image_png = ["piet-common/image_png"]
 jpeg = ["piet-common/jpeg"]
-jpeg_rayon = ["piet-common/jpeg_rayon"]
 gif = ["piet-common/gif"]
 bmp = ["piet-common/bmp"]
 ico = ["piet-common/ico"]
@@ -59,13 +57,11 @@ webp = ["piet-common/webp"]
 pnm = ["piet-common/pnm"]
 dds = ["piet-common/dds"]
 tga = ["piet-common/tga"]
-farbfeld = ["piet-common/farbfeld"]
-dxt = ["piet-common/dxt"]
 hdr = ["piet-common/hdr"]
 serde = ["piet-common/serde"]
 
 [dependencies]
-piet-common = "0.6.2"
+piet-common = { version = "=0.7.0-cairo18" }
 
 tracing = "0.1.40"
 once_cell = "1.20.2"
@@ -93,21 +89,16 @@ features = ["d2d1_1", "dwrite", "winbase", "libloaderapi", "errhandlingapi", "wi
 block = "0.1.6"
 cocoa = "0.24.1"
 objc = "0.2.7"
-core-graphics = "0.22.3"
-foreign-types = "0.3.2"
+core-graphics = "0.24.0"
+foreign-types = "0.5.0"
 bitflags = "1.3.2"
 
 [target.'cfg(any(target_os = "freebsd", target_os="linux", target_os="openbsd"))'.dependencies]
 ashpd = { version = "0.3.2", optional = true }
-# TODO(x11/dependencies): only use feature "xcb" if using X11
-cairo-rs = { version = "0.16.7", default-features = false, features = ["xcb"] }
-cairo-sys-rs = { version = "0.16.3", default-features = false, optional = true }
+cairo-rs = { version = "0.18.5", default-features = false }
 futures = { version = "0.3.31", optional = true, features = ["executor"]}
-gdk-sys = { version = "0.16.0", optional = true }
 # `gtk` gets renamed to `gtk-rs` so that we can use `gtk` as the feature name.
-gtk-rs = { version = "0.16.2", package = "gtk", optional = true }
-glib-sys = { version = "0.16.3", optional = true }
-gtk-sys = { version = "0.16.0", optional = true }
+gtk-rs = { version = "0.18.1", package = "gtk", optional = true }
 nix = { version = "0.24.3", optional = true }
 x11rb = { version = "0.10.1", features = ["allow-unsafe-code", "present", "render", "randr", "xfixes", "xkb", "resource_manager", "cursor"], optional = true }
 wayland-client = { version = "0.29.5", optional = true }
@@ -127,7 +118,7 @@ version = "0.3.72"
 features = ["Window", "MouseEvent", "CssStyleDeclaration", "WheelEvent", "KeyEvent", "KeyboardEvent", "Navigator"]
 
 [dev-dependencies]
-piet-common = { version = "0.6.2", features = ["png"] }
+piet-common = { version = "=0.7.0-cairo18", features = ["png"] }
 static_assertions = "1.1.0"
 test-log = { version = "0.2.16", features = ["trace"], default-features = false }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
