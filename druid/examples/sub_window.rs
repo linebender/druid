@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Example of sub windows.
+ 
+// dependencies
+// druid = "0.8.3"
+// druid-shell = "0.8.3"
+// piet = "0.7.0"
+// instant = "0.1.13"
+// tracing = "0.1.40"
 
 // On Windows platform, don't show a console when opening the app.
 #![windows_subsystem = "windows"]
@@ -19,7 +26,10 @@ use druid::{
 use druid_shell::piet::Text;
 use druid_shell::{Screen, WindowLevel};
 use instant::{Duration, Instant};
-use piet_common::{TextLayout, TextLayoutBuilder};
+use druid::piet::{TextLayout, TextLayoutBuilder};
+// not sure why but using the piet package instead of
+// piet-common fixes an error in lines 301 to 304
+// OLD - use piet_common::{TextLayout, TextLayoutBuilder};
 
 const VERTICAL_WIDGET_SPACING: f64 = 20.0;
 const TEXT_BOX_WIDTH: f64 = 200.0;
