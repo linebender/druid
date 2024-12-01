@@ -500,9 +500,9 @@ impl InternalLifeCycle {
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
             InternalLifeCycle::RouteWidgetAdded
-            | InternalLifeCycle::RouteFocusChanged { .. }
             | InternalLifeCycle::RouteDisabledChanged => true,
-            InternalLifeCycle::RouteViewContextChanged { .. } => false,
+            InternalLifeCycle::RouteViewContextChanged { .. }
+            | InternalLifeCycle::RouteFocusChanged { .. } => false,
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
