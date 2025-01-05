@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Example of sub windows.
- 
+
 // dependencies
 // druid = "0.8.3"
 // druid-shell = "0.8.3"
@@ -15,6 +15,7 @@
 
 use druid::commands::CLOSE_WINDOW;
 use druid::lens::Unit;
+use druid::piet::{TextLayout, TextLayoutBuilder};
 use druid::widget::{
     Align, Button, Checkbox, Controller, ControllerHost, EnvScope, Flex, Label, TextBox,
 };
@@ -26,7 +27,6 @@ use druid::{
 use druid_shell::piet::Text;
 use druid_shell::{Screen, WindowLevel};
 use instant::{Duration, Instant};
-use druid::piet::{TextLayout, TextLayoutBuilder};
 // not sure why but using the piet package instead of
 // piet-common fixes an error in lines 301 to 304
 // OLD - use piet_common::{TextLayout, TextLayoutBuilder};
