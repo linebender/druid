@@ -176,7 +176,7 @@ impl<T: Data> InnerAppState<T> {
         let queue = &mut self.command_queue;
         let data = &mut self.data;
         let env = &self.env;
-        match window_id {
+        match window_id.or(self.menu_window) {
             Some(id) => self
                 .windows
                 .get_mut(id)
