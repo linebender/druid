@@ -1,3 +1,8 @@
+// Copyright 2025 the Druid Authors
+// SPDX-License-Identifier: Apache-2.0
+
+//! Context menu example to increment/decrement a counter 
+
 use druid::widget::prelude::*;
 use druid::widget::{Align, Controller, Label};
 use druid::{
