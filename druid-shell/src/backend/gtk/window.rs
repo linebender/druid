@@ -13,15 +13,13 @@ use std::slice;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Instant;
 
+use gtk::gdk::ffi::GdkKeymapKey;
 use gtk::gdk_pixbuf::Colorspace::Rgb;
 use gtk::gdk_pixbuf::Pixbuf;
-use gtk::glib::source::Continue;
 use gtk::glib::translate::FromGlib;
+use gtk::glib::{ControlFlow, Propagation};
 use gtk::prelude::*;
-use gtk::traits::SettingsExt;
 use gtk::{AccelGroup, ApplicationWindow, DrawingArea};
-
-use gdk_sys::GdkKeymapKey;
 
 use anyhow::anyhow;
 use cairo::Surface;
@@ -416,7 +414,7 @@ impl WindowBuilder {
             .connect_enter_notify_event(|widget, _| {
                 widget.grab_focus();
 
-                Inhibit(true)
+                Propagation::Stop
             });
 
         // Set the minimum size
@@ -528,7 +526,7 @@ impl WindowBuilder {
                 }
             }
 
-            Inhibit(false)
+            Propagation::Proceed
         }));
 
         win_state.drawing_area.connect_screen_changed(
@@ -584,7 +582,7 @@ impl WindowBuilder {
                 });
             }
 
-            Inhibit(true)
+            Propagation::Stop
         }));
 
         win_state.drawing_area.connect_button_release_event(clone!(handle => move |_widget, event| {
@@ -611,7 +609,7 @@ impl WindowBuilder {
                 });
             }
 
-            Inhibit(true)
+            Propagation::Stop
         }));
 
         win_state.drawing_area.connect_motion_notify_event(
@@ -632,7 +630,7 @@ impl WindowBuilder {
                     state.with_handler(|h| h.mouse_move(&mouse_event));
                 }
 
-                Inhibit(true)
+                Propagation::Stop
             }),
         );
 
@@ -642,7 +640,7 @@ impl WindowBuilder {
                     state.with_handler(|h| h.mouse_leave());
                 }
 
-                Inhibit(true)
+                Propagation::Stop
             }),
         );
 
@@ -698,7 +696,7 @@ impl WindowBuilder {
                     }
                 }
 
-                Inhibit(true)
+                Propagation::Stop
             }));
 
         win_state
@@ -716,7 +714,7 @@ impl WindowBuilder {
                     );
                 }
 
-                Inhibit(true)
+                Propagation::Stop
             }));
 
         win_state
@@ -734,7 +732,7 @@ impl WindowBuilder {
                     );
                 }
 
-                Inhibit(true)
+                Propagation::Stop
             }));
 
         win_state
@@ -743,7 +741,7 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     state.with_handler(|h| h.got_focus());
                 }
-                Inhibit(true)
+                Propagation::Stop
             }));
 
         win_state
@@ -752,7 +750,7 @@ impl WindowBuilder {
                 if let Some(state) = handle.state.upgrade() {
                     state.with_handler(|h| h.lost_focus());
                 }
-                Inhibit(true)
+                Propagation::Stop
             }));
 
         win_state
@@ -760,9 +758,12 @@ impl WindowBuilder {
             .connect_delete_event(clone!(handle => move |_widget, _ev| {
                 if let Some(state) = handle.state.upgrade() {
                     state.with_handler(|h| h.request_close());
-                    Inhibit(!state.closing.get())
+                    match state.closing.get() {
+                        true => Propagation::Proceed,
+                        false => Propagation::Stop,
+                    }
                 } else {
-                    Inhibit(false)
+                    Propagation::Proceed
                 }
             }));
 
@@ -1218,9 +1219,9 @@ impl WindowHandle {
         if let Some(state) = self.state.upgrade() {
             gtk::glib::timeout_add(interval, move || {
                 if state.with_handler(|h| h.timer(token)).is_some() {
-                    return Continue(false);
+                    return ControlFlow::Break;
                 }
-                Continue(true)
+                ControlFlow::Continue
             });
         }
         token
@@ -1379,7 +1380,7 @@ impl IdleHandle {
     }
 }
 
-fn run_idle(state: &Arc<WindowState>) -> Continue {
+fn run_idle(state: &Arc<WindowState>) -> ControlFlow {
     util::assert_main_thread();
     let result = state.with_handler(|handler| {
         let queue: Vec<_> = std::mem::take(&mut state.idle_queue.lock().unwrap());
@@ -1401,7 +1402,7 @@ fn run_idle(state: &Arc<WindowState>) -> Continue {
         let timeout = Duration::from_millis(16);
         gtk::glib::timeout_add(timeout, move || run_idle(&state));
     }
-    Continue(false)
+    ControlFlow::Break
 }
 
 fn make_gdk_cursor(cursor: &Cursor, gdk_window: &Window) -> Option<gtk::gdk::Cursor> {
@@ -1501,7 +1502,7 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
     let keyval = key.keyval();
     let hardware_keycode = key.hardware_keycode();
 
-    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or_else(|| keyval.clone());
+    let keycode = hardware_keycode_to_keyval(hardware_keycode).unwrap_or(keyval);
 
     let text = keyval.to_unicode();
     let mods = get_modifiers(key.state());
@@ -1535,14 +1536,14 @@ fn make_key_event(key: &EventKey, repeat: bool, state: KeyState) -> KeyEvent {
 /// keyval with the lowest group and level
 fn hardware_keycode_to_keyval(keycode: u16) -> Option<keycodes::RawKey> {
     unsafe {
-        let keymap = gdk_sys::gdk_keymap_get_default();
+        let keymap = gtk::gdk::ffi::gdk_keymap_get_default();
 
         let mut nkeys = 0;
         let mut keys: *mut GdkKeymapKey = ptr::null_mut();
         let mut keyvals: *mut c_uint = ptr::null_mut();
 
         // call into gdk to retrieve the keyvals and keymap keys
-        gdk_sys::gdk_keymap_get_entries_for_keycode(
+        gtk::gdk::ffi::gdk_keymap_get_entries_for_keycode(
             keymap,
             c_uint::from(keycode),
             &mut keys as *mut *mut GdkKeymapKey,
@@ -1563,8 +1564,8 @@ fn hardware_keycode_to_keyval(keycode: u16) -> Option<keycodes::RawKey> {
             });
 
             // notify glib to free the allocated arrays
-            glib_sys::g_free(keyvals as *mut c_void);
-            glib_sys::g_free(keys as *mut c_void);
+            gtk::glib::ffi::g_free(keyvals as *mut c_void);
+            gtk::glib::ffi::g_free(keys as *mut c_void);
 
             resolved_keyval
         } else {

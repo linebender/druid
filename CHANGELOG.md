@@ -36,6 +36,8 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Maintenance
 
+- Updated `piet-common` to 0.7, `cairo-rs` and `gtk` to 0.18, `core-graphics` to 0.24, `foreign-types` to 0.5, and `kurbo` to 0.11. ([#2410] by [@xStrom])
+
 ### Outside News
 
 ## [0.8.3] - 2023-02-28
@@ -336,7 +338,7 @@ Later support was widened in [#2254] by [@PolyMeilex].
 
 - Replaced `lazy_static` with `once_cell`. ([#2263] by [@jplatte])
 - Updated `piet-common` to 0.6, `kurbo` to 0.9. ([#1677], [#2040] by [@cmyr]; [#1845] by [@JAicewizard]; [#2290] by [@jneem])
-- Updated `cairo-rs`, `cairo-sys-rs`, `gdk-sys`, `gtk-rs`, `glib-sys`, `gtk-sys` to 0.16. ([#1845] by [@JAicewizard], [#2290] by [@jneem])
+- Updated `cairo-rs`, `cairo-sys-rs`, `gdk-sys`, `gtk`, `glib-sys`, `gtk-sys` to 0.16. ([#1845] by [@JAicewizard], [#2290] by [@jneem])
 - Updated `x11rb` to 0.10. ([#1519], [#2231] by [@psychon])
 - Updated `fluent-bundle` to 0.15 and `fluent-syntax` to 0.11. ([#1772] by [@r-ml])
 - Updated `tracing-wasm` to 0.2. ([#1793] by [@Maan2003])
@@ -1246,6 +1248,7 @@ Last release without a changelog :(
 [#2380]: https://github.com/linebender/druid/pull/2380
 [#2402]: https://github.com/linebender/druid/pull/2402
 [#2409]: https://github.com/linebender/druid/pull/2409
+[#2410]: https://github.com/linebender/druid/pull/2410
 [#2413]: https://github.com/linebender/druid/pull/2413
 
 [Unreleased]: https://github.com/linebender/druid/compare/v0.8.3...master
