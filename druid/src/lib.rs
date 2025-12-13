@@ -85,7 +85,7 @@
 //! Utility features:
 //!
 //! * `im` - Efficient immutable data structures using the [`im` crate],
-//!          which is made available via the [`im` module].
+//!   which is made available via the [`im` module].
 //! * `svg` - Scalable Vector Graphics for icons and other scalable images using the [`usvg` crate].
 //! * `image` - Bitmap image support using the [`image` crate].
 //! * `x11` - Work-in-progress X11 backend instead of GTK.

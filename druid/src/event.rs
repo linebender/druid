@@ -161,7 +161,7 @@ pub enum Event {
     /// - Widgets and other Druid components can send custom [`Command`]s at
     ///   runtime, via methods such as [`EventCtx::submit_command`].
     ///
-    /// [`Widget`]: Widget
+    /// [`Widget`]: crate::Widget
     /// [`EventCtx::submit_command`]: crate::EventCtx::submit_command
     /// [`ExtEventSink`]: crate::ExtEventSink
     /// [`MenuItem`]: crate::MenuItem

@@ -372,7 +372,7 @@ impl Application {
                 return;
             }
 
-            if appdata.handles.borrow().len() == 0 {
+            if appdata.handles.borrow().is_empty() {
                 tracing::debug!("shutting down, no window remaining");
                 signal.stop();
                 return;
@@ -566,3 +566,5 @@ impl Seat {
         }
     }
 }
+
+pub fn init_harness() {}

@@ -578,8 +578,8 @@ pub(crate) struct Window {
     ///
     /// There are three ways that rendering can get triggered:
     /// 1) We render a frame, and it signals to us that an animation is requested. In this case, we
-    ///     will render the next frame as soon as we get a notification that the just-presented
-    ///     frame completed. In other words, we use `CompleteNotifyEvent` to schedule rendering.
+    ///    will render the next frame as soon as we get a notification that the just-presented
+    ///    frame completed. In other words, we use `CompleteNotifyEvent` to schedule rendering.
     /// 2) We get an expose event telling us that a region got invalidated. In
     ///    this case, we will render the next frame immediately unless we're already waiting for a
     ///    completion notification. (If we are waiting for a completion notification, we just make

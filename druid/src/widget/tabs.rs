@@ -767,18 +767,13 @@ impl TabsTransition {
 }
 
 /// Determines where the tab bar should be placed relative to the cross axis
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Data)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Data)]
 pub enum TabsEdge {
     /// For horizontal tabs, top. For vertical tabs, left.
+    #[default]
     Leading,
     /// For horizontal tabs, bottom. For vertical tabs, right.
     Trailing,
-}
-
-impl Default for TabsEdge {
-    fn default() -> Self {
-        Self::Leading
-    }
 }
 
 pub struct InitialTab<T> {

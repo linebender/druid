@@ -49,6 +49,7 @@ where
 
 pub trait GlobalEventDispatch {
     fn subscribe(&self, sub: impl Into<GlobalEventSubscription>) -> GlobalEventSubscription;
+    #[expect(dead_code)] // Until it's not dead
     fn release(&self, s: &GlobalEventSubscription);
 }
 

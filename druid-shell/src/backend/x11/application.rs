@@ -944,3 +944,5 @@ fn poll_with_timeout(
 
     Ok(())
 }
+
+pub fn init_harness() {}

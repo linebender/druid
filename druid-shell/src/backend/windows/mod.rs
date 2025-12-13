@@ -70,6 +70,7 @@ impl DxgiSurfaceRenderTarget {
 }
 
 // error handling
+#[allow(dead_code)]
 pub enum Error {
     WinapiError(HRESULT),
 }

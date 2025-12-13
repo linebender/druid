@@ -155,6 +155,9 @@ impl<T: Data> Harness<'_, T> {
                 mock_app,
                 window_size,
             };
+
+            druid_shell::init_harness();
+
             harness_closure(&mut harness);
         }
         render_context_closure(target)

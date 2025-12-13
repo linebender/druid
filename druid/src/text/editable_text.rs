@@ -17,7 +17,7 @@ pub trait EditableText: Sized {
     /// Create a cursor with a reference to the text and a offset position.
     ///
     /// Returns None if the position isn't a codepoint boundary.
-    fn cursor(&self, position: usize) -> Option<StringCursor>;
+    fn cursor(&self, position: usize) -> Option<StringCursor<'_>>;
 
     /// Replace range with new text.
     /// Can panic if supplied an invalid range.
@@ -25,7 +25,7 @@ pub trait EditableText: Sized {
     fn edit(&mut self, range: Range<usize>, new: impl Into<String>);
 
     /// Get slice of text at range.
-    fn slice(&self, range: Range<usize>) -> Option<Cow<str>>;
+    fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>>;
 
     /// Get length of text (in bytes).
     fn len(&self) -> usize;
@@ -62,7 +62,7 @@ pub trait EditableText: Sized {
 }
 
 impl EditableText for String {
-    fn cursor<'a>(&self, position: usize) -> Option<StringCursor> {
+    fn cursor<'a>(&self, position: usize) -> Option<StringCursor<'_>> {
         let new_cursor = StringCursor {
             text: self,
             position,
@@ -79,7 +79,7 @@ impl EditableText for String {
         self.replace_range(range, &new.into());
     }
 
-    fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
+    fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>> {
         self.get(range).map(Cow::from)
     }
 
@@ -177,7 +177,7 @@ impl EditableText for String {
 }
 
 impl EditableText for Arc<String> {
-    fn cursor(&self, position: usize) -> Option<StringCursor> {
+    fn cursor(&self, position: usize) -> Option<StringCursor<'_>> {
         <String as EditableText>::cursor(self, position)
     }
     fn edit(&mut self, range: Range<usize>, new: impl Into<String>) {
@@ -186,7 +186,7 @@ impl EditableText for Arc<String> {
             Arc::make_mut(self).edit(range, new)
         }
     }
-    fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
+    fn slice(&self, range: Range<usize>) -> Option<Cow<'_, str>> {
         Some(Cow::Borrowed(&self[range]))
     }
     fn len(&self) -> usize {

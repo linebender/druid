@@ -126,7 +126,7 @@ impl RichTextBuilder {
     ///
     /// This method returns a [`AttributesAdder`] that can be used to style the newly
     /// added string slice.
-    pub fn push(&mut self, string: &str) -> AttributesAdder {
+    pub fn push(&mut self, string: &str) -> AttributesAdder<'_> {
         let range = self.buffer.len()..(self.buffer.len() + string.len());
         self.buffer.push_str(string);
         self.add_attributes_for_range(range)
@@ -136,7 +136,7 @@ impl RichTextBuilder {
     ///
     /// This method should generally not be invoked manually, but rather through the write! macro itself.
     #[doc(hidden)]
-    pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder {
+    pub fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> AttributesAdder<'_> {
         use std::fmt::Write;
         let start = self.buffer.len();
         self.buffer
@@ -148,7 +148,10 @@ impl RichTextBuilder {
     /// Get an [`AttributesAdder`] for the given range.
     ///
     /// This can be used to modify styles for a given range after it has been added.
-    pub fn add_attributes_for_range(&mut self, range: impl RangeBounds<usize>) -> AttributesAdder {
+    pub fn add_attributes_for_range(
+        &mut self,
+        range: impl RangeBounds<usize>,
+    ) -> AttributesAdder<'_> {
         let range = util::resolve_range(range, self.buffer.len());
         AttributesAdder {
             rich_text_builder: self,

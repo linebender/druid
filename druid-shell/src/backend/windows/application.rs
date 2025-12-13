@@ -141,9 +141,8 @@ impl Application {
                 }
                 let mut msg: MSG = msg.assume_init();
                 let accels = accels::find_accels(GetAncestor(msg.hwnd, GA_ROOT));
-                let translated = accels.map_or(false, |it| {
-                    TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0
-                });
+                let translated = accels
+                    .is_some_and(|it| TranslateAcceleratorW(msg.hwnd, it.handle(), &mut msg) != 0);
                 if !translated {
                     TranslateMessage(&msg);
                     DispatchMessageW(&msg);
@@ -198,3 +197,5 @@ impl Application {
         })
     }
 }
+
+pub fn init_harness() {}

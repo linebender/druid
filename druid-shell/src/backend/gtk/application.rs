@@ -87,3 +87,5 @@ impl crate::platform::linux::ApplicationExt for crate::Application {
         })
     }
 }
+
+pub fn init_harness() {}

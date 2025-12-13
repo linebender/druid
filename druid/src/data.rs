@@ -622,7 +622,7 @@ mod test {
     #[cfg(feature = "im")]
     fn im_data() {
         for len in 8..256 {
-            let input = std::iter::repeat(0_u8).take(len).collect::<im::Vector<_>>();
+            let input = std::iter::repeat_n(0_u8, len).collect::<im::Vector<_>>();
             let mut inp2 = input.clone();
             assert!(input.same(&inp2));
             inp2.set(len - 1, 98);
@@ -633,8 +633,8 @@ mod test {
     #[test]
     #[cfg(feature = "im")]
     fn im_vec_different_length() {
-        let one = std::iter::repeat(0_u8).take(9).collect::<im::Vector<_>>();
-        let two = std::iter::repeat(0_u8).take(10).collect::<im::Vector<_>>();
+        let one = std::iter::repeat_n(0_u8, 9).collect::<im::Vector<_>>();
+        let two = std::iter::repeat_n(0_u8, 10).collect::<im::Vector<_>>();
         assert!(!one.same(&two));
     }
 

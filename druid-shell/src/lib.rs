@@ -63,7 +63,7 @@ mod window;
 pub mod platform;
 pub mod text;
 
-pub use application::{AppHandler, Application};
+pub use application::{init_harness, AppHandler, Application};
 pub use clipboard::{Clipboard, ClipboardFormat, FormatId};
 pub use common_util::Counter;
 pub use dialog::{FileDialogOptions, FileInfo, FileSpec};

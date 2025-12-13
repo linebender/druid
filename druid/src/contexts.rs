@@ -171,7 +171,7 @@ pub trait ChangeCtx {
     /// Returns the state of the widget.
     ///
     /// This method should only be used by the framework to do mergeups.
-    fn state(&mut self) -> State;
+    fn state(&mut self) -> State<'_>;
 }
 
 /// Convenience trait for invalidation and request methods available on multiple contexts.
@@ -245,7 +245,7 @@ impl_context_trait!(
             Self::request_timer(self, deadline)
         }
 
-        fn state(&mut self) -> State {
+        fn state(&mut self) -> State<'_> {
             State {
                 //state: &mut *self.state,
                 widget_state: &mut *self.widget_state,

@@ -495,7 +495,7 @@ mod tests {
 
                 // Because we clipped to the bottom pixel, all pixels in the final image should
                 // match it.
-                let expecting: Vec<u8> = iter::repeat(255).take(16).collect();
+                let expecting: Vec<u8> = iter::repeat_n(255, 16).collect();
                 assert_eq!(&*raw_pixels, &*expecting);
             },
         )
