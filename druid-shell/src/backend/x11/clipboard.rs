@@ -160,7 +160,7 @@ impl ClipboardState {
         if owner.owner == contents.owner_window {
             // We are the new selection owner! Remember our contents for later.
             debug!("put_formats(): became selection owner");
-            if let Some(mut old_owner) = std::mem::replace(&mut self.contents, Some(contents)) {
+            if let Some(mut old_owner) = self.contents.replace(contents) {
                 // We already where the owner before. Destroy the old contents.
                 old_owner.destroy(conn)?;
             }
