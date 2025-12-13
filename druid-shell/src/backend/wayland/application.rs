@@ -566,3 +566,5 @@ impl Seat {
         }
     }
 }
+
+pub fn init_harness() {}

@@ -30,3 +30,5 @@ impl Application {
             .unwrap_or_else(|| "en-US".into())
     }
 }
+
+pub fn init_harness() {}

@@ -197,3 +197,5 @@ impl Application {
         })
     }
 }
+
+pub fn init_harness() {}

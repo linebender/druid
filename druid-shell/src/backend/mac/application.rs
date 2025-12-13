@@ -8,6 +8,7 @@
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
+use std::sync::Once;
 
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicyRegular};
 use cocoa::base::{id, nil, NO, YES};
@@ -182,4 +183,11 @@ extern "C" fn handle_menu_item(this: &mut Object, _: Sel, item: id) {
         let inner = &mut *(inner as *mut DelegateState);
         (*inner).command(tag as u32);
     }
+}
+
+pub fn init_harness() {
+    static INIT: Once = Once::new();
+    INIT.call_once(|| unsafe {
+        let _app: id = msg_send![class!(NSApplication), sharedApplication];
+    });
 }

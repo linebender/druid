@@ -173,3 +173,8 @@ impl Application {
         backend::Application::get_locale()
     }
 }
+
+/// Perform any initialization needed for the testing harness.
+pub fn init_harness() {
+    backend::init_harness();
+}
