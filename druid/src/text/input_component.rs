@@ -855,7 +855,7 @@ impl<T: TextStorage + EditableText> InputHandler for EditSessionHandle<T> {
         self.text.len()
     }
 
-    fn slice(&self, range: Range<usize>) -> std::borrow::Cow<str> {
+    fn slice(&self, range: Range<usize>) -> std::borrow::Cow<'_, str> {
         self.text.slice(range).unwrap()
     }
 

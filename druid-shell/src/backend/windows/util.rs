@@ -140,6 +140,7 @@ type GetSystemMetricsForDpi =
 // from shcore.dll
 type GetDpiForMonitor = unsafe extern "system" fn(HMONITOR, MONITOR_DPI_TYPE, *mut UINT, *mut UINT);
 type SetProcessDpiAwareness = unsafe extern "system" fn(PROCESS_DPI_AWARENESS) -> HRESULT;
+#[allow(non_snake_case)]
 type DCompositionCreateDevice = unsafe extern "system" fn(
     dxgiDevice: *const IDXGIDevice,
     iid: REFIID,

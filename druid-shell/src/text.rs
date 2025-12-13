@@ -243,11 +243,7 @@ impl Selection {
     ///
     /// If the selection is a caret, this is `0`.
     pub fn len(&self) -> usize {
-        if self.anchor > self.active {
-            self.anchor - self.active
-        } else {
-            self.active - self.anchor
-        }
+        self.anchor.abs_diff(self.active)
     }
 
     /// Returns `true` if the selection's length is `0`.
@@ -341,7 +337,7 @@ pub trait InputHandler {
     ///
     /// Panics if the start or end of the range do not fall on a code point
     /// boundary.
-    fn slice(&self, range: Range<usize>) -> Cow<str>;
+    fn slice(&self, range: Range<usize>) -> Cow<'_, str>;
 
     /// Returns the number of UTF-16 code units in the provided UTF-8 range.
     ///

@@ -444,7 +444,7 @@ impl WindowHandle {
     /// only guaranteed to be valid for the current pass of the runloop.
     // TODO: Can we get rid of the Result/Error for ergonomics?
     pub fn get_scale(&self) -> Result<Scale, Error> {
-        self.0.get_scale().map_err(Into::into)
+        self.0.get_scale()
     }
 }
 

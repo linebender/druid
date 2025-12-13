@@ -75,7 +75,7 @@ pub fn temp_dir_for_test() -> std::path::PathBuf {
         .prefix("TempDir")
         .tempdir_in(test_dir)
         .unwrap()
-        .into_path()
+        .keep()
 }
 
 /// test that the first widget to request focus during an event gets it.

@@ -23,8 +23,8 @@ use syn::parse_macro_input;
 ///
 /// - `#[data(ignore)]` makes the generated `Data::same` function skip comparing this field.
 /// - `#[data(same_fn="foo")]` uses the function `foo` for comparing this field. `foo` should
-///    be the name of a function with signature `fn(&T, &T) -> bool`, where `T` is the type of
-///    the field.
+///   be the name of a function with signature `fn(&T, &T) -> bool`, where `T` is the type of
+///   the field.
 /// - `#[data(eq)]` is shorthand for `#[data(same_fn = "PartialEq::eq")]`
 ///
 /// # Example
@@ -61,7 +61,7 @@ pub fn derive_data(input: TokenStream) -> TokenStream {
 ///
 /// - `#[lens(ignore)]` skips creating a lens for one field.
 /// - `#[lens(name="foo")]` gives the lens the specified name (instead of the default, which is to
-///    create a lens with the same name as the field).
+///   create a lens with the same name as the field).
 ///
 /// # Example
 ///

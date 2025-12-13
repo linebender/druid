@@ -87,7 +87,7 @@ pub struct LocalizedString<T> {
 struct BundleStack(Vec<FluentBundle<Arc<FluentResource>>>);
 
 impl BundleStack {
-    fn get_message(&self, id: &str) -> Option<FluentMessage> {
+    fn get_message(&self, id: &str) -> Option<FluentMessage<'_>> {
         self.0.iter().flat_map(|b| b.get_message(id)).next()
     }
 
@@ -238,14 +238,10 @@ impl L10nManager {
         args: impl Into<Option<&'args FluentArgs<'args>>>,
     ) -> Option<ArcStr> {
         let args = args.into();
-        let value = match self
+        let value = self
             .current_bundle
             .get_message(key)
-            .and_then(|msg| msg.value())
-        {
-            Some(v) => v,
-            None => return None,
-        };
+            .and_then(|msg| msg.value())?;
         let mut errs = Vec::new();
         let result = self
             .current_bundle
