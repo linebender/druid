@@ -122,10 +122,7 @@ impl Surface {
             tracing::debug!("{:?} {:?}", obj, event);
         });
 
-        let wl_xdg_popup = match parent.surface(&wl_xdg_surface, &wl_xdg_pos) {
-            Ok(p) => p,
-            Err(cause) => return Err(cause),
-        };
+        let wl_xdg_popup = parent.surface(&wl_xdg_surface, &wl_xdg_pos)?;
         wl_xdg_popup.quick_assign({
             let wl_surface = wl_surface.clone();
             move |_xdg_popup, event, _| {
