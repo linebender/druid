@@ -1,17 +1,17 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Druid</title>
-        <meta name="robots" content="noindex" />
+        <meta name="robots" content="noindex">
 
 
         <!-- Custom HTML head -->
-        
+
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="favicon.svg">
         <link rel="shortcut icon" href="favicon.png">
@@ -25,26 +25,41 @@
         <link rel="stylesheet" href="fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
 
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
     </head>
     <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
     <div id="body-container">
-        <!-- Provide site root to javascript -->
-        <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
-        </script>
-
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -58,57 +73,68 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
-            var html = document.querySelector('html');
-            html.classList.remove('no-js')
+            const html = document.documentElement;
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            html.classList.add("js");
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
-            var sidebar = null;
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="01_overview.html"><strong aria-hidden="true">1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="02_getting_started.html"><strong aria-hidden="true">2.</strong> Getting started</a></li><li class="chapter-item expanded "><a href="03_data.html"><strong aria-hidden="true">3.</strong> Data trait</a></li><li class="chapter-item expanded "><a href="04_widget.html"><strong aria-hidden="true">4.</strong> Widget trait</a></li><li class="chapter-item expanded "><a href="05_lens.html"><strong aria-hidden="true">5.</strong> Lens trait</a></li><li class="chapter-item expanded "><a href="06_env.html"><strong aria-hidden="true">6.</strong> Env</a></li><li class="chapter-item expanded "><a href="07_resolution_independence.html"><strong aria-hidden="true">7.</strong> Resolution independence</a></li><li class="chapter-item expanded "><a href="08_widgets_in_depth.html"><strong aria-hidden="true">8.</strong> Widgets in depth</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="09_more_information.html"><strong aria-hidden="true">9.</strong> More information</a></li></ol>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
                     </div>
@@ -125,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -212,18 +243,18 @@ your UI.</li>
 use druid::{AppLauncher, Widget, WindowDesc};
 
 fn build_ui() -&gt; impl Widget&lt;()&gt; {
-    Label::new(&quot;Hello world&quot;)
+    Label::new("Hello world")
 }
 
 fn main() {
     let main_window = WindowDesc::new(build_ui())
         .window_size((600.0, 400.0))
-        .title(&quot;My first Druid App&quot;);
+        .title("My first Druid App");
     let initial_data = ();
 
     AppLauncher::with_window(main_window)
         .launch(initial_data)
-        .expect(&quot;Failed to launch application&quot;);
+        .expect("Failed to launch application");
 }</code></pre>
 <p>In our main function we create an <code>AppLauncher</code>, pass it a <code>WindowDesc</code>, and launch it. We use <code>build_ui</code> to create a tree of widgets to pass to our <code>WindowDesc</code>. For now this tree consists of one simple label widget.</p>
 <p>This is a very simple example application, using only the bare minimum of features. We can do something more complex.</p>
@@ -241,16 +272,16 @@ fn build_ui() -&gt; impl Widget&lt;()&gt; {
     Split::columns(
         Container::new(
             Flex::column()
-                .with_flex_child(Label::new(&quot;first item&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;second item&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;third item&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;fourth item&quot;), 1.0),
+                .with_flex_child(Label::new("first item"), 1.0)
+                .with_flex_child(Label::new("second item"), 1.0)
+                .with_flex_child(Label::new("third item"), 1.0)
+                .with_flex_child(Label::new("fourth item"), 1.0),
         )
         .border(Color::grey(0.6), 2.0),
         Container::new(
             Flex::column()
-                .with_flex_child(Label::new(&quot;Button placeholder&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;Textbox placeholder&quot;), 1.0),
+                .with_flex_child(Label::new("Button placeholder"), 1.0)
+                .with_flex_child(Label::new("Textbox placeholder"), 1.0),
         )
         .border(Color::grey(0.6), 2.0),
     )
@@ -277,13 +308,13 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     Split::columns(
         Container::new(
             // Dynamic list of Widgets
-            List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
+            List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
         )
         .border(Color::grey(0.6), 2.0),
         Container::new(
             Flex::column()
-                .with_flex_child(Label::new(&quot;Button placeholder&quot;), 1.0)
-                .with_flex_child(Label::new(&quot;Textbox placeholder&quot;), 1.0),
+                .with_flex_child(Label::new("Button placeholder"), 1.0)
+                .with_flex_child(Label::new("Textbox placeholder"), 1.0),
         )
         .border(Color::grey(0.6), 2.0),
     )
@@ -298,18 +329,18 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 fn main() {
     let main_window = WindowDesc::new(build_ui())
         .window_size((600.0, 400.0))
-        .title(&quot;My first Druid App&quot;);
+        .title("My first Druid App");
     let initial_data = vector![
-        &quot;first item&quot;.into(),
-        &quot;second item&quot;.into(),
-        &quot;third item&quot;.into(),
-        &quot;foo&quot;.into(),
-        &quot;bar&quot;.into(),
+        "first item".into(),
+        "second item".into(),
+        "third item".into(),
+        "foo".into(),
+        "bar".into(),
     ];
 
     AppLauncher::with_window(main_window)
         .launch(initial_data)
-        .expect(&quot;Failed to launch application&quot;);
+        .expect("Failed to launch application");
 }</code></pre>
 <p>We can now change the contents of the UI depending on the data we want to display; but our UI is still static. To add user interaction, we need a way to modify our data.</p>
 <h2 id="interaction-widgets"><a class="header" href="#interaction-widgets">Interaction widgets</a></h2>
@@ -321,8 +352,8 @@ fn main() {
 fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
-    // Replace `Label::new(&quot;Button placeholder&quot;)` with
-    Button::new(&quot;Add item&quot;)
+    // Replace `Label::new("Button placeholder")` with
+    Button::new("Add item")
 
     // ...
 }</code></pre>
@@ -330,8 +361,8 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 <pre><code class="language-rust  noplaypen">fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
-    Button::new(&quot;Add item&quot;)
-        .on_click(|_, data: &amp;mut Vector&lt;String&gt;, _| data.push_back(&quot;New item&quot;.into()))
+    Button::new("Add item")
+        .on_click(|_, data: &amp;mut Vector&lt;String&gt;, _| data.push_back("New item".into()))
 
     // ...
 }</code></pre>
@@ -363,7 +394,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 
     // Replace previous List with:
     LensWrap::new(
-        List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
+        List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
         TodoList::items,
     )
 
@@ -374,7 +405,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
     // Replace previous Button with:
-    Button::new(&quot;Add item&quot;).on_click(|_, data: &amp;mut TodoList, _| {
+    Button::new("Add item").on_click(|_, data: &amp;mut TodoList, _| {
         data.items.push_back(data.next_item.clone());
         data.next_item = String::new();
     })
@@ -389,7 +420,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
     // ...
 
-    // Replace `Label::new(&quot;Textbox placeholder&quot;)` with
+    // Replace `Label::new("Textbox placeholder")` with
     LensWrap::new(TextBox::new(), TodoList::next_item)
 
     // ...
@@ -414,7 +445,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
         Container::new(
             // Dynamic list of Widgets
             LensWrap::new(
-                List::new(|| Label::dynamic(|data, _| format!(&quot;List item: {data}&quot;))),
+                List::new(|| Label::dynamic(|data, _| format!("List item: {data}"))),
                 TodoList::items,
             ),
         )
@@ -422,7 +453,7 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
         Container::new(
             Flex::column()
                 .with_flex_child(
-                    Button::new(&quot;Add item&quot;).on_click(|_, data: &amp;mut TodoList, _| {
+                    Button::new("Add item").on_click(|_, data: &amp;mut TodoList, _| {
                         data.items.push_back(data.next_item.clone());
                         data.next_item = String::new();
                     }),
@@ -437,21 +468,21 @@ fn build_ui() -&gt; impl Widget&lt;TodoList&gt; {
 fn main() {
     let main_window = WindowDesc::new(build_ui())
         .window_size((600.0, 400.0))
-        .title(&quot;My first Druid App&quot;);
+        .title("My first Druid App");
     let initial_data = TodoList {
         items: vector![
-            &quot;first item&quot;.into(),
-            &quot;second item&quot;.into(),
-            &quot;third item&quot;.into(),
-            &quot;foo&quot;.into(),
-            &quot;bar&quot;.into(),
+            "first item".into(),
+            "second item".into(),
+            "third item".into(),
+            "foo".into(),
+            "bar".into(),
         ],
         next_item: String::new(),
     };
 
     AppLauncher::with_window(main_window)
         .launch(initial_data)
-        .expect(&quot;Failed to launch application&quot;);
+        .expect("Failed to launch application");
 }</code></pre>
 <p>We now have a list of items, which we can add to by filling a textbox and clicking a button.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dataflow-and-the-data-trait"><a class="header" href="#dataflow-and-the-data-trait">Dataflow and the <code>Data</code> trait</a></h1>
@@ -468,7 +499,7 @@ fn main() {
     /// need not be considered the same here, as will often be the
     /// case when two copies are separately allocated.
     ///
-    /// Note that &quot;equal&quot; above has a slightly different meaning than
+    /// Note that "equal" above has a slightly different meaning than
     /// `PartialEq`, for example two floating point NaN values should
     /// be considered equal when they have the same bit representation.
     fn same(&amp;self, other: &amp;Self) -&gt; bool;</code></pre>
@@ -516,7 +547,7 @@ struct TodoItem {
 
     // You can specify a custom comparison fn
     // (anything with the signature (&amp;T, &amp;T) -&gt; bool).
-    #[data(same_fn = &quot;PartialEq::eq&quot;)]
+    #[data(same_fn = "PartialEq::eq")]
     added_date: DateTime,
 
     // You can specify that a field should
@@ -620,14 +651,14 @@ vertical padding, you can just do,</p>
 <pre><code class="language-rust noplaypen">use druid::widget::{Label, Padding};
 
 fn padded_label() {
-    let label: Label&lt;()&gt; = Label::new(&quot;Humour me&quot;);
+    let label: Label&lt;()&gt; = Label::new("Humour me");
     let padded = Padding::new((4.0, 8.0), label);
 }</code></pre>
 <p>to force the label to be center-aligned if it is given extra space you can write,</p>
 <pre><code class="language-rust noplaypen">use druid::widget::Align;
 
 fn align_center() {
-    let label: Label&lt;()&gt; = Label::new(&quot;Center me&quot;);
+    let label: Label&lt;()&gt; = Label::new("Center me");
     let centered = Align::centered(label);
 }</code></pre>
 <h2 id="builder-methods-and-widgetext"><a class="header" href="#builder-methods-and-widgetext">Builder methods and <code>WidgetExt</code></a></h2>
@@ -676,12 +707,12 @@ a stack of three labels, you can do:</p>
 
 fn flex_builder() -&gt; Flex&lt;()&gt; {
     Flex::column()
-        .with_child(Label::new(&quot;Number One&quot;))
-        .with_child(Label::new(&quot;Number Two&quot;))
-        .with_child(Label::new(&quot;Some Other Number&quot;))
+        .with_child(Label::new("Number One"))
+        .with_child(Label::new("Number Two"))
+        .with_child(Label::new("Some Other Number"))
 }</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="lenses-and-the-lens-trait"><a class="header" href="#lenses-and-the-lens-trait">Lenses and the <code>Lens</code> trait</a></h1>
-<p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es are a complex but powerful concept, that allow you to abstract over the notion of &quot;X owns an instance of Y&quot;.</p>
+<p>One of the key abstractions in <code>druid</code> along with <code>Data</code> is the <code>Lens</code> trait. This page explains what they are, and then how to use them. <code>Lens</code>es are a complex but powerful concept, that allow you to abstract over the notion of "X owns an instance of Y".</p>
 <h2 id="fundamentals-definition-and-implementation"><a class="header" href="#fundamentals-definition-and-implementation">Fundamentals: Definition and Implementation</a></h2>
 <h3 id="definition"><a class="header" href="#definition">Definition</a></h3>
 <p>Let's start with the (simplified) definition of a <code>Lens</code>:</p>
@@ -854,7 +885,7 @@ struct Inner {
 let composed_lens = Outer::inner.then(Inner::text);
 <span class="boring">}</span></code></pre></pre>
 <p><code>LensExt</code> contains a few more useful methods for handling things like negating a boolean, or auto-<code>Deref</code>ing a value.</p>
-<p>There are also 3 special structs in <code>druid::lens</code>: <code>Constant</code>, <code>Identity</code> and <code>Unit</code>. <code>Constant</code> is a lens that always returns the same value, and always discards any changes, while <code>Identity</code> is a lens that does nothing. You might say &quot;what is the point of a lens that does nothing&quot;, which would be a fair question. Well, there are some places where a lens is required, and having an identity allows the user to say act as if there was no lens. It's also used to begin a composition chain using the combinators like <code>then</code>. <code>Unit</code> is a special case of <code>Constant</code> where the constant in question is <code>()</code>.</p>
+<p>There are also 3 special structs in <code>druid::lens</code>: <code>Constant</code>, <code>Identity</code> and <code>Unit</code>. <code>Constant</code> is a lens that always returns the same value, and always discards any changes, while <code>Identity</code> is a lens that does nothing. You might say "what is the point of a lens that does nothing", which would be a fair question. Well, there are some places where a lens is required, and having an identity allows the user to say act as if there was no lens. It's also used to begin a composition chain using the combinators like <code>then</code>. <code>Unit</code> is a special case of <code>Constant</code> where the constant in question is <code>()</code>.</p>
 <h3 id="the-lens-macro"><a class="header" href="#the-lens-macro">The <code>lens</code> macro</a></h3>
 <p>Finally, there is a macro for constructing lenses on the fly. It allows you to lens into fields of a struct you don't control (so you can't derive <code>Lens</code> for it), it also allows lensing into tuples and tuple structs, and lastly it will create index lenses into slices.</p>
 <h3 id="wrapping-up"><a class="header" href="#wrapping-up">Wrapping up</a></h3>
@@ -897,8 +928,8 @@ a combination of a string identifier and a type.</p>
 key, you should declare it as a <code>const</code>, and give it a unique name. By
 convention, you should namespace your keys using something like <a href="https://en.wikipedia.org/wiki/Reverse_domain_name_notation">reverse-DNS</a>
 notation, or even just prefixing them with the name of your app.</p>
-<pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new(&quot;height&quot;);
-const GOOD_NAME: Key&lt;f64&gt; = Key::new(&quot;com.example.my-app.main-view-height&quot;);</code></pre>
+<pre><code class="language-rust noplaypen">const BAD_NAME: Key&lt;f64&gt; = Key::new("height");
+const GOOD_NAME: Key&lt;f64&gt; = Key::new("com.example.my-app.main-view-height");</code></pre>
 </li>
 <li>
 <p><strong><code>Key</code>s must always be set before they are used.</strong> In practice this means
@@ -917,19 +948,19 @@ replace it with any other type.</p>
 <p>Druid includes a <a href="https://docs.rs/druid/latest/druid/enum.KeyOrValue.html"><code>KeyOrValue</code></a> type that is used for setting certain properties
 of widgets. This is a type that can be <em>either</em> a concrete instance of some
 type, <em>or</em> a <code>Key</code> that can be used to get that type from the <code>Env</code>.</p>
-<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new(&quot;org.linebender.example.important-label-color&quot;);
+<pre><code class="language-rust noplaypen">const IMPORTANT_LABEL_COLOR: Key&lt;Color&gt; = Key::new("org.linebender.example.important-label-color");
 const RED: Color = Color::rgb8(0xFF, 0, 0);
 
 fn make_labels() {
-    let with_value = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(RED);
-    let with_key = Label::&lt;()&gt;::new(&quot;Warning!&quot;).with_text_color(IMPORTANT_LABEL_COLOR);
+    let with_value = Label::&lt;()&gt;::new("Warning!").with_text_color(RED);
+    let with_key = Label::&lt;()&gt;::new("Warning!").with_text_color(IMPORTANT_LABEL_COLOR);
 }</code></pre>
 <h3 id="envscope"><a class="header" href="#envscope">EnvScope</a></h3>
 <p>You may override values in the environment for a given widget (and all of its
 children) by using the <a href="https://docs.rs/druid/latest/druid/widget/struct.EnvScope.html"><code>EnvScope</code></a> widget. This is easiest when combined with
 the <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html#method.env_scope"><code>env_scope</code></a> method on <a href="https://docs.rs/druid/latest/druid/trait.WidgetExt.html"><code>WidgetExt</code></a>:</p>
 <pre><code class="language-rust noplaypen">fn scoped_label() {
-    let my_label = Label::&lt;()&gt;::new(&quot;Warning!&quot;).env_scope(|env, _| {
+    let my_label = Label::&lt;()&gt;::new("Warning!").env_scope(|env, _| {
         env.set(druid::theme::TEXT_COLOR, Color::BLACK);
         env.set(druid::theme::TEXT_SIZE_NORMAL, 18.0);
     });
@@ -955,8 +986,8 @@ However for simplicity you can think of a pixel as a square which you can choose
 This allows display manufacturers to put more and more pixels into the same sized screen.
 The <strong>pixel densities of displays are increasing</strong>.</p>
 <p>There is also an <strong>increasing variety in the pixel density</strong> of the displays used by people.
-Some might have a brand new <em>30&quot; 8K UHD</em> (<em>7680px * 4320px</em>) display,
-while others might still be rocking their <em>30&quot; HD ready</em> (<em>1366px * 768px</em>) display.
+Some might have a brand new <em>30" 8K UHD</em> (<em>7680px * 4320px</em>) display,
+while others might still be rocking their <em>30" HD ready</em> (<em>1366px * 768px</em>) display.
 It might even be the same person on the same computer with a multi-display setup.</p>
 <h2 id="the-naive-old-school-approach-to-ui"><a class="header" href="#the-naive-old-school-approach-to-ui">The naive old school approach to UI</a></h2>
 <p>For a very long time UIs have been designed without thinking about pixel density at all.
@@ -1028,7 +1059,7 @@ as a background, we could do:</p>
 <pre><code class="language-rust noplaypen">fn background_label() -&gt; impl Widget&lt;Color&gt; {
     Label::dynamic(|color: &amp;Color, _| {
         let (r, g, b, _) = color.as_rgba8();
-        format!(&quot;#{r:X}{g:X}{b:X}&quot;)
+        format!("#{r:X}{g:X}{b:X}")
     })
     .background(make_color_swatch())
 }</code></pre>
@@ -1048,7 +1079,7 @@ passed a mutable reference to its child in each method, so that it can modify it
 or forward events as needed.</p>
 <p>As an arbitrary example, here is how you might use a <code>Controller</code> to make a
 textbox fire some action (say doing a search) 300ms after the last keypress:</p>
-<pre><code class="language-rust noplaypen">const ACTION: Selector = Selector::new(&quot;hello.textbox-action&quot;);
+<pre><code class="language-rust noplaypen">const ACTION: Selector = Selector::new("hello.textbox-action");
 const DELAY: Duration = Duration::from_millis(300);
 
 struct TextBoxActionController {
@@ -1160,6 +1191,7 @@ youtube videos.</p>
             window.setTimeout(window.print, 100);
         });
         </script>
+
 
     </div>
     </body>
