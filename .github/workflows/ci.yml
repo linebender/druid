@@ -61,35 +61,35 @@ jobs:
 
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy druid-shell
-        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=x11,image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --locked --all-targets --no-default-features --features=x11,image,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid
-        run: cargo clippy --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid/Cargo.toml --locked --all-targets --no-default-features --features=svg,image,im,x11,raw-win-handle -- -D warnings
 
       - name: cargo clippy druid-derive
-        run: cargo clippy --manifest-path=druid-derive/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path=druid-derive/Cargo.toml --locked --all-targets -- -D warnings
         # there's no platform specific code here so we only run once
         if: contains(matrix.os, 'mac')
 
       - name: cargo clippy book examples
-        run: cargo clippy --manifest-path=docs/book_examples/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path=docs/book_examples/Cargo.toml --locked --all-targets -- -D warnings
         if: contains(matrix.os, 'mac')
 
       # Test packages in deeper-to-higher dependency order
       - name: cargo test druid-shell
-        run: cargo test --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --locked --no-default-features --features=x11,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; we run them in a parallel task
       # there are no gtk-specific doctests in the main druid crate anyway
       - name: cargo test druid
-        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=svg,image,im,x11
+        run: cargo test --manifest-path=druid/Cargo.toml --locked --all-targets --no-default-features --features=svg,image,im,x11
 
       - name: cargo test druid-derive
-        run: cargo test --manifest-path=druid-derive/Cargo.toml
+        run: cargo test --manifest-path=druid-derive/Cargo.toml --locked
         if: contains(matrix.os, 'mac')
 
       - name: cargo test book examples
-        run: cargo test --manifest-path=docs/book_examples/Cargo.toml
+        run: cargo test --manifest-path=docs/book_examples/Cargo.toml --locked
         if: contains(matrix.os, 'mac')
 
   # we test the wayland backend as a separate job 
@@ -114,15 +114,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell
-        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --no-default-features --features=wayland,image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --locked --all-targets --no-default-features --features=wayland,image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
-        run: cargo test --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --locked --no-default-features --features=wayland,image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no wayland-specific
       # doctests in the main druid crate anyway
       - name: cargo test druid
-        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --no-default-features --features=wayland,svg,image,im,raw-win-handle
+        run: cargo test --manifest-path=druid/Cargo.toml --locked --all-targets --no-default-features --features=wayland,svg,image,im,raw-win-handle
 
   # we test the gtk backend as a separate job because gtk install takes
   # a long time.
@@ -147,15 +147,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell
-        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --features=image,raw-win-handle -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --locked --all-targets --features=image,raw-win-handle -- -D warnings
 
       - name: cargo test druid-shell
-        run: cargo test --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --locked --features=image,raw-win-handle
 
       # We use --all-targets to skip doc tests; there are no gtk-specific
       # doctests in the main druid crate anyway
       - name: cargo test druid
-        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --features=svg,image,im,raw-win-handle
+        run: cargo test --manifest-path=druid/Cargo.toml --locked --all-targets --features=svg,image,im,raw-win-handle
 
   test-stable-wasm:
     runs-on: macOS-latest
@@ -179,21 +179,21 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: cargo clippy druid-shell (wasm)
-        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --all-targets --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --manifest-path=druid-shell/Cargo.toml --locked --all-targets --target wasm32-unknown-unknown -- -D warnings
 
       # Test wasm32 relevant packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
       - name: cargo test compile druid-shell
-        run: cargo test --manifest-path=druid-shell/Cargo.toml --features=image --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=druid-shell/Cargo.toml --locked --features=image --no-run --target wasm32-unknown-unknown
 
       # We use --all-targets to skip doc tests; there are no wasm-specific
       # doctests in the main druid crate anyway
       - name: cargo test compile druid
         # TODO: Add svg feature when it's no longer broken with wasm
-        run: cargo test --manifest-path=druid/Cargo.toml --all-targets --features=image,im --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=druid/Cargo.toml --locked --all-targets --features=image,im --no-run --target wasm32-unknown-unknown
 
       - name: cargo test compile book examples
-        run: cargo test --manifest-path=docs/book_examples/Cargo.toml --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=docs/book_examples/Cargo.toml --locked --no-run --target wasm32-unknown-unknown
 
       ## build the special druid-web-examples package.
       - name: wasm-pack build examples
@@ -219,7 +219,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: cargo test druid --doc
-        run: cargo test --manifest-path=druid/Cargo.toml --doc --no-default-features --features=svg,image,im,raw-win-handle
+        run: cargo test --manifest-path=druid/Cargo.toml --locked --doc --no-default-features --features=svg,image,im,raw-win-handle
 
   check-docs:
     name: Docs
@@ -244,25 +244,25 @@ jobs:
 
       # Doc packages in deeper-to-higher dependency order
       - name: cargo doc druid-shell
-        run: cargo doc --manifest-path=druid-shell/Cargo.toml --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --locked --features=image,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid
-        run: cargo doc --manifest-path=druid/Cargo.toml --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid/Cargo.toml --locked --features=svg,image,im,raw-win-handle --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
 
       - name: cargo doc druid-derive
-        run: cargo doc --manifest-path=druid-derive/Cargo.toml --no-deps --document-private-items
+        run: cargo doc --manifest-path=druid-derive/Cargo.toml --locked --no-deps --document-private-items
 
       - name: cargo doc book examples
-        run: cargo doc --manifest-path=docs/book_examples/Cargo.toml --no-deps --document-private-items
+        run: cargo doc --manifest-path=docs/book_examples/Cargo.toml --locked --no-deps --document-private-items
 
       # On Linux also attempt docs for X11.
       - name: cargo doc druid-shell (X11)
-        run: cargo doc --manifest-path=druid-shell/Cargo.toml --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --locked --no-default-features --features=x11,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
       # On Linux also attempt docs for Wayland.
       - name: cargo doc druid-shell (Wayland)
-        run: cargo doc --manifest-path=druid-shell/Cargo.toml --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --manifest-path=druid-shell/Cargo.toml --locked --no-default-features --features=wayland,image,raw-win-handle --no-deps --document-private-items  -Zunstable-options -Zrustdoc-scrape-examples
         if: contains(matrix.os, 'ubuntu')
 
   mdbook-build:
@@ -281,7 +281,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: install mdbook
-        run: cargo install --vers "^0.4" mdbook
+        run: cargo install --vers "=0.4.52" mdbook
 
       - name: mdbook build
         run: mdbook build
