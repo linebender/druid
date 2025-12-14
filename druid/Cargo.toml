@@ -51,19 +51,19 @@ image-all = ["image", "svg", "png", "jpeg", "gif", "bmp", "ico", "tiff", "webp",
 druid-shell = { version = "0.8.3", default-features = false, path = "../druid-shell" }
 druid-derive = { version = "0.5.1", path = "../druid-derive" }
 
-tracing = { version = "0.1.40" }
-tracing-subscriber = { version = "0.3.18", features = ["fmt", "ansi"], default-features = false }
+tracing = { version = "0.1.43" }
+tracing-subscriber = { version = "0.3.22", features = ["fmt", "ansi"], default-features = false }
 fluent-bundle = "0.15.3"
-fluent-langneg = "0.13.0"
+fluent-langneg = "0.13.1"
 fluent-syntax = "0.11.1"
-unic-langid = "0.9.5"
+unic-langid = "0.9.6"
 unicode-segmentation = "1.12.0"
 xi-unicode = "0.3.0"
 fnv = "1.0.7"
 instant = { version = "0.1.13", features = ["wasm-bindgen"] }
 
 # Optional dependencies
-chrono = { version = "0.4.38", optional = true }
+chrono = { version = "0.4.42", optional = true }
 im = { version = "15.1.0", optional = true }
 resvg = { version = "0.25.0", optional = true } # When updating, make sure it doesn't pin a specific `png` crate, see druid#2345
 usvg =  { version = "0.25.0", optional = true }
@@ -75,12 +75,12 @@ console_error_panic_hook = { version = "0.1.7" }
 
 [dev-dependencies]
 float-cmp = { version = "0.9.0", features = ["std"], default-features = false }
-tempfile = "3.13.0"
+tempfile = "3.23.0"
 piet-common = { version = "=0.7.0-cairo18", features = ["png"] }
 pulldown-cmark = { version = "0.8.0", default-features = false }
-test-log = { version = "0.2.16", features = ["trace"], default-features = false }
+test-log = { version = "0.2.19", features = ["trace"], default-features = false }
 # test-env-log needs it
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
 open = "1.7.1"
