@@ -182,6 +182,16 @@ impl WindowHandle {
         self.0.resizable(resizable)
     }
 
+    /// Get whether the window is resizable
+    pub fn is_resizable(&self) -> bool {
+        self.0.is_resizable()
+    }
+
+    /// Get whether the window is transparent
+    pub fn is_transparent(&self) -> bool {
+        self.0.is_transparent()
+    }
+
     /// Sets the state of the window.
     pub fn set_window_state(&mut self, state: WindowState) {
         self.0.set_window_state(state);
@@ -205,6 +215,11 @@ impl WindowHandle {
     /// Set whether the window should show titlebar.
     pub fn show_titlebar(&self, show_titlebar: bool) {
         self.0.show_titlebar(show_titlebar)
+    }
+
+    /// Get whether the window has titlebar.
+    pub fn has_titlebar(&self) -> bool {
+        self.0.has_titlebar()
     }
 
     /// Sets the position of the window.
