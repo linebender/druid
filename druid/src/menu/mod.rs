@@ -632,6 +632,25 @@ impl<T: Data> MenuItem<T> {
         self.on_activate(move |ctx, _data, _env| ctx.submit_command(cmd.clone()))
     }
 
+    /// Turns this `MenuItem` into a `RadioButton`
+    ///
+    /// When selected this MenuItem will set the provided value as data.
+    /// If data is equal to the provided value the Item is selected otherwise not.
+    pub fn radio_item(self, value: T, unselect: Option<T>) -> Self
+    where
+        T: PartialEq,
+    {
+        let value2 = value.clone();
+        self.on_activate(move |_, data: &mut T, _| {
+            if *data != value {
+                *data = value.clone();
+            } else if let Some(value) = unselect.clone() {
+                *data = value;
+            }
+        })
+        .selected_if(move |data, _| *data == value2)
+    }
+
     /// Provide a hotkey for activating this menu item.
     ///
     /// This is equivalent to
@@ -710,6 +729,17 @@ impl<T: Data> MenuItem<T> {
     // Panics if we haven't been resolved.
     fn is_enabled(&self) -> bool {
         self.old_state.as_ref().unwrap().enabled
+    }
+}
+
+impl MenuItem<bool> {
+    /// Turns the MenuItem into a CheckBox.
+    ///
+    /// this is a convenience method which sets the `on_activate` and `selected_if` callbacks
+    /// to behave like a `CheckBox`.
+    pub fn toggle_data(self) -> Self {
+        self.on_activate(|_, data, _| *data = !*data)
+            .selected_if(|data, _| *data)
     }
 }
 

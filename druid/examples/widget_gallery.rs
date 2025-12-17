@@ -322,7 +322,7 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
         // The space needed to lay all elements out on a single line.
         let ideal_width = (self.cell_size.width + self.spacing + 1.0) * count;
         // Constrain the width.
-        let width = ideal_width.min(bc.max().width).max(bc.min().width);
+        let width = ideal_width.clamp(bc.min().width, bc.max().width);
         // Given the width, the space needed to lay out all elements (as many as possible on each
         // line).
         let cells_in_row =
@@ -334,7 +334,7 @@ impl<T: Data> Widget<T> for SquaresGrid<T> {
             let ideal_height = height_from_rows(rows);
 
             // Constrain the height
-            let height = ideal_height.max(bc.min().height).min(bc.max().height);
+            let height = ideal_height.clamp(bc.min().height, bc.max().height);
             // Now calculate how many rows we can actually fit in
             while height_from_rows(rows) > height && rows > 0 {
                 rows -= 1;
