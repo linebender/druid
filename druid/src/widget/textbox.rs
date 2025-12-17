@@ -718,11 +718,8 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
             self.text().borrow().layout.layout_metrics()
         };
 
-        let layout_baseline = text_metrics.size.height - text_metrics.first_baseline;
-        let baseline_off = layout_baseline
-            - (self.inner.child_size().height - self.inner.viewport_rect().height())
-            + textbox_insets.y1;
-        ctx.set_baseline_offset(baseline_off);
+        let baseline_offset = size.height - text_metrics.first_baseline - textbox_insets.y1;
+        ctx.set_baseline_offset(baseline_offset);
         if self.scroll_to_selection_after_layout {
             self.scroll_to_selection_end(ctx);
             self.scroll_to_selection_after_layout = false;
@@ -731,7 +728,7 @@ impl<T: TextStorage + EditableText> Widget<T> for TextBox<T> {
         trace!(
             "Computed layout: size={}, baseline_offset={:?}",
             size,
-            baseline_off
+            baseline_offset
         );
         size
     }
