@@ -499,10 +499,9 @@ impl InternalLifeCycle {
     /// [`Event::should_propagate_to_hidden`]: Event::should_propagate_to_hidden
     pub fn should_propagate_to_hidden(&self) -> bool {
         match self {
-            InternalLifeCycle::RouteWidgetAdded
-            | InternalLifeCycle::RouteFocusChanged { .. }
-            | InternalLifeCycle::RouteDisabledChanged => true,
-            InternalLifeCycle::RouteViewContextChanged { .. } => false,
+            InternalLifeCycle::RouteWidgetAdded | InternalLifeCycle::RouteDisabledChanged => true,
+            InternalLifeCycle::RouteViewContextChanged { .. }
+            | InternalLifeCycle::RouteFocusChanged { .. } => false,
             InternalLifeCycle::DebugRequestState { .. }
             | InternalLifeCycle::DebugRequestDebugState { .. }
             | InternalLifeCycle::DebugInspectState(_) => true,
