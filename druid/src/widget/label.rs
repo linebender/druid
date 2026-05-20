@@ -81,6 +81,7 @@ pub struct RawLabel<T> {
 
     disabled: bool,
     default_text_color: KeyOrValue<Color>,
+    baseline_offset: f64,
 }
 
 /// Options for handling lines that are too wide for the label.
@@ -138,6 +139,7 @@ impl<T: TextStorage> RawLabel<T> {
             line_break_mode: LineBreaking::Overflow,
             disabled: false,
             default_text_color: crate::theme::TEXT_COLOR.into(),
+            baseline_offset: 0f64,
         }
     }
 
@@ -254,8 +256,7 @@ impl<T: TextStorage> RawLabel<T> {
 
     /// Return the offset of the first baseline relative to the bottom of the widget.
     pub fn baseline_offset(&self) -> f64 {
-        let text_metrics = self.layout.layout_metrics();
-        text_metrics.size.height - text_metrics.first_baseline
+        self.baseline_offset
     }
 }
 
@@ -588,11 +589,12 @@ impl<T: TextStorage> Widget<T> for RawLabel<T> {
         self.layout.rebuild_if_needed(ctx.text(), env);
 
         let text_metrics = self.layout.layout_metrics();
-        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
         let size = bc.constrain(Size::new(
             text_metrics.size.width + 2. * LABEL_X_PADDING,
             text_metrics.size.height,
         ));
+        self.baseline_offset = size.height - text_metrics.first_baseline;
+        ctx.set_baseline_offset(self.baseline_offset);
         trace!("Computed size: {}", size);
         size
     }
