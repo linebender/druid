@@ -434,15 +434,14 @@ impl<T: Data> Window<T> {
             self.layout(queue, data, env);
         }
 
+        let reset_color = if self.transparent {
+            Color::TRANSPARENT
+        } else {
+            env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
+        };
+
         for &r in invalid.rects() {
-            piet.clear(
-                Some(r),
-                if self.transparent {
-                    Color::TRANSPARENT
-                } else {
-                    env.get(crate::theme::WINDOW_BACKGROUND_COLOR)
-                },
-            );
+            piet.fill(r, &reset_color);
         }
         self.paint(piet, invalid, queue, data, env);
     }
