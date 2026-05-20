@@ -40,6 +40,14 @@ You can find its changes [documented below](#083---2023-02-28).
 
 ### Outside News
 
+## [0.8.4] - 2023-05-26
+
+### Changed
+- set ValueTextBox to update value while editing by default. ([#7354d48] by [@jeremiahroise])
+
+### Docs
+- docs for function update_value_while_editing now mentions that is is true by default. ([#11ccafd] by [@jeremiahroise])
+
 ## [0.8.3] - 2023-02-28
 
 ### Added
