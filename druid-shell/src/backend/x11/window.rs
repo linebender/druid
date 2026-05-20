@@ -160,6 +160,10 @@ impl WindowBuilder {
         self.transparent = transparent;
     }
 
+    pub fn set_always_on_top(&mut self, _always_on_top: bool) {
+        warn!("WindowBuilder::set_always_on_top is currently unimplemented for X11 backend.");
+    }
+
     pub fn set_position(&mut self, position: Point) {
         self.position = Some(position);
     }
